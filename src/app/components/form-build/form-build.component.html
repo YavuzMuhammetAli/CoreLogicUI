@@ -1,0 +1,33 @@
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+<div class="container mt-5">
+  <h3>Dinamik Tablo Oluşturucu</h3>
+  <form [formGroup]="tableForm" (ngSubmit)="onSubmit()">
+    <div formArrayName="columns" *ngFor="let column of columns.controls; let i = index" class="mb-3">
+      <div [formGroupName]="i" class="row align-items-center">
+        <div class="col-md-4">
+          <input type="text" class="form-control" formControlName="columnName" placeholder="Sütun Adı">
+        </div>
+        <div class="col-md-4">
+          <select class="form-control" formControlName="dataType">
+            <option value="" disabled selected>Veri Tipi Seç</option>
+            <option *ngFor="let type of dataTypes" [value]="type">{{ type }}</option>
+          </select>
+        </div>
+        <div class="col-md-2 text-center">
+          <input type="checkbox" formControlName="isNullable">
+          <label>Nullable</label>
+        </div>
+        <div class="col-md-2 text-center">
+          <button type="button" class="btn btn-danger btn-sm" (click)="removeColumn(i)">Sil</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-end">
+      <button type="button" class="btn btn-primary" (click)="addColumn()">Sütun Ekle</button>
+      <button type="submit" class="btn btn-success">Tablo Kaydet</button>
+    </div>
+  </form>
+</div>
