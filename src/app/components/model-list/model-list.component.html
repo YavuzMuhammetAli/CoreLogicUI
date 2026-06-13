@@ -1,0 +1,74 @@
+<div class="page-header">
+  <div>
+    <span class="eyebrow">CoreLogic Platform</span>
+    <h1 class="page-title">Yayınlanmış Modeller</h1>
+    <p class="page-subtitle">Çalışma zamanında yayınlanan dinamik veri modelleriniz.</p>
+  </div>
+  <a routerLink="/build" class="btn btn-primary">
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M12 5v14M5 12h14"/>
+    </svg>
+    Yeni Model
+  </a>
+</div>
+
+<!-- Model Listesi -->
+@if (models.length > 0) {
+  <div class="model-grid">
+    @for (model of models; track model.typeName) {
+      <a class="model-card panel" [routerLink]="['/models', model.typeName]">
+        <div class="model-card-head">
+          <div class="model-type-badge">
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+            </svg>
+          </div>
+          <button
+            class="btn btn-ghost btn-sm remove-btn"
+            (click)="removeModel(model.typeName, $event)"
+            [attr.aria-label]="model.typeName + ' modelini listeden kaldır'"
+            type="button">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <h2 class="model-name">{{ model.typeName }}</h2>
+
+        <div class="model-meta">
+          <span class="badge badge-meta">{{ model.columns.length }} sütun</span>
+          <span class="model-date">{{ formatDate(model.registeredAt) }}</span>
+        </div>
+
+        <div class="model-columns">
+          @for (col of model.columns.slice(0, 3); track col.columnName) {
+            <span class="col-chip">{{ col.columnName }}</span>
+          }
+          @if (model.columns.length > 3) {
+            <span class="col-chip col-more">+{{ model.columns.length - 3 }}</span>
+          }
+        </div>
+
+        <div class="model-footer">
+          <span class="model-link">Verileri görüntüle →</span>
+        </div>
+      </a>
+    }
+  </div>
+} @else {
+  <!-- Empty state -->
+  <div class="panel">
+    <div class="empty-state">
+      <div class="empty-icon" aria-hidden="true">🗂️</div>
+      <h3>Henüz model yayınlanmadı</h3>
+      <p>
+        C# entity kodunu çalışma zamanında derleyen dinamik model sisteminizi kullanmaya başlayın.
+        İlk modelinizi oluşturun.
+      </p>
+      <a routerLink="/build" class="btn btn-primary">
+        İlk Modeli Oluştur
+      </a>
+    </div>
+  </div>
+}

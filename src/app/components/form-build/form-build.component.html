@@ -1,33 +1,169 @@
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+<div class="page-header">
+  <div>
+    <span class="eyebrow">Platform</span>
+    <h1 class="page-title">Yeni Tablo Oluştur</h1>
+    <p class="page-subtitle">C# entity kodunu çalışma zamanında derleyip yeni bir veri modeli yayınlayın.</p>
+  </div>
+</div>
 
-<div class="container mt-5">
-  <h3>Dinamik Tablo Oluşturucu</h3>
-  <form [formGroup]="tableForm" (ngSubmit)="onSubmit()">
-    <div formArrayName="columns" *ngFor="let column of columns.controls; let i = index" class="mb-3">
-      <div [formGroupName]="i" class="row align-items-center">
-        <div class="col-md-4">
-          <input type="text" class="form-control" formControlName="columnName" placeholder="Sütun Adı">
-        </div>
-        <div class="col-md-4">
-          <select class="form-control" formControlName="dataType">
-            <option value="" disabled selected>Veri Tipi Seç</option>
-            <option *ngFor="let type of dataTypes" [value]="type">{{ type }}</option>
-          </select>
-        </div>
-        <div class="col-md-2 text-center">
-          <input type="checkbox" formControlName="isNullable">
-          <label>Nullable</label>
-        </div>
-        <div class="col-md-2 text-center">
-          <button type="button" class="btn btn-danger btn-sm" (click)="removeColumn(i)">Sil</button>
-        </div>
-      </div>
+<div class="build-layout">
+  <!-- Sol: Form -->
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Model Tanımı</h2>
     </div>
+    <div class="panel-body">
+      <form [formGroup]="tableForm" (ngSubmit)="onSubmit()" novalidate>
 
-    <div class="text-end">
-      <button type="button" class="btn btn-primary" (click)="addColumn()">Sütun Ekle</button>
-      <button type="submit" class="btn btn-success">Tablo Kaydet</button>
+        <!-- Entity adı -->
+        <div class="field">
+          <label for="entityName">
+            Model Adı <span class="req">*</span>
+          </label>
+          <input
+            id="entityName"
+            type="text"
+            formControlName="entityName"
+            placeholder="Örn: Product, Customer"
+            required
+            [attr.aria-invalid]="entityNameCtrl.touched && entityNameCtrl.invalid"
+            aria-describedby="entityName-help entityName-err">
+          <span id="entityName-help" class="field-help">
+            PascalCase, harf ile başlamalı. Örn: <code>OrderItem</code>
+          </span>
+          @if (entityNameCtrl.touched && entityNameCtrl.hasError('required')) {
+            <span id="entityName-err" class="field-error" role="alert">Model adı zorunludur.</span>
+          } @else if (entityNameCtrl.touched && entityNameCtrl.hasError('pattern')) {
+            <span id="entityName-err" class="field-error" role="alert">Büyük harfle başlayan harf/rakam kullanın. Örn: MyModel</span>
+          }
+        </div>
+
+        <!-- Sütunlar -->
+        <div class="columns-section">
+          <div class="columns-header">
+            <h3 class="columns-title">Sütunlar</h3>
+            <button type="button" class="btn btn-secondary btn-sm" (click)="addColumn()">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              Sütun Ekle
+            </button>
+          </div>
+
+          @if (columns.length === 0) {
+            <p class="no-columns">Sütun eklenmedi. Yukarıdaki butonu kullanın.</p>
+          } @else {
+            <div class="columns-list" formArrayName="columns">
+              @for (col of columns.controls; track $index) {
+                <div class="column-row" [formGroupName]="$index">
+                  <!-- Sütun adı -->
+                  <div class="field col-name-field">
+                    <label [attr.for]="'col-name-' + $index">Ad <span class="req">*</span></label>
+                    <input
+                      [id]="'col-name-' + $index"
+                      type="text"
+                      formControlName="columnName"
+                      placeholder="Örn: Name"
+                      required
+                      [attr.aria-invalid]="getColumnGroup($index).get('columnName')!.touched && getColumnGroup($index).get('columnName')!.invalid">
+                    @if (getColumnGroup($index).get('columnName')!.touched && getColumnGroup($index).get('columnName')!.hasError('required')) {
+                      <span class="field-error" role="alert">Ad zorunludur.</span>
+                    } @else if (getColumnGroup($index).get('columnName')!.touched && getColumnGroup($index).get('columnName')!.hasError('pattern')) {
+                      <span class="field-error" role="alert">Geçerli tanımlayıcı girin.</span>
+                    }
+                  </div>
+
+                  <!-- Veri tipi -->
+                  <div class="field col-type-field">
+                    <label [attr.for]="'col-type-' + $index">Tip</label>
+                    <select [id]="'col-type-' + $index" formControlName="dataType">
+                      @for (type of dataTypes; track type) {
+                        <option [value]="type">{{ type }}</option>
+                      }
+                    </select>
+                  </div>
+
+                  <!-- Nullable -->
+                  <div class="col-nullable-field">
+                    <label class="checkbox-label" [attr.for]="'col-null-' + $index">
+                      <input
+                        [id]="'col-null-' + $index"
+                        type="checkbox"
+                        formControlName="isNullable">
+                      Nullable
+                    </label>
+                  </div>
+
+                  <!-- Sil -->
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-sm col-remove-btn"
+                    (click)="removeColumn($index)"
+                    [attr.aria-label]="'Sütun ' + ($index + 1) + ' sil'">
+                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Durum mesajı -->
+        @if (submitMessage) {
+          <div
+            class="alert"
+            [class.alert-success]="submitSuccess"
+            [class.alert-danger]="!submitSuccess"
+            [attr.role]="submitSuccess ? 'status' : 'alert'">
+            {{ submitMessage }}
+            @if (submitSuccess) {
+              <br><small>Model listesine yönlendiriliyorsunuz...</small>
+            }
+          </div>
+        }
+
+        <!-- Submit -->
+        <div class="form-actions">
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="isLoading">
+            @if (isLoading) {
+              <span class="spinner" aria-hidden="true"></span>
+              Derleniyor...
+            } @else {
+              Modeli Yayınla
+            }
+          </button>
+        </div>
+      </form>
     </div>
-  </form>
+  </div>
+
+  <!-- Sağ: Önizleme kodu -->
+  <div class="code-preview panel">
+    <div class="panel-head">
+      <h2>C# Önizleme</h2>
+      <span class="badge badge-meta">Roslyn</span>
+    </div>
+    <div class="panel-body">
+      <pre class="code-block"><code>using Core.Entities;
+using Entities.Concrete;
+
+public class <strong>{{ tableForm.value.entityName || 'MyEntity' }}</strong> : DbBaseObject, IEntity
+&#123;
+@for (col of tableForm.value.columns || []; track $index) {
+  @if (col.columnName?.trim()) {
+<span>    public {{ col.dataType }} {{ col.columnName }} &#123; get; set; &#125;</span>
+  }
+}
+&#125;</code></pre>
+      <p class="code-note">
+        <code>DbBaseObject</code> taban sınıfı <code>ID</code>, <code>Active</code>, <code>CreatedOn</code>,
+        <code>CreatedBy</code>, <code>LastModifiedOn</code>, <code>LastModifiedBy</code> alanlarını sağlar.
+      </p>
+    </div>
+  </div>
 </div>

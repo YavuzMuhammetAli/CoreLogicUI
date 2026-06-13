@@ -1,0 +1,17 @@
+import { HttpInterceptorFn } from '@angular/common/http';
+
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  // SSR (Node.js) ortamında localStorage yoktur; guard ile atla
+  if (typeof localStorage === 'undefined') return next(req);
+
+  const token = localStorage.getItem('access_token');
+
+  if (token) {
+    const cloned = req.clone({
+      headers: req.headers.set('Authorization', `Bearer ${token}`)
+    });
+    return next(cloned);
+  }
+
+  return next(req);
+};

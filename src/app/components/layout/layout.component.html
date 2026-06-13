@@ -1,0 +1,72 @@
+<div class="app-shell" [class.sidebar-collapsed]="!sidebarOpen">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Ana menü">
+    <div class="sidebar-logo">
+      <span class="logo-mark">CL</span>
+      <span class="logo-text">CoreLogic</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <span class="nav-label eyebrow">Veri</span>
+      <a
+        class="nav-item"
+        routerLink="/models"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        aria-label="Model listesi">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+        </svg>
+        Modeller
+      </a>
+
+      <span class="nav-label eyebrow" style="margin-top: var(--space-4)">Platform</span>
+      <a
+        class="nav-item"
+        routerLink="/build"
+        routerLinkActive="active"
+        aria-label="Yeni tablo oluştur">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Tablo Oluştur
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="nav-item logout-btn" (click)="logout()" type="button" aria-label="Çıkış yap">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+        </svg>
+        Çıkış Yap
+      </button>
+    </div>
+  </aside>
+
+  <!-- Ana içerik -->
+  <div class="main-area">
+    <!-- Topbar -->
+    <header class="topbar">
+      <button
+        class="topbar-toggle btn btn-ghost btn-sm"
+        (click)="toggleSidebar()"
+        type="button"
+        [attr.aria-expanded]="sidebarOpen"
+        aria-label="Menüyü aç/kapat">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12h18M3 6h18M3 18h18"/>
+        </svg>
+      </button>
+
+      <div class="topbar-right">
+        <span class="badge badge-success">Çevrimiçi</span>
+      </div>
+    </header>
+
+    <!-- Sayfa içeriği -->
+    <main class="page-content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>
