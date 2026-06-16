@@ -1,0 +1,196 @@
+<div class="model-node" [class.model-node--sub]="depth > 1" [attr.data-depth]="depth">
+
+  <!-- Düğüm başlığı -->
+  <div class="node-head">
+    <div class="node-head-left">
+      <span class="eyebrow depth-badge">{{ derinlikEtiketi(depth) }}</span>
+      @if (depth > 1) {
+        <span class="muted-hint">Parent'a FK bağlı</span>
+      }
+    </div>
+    @if (canRemove && onRemoveSelf) {
+      <button
+        type="button"
+        class="btn btn-ghost btn-sm remove-node-btn"
+        (click)="onRemoveSelf()"
+        [attr.aria-label]="'Bu alt modeli kaldır'">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+        Alt Modeli Kaldır
+      </button>
+    }
+  </div>
+
+  <div [formGroup]="group">
+
+    <!-- Model adı -->
+    <div class="field">
+      <label [attr.for]="'entity-' + depth">
+        Model Adı <span class="req">*</span>
+      </label>
+      <input
+        [id]="'entity-' + depth"
+        type="text"
+        formControlName="entityName"
+        placeholder="Örn: OrderItem"
+        required
+        [attr.aria-invalid]="entityNameCtrl.touched && entityNameCtrl.invalid"
+        aria-describedby="entity-help">
+      <span id="entity-help" class="field-help">
+        PascalCase, büyük harfle başlamalı. Örn: <code>OrderItem</code>
+      </span>
+      @if (entityNameCtrl.touched && entityNameCtrl.hasError('required')) {
+        <span class="field-error" role="alert">Model adı zorunludur.</span>
+      } @else if (entityNameCtrl.touched && entityNameCtrl.hasError('pattern')) {
+        <span class="field-error" role="alert">Büyük harfle başlayan harf/rakam kullanın. Örn: OrderItem</span>
+      }
+    </div>
+
+    <!-- Sütunlar bölümü -->
+    <div class="columns-section">
+      <div class="columns-header">
+        <h4 class="columns-title">Sütunlar</h4>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="addColumn()">
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          Sütun Ekle
+        </button>
+      </div>
+
+      @if (columns.length === 0) {
+        <p class="no-columns">Sütun eklenmedi. Yukarıdaki butonu kullanın.</p>
+      } @else {
+        <div class="columns-list" formArrayName="columns">
+          @for (col of columns.controls; track $index) {
+            <div class="column-row" [formGroupName]="$index">
+
+              <!-- Sütun adı -->
+              <div class="field col-name-field">
+                <label [attr.for]="'col-name-' + depth + '-' + $index">
+                  Ad <span class="req">*</span>
+                </label>
+                <input
+                  [id]="'col-name-' + depth + '-' + $index"
+                  type="text"
+                  formControlName="columnName"
+                  placeholder="Örn: Price"
+                  required
+                  [attr.aria-invalid]="getColumnGroup($index).get('columnName')!.touched && getColumnGroup($index).get('columnName')!.invalid">
+                @if (getColumnGroup($index).get('columnName')!.touched && getColumnGroup($index).get('columnName')!.hasError('required')) {
+                  <span class="field-error" role="alert">Ad zorunludur.</span>
+                } @else if (getColumnGroup($index).get('columnName')!.touched && getColumnGroup($index).get('columnName')!.hasError('pattern')) {
+                  <span class="field-error" role="alert">Geçerli tanımlayıcı girin.</span>
+                }
+              </div>
+
+              <!-- Veri tipi -->
+              <div class="field col-type-field">
+                <label [attr.for]="'col-type-' + depth + '-' + $index">Tip</label>
+                <select [id]="'col-type-' + depth + '-' + $index" formControlName="dataType">
+                  @for (type of dataTypes; track type) {
+                    <option [value]="type">{{ type }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- Nullable -->
+              <div class="col-nullable-field">
+                <label class="checkbox-label" [attr.for]="'col-null-' + depth + '-' + $index">
+                  <input
+                    [id]="'col-null-' + depth + '-' + $index"
+                    type="checkbox"
+                    formControlName="isNullable">
+                  Nullable
+                </label>
+              </div>
+
+              <!-- String'e özel: MinLength, MaxLength, Regex -->
+              @if (getColumnGroup($index).get('dataType')!.value === 'string') {
+                <div class="col-rules-row">
+                  <div class="field col-rule-field">
+                    <label [attr.for]="'col-minlen-' + depth + '-' + $index">Min. Uzunluk</label>
+                    <input [id]="'col-minlen-' + depth + '-' + $index" type="number" class="input" formControlName="minLength" placeholder="0" min="0">
+                  </div>
+                  <div class="field col-rule-field">
+                    <label [attr.for]="'col-maxlen-' + depth + '-' + $index">Maks. Uzunluk</label>
+                    <input [id]="'col-maxlen-' + depth + '-' + $index" type="number" class="input" formControlName="maxLength" placeholder="255" min="0">
+                  </div>
+                  <div class="field col-rule-field col-rule-field--wide">
+                    <label [attr.for]="'col-regex-' + depth + '-' + $index">Regex Deseni</label>
+                    <input [id]="'col-regex-' + depth + '-' + $index" type="text" class="input" formControlName="regex" placeholder="Örn: ^[A-Z].*">
+                  </div>
+                  <div class="field col-rule-field col-rule-field--wide">
+                    <label [attr.for]="'col-regexmsg-' + depth + '-' + $index">Regex Hata Mesajı</label>
+                    <input [id]="'col-regexmsg-' + depth + '-' + $index" type="text" class="input" formControlName="regexMessage" placeholder="Geçersiz format">
+                  </div>
+                </div>
+              }
+
+              <!-- Sayısal tiplere özel: Min, Max -->
+              @if (
+                getColumnGroup($index).get('dataType')!.value === 'int' ||
+                getColumnGroup($index).get('dataType')!.value === 'float' ||
+                getColumnGroup($index).get('dataType')!.value === 'decimal'
+              ) {
+                <div class="col-rules-row">
+                  <div class="field col-rule-field">
+                    <label [attr.for]="'col-min-' + depth + '-' + $index">Min. Değer</label>
+                    <input [id]="'col-min-' + depth + '-' + $index" type="number" class="input" formControlName="min" placeholder="Örn: 0">
+                  </div>
+                  <div class="field col-rule-field">
+                    <label [attr.for]="'col-max-' + depth + '-' + $index">Maks. Değer</label>
+                    <input [id]="'col-max-' + depth + '-' + $index" type="number" class="input" formControlName="max" placeholder="Örn: 9999">
+                  </div>
+                </div>
+              }
+
+              <!-- Sütun sil -->
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm col-remove-btn"
+                (click)="removeColumn($index)"
+                [attr.aria-label]="'Sütun ' + ($index + 1) + ' sil'">
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Alt Modeller (recursive) -->
+    @if (subModels.length > 0) {
+      <div class="sub-models-section" formArrayName="subModels">
+        @for (sub of subModels.controls; track $index) {
+          <app-model-node
+            [group]="getSubModelGroup($index)"
+            [depth]="depth + 1"
+            [canRemove]="true"
+            [onRemoveSelf]="removeSubModelFn($index)">
+          </app-model-node>
+        }
+      </div>
+    }
+
+    <!-- Alt Model Oluştur butonu — max 4 derinlikte kilitleniyor -->
+    @if (depth < MAX_DEPTH) {
+      <button
+        type="button"
+        class="btn btn-secondary btn-sm add-sub-model-btn"
+        (click)="addSubModel()">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <path d="M17.5 17.5v4M15.5 19.5h4"/>
+        </svg>
+        Alt Model Oluştur
+      </button>
+    }
+
+  </div>
+</div>

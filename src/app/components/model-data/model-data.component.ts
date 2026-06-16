@@ -1,35 +1,33 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, signal } from '@angular/core';
+import { CommonModule, DatePipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { ModelRegistryService, RegisteredModel, RegisteredColumn } from '../../services/model-registry.service';
-import { PublishedModelService } from '../../services/published-model.service';
+import { PublishedModelService, PublishedModel, PublishedColumn } from '../../services/published-model.service';
 import { PublishModelService } from '../../services/publish-model.service';
+import { PermissionService } from '../../services/permission.service';
+import { PublishedTableService, ModelVersion } from '../../services/published-table.service';
+import {
+  inputTypeFor,
+  isImage,
+  imageSrc,
+  isBase64Value,
+  cellValue,
+  rowVal,
+  downloadFile
+} from './model-data.util';
 
 type DataRow = Record<string, unknown>;
-
-/** Veri tipine göre HTML input tipi */
-function inputTypeFor(dataType: string): string {
-  switch (dataType) {
-    case 'int':
-    case 'float':
-    case 'decimal': return 'number';
-    case 'datetime': return 'date';
-    case 'boolean': return 'checkbox';
-    default: return 'text';
-  }
-}
 
 @Component({
   selector: 'app-model-data',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, DatePipe],
   templateUrl: './model-data.component.html',
   styleUrls: ['./model-data.component.scss']
 })
 export class ModelDataComponent implements OnInit {
   typeName = '';
-  model: RegisteredModel | undefined;
+  model: PublishedModel | undefined;
 
   // Grid durumu
   rows: DataRow[] = [];
@@ -47,26 +45,68 @@ export class ModelDataComponent implements OnInit {
   // Silme durumu
   deletingId: number | null = null;
 
+  // Sürüm paneli durumu
+  versions = signal<ModelVersion[]>([]);
+  showVersionPanel = signal(false);
+
   // Assembly yüklenmemiş hatası için tek-seferlik retry bayrağı
   private rowsRetried = false;
   private formRetried = false;
 
+  // Mevcut form oturumunda seçilen dosyaların adları (colName → filename)
+  private fileNames: Record<string, string> = {};
+
   constructor(
     private route: ActivatedRoute,
-    private registry: ModelRegistryService,
     private publishedModel: PublishedModelService,
     private publishModel: PublishModelService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    public permissionService: PermissionService,
+    public publishedTableService: PublishedTableService
   ) {}
 
   ngOnInit(): void {
-    this.typeName = this.route.snapshot.paramMap.get('typeName') ?? '';
-    this.model = this.registry.get(this.typeName);
-    this.loadRows();
+    // snapshot yerine paramMap observable'ına abone ol;
+    // aynı component örneği farklı modeller için yeniden kullanıldığında
+    // (Angular route-reuse) her parametre değişiminde tetiklenir.
+    this.route.paramMap.subscribe(params => {
+      this.typeName = params.get('typeName') ?? '';
+      this.resetState();
+      this.loadModelMeta();
+    });
   }
 
-  get columns(): RegisteredColumn[] {
+  /** Yeni modele geçerken önceki modelin durumunu temizle */
+  private resetState(): void {
+    this.model = undefined;
+    this.rows = [];
+    this.loadError = null;
+    this.showForm = false;
+    this.editingRow = null;
+    this.formMessage = null;
+    this.formSuccess = null;
+    this.deletingId = null;
+    this.rowsRetried = false;
+    this.formRetried = false;
+    this.showVersionPanel.set(false);
+    this.versions.set([]);
+  }
+
+  get columns(): PublishedColumn[] {
     return this.model?.columns ?? [];
+  }
+
+  /** Model meta verisini backend'den çek, ardından satırları yükle */
+  private loadModelMeta(): void {
+    this.publishedModel.getModels().subscribe({
+      next: res => {
+        if (res.success) {
+          this.model = (res.data ?? []).find(m => m.typeName === this.typeName);
+        }
+        this.loadRows();
+      },
+      error: () => this.loadRows()
+    });
   }
 
   /** Tüm kayıtları yükle */
@@ -84,7 +124,17 @@ export class ModelDataComponent implements OnInit {
           // Backend yeniden başlatıldıysa assembly null olur; bir kez yükleyip tekrar dene.
           this.rowsRetried = true;
           this.publishModel.loadAssembly().subscribe({
-            next: () => this.loadRows(),
+            next: () => {
+              // Assembly yeniden yüklendi; model meta'sını da taze çek
+              this.publishedModel.getModels().subscribe({
+                next: metaRes => {
+                  if (metaRes.success)
+                    this.model = (metaRes.data ?? []).find(m => m.typeName === this.typeName);
+                  this.loadRows();
+                },
+                error: () => this.loadRows()
+              });
+            },
             error: () => {
               this.loadingRows = false;
               this.loadError = 'Model backend\'de yüklü değil. "Tablo Oluştur"dan yeniden yayınlayın.';
@@ -109,17 +159,10 @@ export class ModelDataComponent implements OnInit {
     return ['ID', ...this.columns.map(c => c.columnName)];
   }
 
-  /** Satırdan hücre değeri */
-  cellValue(row: DataRow, key: string): string {
-    const v = row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
-    if (v === null || v === undefined) return '—';
-    if (typeof v === 'boolean') return v ? '✓' : '✗';
-    return String(v);
-  }
-
   /** Ekle formunu aç */
   openAddForm(): void {
     this.editingRow = null;
+    this.fileNames = {};
     this.buildForm(null);
     this.showForm = true;
     this.formMessage = null;
@@ -129,6 +172,7 @@ export class ModelDataComponent implements OnInit {
   /** Düzenle formunu aç */
   openEditForm(row: DataRow): void {
     this.editingRow = row;
+    this.fileNames = {};
     this.buildForm(row);
     this.showForm = true;
     this.formMessage = null;
@@ -229,11 +273,79 @@ export class ModelDataComponent implements OnInit {
     });
   }
 
-  inputTypeFor(dataType: string): string {
-    return inputTypeFor(dataType);
+  // ─── Util delegasyonları — template'te doğrudan çağrılabilmesi için ────────────
+
+  inputTypeFor  = inputTypeFor;
+  isImage       = isImage;
+  imageSrc      = imageSrc;
+  isBase64Value = isBase64Value;
+  cellValue     = cellValue;
+  rowVal        = rowVal;
+
+  downloadFile(b64: string, colName: string): void {
+    downloadFile(b64, colName, this.fileNames);
+  }
+
+  rowId(row: DataRow): number {
+    return Number(row['ID'] ?? row['id'] ?? 0);
+  }
+
+  /**
+   * Seçilen dosyayı saf base64 olarak form control'üne yazar.
+   * Dosya adı fileNames map'inde saklanır — backend pipe karakterini kabul etmez.
+   */
+  onFileSelected(event: Event, colName: string): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    this.fileNames[colName] = file.name;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      // data-URL önekini at — backend saf base64 (byte[]) bekler
+      const base64 = dataUrl.split(',')[1] ?? dataUrl;
+      this.recordForm.get(colName)?.setValue(base64);
+    };
+    reader.readAsDataURL(file);
   }
 
   getControl(colName: string) {
     return this.recordForm.get(colName)!;
+  }
+
+  /** Sürüm geçmişini backend'den yükler */
+  loadVersions(): void {
+    this.publishedTableService.getVersions(this.typeName).subscribe({
+      next: r => {
+        if (r.success) {
+          this.versions.set(r.data ?? []);
+        }
+      },
+      error: () => { /* sessizce geç */ }
+    });
+  }
+
+  /** Sürüm panelini aç/kapat; açılırken veriyi yükle */
+  toggleVersionPanel(): void {
+    this.showVersionPanel.update(v => !v);
+    if (this.showVersionPanel()) {
+      this.loadVersions();
+    }
+  }
+
+  /** Onay alındıktan sonra rollback isteği gönderir; başarıda veri + sürümleri yeniler */
+  doRollback(version: number): void {
+    if (!confirm(`v${version} versiyonuna geri almak istediğinize emin misiniz?`)) return;
+
+    this.publishedTableService.rollback(this.typeName, version).subscribe({
+      next: res => {
+        if (res.success) {
+          this.loadRows();
+          this.loadVersions();
+        }
+      },
+      error: () => { /* sessizce geç */ }
+    });
   }
 }

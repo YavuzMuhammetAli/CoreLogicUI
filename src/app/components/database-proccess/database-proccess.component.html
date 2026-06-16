@@ -1,1 +1,61 @@
-<p>database-proccess works!</p>
+<div class="panel">
+  <div class="panel-head">
+    <h1 class="eyebrow">Veritabanı İşlemleri</h1>
+  </div>
+
+  <div class="panel-body">
+    <!-- Yükleniyor göstergesi -->
+    @if (loading()) {
+      <div class="loading-row" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <span class="sr-only">İşlem devam ediyor…</span>
+      </div>
+    }
+
+    <!-- Sonuç mesajı -->
+    @if (message().type !== 'idle') {
+      @if (message().type === 'success') {
+        <div class="alert alert-success" role="status">{{ message().text }}</div>
+      } @else {
+        <div class="alert alert-danger" role="alert">{{ message().text }}</div>
+      }
+    }
+
+    <!-- İşlem butonları -->
+    <div class="action-group">
+      <div class="action-card">
+        <div class="action-card-info">
+          <h3>Tablo Oluştur</h3>
+          <p>Yayınlanmış modeller için SQL tablolarını oluşturur veya günceller.</p>
+        </div>
+        <button
+          class="btn btn-primary"
+          type="button"
+          [disabled]="loading()"
+          (click)="createTable()">
+          @if (loading()) {
+            <span class="spinner" aria-hidden="true"></span>
+          }
+          Tablo Oluştur
+        </button>
+      </div>
+
+      <div class="action-card">
+        <div class="action-card-info">
+          <h3>Veritabanını Kontrol Et</h3>
+          <p>Veritabanı bağlantısını ve şemasını doğrular.</p>
+        </div>
+        <button
+          class="btn btn-secondary"
+          type="button"
+          [disabled]="loading()"
+          (click)="checkDatabase()">
+          @if (loading()) {
+            <span class="spinner" aria-hidden="true"></span>
+          }
+          Veritabanını Kontrol Et
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

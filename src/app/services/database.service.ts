@@ -12,6 +12,11 @@ export class DatabaseService {
 
   /** Yayınlanan dinamik tipler için SQL tabloları oluşturur */
   createTable(): Observable<ResponseModel> {
-    return this.http.get<ResponseModel>(`${this.baseUrl}/createtable`);
+    return this.http.post<ResponseModel>(`${this.baseUrl}/createtable`, null);
+  }
+
+  /** Veritabanı bağlantısını ve şemasını kontrol eder */
+  checkDatabase(): Observable<ResponseModel> {
+    return this.http.post<ResponseModel>(`${this.baseUrl}/checkdatabase`, null);
   }
 }

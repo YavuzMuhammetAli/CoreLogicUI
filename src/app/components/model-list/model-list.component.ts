@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
-import { ModelRegistryService, RegisteredModel } from '../../services/model-registry.service';
+import { RouterLink, Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
+import { PublishedModelService, PublishedModel } from '../../services/published-model.service';
+import { PermissionService } from '../../services/permission.service';
 
 @Component({
   selector: 'app-model-list',
@@ -11,26 +13,61 @@ import { ModelRegistryService, RegisteredModel } from '../../services/model-regi
   styleUrls: ['./model-list.component.scss']
 })
 export class ModelListComponent implements OnInit {
-  models: RegisteredModel[] = [];
+  models: PublishedModel[] = [];
+  loading = false;
+  loadError: string | null = null;
+  /** Normal kullanıcı hiçbir tabloya erişemediğinde true */
+  noPermission = false;
 
-  constructor(private registry: ModelRegistryService) {}
+  constructor(
+    private publishedModel: PublishedModelService,
+    private permissionService: PermissionService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
-    this.models = this.registry.list();
+    this.load();
   }
 
-  removeModel(typeName: string, event: Event): void {
-    event.preventDefault();
-    event.stopPropagation();
-    if (confirm(`"${typeName}" modelini listeden kaldırmak istediğinize emin misiniz?`)) {
-      this.registry.remove(typeName);
-      this.models = this.registry.list();
-    }
-  }
+  load(): void {
+    this.loading = true;
+    this.loadError = null;
+    this.noPermission = false;
 
-  formatDate(iso: string): string {
-    return new Date(iso).toLocaleDateString('tr-TR', {
-      day: '2-digit', month: 'short', year: 'numeric'
+    // Yetki ve model listesini birlikte yükle — signal'in hazır olması için
+    forkJoin([
+      this.permissionService.loadMyPermissions(),
+      this.publishedModel.getModels()
+    ]).subscribe({
+      next: ([, modelsRes]) => {
+        this.loading = false;
+        if (!modelsRes.success) {
+          this.loadError = modelsRes.message ?? 'Modeller yüklenemedi.';
+          return;
+        }
+        const allModels = modelsRes.data ?? [];
+
+        if (this.permissionService.isAdmin()) {
+          // Admin: tüm model kartlarını göster (mevcut davranış)
+          this.models = allModels;
+        } else {
+          // Normal kullanıcı: "Modeller" listesini göstermez;
+          // okuma yetkili ilk tabloya doğrudan yönlendir
+          const permitted = allModels.filter(m =>
+            this.permissionService.can(m.typeName, 'read')
+          );
+          if (permitted.length > 0) {
+            this.router.navigate(['/models', permitted[0].typeName], { replaceUrl: true });
+          } else {
+            // Hiç erişim yoksa boş-yetki durumunu göster
+            this.noPermission = true;
+          }
+        }
+      },
+      error: err => {
+        this.loading = false;
+        this.loadError = err?.error?.message ?? 'Sunucu bağlantı hatası.';
+      }
     });
   }
 }

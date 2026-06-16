@@ -1,0 +1,133 @@
+/* ── Yetki Yönetimi Ekranı ── */
+
+.perm-page {
+  padding: var(--space-6);
+  max-width: var(--container-max);
+  margin: 0 auto;
+}
+
+/* İki sütunlu panel düzeni */
+.perm-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: var(--space-6);
+  align-items: start;
+  margin-top: var(--space-6);
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Kullanıcı paneli — sabit yükseklikte scroll */
+.user-panel {
+  position: sticky;
+  top: var(--space-6);
+}
+
+/* Seçili kullanıcı satırı */
+.user-row {
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-standard);
+
+  &:hover {
+    background: var(--surface-warm);
+  }
+
+  &.selected {
+    background: color-mix(in oklab, var(--accent), transparent 90%);
+
+    td {
+      font-weight: 500;
+    }
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring) inset;
+  }
+}
+
+/* E-posta sütunu — küçük ekranlarda kesilebilir */
+.email-cell {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sağ panel başlık alt metni */
+.perm-subtitle {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+/* Bölüm ayırıcı */
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--border-soft);
+  margin: var(--space-6) 0;
+}
+
+/* Bölüm başlıkları */
+.section-block {
+  margin-bottom: var(--space-4);
+}
+
+.section-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: var(--space-4);
+}
+
+/* Admin checkbox satırı */
+.admin-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+/* İzin matrisi sütun genişlikleri */
+.perm-table {
+  .perm-col {
+    width: 72px;
+    text-align: center;
+
+    input[type="checkbox"] {
+      cursor: pointer;
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
+    }
+  }
+
+  .model-name-cell {
+    font-weight: 500;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+  }
+
+  /* Değiştirilmiş ama henüz kaydedilmemiş satır */
+  .dirty-row {
+    background: var(--warn-bg);
+  }
+}
+
+/* Kaydet butonu alt çubuğu */
+.perm-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-4);
+  gap: var(--space-3);
+}

@@ -1,0 +1,481 @@
+<!-- ─── Breadcrumb ──────────────────────────────────────────────────────────── -->
+<div class="detail-breadcrumb">
+  <a [routerLink]="['/models']" class="bc-link">Modeller</a>
+  <span class="bc-sep">/</span>
+  <a [routerLink]="['/models', typeName]" class="bc-link">{{ typeName }}</a>
+  <span class="bc-sep">/</span>
+  <span class="bc-current">Detay</span>
+</div>
+
+<!-- ─── Yükleniyor / Hata ──────────────────────────────────────────────────── -->
+@if (loadingRecord) {
+  <div class="detail-loading">
+    <span class="spinner" style="width:32px;height:32px" aria-label="Yükleniyor"></span>
+    <p>Kayıt yükleniyor...</p>
+  </div>
+}
+
+@if (recordError) {
+  <div class="alert alert-danger" role="alert">{{ recordError }}</div>
+}
+
+<!-- ─── Ana içerik (kayıt bulunduğunda) ───────────────────────────────────── -->
+@if (!loadingRecord && !recordError && record) {
+
+  <!-- ══ ÜST PANEL: Ana Kayıt ═══════════════════════════════════════════════ -->
+  <div class="panel record-panel">
+    <div class="panel-head record-panel-head">
+      <div>
+        <h1 class="record-title">{{ typeName }}</h1>
+      </div>
+      <div class="panel-actions">
+        <a [routerLink]="['/models', typeName]" class="btn btn-ghost btn-sm">
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          Listeye Dön
+        </a>
+        @if (!showEditForm && permission.can(typeName, 'update')) {
+          <button type="button" class="btn btn-secondary btn-sm" (click)="openEditMode()">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            Düzenle
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- ── Görüntüleme Modu ──────────────────────────────────────────────── -->
+    @if (!showEditForm) {
+      <div class="panel-body">
+        <div class="field-display-grid">
+          @for (col of parentColumns; track col.columnName) {
+            <div class="field-display-item">
+              <span class="field-display-label">
+                {{ col.columnName }}
+                <span class="col-type-tag">{{ col.dataType }}</span>
+              </span>
+              <div class="field-display-value">
+                @if (isImage(recordStr(col))) {
+                  <img
+                    [src]="imageSrc(recordStr(col))"
+                    [alt]="col.columnName"
+                    class="record-img-preview"
+                    loading="lazy">
+                } @else if (isBase64Value(recordStr(col))) {
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-sm"
+                    (click)="downloadParentFile(recordStr(col), col.columnName)">
+                    <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7 10 12 15 17 10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    İndir
+                  </button>
+                } @else {
+                  <span class="field-display-text">{{ displayValue(col) }}</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- ── Düzenleme Modu (inline — modal değil) ────────────────────────── -->
+    @if (showEditForm && editForm) {
+      <div class="panel-body">
+        @if (editMsg) {
+          <div
+            class="alert"
+            [class.alert-success]="editOk"
+            [class.alert-danger]="!editOk"
+            [attr.role]="editOk ? 'status' : 'alert'"
+            style="margin-bottom: var(--space-4)">
+            {{ editMsg }}
+          </div>
+        }
+        <form [formGroup]="editForm" (ngSubmit)="submitEdit()" novalidate>
+          <div class="edit-fields-grid">
+            @for (col of parentColumns; track col.columnName) {
+              <div class="field">
+                <label [attr.for]="'edit-' + col.columnName">
+                  {{ col.columnName }}
+                  @if (!col.isNullable) { <span style="color:var(--danger)">*</span> }
+                  <span class="col-type-tag">{{ col.dataType }}</span>
+                </label>
+
+                @if (inputTypeFor(col.dataType) === 'checkbox') {
+                  <label class="checkbox-label" [attr.for]="'edit-' + col.columnName">
+                    <input [id]="'edit-' + col.columnName" type="checkbox" [formControlName]="col.columnName">
+                    {{ col.columnName }}
+                  </label>
+                } @else if (inputTypeFor(col.dataType) === 'file') {
+                  <input [id]="'edit-' + col.columnName" type="file"
+                    (change)="onEditFileSelected($event, col.columnName)"
+                    style="display:block;margin-bottom:var(--space-2)">
+                  @if (getEditControl(col.columnName).value) {
+                    @if (isImage(getEditControl(col.columnName).value)) {
+                      <img [src]="imageSrc(getEditControl(col.columnName).value)" alt="Önizleme"
+                        style="max-height:100px;max-width:100%;border-radius:6px;border:1px solid var(--border);object-fit:contain;display:block;margin-bottom:var(--space-2)">
+                    } @else {
+                      <div style="display:flex;align-items:center;gap:var(--space-2)">
+                        <span class="eyebrow">Dosya mevcut</span>
+                        <button type="button" class="btn btn-ghost btn-sm"
+                          (click)="downloadParentFile(getEditControl(col.columnName).value, col.columnName)">İndir</button>
+                      </div>
+                    }
+                  }
+                } @else {
+                  <input
+                    class="input"
+                    [id]="'edit-' + col.columnName"
+                    [type]="inputTypeFor(col.dataType)"
+                    [formControlName]="col.columnName"
+                    [attr.required]="!col.isNullable || null"
+                    [attr.aria-invalid]="getEditControl(col.columnName).touched && getEditControl(col.columnName).invalid"
+                    [attr.aria-describedby]="'edit-err-' + col.columnName">
+                }
+
+                @if (getEditControl(col.columnName).touched && getEditControl(col.columnName).hasError('required')) {
+                  <span [id]="'edit-err-' + col.columnName" class="field-error" role="alert">
+                    {{ col.columnName }} zorunludur.
+                  </span>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="edit-actions">
+            <button type="button" class="btn btn-secondary" (click)="cancelEdit()" [disabled]="editLoading">İptal</button>
+            <button type="submit" class="btn btn-primary" [disabled]="editLoading">
+              @if (editLoading) {
+                <span class="spinner" aria-hidden="true"></span>
+                Kaydediliyor...
+              } @else {
+                Kaydet
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    }
+  </div>
+
+  <!-- ══ ALT PANEL: İlişkili Alt Modeller (Sekmeler) ═══════════════════════ -->
+  @if (loadingChildren) {
+    <div class="children-loading">
+      <span class="spinner" aria-hidden="true"></span>
+      <span>İlişkili modeller yükleniyor...</span>
+    </div>
+  }
+
+  @if (!loadingChildren && childModelNames.length > 0) {
+    <div class="children-panel panel">
+
+      <!-- Sekme çubuğu -->
+      <div class="tab-bar" role="tablist" aria-label="Alt modeller">
+        @for (name of childModelNames; track name) {
+          <button
+            class="tab-btn"
+            [class.tab-btn--active]="activeTab === name"
+            role="tab"
+            [attr.aria-selected]="activeTab === name"
+            (click)="setTab(name)">
+            {{ name }}
+            @if (tabRowCount(name) > 0) {
+              <span class="tab-badge">{{ tabRowCount(name) }}</span>
+            }
+          </button>
+        }
+      </div>
+
+      <!-- Her sekme paneli -->
+      @for (name of childModelNames; track name) {
+        @if (activeTab === name) {
+          @let state = tabState(name);
+          @if (state) {
+            <div class="tab-panel" role="tabpanel" [attr.aria-label]="name + ' kayıtları'">
+
+              <!-- Araç çubuğu: arama + ekle butonu -->
+              <div class="tab-toolbar">
+                <div class="search-box">
+                  <svg class="search-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                  </svg>
+                  <input
+                    type="search"
+                    class="input search-input"
+                    [placeholder]="name + ' içinde ara...'"
+                    [value]="state.searchTerm"
+                    (input)="state.searchTerm = $any($event.target).value"
+                    [attr.aria-label]="name + ' ara'">
+                </div>
+                <div class="tab-toolbar-actions">
+                  <button type="button" class="btn btn-secondary btn-sm" (click)="loadTabRows(state)" [disabled]="state.loading">
+                    <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                    </svg>
+                    Yenile
+                  </button>
+                  @if (permission.can(name, 'create')) {
+                    <button
+                      type="button"
+                      class="btn btn-primary btn-sm"
+                      (click)="state.formMode === 'add' ? closeTabForm(state) : openTabAddForm(state)">
+                      @if (state.formMode === 'add') {
+                        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                          <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                        İptal
+                      } @else {
+                        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                          <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        Yeni {{ name }}
+                      }
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <!-- ── Inline Form Paneli (Ekle / Düzenle) ───────────────────── -->
+              @if (state.formMode !== 'none' && state.form) {
+                <div class="inline-form-card" role="region" [attr.aria-label]="state.formMode === 'add' ? 'Yeni ' + name + ' ekle' : name + ' düzenle'">
+                  <div class="inline-form-header">
+                    <h3 class="inline-form-title">
+                      {{ state.formMode === 'add' ? 'Yeni ' + name : name + ' Düzenle' }}
+                    </h3>
+                    <div class="fk-chip" title="Otomatik atanacak yabancı anahtar">
+                      <svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                      </svg>
+                      {{ state.fkColumn }}: {{ recordId }}
+                    </div>
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="closeTabForm(state)" aria-label="Formu kapat">
+                      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  <form [formGroup]="state.form" (ngSubmit)="submitTabForm(state)" novalidate class="inline-form-body">
+
+                    @if (state.formMsg) {
+                      <div
+                        class="alert"
+                        [class.alert-success]="state.formOk"
+                        [class.alert-danger]="!state.formOk"
+                        [attr.role]="state.formOk ? 'status' : 'alert'"
+                        style="margin-bottom:var(--space-4)">
+                        {{ state.formMsg }}
+                      </div>
+                    }
+
+                    <div class="inline-form-fields">
+                      @for (col of visibleCols(state); track col.columnName) {
+                        <div class="field">
+                          <label [attr.for]="'tab-' + name + '-' + col.columnName">
+                            {{ col.columnName }}
+                            @if (!col.isNullable) { <span style="color:var(--danger)">*</span> }
+                            <span class="col-type-tag">{{ col.dataType }}</span>
+                          </label>
+
+                          @if (inputTypeFor(col.dataType) === 'checkbox') {
+                            <label class="checkbox-label" [attr.for]="'tab-' + name + '-' + col.columnName">
+                              <input [id]="'tab-' + name + '-' + col.columnName" type="checkbox" [formControlName]="col.columnName">
+                              {{ col.columnName }}
+                            </label>
+                          } @else if (inputTypeFor(col.dataType) === 'file') {
+                            <input [id]="'tab-' + name + '-' + col.columnName" type="file"
+                              (change)="onTabFileSelected($event, col.columnName, state)"
+                              style="display:block;margin-bottom:var(--space-2)">
+                            @if (getTabControl(state, col.columnName).value) {
+                              @if (isImage(getTabControl(state, col.columnName).value)) {
+                                <img [src]="imageSrc(getTabControl(state, col.columnName).value)" alt="Önizleme"
+                                  style="max-height:80px;max-width:100%;border-radius:4px;border:1px solid var(--border);object-fit:contain;display:block">
+                              } @else {
+                                <div style="display:flex;align-items:center;gap:var(--space-2)">
+                                  <span class="eyebrow">Dosya mevcut</span>
+                                  <button type="button" class="btn btn-ghost btn-sm"
+                                    (click)="downloadTabFile(getTabControl(state, col.columnName).value, col.columnName, state)">İndir</button>
+                                </div>
+                              }
+                            }
+                          } @else {
+                            <input
+                              class="input"
+                              [id]="'tab-' + name + '-' + col.columnName"
+                              [type]="inputTypeFor(col.dataType)"
+                              [formControlName]="col.columnName"
+                              [attr.required]="!col.isNullable || null"
+                              [attr.aria-invalid]="getTabControl(state, col.columnName).touched && getTabControl(state, col.columnName).invalid"
+                              [attr.aria-describedby]="'tab-err-' + name + '-' + col.columnName">
+                          }
+
+                          @if (getTabControl(state, col.columnName).touched && getTabControl(state, col.columnName).hasError('required')) {
+                            <span [id]="'tab-err-' + name + '-' + col.columnName" class="field-error" role="alert">
+                              {{ col.columnName }} zorunludur.
+                            </span>
+                          }
+                        </div>
+                      }
+                    </div>
+
+                    <div class="inline-form-actions">
+                      <button type="button" class="btn btn-secondary" (click)="closeTabForm(state)" [disabled]="state.formLoading">İptal</button>
+                      <button type="submit" class="btn btn-primary" [disabled]="state.formLoading">
+                        @if (state.formLoading) {
+                          <span class="spinner" aria-hidden="true"></span>
+                          Kaydediliyor...
+                        } @else {
+                          {{ state.formMode === 'add' ? 'Kaydet' : 'Güncelle' }}
+                        }
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              }
+
+              <!-- ── Hata / Yükleniyor / Boş ────────────────────────────── -->
+              @if (state.error) {
+                <div class="alert alert-danger" style="margin:var(--space-3) var(--space-4)" role="alert">{{ state.error }}</div>
+              }
+
+              @if (state.loading) {
+                <div class="tab-loading">
+                  <span class="spinner" aria-hidden="true"></span>
+                  <span>Kayıtlar yükleniyor...</span>
+                </div>
+              }
+
+              @if (!state.loading && !state.error && state.rows.length === 0) {
+                <div class="empty-state" style="padding:var(--space-8) var(--space-5)">
+                  <div class="empty-icon" aria-hidden="true">📋</div>
+                  <h3>{{ name }} kaydı yok</h3>
+                  <p>Bu kayıda ait {{ name }} henüz eklenmemiş.</p>
+                  @if (permission.can(name, 'create')) {
+                    <button type="button" class="btn btn-primary" (click)="openTabAddForm(state)">İlk Kaydı Ekle</button>
+                  }
+                </div>
+              }
+
+              <!-- ── Veri Tablosu ─────────────────────────────────────────── -->
+              @if (!state.loading && getDisplayRows(state).length > 0) {
+                <div class="tab-table-wrapper">
+                  <table class="data-table" [attr.aria-label]="name + ' kayıtları'">
+                    <thead>
+                      <tr>
+                        @for (h of tableHeaders(state); track h) {
+                          <th
+                            scope="col"
+                            class="sortable-th"
+                            (click)="toggleSort(state, h)"
+                            [attr.aria-sort]="state.sortCol === h ? (state.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'">
+                            {{ h }}
+                            <span class="sort-icon" aria-hidden="true">
+                              @if (state.sortCol === h) {
+                                {{ state.sortDir === 'asc' ? '↑' : '↓' }}
+                              } @else {
+                                <span class="sort-icon-neutral">↕</span>
+                              }
+                            </span>
+                          </th>
+                        }
+                        <th scope="col" class="detail-actions-col">İşlemler</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (row of getDisplayRows(state); track $index) {
+                        <tr>
+                          @for (h of tableHeaders(state); track h) {
+                            <td [attr.data-label]="h">
+                              @if (isImage(strVal(row, h))) {
+                                <img
+                                  [src]="imageSrc(strVal(row, h))"
+                                  [alt]="h"
+                                  style="max-height:40px;max-width:60px;border-radius:4px;object-fit:cover;vertical-align:middle"
+                                  loading="lazy">
+                              } @else if (isBase64Value(strVal(row, h))) {
+                                <button type="button" class="btn btn-ghost btn-sm"
+                                  (click)="downloadTabFile(strVal(row, h), h, state)" title="İndir">
+                                  <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                                  </svg>
+                                  İndir
+                                </button>
+                              } @else {
+                                {{ cellVal(row, h) }}
+                              }
+                            </td>
+                          }
+                          <td class="td-actions detail-actions-cell">
+                            <!-- Görüntüle: child detail sayfasına git (GrandChild desteği) -->
+                            <a
+                              [routerLink]="['/models', name, rowId(row)]"
+                              class="btn btn-ghost btn-sm"
+                              title="Detayı görüntüle"
+                              aria-label="Kaydı görüntüle">
+                              <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                              </svg>
+                              Görüntüle
+                            </a>
+                            @if (permission.can(name, 'update')) {
+                              <button
+                                type="button"
+                                class="btn btn-secondary btn-sm"
+                                (click)="openTabEditForm(state, row)"
+                                aria-label="Kaydı düzenle">
+                                Düzenle
+                              </button>
+                            }
+                            @if (permission.can(name, 'delete')) {
+                              <button
+                                type="button"
+                                class="btn btn-danger btn-sm"
+                                (click)="deleteTabRow(state, row)"
+                                aria-label="Kaydı sil">
+                                Sil
+                              </button>
+                            }
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                  <div class="table-footer">
+                    <span class="eyebrow">
+                      @if (state.searchTerm) {
+                        {{ getDisplayRows(state).length }} / {{ state.rows.length }} kayıt
+                      } @else {
+                        {{ state.rows.length }} kayıt
+                      }
+                    </span>
+                  </div>
+                </div>
+              }
+
+              <!-- Arama sonuç yok -->
+              @if (!state.loading && state.rows.length > 0 && getDisplayRows(state).length === 0) {
+                <div class="empty-state" style="padding:var(--space-6)">
+                  <p>"{{ state.searchTerm }}" için sonuç bulunamadı.</p>
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="state.searchTerm = ''">Aramayı Temizle</button>
+                </div>
+              }
+
+            </div>
+          }
+        }
+      }
+    </div>
+  }
+
+  @if (!loadingChildren && childModelNames.length === 0) {
+    <!-- Alt model yok — sessizce geç (kök modeller için normal) -->
+  }
+}

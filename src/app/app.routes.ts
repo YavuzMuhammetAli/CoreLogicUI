@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
+import { adminGuard } from './guards/admin.guard';
 
 export const routes: Routes = [
   // Giriş ekranı (korumasız)
@@ -28,9 +29,33 @@ export const routes: Routes = [
           import('./components/model-data/model-data.component').then(m => m.ModelDataComponent)
       },
       {
+        path: 'models/:typeName/:id',
+        loadComponent: () =>
+          import('./components/model-detail/model-detail.component').then(m => m.ModelDetailComponent)
+      },
+      {
         path: 'build',
+        canActivate: [adminGuard],
         loadComponent: () =>
           import('./components/form-build/form-build.component').then(m => m.FormBuildComponent)
+      },
+      {
+        path: 'drafts',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/draft-models/draft-models.component').then(m => m.DraftModelsComponent)
+      },
+      {
+        path: 'database',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/database-proccess/database-proccess.component').then(m => m.DatabaseProccessComponent)
+      },
+      {
+        path: 'permissions',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/user-permissions/user-permissions.component').then(m => m.UserPermissionsComponent)
       }
     ]
   },

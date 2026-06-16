@@ -1,10 +1,5 @@
 <!-- Sayfa başlığı -->
 <div class="page-header">
-  <div class="breadcrumb">
-    <a routerLink="/models" class="breadcrumb-link">Modeller</a>
-    <span class="breadcrumb-sep" aria-hidden="true">›</span>
-    <span>{{ typeName }}</span>
-  </div>
   <h1 class="page-title">{{ typeName }}</h1>
   @if (model) {
     <p class="page-subtitle">{{ model.columns.length }} sütun · Backend'den canlı veri</p>
@@ -29,6 +24,9 @@
         <h2>Kayıtlar</h2>
       </div>
       <div class="panel-actions">
+        @if (permissionService.isAdmin()) {
+          <button class="btn btn-ghost btn-sm" type="button" (click)="toggleVersionPanel()">Sürümler</button>
+        }
         <button class="btn btn-secondary btn-sm" (click)="loadRows()" type="button" [disabled]="loadingRows">
           @if (loadingRows) {
             <span class="spinner" aria-hidden="true"></span>
@@ -39,12 +37,14 @@
           }
           Yenile
         </button>
-        <button class="btn btn-primary btn-sm" (click)="openAddForm()" type="button">
-          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
-          Ekle
-        </button>
+        @if (permissionService.can(typeName, 'create')) {
+          <button class="btn btn-primary btn-sm" (click)="openAddForm()" type="button">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Ekle
+          </button>
+        }
       </div>
     </div>
 
@@ -68,7 +68,9 @@
           <div class="empty-icon" aria-hidden="true">📋</div>
           <h3>Henüz kayıt yok</h3>
           <p>Bu modele ait kayıt eklenmemiş. "Ekle" butonuyla ilk kaydı oluşturun.</p>
-          <button class="btn btn-primary" (click)="openAddForm()" type="button">İlk Kaydı Ekle</button>
+          @if (permissionService.can(typeName, 'create')) {
+            <button class="btn btn-primary" (click)="openAddForm()" type="button">İlk Kaydı Ekle</button>
+          }
         </div>
       } @else if (rows.length > 0) {
         <div class="table-wrapper">
@@ -83,30 +85,59 @@
             </thead>
             <tbody>
               @for (row of rows; track $index) {
-                <tr>
+                <tr
+                  class="clickable-row"
+                  [routerLink]="['/models', typeName, rowId(row)]"
+                  role="link"
+                  [attr.aria-label]="typeName + ' #' + rowId(row) + ' detayını aç'">
                   @for (header of tableHeaders; track header) {
-                    <td [attr.data-label]="header">{{ cellValue(row, header) }}</td>
-                  }
-                  <td class="td-actions">
-                    <button
-                      class="btn btn-secondary btn-sm"
-                      (click)="openEditForm(row)"
-                      type="button"
-                      aria-label="Kaydı düzenle">
-                      Düzenle
-                    </button>
-                    <button
-                      class="btn btn-danger btn-sm"
-                      (click)="deleteRow(row)"
-                      type="button"
-                      [disabled]="deletingId === (row['ID'] ?? row['id'])"
-                      aria-label="Kaydı sil">
-                      @if (deletingId === (row['ID'] ?? row['id'])) {
-                        <span class="spinner" aria-hidden="true"></span>
+                    <td [attr.data-label]="header">
+                      @if (isImage(rowVal(row, header))) {
+                        <img
+                          [src]="imageSrc(rowVal(row, header))"
+                          alt="{{ header }}"
+                          style="max-height: 48px; max-width: 72px; border-radius: 4px; object-fit: cover; vertical-align: middle;"
+                          loading="lazy">
+                      } @else if (isBase64Value(rowVal(row, header))) {
+                        <button
+                          type="button"
+                          class="btn btn-ghost btn-sm"
+                          (click)="downloadFile(rowVal(row, header), header); $event.stopPropagation()"
+                          title="Dosyayı indir">
+                          <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                          </svg>
+                          İndir
+                        </button>
                       } @else {
-                        Sil
+                        {{ cellValue(row, header) }}
                       }
-                    </button>
+                    </td>
+                  }
+                  <td class="td-actions" (click)="$event.stopPropagation()">
+                    @if (permissionService.can(typeName, 'update')) {
+                      <button
+                        class="btn btn-secondary btn-sm"
+                        (click)="openEditForm(row)"
+                        type="button"
+                        aria-label="Kaydı düzenle">
+                        Düzenle
+                      </button>
+                    }
+                    @if (permissionService.can(typeName, 'delete')) {
+                      <button
+                        class="btn btn-danger btn-sm"
+                        (click)="deleteRow(row)"
+                        type="button"
+                        [disabled]="deletingId === (row['ID'] ?? row['id'])"
+                        aria-label="Kaydı sil">
+                        @if (deletingId === (row['ID'] ?? row['id'])) {
+                          <span class="spinner" aria-hidden="true"></span>
+                        } @else {
+                          Sil
+                        }
+                      </button>
+                    }
                   </td>
                 </tr>
               }
@@ -119,6 +150,60 @@
       }
     }
   </div>
+
+  <!-- Sürüm Geçmişi Paneli -->
+  @if (permissionService.isAdmin() && showVersionPanel()) {
+    <div class="panel" style="margin-top: 1.5rem">
+      <div class="panel-head">
+        <h3>Sürüm Geçmişi</h3>
+      </div>
+      <div class="panel-body">
+        @if (versions().length === 0) {
+          <div class="empty-state">
+            <p>Bu model için kayıtlı sürüm bulunamadı.</p>
+          </div>
+        } @else {
+          <table class="data-table" aria-label="Sürüm geçmişi">
+            <thead>
+              <tr>
+                <th scope="col">Versiyon</th>
+                <th scope="col">Durum</th>
+                <th scope="col">Namespace</th>
+                <th scope="col">Oluşturulma</th>
+                <th scope="col">İşlem</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (v of versions(); track v.id) {
+                <tr>
+                  <td>v{{ v.version }}</td>
+                  <td>
+                    @if (v.status === 1 || v.status === 'Published') {
+                      <span class="badge badge-success">Aktif</span>
+                    } @else {
+                      <span class="badge badge-warn">Arşiv</span>
+                    }
+                  </td>
+                  <td>{{ v.namespace }}</td>
+                  <td>{{ v.createdOn | date:'short' }}</td>
+                  <td class="td-actions">
+                    @if (v.status !== 1 && v.status !== 'Published') {
+                      <button
+                        class="btn btn-ghost btn-sm"
+                        type="button"
+                        (click)="doRollback(v.version)">
+                        Geri Al
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    </div>
+  }
 
   <!-- Form Modal (inline) -->
   @if (showForm) {
@@ -164,6 +249,37 @@
                         [formControlName]="col.columnName">
                       {{ col.columnName }} aktif
                     </label>
+                  } @else if (inputTypeFor(col.dataType) === 'file') {
+                    <!-- Dosya / resim alanı -->
+                    <input
+                      [id]="'rec-' + col.columnName"
+                      type="file"
+                      (change)="onFileSelected($event, col.columnName)"
+                      [attr.aria-describedby]="'rec-err-' + col.columnName"
+                      style="display: block; margin-bottom: var(--space-2)">
+                    @if (getControl(col.columnName).value) {
+                      @if (isImage(getControl(col.columnName).value)) {
+                        <!-- Seçili/mevcut resim önizlemesi -->
+                        <img
+                          [src]="imageSrc(getControl(col.columnName).value)"
+                          alt="Önizleme"
+                          style="max-height: 120px; max-width: 100%; border-radius: 6px; border: 1px solid var(--border); object-fit: contain; display: block; margin-bottom: var(--space-2)">
+                      } @else {
+                        <!-- Seçili/mevcut dosya -->
+                        <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2)">
+                          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                          </svg>
+                          <span class="eyebrow">Dosya mevcut</span>
+                          <button
+                            type="button"
+                            class="btn btn-ghost btn-sm"
+                            (click)="downloadFile(getControl(col.columnName).value, col.columnName)">
+                            İndir
+                          </button>
+                        </div>
+                      }
+                    }
                   } @else {
                     <input
                       [id]="'rec-' + col.columnName"

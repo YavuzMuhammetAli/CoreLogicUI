@@ -1,0 +1,273 @@
+<div class="perm-page">
+
+  <!-- Sayfa başlığı -->
+  <div class="page-header">
+    <span class="eyebrow">Yönetim</span>
+    <h1 class="page-title">Kullanıcı Yetkileri</h1>
+    <p class="page-subtitle">Kullanıcıları seçin, model bazında okuma/yazma izni atayın ve admin rolünü yönetin.</p>
+  </div>
+
+  <div class="perm-layout">
+
+    <!-- ── Sol: Kullanıcı Listesi ── -->
+    <div class="panel user-panel">
+      <div class="panel-head">
+        <h2 class="panel-head-title">Kullanıcılar</h2>
+        <div class="panel-actions">
+          <button class="btn btn-ghost btn-sm" (click)="loadUsers()" type="button" title="Yenile"
+                  [disabled]="usersLoading()">
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2">
+              <path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="panel-body">
+        <!-- Yükleniyor -->
+        @if (usersLoading()) {
+          <div class="empty-state">
+            <span class="spinner" aria-label="Yükleniyor"></span>
+          </div>
+        }
+
+        <!-- Hata -->
+        @if (!usersLoading() && usersError()) {
+          <div class="alert alert-danger" role="alert">{{ usersError() }}</div>
+        }
+
+        <!-- Kullanıcı tablosu -->
+        @if (!usersLoading() && !usersError() && users().length > 0) {
+          <div class="table-wrapper">
+            <table class="data-table" aria-label="Kullanıcı listesi">
+              <thead>
+                <tr>
+                  <th>Ad Soyad</th>
+                  <th>E-posta</th>
+                  <th>Durum</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (u of users(); track u.id) {
+                  <tr
+                    class="user-row"
+                    [class.selected]="selectedUser()?.id === u.id"
+                    (click)="selectUser(u)"
+                    [attr.aria-selected]="selectedUser()?.id === u.id"
+                    tabindex="0"
+                    (keydown.enter)="selectUser(u)"
+                    (keydown.space)="selectUser(u)"
+                    [attr.aria-label]="'Kullanıcıyı seç: ' + fullName(u)">
+                    <td>
+                      {{ fullName(u) }}
+                      @if (u.isAdmin) {
+                        <span class="badge badge-meta" title="Admin">Admin</span>
+                      }
+                    </td>
+                    <td class="email-cell">{{ u.email }}</td>
+                    <td>
+                      @if (u.status) {
+                        <span class="badge badge-success">Aktif</span>
+                      } @else {
+                        <span class="badge badge-warn">Pasif</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        <!-- Boş -->
+        @if (!usersLoading() && !usersError() && users().length === 0) {
+          <div class="empty-state">
+            <div class="empty-icon">
+              <svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="1.5">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <p>Kayıtlı kullanıcı bulunamadı.</p>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- ── Sağ: Yetki Yönetimi ── -->
+    <div class="panel perm-panel">
+
+      @if (!selectedUser()) {
+        <!-- Kullanıcı seçilmedi -->
+        <div class="panel-body">
+          <div class="empty-state">
+            <div class="empty-icon">
+              <svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="1.5">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <p>Düzenlemek için soldaki listeden bir kullanıcı seçin.</p>
+          </div>
+        </div>
+      }
+
+      @if (selectedUser(); as user) {
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-head-title">{{ fullName(user) }}</h2>
+            <span class="perm-subtitle">{{ user.email }}</span>
+          </div>
+        </div>
+
+        <div class="panel-body">
+
+          <!-- ── Admin Rol Yönetimi ── -->
+          <section class="section-block" aria-labelledby="admin-section-title">
+            <h3 id="admin-section-title" class="section-title">Admin Rolü</h3>
+
+            <div class="admin-toggle-row">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  [checked]="user.isAdmin"
+                  [disabled]="adminSaving()"
+                  (change)="toggleAdmin(!user.isAdmin)"
+                  aria-describedby="admin-help">
+                Bu kullanıcıya admin yetkisi ver
+              </label>
+              @if (adminSaving()) {
+                <span class="spinner" aria-label="Kaydediliyor"></span>
+              }
+            </div>
+
+            <p id="admin-help" class="field-help">
+              Admin, tüm model ve platform özelliklerine erişir.
+              <strong>Rol değişikliği kullanıcının yeni girişinde etkinleşir.</strong>
+            </p>
+
+            @if (adminMsg()) {
+              <div class="alert" [class.alert-success]="adminMsgType()==='success'"
+                   [class.alert-danger]="adminMsgType()==='danger'" role="alert">
+                {{ adminMsg() }}
+              </div>
+            }
+          </section>
+
+          <hr class="section-divider">
+
+          <!-- ── Model İzin Matrisi ── -->
+          <section class="section-block" aria-labelledby="perm-section-title">
+            <h3 id="perm-section-title" class="section-title">Model İzinleri</h3>
+
+            @if (selectedIsAdmin) {
+              <div class="alert alert-info" role="status">
+                Bu kullanıcı admin olduğundan tüm modellere tam erişimi vardır. İzin matrisi uygulanmaz.
+              </div>
+            }
+
+            @if (permLoading()) {
+              <div class="empty-state">
+                <span class="spinner" aria-label="Yükleniyor"></span>
+              </div>
+            }
+
+            @if (!permLoading() && permError()) {
+              <div class="alert alert-danger" role="alert">{{ permError() }}</div>
+            }
+
+            @if (!permLoading() && !permError() && permRows().length > 0) {
+              <div class="table-wrapper">
+                <table class="data-table perm-table"
+                       aria-label="Model izin matrisi"
+                       [attr.aria-disabled]="selectedIsAdmin">
+                  <thead>
+                    <tr>
+                      <th>Model</th>
+                      <th class="perm-col">
+                        <abbr title="Okuma">Oku</abbr>
+                      </th>
+                      <th class="perm-col">
+                        <abbr title="Oluşturma">Ekle</abbr>
+                      </th>
+                      <th class="perm-col">
+                        <abbr title="Güncelleme">Güncelle</abbr>
+                      </th>
+                      <th class="perm-col">
+                        <abbr title="Silme">Sil</abbr>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of permRows(); track row.modelName) {
+                      <tr [class.dirty-row]="row.dirty">
+                        <td class="model-name-cell">{{ row.modelName }}</td>
+                        <td class="perm-col">
+                          <input type="checkbox" [(ngModel)]="row.canRead"
+                                 [disabled]="selectedIsAdmin"
+                                 (change)="markDirty(row)"
+                                 [attr.aria-label]="row.modelName + ' okuma'">
+                        </td>
+                        <td class="perm-col">
+                          <input type="checkbox" [(ngModel)]="row.canCreate"
+                                 [disabled]="selectedIsAdmin"
+                                 (change)="markDirty(row)"
+                                 [attr.aria-label]="row.modelName + ' oluşturma'">
+                        </td>
+                        <td class="perm-col">
+                          <input type="checkbox" [(ngModel)]="row.canUpdate"
+                                 [disabled]="selectedIsAdmin"
+                                 (change)="markDirty(row)"
+                                 [attr.aria-label]="row.modelName + ' güncelleme'">
+                        </td>
+                        <td class="perm-col">
+                          <input type="checkbox" [(ngModel)]="row.canDelete"
+                                 [disabled]="selectedIsAdmin"
+                                 (change)="markDirty(row)"
+                                 [attr.aria-label]="row.modelName + ' silme'">
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              @if (!selectedIsAdmin) {
+                <div class="perm-footer">
+                  <button
+                    class="btn btn-primary"
+                    (click)="savePermissions()"
+                    [disabled]="permSaving()"
+                    type="button">
+                    @if (permSaving()) {
+                      <span class="spinner" aria-label="Kaydediliyor"></span>
+                      Kaydediliyor…
+                    } @else {
+                      İzinleri Kaydet
+                    }
+                  </button>
+                </div>
+              }
+
+              @if (permMsg()) {
+                <div class="alert" [class.alert-success]="permMsgType()==='success'"
+                     [class.alert-danger]="permMsgType()==='danger'" role="alert">
+                  {{ permMsg() }}
+                </div>
+              }
+            }
+
+            @if (!permLoading() && !permError() && permRows().length === 0) {
+              <div class="empty-state">
+                <p>Sistemde henüz yayınlanmış model bulunmuyor.</p>
+              </div>
+            }
+          </section>
+
+        </div>
+      }
+    </div>
+  </div>
+</div>

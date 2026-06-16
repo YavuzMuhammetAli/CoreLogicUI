@@ -1,0 +1,116 @@
+/* ── Alt model paneli ──────────────────────────────────────────────────────── */
+
+.child-panel {
+  margin-top: var(--space-4);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+
+  /* Daha derin iç içe panel: sol kenar vurgusu */
+  &.child-panel--nested {
+    border-left: 3px solid var(--accent);
+    margin-left: var(--space-4);
+  }
+}
+
+/* ── Panel başlığı ─────────────────────────────────────────────────────────── */
+
+.child-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-warm);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.child-panel-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+
+  h3 {
+    font-size: var(--text-base);
+    font-weight: 700;
+    color: var(--fg);
+    margin: 0;
+  }
+
+  .eyebrow {
+    font-size: var(--text-xs);
+    color: var(--accent);
+  }
+}
+
+.child-panel-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ── Boş durum ─────────────────────────────────────────────────────────────── */
+
+.child-empty {
+  padding: var(--space-4) var(--space-5);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+/* ── Yükleniyor ────────────────────────────────────────────────────────────── */
+
+.child-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+/* ── Tablo sarmalayıcı ─────────────────────────────────────────────────────── */
+
+.child-table-wrapper {
+  overflow-x: auto;
+
+  .data-table {
+    font-size: var(--text-sm);
+  }
+}
+
+/* ── Genişlet sütunu / hücre ───────────────────────────────────────────────── */
+
+.expand-col,
+.expand-cell {
+  width: 60px;
+  text-align: center;
+}
+
+.expand-btn {
+  padding: var(--space-1) var(--space-2);
+
+  &:hover {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+}
+
+/* ── Genişletilmiş satır ───────────────────────────────────────────────────── */
+
+.child-expand-row > td {
+  padding: 0;
+  background: var(--bg);
+}
+
+/* ── col-type-hint (form etiketlerinde) ────────────────────────────────────── */
+
+.col-type-hint {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  margin-left: var(--space-1);
+  font-weight: 400;
+}
+
+.req {
+  color: var(--danger);
+  margin-left: 2px;
+}
