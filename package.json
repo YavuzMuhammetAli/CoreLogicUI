@@ -7,7 +7,7 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "serve:ssr:CoreLogicUI": "node dist/core-logic-ui/server/server.mjs"
+    "serve:ssr:CoreLogicUI": "echo 'SSR kaldirildi — artik kullanilmiyor'"
   },
   "private": true,
   "dependencies": {

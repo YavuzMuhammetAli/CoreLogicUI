@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
 import { adminGuard } from './guards/admin.guard';
+import { modelPermissionGuard } from './guards/model-permission.guard';
 
 export const routes: Routes = [
   // Giriş ekranı (korumasız)
@@ -25,11 +26,21 @@ export const routes: Routes = [
       },
       {
         path: 'models/:typeName',
+        canActivate: [modelPermissionGuard('read')],
         loadComponent: () =>
           import('./components/model-data/model-data.component').then(m => m.ModelDataComponent)
       },
+      // "new" sabit segmenti ":id" param'ından önce gelmeli — aksi halde Angular "new" stringini ID olarak yakalar
+      {
+        path: 'models/:typeName/new',
+        canActivate: [modelPermissionGuard('create')],
+        data: { mode: 'new' },
+        loadComponent: () =>
+          import('./components/model-detail/model-detail.component').then(m => m.ModelDetailComponent)
+      },
       {
         path: 'models/:typeName/:id',
+        canActivate: [modelPermissionGuard('read')],
         loadComponent: () =>
           import('./components/model-detail/model-detail.component').then(m => m.ModelDetailComponent)
       },
@@ -56,6 +67,12 @@ export const routes: Routes = [
         canActivate: [adminGuard],
         loadComponent: () =>
           import('./components/user-permissions/user-permissions.component').then(m => m.UserPermissionsComponent)
+      },
+      {
+        // Kullanıcının kendi profil sayfası — authGuard layout'tan miras alınır
+        path: 'profile',
+        loadComponent: () =>
+          import('./components/user-profile/user-profile.component').then(m => m.UserProfileComponent)
       }
     ]
   },

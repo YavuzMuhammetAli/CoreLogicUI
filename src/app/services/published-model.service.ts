@@ -20,6 +20,19 @@ export interface PublishedModel {
   columns: PublishedColumn[];
 }
 
+/** Sayfalı yanıt verisi — backend PagedResult ile eşleşir */
+export interface PagedData<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** Sayfalı getAll yanıtı */
+export interface PagedResponseModel<T> extends ResponseModel {
+  data: PagedData<T>;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PublishedModelService {
   private readonly baseUrl = `${environment.apiBaseUrl}/PublishedModel`;
@@ -38,6 +51,27 @@ export class PublishedModelService {
       params = params.set('parentColumn', parentColumn).set('parentId', parentId);
     }
     return this.http.get<ListResponseModel<Record<string, unknown>>>(`${this.baseUrl}/getall`, { params });
+  }
+
+  /**
+   * Sayfalı kayıt listesi getirir. Backend'e page + pageSize gönderilir; yalnız ilgili
+   * sayfa döner. Alt-model sekmeleri paramsız getAll kullanmaya devam eder.
+   */
+  getAllPaged(
+    typeName: string,
+    page: number,
+    pageSize: number,
+    parentColumn?: string,
+    parentId?: number
+  ): Observable<PagedResponseModel<Record<string, unknown>>> {
+    let params = new HttpParams()
+      .set('typeName', typeName)
+      .set('page', page)
+      .set('pageSize', pageSize);
+    if (parentColumn && parentId != null) {
+      params = params.set('parentColumn', parentColumn).set('parentId', parentId);
+    }
+    return this.http.get<PagedResponseModel<Record<string, unknown>>>(`${this.baseUrl}/getall`, { params });
   }
 
   /** Belirtilen parent modelin doğrudan alt model adlarını döndürür. */

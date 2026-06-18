@@ -1,0 +1,341 @@
+<div class="profile-page">
+
+  <!-- Sayfa başlığı -->
+  <div class="page-header">
+    <span class="eyebrow">Hesabım</span>
+    <h1 class="page-title">Profil Ayarları</h1>
+    <p class="page-subtitle">Kişisel bilgilerinizi, fotoğrafınızı ve şifrenizi buradan yönetebilirsiniz.</p>
+  </div>
+
+  <!-- Yüklenme -->
+  @if (loading()) {
+    <div class="profile-loading">
+      <span class="spinner" aria-label="Yükleniyor"></span>
+      <span>Profil yükleniyor…</span>
+    </div>
+  }
+
+  <!-- Hata -->
+  @if (!loading() && loadError()) {
+    <div class="alert alert-danger" role="alert">{{ loadError() }}</div>
+  }
+
+  @if (!loading() && !loadError() && profile(); as p) {
+    <div class="profile-layout">
+
+      <!-- ══════════ Sol: Fotoğraf + Hesap Bilgileri ══════════ -->
+      <div class="profile-side">
+
+        <!-- Fotoğraf paneli -->
+        <div class="panel avatar-panel">
+          <div class="panel-body avatar-body">
+
+            <div class="avatar-wrap" [class.uploading]="photoUploading()">
+              @if (photoPreview()) {
+                <img
+                  [src]="photoPreview()"
+                  alt="Profil fotoğrafı"
+                  class="avatar-img"
+                  aria-label="Profil fotoğrafı">
+              } @else {
+                <span class="avatar-initials" aria-hidden="true">{{ initials }}</span>
+              }
+
+              @if (photoUploading()) {
+                <div class="avatar-overlay" aria-hidden="true">
+                  <span class="spinner"></span>
+                </div>
+              }
+            </div>
+
+            <div class="avatar-name">
+              <strong>{{ p.firstName }} {{ p.lastName }}</strong>
+              <span class="avatar-email">{{ p.email }}</span>
+              @if (p.isAdmin) {
+                <span class="badge badge-meta">Admin</span>
+              } @else {
+                <span class="badge">Kullanıcı</span>
+              }
+            </div>
+
+            <!-- Fotoğraf yükleme input'u (gizli) -->
+            <input
+              #photoInput
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              class="sr-only"
+              aria-label="Fotoğraf seç"
+              (change)="onPhotoSelected($event)">
+
+            <div class="avatar-actions">
+              <button
+                class="btn btn-secondary btn-sm"
+                type="button"
+                (click)="triggerPhotoInput()"
+                [disabled]="photoUploading()"
+                aria-label="Fotoğraf yükle veya değiştir">
+                <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                Fotoğraf Yükle
+              </button>
+
+              @if (p.photoUrl) {
+                <button
+                  class="btn btn-ghost btn-sm"
+                  type="button"
+                  (click)="removePhoto()"
+                  [disabled]="photoUploading()"
+                  aria-label="Profil fotoğrafını sil">
+                  Kaldır
+                </button>
+              }
+            </div>
+
+            <p class="field-help" style="text-align:center; margin-top: var(--space-2);">
+              JPG, PNG veya WebP · Maks. 2 MB
+            </p>
+          </div>
+        </div>
+
+        <!-- Hesap bilgileri (salt-okunur) -->
+        <div class="panel" id="account">
+          <div class="panel-head">
+            <h2 class="panel-head-title">Hesap Bilgileri</h2>
+          </div>
+          <div class="panel-body">
+            <dl class="info-list">
+              <div class="info-row">
+                <dt>Kayıt Tarihi</dt>
+                <dd>{{ formatDate(p.createdOn) }}</dd>
+              </div>
+              <div class="info-row">
+                <dt>Rol</dt>
+                <dd>
+                  @if (p.isAdmin) {
+                    <span class="badge badge-meta">Admin</span>
+                  } @else {
+                    <span class="badge">Normal Kullanıcı</span>
+                  }
+                </dd>
+              </div>
+              <div class="info-row">
+                <dt>Hesap Durumu</dt>
+                <dd>
+                  @if (p.status) {
+                    <span class="badge badge-success">Aktif</span>
+                  } @else {
+                    <span class="badge badge-warn">Pasif</span>
+                  }
+                </dd>
+              </div>
+              <div class="info-row">
+                <dt>Kullanıcı ID</dt>
+                <dd class="info-meta">#{{ p.id }}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ══════════ Sağ: Formlar ══════════ -->
+      <div class="profile-main">
+
+        <!-- Bilgiler formu -->
+        <div class="panel">
+          <div class="panel-head">
+            <h2 class="panel-head-title">Kişisel Bilgiler</h2>
+          </div>
+          <div class="panel-body">
+            <form
+              [formGroup]="infoForm"
+              (ngSubmit)="saveInfo()"
+              novalidate
+              class="flow">
+
+              <div class="field-row">
+                <div class="field">
+                  <label for="firstName">Ad <span class="req">*</span></label>
+                  <input
+                    id="firstName"
+                    type="text"
+                    formControlName="firstName"
+                    autocomplete="given-name"
+                    [attr.aria-invalid]="fi['firstName'].touched && fi['firstName'].invalid"
+                    aria-describedby="firstName-err">
+                  @if (fi['firstName'].touched && fi['firstName'].hasError('required')) {
+                    <span id="firstName-err" class="field-error" role="alert">Ad zorunludur.</span>
+                  }
+                </div>
+
+                <div class="field">
+                  <label for="lastName">Soyad <span class="req">*</span></label>
+                  <input
+                    id="lastName"
+                    type="text"
+                    formControlName="lastName"
+                    autocomplete="family-name"
+                    [attr.aria-invalid]="fi['lastName'].touched && fi['lastName'].invalid"
+                    aria-describedby="lastName-err">
+                  @if (fi['lastName'].touched && fi['lastName'].hasError('required')) {
+                    <span id="lastName-err" class="field-error" role="alert">Soyad zorunludur.</span>
+                  }
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="email">E-posta <span class="req">*</span></label>
+                <input
+                  id="email"
+                  type="email"
+                  formControlName="email"
+                  autocomplete="email"
+                  [attr.aria-invalid]="fi['email'].touched && fi['email'].invalid"
+                  aria-describedby="email-err email-help">
+                <span id="email-help" class="field-help">
+                  E-posta değişikliği bir sonraki girişte JWT'ye yansır.
+                </span>
+                @if (fi['email'].touched && fi['email'].hasError('required')) {
+                  <span id="email-err" class="field-error" role="alert">E-posta zorunludur.</span>
+                } @else if (fi['email'].touched && fi['email'].hasError('email')) {
+                  <span id="email-err" class="field-error" role="alert">Geçerli bir e-posta adresi girin.</span>
+                }
+              </div>
+
+              <div class="field-row">
+                <div class="field">
+                  <label for="tc">TC Kimlik No</label>
+                  <input
+                    id="tc"
+                    type="text"
+                    formControlName="tc"
+                    maxlength="11"
+                    autocomplete="off"
+                    inputmode="numeric"
+                    [attr.aria-invalid]="fi['tc'].touched && fi['tc'].invalid"
+                    aria-describedby="tc-err">
+                  @if (fi['tc'].touched && fi['tc'].hasError('pattern')) {
+                    <span id="tc-err" class="field-error" role="alert">TC Kimlik No 11 haneli olmalıdır.</span>
+                  }
+                </div>
+
+                <div class="field">
+                  <label for="birthDay">Doğum Tarihi</label>
+                  <input
+                    id="birthDay"
+                    type="date"
+                    formControlName="birthDay"
+                    autocomplete="bday">
+                </div>
+              </div>
+
+              <div class="form-footer">
+                <button
+                  class="btn btn-primary"
+                  type="submit"
+                  [disabled]="infoForm.invalid || infoSaving()">
+                  @if (infoSaving()) {
+                    <span class="spinner" aria-label="Kaydediliyor"></span>
+                    Kaydediliyor…
+                  } @else {
+                    Bilgileri Kaydet
+                  }
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Şifre değiştirme formu -->
+        <div class="panel">
+          <div class="panel-head">
+            <h2 class="panel-head-title">Şifre Değiştir</h2>
+          </div>
+          <div class="panel-body">
+            <form
+              [formGroup]="pwForm"
+              (ngSubmit)="changePassword()"
+              novalidate
+              class="flow">
+
+              <div class="field">
+                <label for="currentPassword">Mevcut Şifre <span class="req">*</span></label>
+                <input
+                  id="currentPassword"
+                  type="password"
+                  formControlName="currentPassword"
+                  autocomplete="current-password"
+                  [attr.aria-invalid]="fp['currentPassword'].touched && fp['currentPassword'].invalid"
+                  aria-describedby="curpw-err">
+                @if (fp['currentPassword'].touched && fp['currentPassword'].hasError('required')) {
+                  <span id="curpw-err" class="field-error" role="alert">Mevcut şifre zorunludur.</span>
+                }
+              </div>
+
+              <div class="field-row">
+                <div class="field">
+                  <label for="newPassword">Yeni Şifre <span class="req">*</span></label>
+                  <input
+                    id="newPassword"
+                    type="password"
+                    formControlName="newPassword"
+                    autocomplete="new-password"
+                    [attr.aria-invalid]="fp['newPassword'].touched && fp['newPassword'].invalid"
+                    aria-describedby="newpw-err newpw-help">
+                  <span id="newpw-help" class="field-help">En az 6 karakter</span>
+                  @if (fp['newPassword'].touched && fp['newPassword'].hasError('required')) {
+                    <span id="newpw-err" class="field-error" role="alert">Yeni şifre zorunludur.</span>
+                  } @else if (fp['newPassword'].touched && fp['newPassword'].hasError('minlength')) {
+                    <span id="newpw-err" class="field-error" role="alert">Şifre en az 6 karakter olmalıdır.</span>
+                  }
+                </div>
+
+                <div class="field">
+                  <label for="confirmPassword">Yeni Şifre Tekrar <span class="req">*</span></label>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    formControlName="confirmPassword"
+                    autocomplete="new-password"
+                    [attr.aria-invalid]="fp['confirmPassword'].touched && (fp['confirmPassword'].invalid || pwForm.hasError('mismatch'))"
+                    aria-describedby="confirmpw-err">
+                  @if (fp['confirmPassword'].touched && fp['confirmPassword'].hasError('required')) {
+                    <span id="confirmpw-err" class="field-error" role="alert">Şifre tekrarı zorunludur.</span>
+                  } @else if (fp['confirmPassword'].touched && pwForm.hasError('mismatch')) {
+                    <span id="confirmpw-err" class="field-error" role="alert">Şifreler eşleşmiyor.</span>
+                  }
+                </div>
+              </div>
+
+              @if (pwSuccess()) {
+                <div class="alert alert-success" role="status">
+                  Şifreniz başarıyla değiştirildi.
+                </div>
+              }
+
+              <div class="form-footer">
+                <button
+                  class="btn btn-primary"
+                  type="submit"
+                  [disabled]="pwForm.invalid || pwSaving()">
+                  @if (pwSaving()) {
+                    <span class="spinner" aria-label="Kaydediliyor"></span>
+                    Kaydediliyor…
+                  } @else {
+                    Şifreyi Değiştir
+                  }
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>

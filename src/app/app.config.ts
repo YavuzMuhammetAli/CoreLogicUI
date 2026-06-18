@@ -4,13 +4,12 @@ import {
   PLATFORM_ID,
   provideZoneChangeDetection
 } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withEnabledBlockingInitialNavigation } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 
 import { routes } from './app.routes';
-import { provideClientHydration } from '@angular/platform-browser';
 import { authInterceptor } from './interceptors/auth.interceptor';
 import { errorInterceptor } from './interceptors/error.interceptor';
 import { PermissionService } from './services/permission.service';
@@ -35,7 +34,7 @@ function permissionInitializerFactory(
   platformId: Object
 ): () => Promise<void> {
   return () => {
-    // SSR ortamında tarayıcı yoktur; localStorage/JWT erişimi anlamsız
+    // Tarayıcı dışında (artık olmasa da guard yapısını bozmamak için korundu)
     if (!isPlatformBrowser(platformId)) return Promise.resolve();
 
     return firstValueFrom(permissionService.loadMyPermissions())
@@ -47,8 +46,9 @@ function permissionInitializerFactory(
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(routes),
-    provideClientHydration(),
+    // withEnabledBlockingInitialNavigation: APP_INITIALIZER (izin yüklemesi) tamamlanana
+    // dek navigasyon başlamaz; guard'lar sinyal dolu olduğunda çalışır → login flash yok.
+    provideRouter(routes, withEnabledBlockingInitialNavigation()),
     provideHttpClient(withFetch(), withInterceptors([authInterceptor, errorInterceptor])),
 
     // Guard yarış durumu düzeltmesi: izinleri router etkinleşmeden yükle

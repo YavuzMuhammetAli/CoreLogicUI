@@ -198,6 +198,12 @@
                       <th class="perm-col">
                         <abbr title="Silme">Sil</abbr>
                       </th>
+                      <th class="perm-col">
+                        <abbr title="Navigasyon — modelin kullanıcı sidebar'ında görünsün mü?">Nav</abbr>
+                      </th>
+                      <th class="perm-col">
+                        <abbr title="Sadece kendi kayıtları — kullanıcı yalnızca kendi oluşturduğu kayıtları görür ve değiştirebilir">Kendi</abbr>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -227,6 +233,18 @@
                                  [disabled]="selectedIsAdmin"
                                  (change)="markDirty(row)"
                                  [attr.aria-label]="row.modelName + ' silme'">
+                        </td>
+                        <td class="perm-col">
+                          <input type="checkbox" [(ngModel)]="row.canShowInNav"
+                                 [disabled]="selectedIsAdmin"
+                                 (change)="markDirty(row)"
+                                 [attr.aria-label]="row.modelName + ' navigasyonda göster'">
+                        </td>
+                        <td class="perm-col">
+                          <input type="checkbox" [(ngModel)]="row.canOwnOnly"
+                                 [disabled]="selectedIsAdmin"
+                                 (change)="markDirty(row)"
+                                 [attr.aria-label]="row.modelName + ' sadece kendi kayıtları'">
                         </td>
                       </tr>
                     }

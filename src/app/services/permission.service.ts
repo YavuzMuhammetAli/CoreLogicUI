@@ -1,7 +1,7 @@
 import { Injectable, signal, inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
-import { Observable, tap } from 'rxjs';
+import { Observable, of, tap, catchError, shareReplay, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface ModelPermission {
@@ -10,6 +10,10 @@ export interface ModelPermission {
   canCreate: boolean;
   canUpdate: boolean;
   canDelete: boolean;
+  /** Kullanıcı sidebar navigasyonunda görünsün mü? Read'den bağımsız bayrak. */
+  canShowInNav: boolean;
+  /** Kullanıcı yalnızca kendi oluşturduğu (CreatedBy==userId) kayıtları görebilir/değiştirebilir. */
+  canOwnOnly: boolean;
 }
 
 export interface MyPermissionsResponse {
@@ -29,6 +33,41 @@ export class PermissionService {
 
   /** Kullanıcının yetki verisi — null ise henüz yüklenmedi */
   private _data = signal<MyPermissionsResponse['data'] | null>(null);
+
+  /**
+   * Uçuştaki yükleme isteği — aynı anda birden fazla guard çalışırsa
+   * tek HTTP isteğiyle paylaşılır. clear() çağrısında sıfırlanır.
+   */
+  private _loadingRef: Observable<MyPermissionsResponse['data'] | null> | null = null;
+
+  /**
+   * Yetki verisinin yüklü olmasını garantiler.
+   *
+   * - Sinyal zaten doluysa anında mevcut veriyi emit eder (HTTP isteği atmaz).
+   * - Değilse `loadMyPermissions()` çağırır; aynı anda birden fazla guard
+   *   çalışırsa `shareReplay(1)` sayesinde tek HTTP isteği atılır.
+   * - Hata durumunda `null` emit eder; 401 `errorInterceptor` tarafından
+   *   login yönlendirmesiyle ele alınır.
+   *
+   * Guard'larda kullanım: `permissions.ensureLoaded().pipe(map(() => ...))`
+   */
+  ensureLoaded(): Observable<MyPermissionsResponse['data'] | null> {
+    // Zaten dolduysa — anında dön, yeniden istek atma
+    if (this._data() !== null) {
+      return of(this._data());
+    }
+
+    // Uçuştaki isteği paylaş; tamamlanınca referansı temizle
+    if (!this._loadingRef) {
+      this._loadingRef = this.loadMyPermissions().pipe(
+        map(() => this._data()),
+        catchError(() => of(null)),
+        shareReplay(1)
+      );
+    }
+
+    return this._loadingRef;
+  }
 
   /**
    * Kullanıcının yetkilerini backend'den yükler.
@@ -82,6 +121,37 @@ export class PermissionService {
     }
   }
 
+  /**
+   * Kullanıcının bu modelde yalnızca kendi kayıtlarıyla sınırlı olup olmadığını döndürür.
+   * Admin için her zaman false (admin tüm kayıtları görür, kısıt uygulanmaz).
+   * Gerçek veri filtrelemesi backend'dedir; bu metot yalnızca UI bilgilendirme etiketi için.
+   */
+  isOwnRecordsOnly(modelName: string): boolean {
+    const data = this._data();
+    if (!data) return false;
+    if (data.isAdmin) return false; // admin kısıtsız
+    const perm = data.permissions.find(
+      p => p.modelName.toLowerCase() === modelName.toLowerCase()
+    );
+    return perm?.canOwnOnly ?? false;
+  }
+
+  /**
+   * Verilen modelin navigasyonda görünüp görünmeyeceğini senkron kontrol eder.
+   * Yönetici ise her zaman true döner (admin sidebar'ı farklı branch'te render edilir,
+   * bu metot admin görünürlüğünü etkilemez; yalnızca normal kullanıcı nav filtresi için).
+   */
+  canNavigate(modelName: string): boolean {
+    const data = this._data();
+    if (!data) return false;
+    if (data.isAdmin) return true;
+
+    const perm = data.permissions.find(
+      p => p.modelName.toLowerCase() === modelName.toLowerCase()
+    );
+    return perm?.canShowInNav ?? false;
+  }
+
   /** Yetki verisini yeniden yükler (örn. kullanıcı değişikliğinden sonra). */
   refresh(): Observable<MyPermissionsResponse> {
     return this.loadMyPermissions();
@@ -90,6 +160,7 @@ export class PermissionService {
   /** Yetki verisini temizler (çıkış işleminde çağrılır). */
   clear(): void {
     this._data.set(null);
+    this._loadingRef = null; // ensureLoaded uçuş referansını da sıfırla
   }
 
   /**

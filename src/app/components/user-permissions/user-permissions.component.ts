@@ -11,11 +11,15 @@ import { ModelPermission } from '../../services/permission.service';
 
 /** Düzenleme için kullanılan geçici izin satırı (orijinalden kopyalanır) */
 export interface PermissionRow {
-  modelName: string;
-  canRead:   boolean;
-  canCreate: boolean;
-  canUpdate: boolean;
-  canDelete: boolean;
+  modelName:    string;
+  canRead:      boolean;
+  canCreate:    boolean;
+  canUpdate:    boolean;
+  canDelete:    boolean;
+  /** Modelin kullanıcı sidebar navigasyonunda görünsün mü? */
+  canShowInNav: boolean;
+  /** Kullanıcı yalnızca kendi oluşturduğu kayıtları görebilir/değiştirebilir. */
+  canOwnOnly:   boolean;
   /** Değiştirildi mi? Yalnızca değişen satırlar backend'e gönderilir */
   dirty: boolean;
 }
@@ -104,11 +108,13 @@ export class UserPermissionsComponent implements OnInit {
         const rows: PermissionRow[] = allModels.map(m => {
           const p = existing.find(e => e.modelName.toLowerCase() === m.typeName.toLowerCase());
           return {
-            modelName: m.typeName,
-            canRead:   p?.canRead   ?? false,
-            canCreate: p?.canCreate ?? false,
-            canUpdate: p?.canUpdate ?? false,
-            canDelete: p?.canDelete ?? false,
+            modelName:    m.typeName,
+            canRead:      p?.canRead      ?? false,
+            canCreate:    p?.canCreate    ?? false,
+            canUpdate:    p?.canUpdate    ?? false,
+            canDelete:    p?.canDelete    ?? false,
+            canShowInNav: p?.canShowInNav ?? false,
+            canOwnOnly:   p?.canOwnOnly   ?? false,
             dirty: false
           };
         });

@@ -2,7 +2,8 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { forkJoin, Subscription } from 'rxjs';
+import { forkJoin, of, Subscription } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { PublishedModelService, PublishedModel, PublishedColumn } from '../../services/published-model.service';
 import { PublishModelService } from '../../services/publish-model.service';
 import { PermissionService } from '../../services/permission.service';
@@ -49,6 +50,8 @@ interface TabState {
 export class ModelDetailComponent implements OnInit, OnDestroy {
   typeName = '';
   recordId = 0;
+  /** Yeni kayıt ekleme modu (route data: { mode: 'new' }) */
+  isNew = false;
 
   // Üst kayıt
   record: DataRow | null = null;
@@ -56,7 +59,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   loadingRecord = false;
   recordError: string | null = null;
 
-  // Üst kayıt düzenleme (inline, modal değil)
+  // Üst kayıt düzenleme / yeni kayıt formu (inline, modal değil)
   showEditForm = false;
   editForm: FormGroup | null = null;
   editLoading = false;
@@ -71,6 +74,12 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   tabStates = new Map<string, TabState>();
   loadingChildren = false;
 
+  /** Yeni kayıt akışında birden fazla child satırı biriktirmek için sayaç */
+  private localIdSeq = 0;
+
+  /** Toplu kayıt sonrası kaydedilemeyenlerin listesi (edit instance'ta gösterilir) */
+  childSaveErrors: string[] = [];
+
   private routeSub?: Subscription;
 
   constructor(
@@ -83,6 +92,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // Route data'dan modu bir kez belirle (snapshot; yeni ve düzenle route'ları farklı)
+    this.isNew = this.route.snapshot.data['mode'] === 'new';
     this.routeSub = this.route.paramMap.subscribe(params => {
       this.typeName = params.get('typeName') ?? '';
       this.recordId = Number(params.get('id') ?? 0);
@@ -127,6 +138,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.allModels = [];
     this.tabStates.clear();
     this.loadingChildren = false;
+    this.childSaveErrors = [];
+    this.localIdSeq = 0;
   }
 
   // ─── Veri yükleme ───────────────────────────────────────────────────────────
@@ -134,6 +147,33 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   private loadAll(): void {
     this.loadingRecord = true;
 
+    if (this.isNew) {
+      // Yeni kayıt modu: model şemasını yükle + alt sekmeleri hazırla
+      this.publishedModel.getModels().subscribe({
+        next: res => {
+          this.loadingRecord = false;
+          if (res.success) {
+            this.allModels = res.data ?? [];
+            this.model = this.allModels.find(m => m.typeName === this.typeName) ?? null;
+          }
+          if (this.model) {
+            this.buildNewForm();
+            // Şema mevcutsa alt sekmeleri de yükle (server'dan veri çekmeden)
+            this.loadChildrenForNew();
+          } else {
+            this.recordError = `"${this.typeName}" modeli bulunamadı.`;
+          }
+        },
+        error: err => {
+          this.loadingRecord = false;
+          const e = err as { error?: { message?: string }; message?: string };
+          this.recordError = e?.error?.message ?? e?.message ?? 'Model şeması yüklenemedi.';
+        }
+      });
+      return;
+    }
+
+    // Mevcut kayıt modu: model şeması + kayıt verisi
     forkJoin({
       models: this.publishedModel.getModels(),
       record: this.publishedModel.get(this.typeName, this.recordId)
@@ -148,6 +188,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
         if (record.success && record.data) {
           this.record = record.data as DataRow;
+          // Kayıt geldi — doğrudan düzenleme formunu aç (salt-okunur modu yoktur)
+          this.openEditMode();
         } else if (record.success && !record.data) {
           // Assembly yüklü değil — bir kez retry
           this.retryWithAssembly();
@@ -157,6 +199,12 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
         }
 
         this.loadChildren();
+        // Toplu kayıt akışından gelen kısmi hata mesajlarını oku
+        const navState = this.router.lastSuccessfulNavigation?.extras?.state as Record<string, unknown> | null;
+        const errors = navState?.['childSaveErrors'];
+        if (Array.isArray(errors)) {
+          this.childSaveErrors = errors as string[];
+        }
       },
       error: err => {
         this.loadingRecord = false;
@@ -196,6 +244,30 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Yeni kayıt modunda alt sekmeleri hazırlar — şema yükler, satır çekmez.
+   * Kullanıcı burada staged satırlar biriktirir; kayıt anında FK atanır.
+   */
+  private loadChildrenForNew(): void {
+    this.loadingChildren = true;
+    this.publishedModel.getChildModels(this.typeName).subscribe({
+      next: res => {
+        this.loadingChildren = false;
+        if (res.success && res.data?.length) {
+          this.childModelNames = res.data;
+          this.activeTab = res.data[0];
+          for (const name of res.data) {
+            const meta = this.allModels.find(m => m.typeName === name);
+            const state = this.buildTabState(name, meta?.columns ?? []);
+            // Yeni kayıt modunda server'dan veri çekilmez; rows boş kalır
+            this.tabStates.set(name, state);
+          }
+        }
+      },
+      error: () => { this.loadingChildren = false; }
+    });
+  }
+
   // ─── Üst kayıt alanları ─────────────────────────────────────────────────────
 
   /** Üst kayda ait tüm kolonlar */
@@ -209,25 +281,9 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return this.record[col.columnName] ?? this.record[col.columnName.toLowerCase()];
   }
 
-  /** Görüntüleme için biçimlendirilmiş değer */
-  displayValue(col: PublishedColumn): string {
-    const v = this.recordRaw(col);
-    if (v === null || v === undefined) return '—';
-    if (typeof v === 'boolean') return v ? 'Evet' : 'Hayır';
-    if (col.dataType === 'datetime' && typeof v === 'string') {
-      try { return new Date(v).toLocaleString('tr-TR'); } catch { /* skip */ }
-    }
-    return String(v);
-  }
+  // ─── Üst kayıt formu ────────────────────────────────────────────────────────
 
-  /** Ham string değer (base64/resim kontrolü için) */
-  recordStr(col: PublishedColumn): string {
-    const v = this.recordRaw(col);
-    return typeof v === 'string' ? v : '';
-  }
-
-  // ─── Üst kayıt düzenleme ────────────────────────────────────────────────────
-
+  /** Mevcut kayıt ile düzenleme formunu oluştur */
   openEditMode(): void {
     if (!this.model || !this.record) return;
     const controls: Record<string, unknown> = {};
@@ -243,11 +299,18 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.showEditForm = true;
   }
 
-  cancelEdit(): void {
-    this.showEditForm = false;
-    this.editForm = null;
+  /** Yeni kayıt modu için boş form oluştur */
+  private buildNewForm(): void {
+    const controls: Record<string, unknown> = {};
+    for (const col of this.parentColumns) {
+      const validators = col.isNullable ? [] : [Validators.required];
+      controls[col.columnName] = ['', validators];
+    }
+    this.editForm = this.fb.group(controls);
     this.editMsg = null;
     this.editOk = null;
+    this.editFileNames = {};
+    this.showEditForm = true;
   }
 
   submitEdit(): void {
@@ -259,25 +322,62 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.editMsg = null;
     this.editOk = null;
 
-    const jsonData: DataRow = { ...this.editForm.value, ID: this.recordId };
-
-    this.publishedModel.update(this.typeName, jsonData).subscribe({
-      next: res => {
-        this.editLoading = false;
-        this.editOk = res.success;
-        this.editMsg = res.message;
-        if (res.success) {
-          this.record = { ...this.record, ...this.editForm!.value, ID: this.recordId };
-          setTimeout(() => this.cancelEdit(), 1200);
+    if (this.isNew) {
+      // Yeni kayıt oluştur
+      const jsonData: DataRow = { ...this.editForm.value };
+      this.publishedModel.add(this.typeName, jsonData).subscribe({
+        next: res => {
+          this.editLoading = false;
+          this.editOk = res.success;
+          this.editMsg = res.message;
+          if (res.success) {
+            // Oluşturulan kaydı bulmak için listeyi çek → en büyük ID heuristic
+            this.publishedModel.getAll(this.typeName).subscribe({
+              next: listRes => {
+                const rows = (listRes.success ? (listRes.data ?? []) : []) as DataRow[];
+                const maxId = rows.reduce((max, r) => {
+                  const id = Number(r['ID'] ?? r['id'] ?? 0);
+                  return id > max ? id : max;
+                }, 0);
+                if (maxId > 0) {
+                  // Biriken alt kayıtları kaydet, ardından düzenleme sayfasına geç
+                  this.persistStagedChildren(maxId);
+                } else {
+                  this.router.navigate(['/models', this.typeName]);
+                }
+              },
+              error: () => this.router.navigate(['/models', this.typeName])
+            });
+          }
+        },
+        error: err => {
+          this.editLoading = false;
+          this.editOk = false;
+          const e = err as { error?: { message?: string }; message?: string };
+          this.editMsg = e?.error?.message ?? e?.message ?? 'Kayıt oluşturulamadı.';
         }
-      },
-      error: err => {
-        this.editLoading = false;
-        this.editOk = false;
-        const e = err as { error?: { message?: string }; message?: string };
-        this.editMsg = e?.error?.message ?? e?.message ?? 'Güncelleme başarısız.';
-      }
-    });
+      });
+    } else {
+      // Mevcut kaydı güncelle — sayfada kal, başarı mesajı göster
+      const jsonData: DataRow = { ...this.editForm.value, ID: this.recordId };
+      this.publishedModel.update(this.typeName, jsonData).subscribe({
+        next: res => {
+          this.editLoading = false;
+          this.editOk = res.success;
+          this.editMsg = res.message;
+          if (res.success) {
+            // Kaydı optimistik güncelle, sayfada kal
+            this.record = { ...this.record, ...this.editForm!.value, ID: this.recordId };
+          }
+        },
+        error: err => {
+          this.editLoading = false;
+          this.editOk = false;
+          const e = err as { error?: { message?: string }; message?: string };
+          this.editMsg = e?.error?.message ?? e?.message ?? 'Güncelleme başarısız.';
+        }
+      });
+    }
   }
 
   onEditFileSelected(event: Event, colName: string): void {
@@ -461,6 +561,25 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       state.form?.markAllAsTouched();
       return;
     }
+
+    // Yeni kayıt modunda — bellekte biriktir, HTTP yapma
+    if (this.isNew) {
+      if (state.formMode === 'edit' && state.editingRow) {
+        // Staged satırı güncelle
+        const localId = state.editingRow['__localId'] as number;
+        const idx = state.rows.findIndex(r => r['__localId'] === localId);
+        if (idx >= 0) {
+          state.rows[idx] = { ...state.form.value, __localId: localId };
+        }
+      } else {
+        // Yeni staged satır ekle
+        state.rows = [...state.rows, { ...state.form.value, __localId: ++this.localIdSeq }];
+      }
+      this.closeTabForm(state);
+      return;
+    }
+
+    // Mevcut kayıt modu — backend'e gönder
     state.formLoading = true;
     state.formMsg = null;
     state.formOk = null;
@@ -498,7 +617,77 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     state.formMsg = e?.error?.message ?? e?.message ?? 'İşlem başarısız.';
   }
 
+  /**
+   * Yeni kayıt kaydedildikten sonra, bellekte biriken alt kayıtları sırayla backend'e gönderir.
+   * Başarısız olanlar hata listesiyle edit sayfasına aktarılır.
+   */
+  private persistStagedChildren(parentId: number): void {
+    // Tüm tab'lardan staged satırları topla
+    const tasks: Array<{ typeName: string; fkColumn: string; row: DataRow; label: string }> = [];
+    let taskIdx = 0;
+    for (const [, state] of this.tabStates) {
+      state.rows.forEach(row => {
+        taskIdx++;
+        // __localId'yi payload'dan çıkar, FK'yı ekle
+        const { __localId, ...fields } = row as DataRow & { __localId?: unknown };
+        const payload: DataRow = { ...fields, [state.fkColumn]: parentId };
+        tasks.push({ typeName: state.typeName, fkColumn: state.fkColumn, row: payload, label: `${state.typeName} #${taskIdx}` });
+      });
+    }
+
+    if (tasks.length === 0) {
+      // Biriken satır yok — doğrudan düzenleme sayfasına git
+      this.router.navigate(['/models', this.typeName, parentId]);
+      return;
+    }
+
+    // Her task için bir Observable oluştur; hata durumunda hata mesajıyla tamamlanır
+    const saveObs = tasks.map(task =>
+      this.publishedModel.add(task.typeName, task.row).pipe(
+        map(res => ({ label: task.label, success: res.success, message: res.message })),
+        catchError(err => {
+          const e = err as { error?: { message?: string }; message?: string };
+          const msg = e?.error?.message ?? e?.message ?? 'İşlem başarısız.';
+          return of({ label: task.label, success: false, message: msg });
+        })
+      )
+    );
+
+    forkJoin(saveObs).subscribe(results => {
+      const errors = results
+        .filter(r => !r.success)
+        .map(r => `${r.label}: ${r.message}`);
+
+      if (errors.length > 0) {
+        // Kısmi başarısızlık — edit sayfasına hata listesiyle git
+        this.router.navigate(['/models', this.typeName, parentId], {
+          state: { childSaveErrors: errors }
+        });
+      } else {
+        // Tümü başarılı
+        this.router.navigate(['/models', this.typeName, parentId]);
+      }
+    });
+  }
+
+  /** Yeni kayıt modunda biriken alt kayıt sayısı (Kaydet butonu etiketi için) */
+  get stagedChildCount(): number {
+    let total = 0;
+    for (const [, state] of this.tabStates) {
+      total += state.rows.length;
+    }
+    return total;
+  }
+
   deleteTabRow(state: TabState, row: DataRow): void {
+    // Yeni kayıt modunda — bellekten çıkar, HTTP yapma
+    if (this.isNew) {
+      if (!confirm('Bu biriktirilen satırı kaldırmak istediğinize emin misiniz?')) return;
+      const localId = row['__localId'] as number;
+      state.rows = state.rows.filter(r => r['__localId'] !== localId);
+      return;
+    }
+
     const id = this.rowId(row);
     if (!id || !confirm(`ID:${id} kaydını silmek istediğinize emin misiniz?`)) return;
     this.publishedModel.delete(state.typeName, id).subscribe({

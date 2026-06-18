@@ -1,0 +1,276 @@
+import {
+  Component, OnInit, signal, inject, PLATFORM_ID, ElementRef, ViewChild
+} from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl } from '@angular/forms';
+import { NotificationService } from '../../services/notification.service';
+import { UserProfileService } from '../../services/user-profile.service';
+import { UserProfile } from '../../models/userProfile';
+import { environment } from '../../../environments/environment';
+
+/** Şifre tekrar eşleşme validasyonu */
+function passwordsMatch(control: AbstractControl) {
+  const group = control as import('@angular/forms').FormGroup;
+  const pw  = group.get('newPassword')?.value;
+  const pw2 = group.get('confirmPassword')?.value;
+  return pw && pw2 && pw !== pw2 ? { mismatch: true } : null;
+}
+
+@Component({
+  selector: 'app-user-profile',
+  standalone: true,
+  imports: [ReactiveFormsModule],
+  templateUrl: './user-profile.component.html',
+  styleUrls: ['./user-profile.component.scss']
+})
+export class UserProfileComponent implements OnInit {
+  @ViewChild('photoInput') photoInputRef!: ElementRef<HTMLInputElement>;
+
+  private readonly fb            = inject(FormBuilder);
+  private readonly profileSvc    = inject(UserProfileService);
+  private readonly notif         = inject(NotificationService);
+  private readonly platformId    = inject(PLATFORM_ID);
+
+  /* ── Profil verisi ── */
+  profile        = signal<UserProfile | null>(null);
+  loading        = signal(true);
+  loadError      = signal('');
+
+  /* ── Fotoğraf ── */
+  photoPreview   = signal<string | null>(null);   // önizleme URL'si
+  photoUploading = signal(false);
+
+  /* ── Bilgiler formu ── */
+  infoSaving     = signal(false);
+  infoForm = this.fb.group({
+    firstName: ['', [Validators.required, Validators.maxLength(100)]],
+    lastName:  ['', [Validators.required, Validators.maxLength(100)]],
+    email:     ['', [Validators.required, Validators.email]],
+    tc:        ['', [Validators.pattern(/^\d{11}$/)]],
+    birthDay:  ['']
+  });
+
+  /* ── Şifre formu ── */
+  pwSaving       = signal(false);
+  pwSuccess      = signal(false);
+  pwForm = this.fb.group({
+    currentPassword:  ['', Validators.required],
+    newPassword:      ['', [Validators.required, Validators.minLength(6)]],
+    confirmPassword:  ['', Validators.required]
+  }, { validators: passwordsMatch });
+
+  /* ── Getter kısa yollar ── */
+  get fi() { return this.infoForm.controls; }
+  get fp() { return this.pwForm.controls; }
+
+  ngOnInit(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.loadProfile();
+  }
+
+  /* ──────────────── Profil yükleme ──────────────── */
+
+  loadProfile(): void {
+    this.loading.set(true);
+    this.loadError.set('');
+
+    this.profileSvc.getMe().subscribe({
+      next: res => {
+        if (res.success && res.data) {
+          this.profile.set(res.data);
+          this.photoPreview.set(this.resolvePhotoUrl(res.data.photoUrl));
+          this.patchInfoForm(res.data);
+        } else {
+          this.loadError.set(res.message || 'Profil yüklenemedi.');
+        }
+        this.loading.set(false);
+      },
+      error: () => {
+        this.loadError.set('Profil bilgileri alınamadı. Lütfen tekrar deneyin.');
+        this.loading.set(false);
+      }
+    });
+  }
+
+  private patchInfoForm(p: UserProfile): void {
+    // BirthDay ISO string → date input değeri (YYYY-MM-DD)
+    const bd = p.birthDay ? p.birthDay.substring(0, 10) : '';
+    this.infoForm.patchValue({
+      firstName: p.firstName,
+      lastName:  p.lastName,
+      email:     p.email,
+      tc:        p.tc,
+      birthDay:  bd
+    });
+  }
+
+  /* ──────────────── Fotoğraf ──────────────── */
+
+  triggerPhotoInput(): void {
+    this.photoInputRef?.nativeElement.click();
+  }
+
+  onPhotoSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file  = input.files?.[0];
+    if (!file) return;
+
+    // Anlık önizleme
+    const reader = new FileReader();
+    reader.onload = e => this.photoPreview.set(e.target?.result as string);
+    reader.readAsDataURL(file);
+
+    // Yükle
+    this.photoUploading.set(true);
+    this.profileSvc.uploadPhoto(file).subscribe({
+      next: res => {
+        this.photoUploading.set(false);
+        if (res.success && res.data) {
+          const p = this.profile();
+          if (p) {
+            this.profile.set({ ...p, photoUrl: res.data });
+            this.photoPreview.set(this.resolvePhotoUrl(res.data));
+          }
+          this.notif.success('Profil fotoğrafı güncellendi.');
+        } else {
+          this.notif.warn(res.message || 'Fotoğraf yüklenemedi.');
+          // Önizlemeyi geri al
+          const p = this.profile();
+          this.photoPreview.set(this.resolvePhotoUrl(p?.photoUrl ?? null));
+        }
+        input.value = '';
+      },
+      error: () => {
+        this.photoUploading.set(false);
+        this.notif.warn('Fotoğraf yüklenemedi. Lütfen tekrar deneyin.');
+        const p = this.profile();
+        this.photoPreview.set(this.resolvePhotoUrl(p?.photoUrl ?? null));
+        input.value = '';
+      }
+    });
+  }
+
+  removePhoto(): void {
+    if (!this.profile()?.photoUrl) return;
+    this.photoUploading.set(true);
+    this.profileSvc.deletePhoto().subscribe({
+      next: res => {
+        this.photoUploading.set(false);
+        if (res.success) {
+          const p = this.profile();
+          if (p) this.profile.set({ ...p, photoUrl: null });
+          this.photoPreview.set(null);
+          this.notif.success('Profil fotoğrafı silindi.');
+        } else {
+          this.notif.warn(res.message || 'Fotoğraf silinemedi.');
+        }
+      },
+      error: () => {
+        this.photoUploading.set(false);
+        this.notif.warn('Fotoğraf silinemedi. Lütfen tekrar deneyin.');
+      }
+    });
+  }
+
+  /* ──────────────── Bilgiler formu ──────────────── */
+
+  saveInfo(): void {
+    if (this.infoForm.invalid || this.infoSaving()) return;
+
+    this.infoSaving.set(true);
+    const { firstName, lastName, email, tc, birthDay } = this.infoForm.value;
+
+    this.profileSvc.updateProfile({
+      firstName: firstName ?? '',
+      lastName:  lastName  ?? '',
+      email:     email     ?? '',
+      tc:        tc        ?? '',
+      birthDay:  birthDay  ? new Date(birthDay).toISOString() : ''
+    }).subscribe({
+      next: res => {
+        this.infoSaving.set(false);
+        if (res.success) {
+          // Profil verisini güncelle
+          const p = this.profile();
+          if (p) {
+            this.profile.set({
+              ...p,
+              firstName: firstName ?? '',
+              lastName:  lastName  ?? '',
+              email:     email     ?? '',
+              tc:        tc        ?? '',
+              birthDay:  birthDay ? new Date(birthDay).toISOString() : p.birthDay
+            });
+          }
+          this.notif.success('Profil bilgileri kaydedildi.');
+        } else {
+          this.notif.warn(res.message || 'Güncelleme başarısız.');
+        }
+      },
+      error: () => {
+        this.infoSaving.set(false);
+        this.notif.warn('Bir hata oluştu. Lütfen tekrar deneyin.');
+      }
+    });
+  }
+
+  /* ──────────────── Şifre formu ──────────────── */
+
+  changePassword(): void {
+    if (this.pwForm.invalid || this.pwSaving()) return;
+
+    this.pwSaving.set(true);
+    this.pwSuccess.set(false);
+
+    const { currentPassword, newPassword } = this.pwForm.value;
+    this.profileSvc.changePassword({
+      currentPassword: currentPassword ?? '',
+      newPassword:     newPassword     ?? ''
+    }).subscribe({
+      next: res => {
+        this.pwSaving.set(false);
+        if (res.success) {
+          this.pwSuccess.set(true);
+          this.pwForm.reset();
+          this.notif.success('Şifreniz başarıyla değiştirildi.');
+        } else {
+          this.notif.warn(res.message || 'Şifre değiştirilemedi.');
+        }
+      },
+      error: () => {
+        this.pwSaving.set(false);
+        this.notif.warn('Şifre değiştirilemedi. Lütfen tekrar deneyin.');
+      }
+    });
+  }
+
+  /* ──────────────── Yardımcı ──────────────── */
+
+  /** Göreli PhotoUrl'yi tam URL'ye çevirir. */
+  resolvePhotoUrl(url: string | null | undefined): string | null {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    return `${environment.apiBaseUrl}${url}`;
+  }
+
+  /** Profildeki ad ve soyadın baş harfleri */
+  get initials(): string {
+    const p = this.profile();
+    if (!p) return '?';
+    const fn = (p.firstName?.[0] ?? '').toUpperCase();
+    const ln = (p.lastName?.[0]  ?? '').toUpperCase();
+    return fn + ln || p.email?.[0]?.toUpperCase() || '?';
+  }
+
+  /** Tarih string'ini okunabilir biçime çevirir */
+  formatDate(iso: string | null | undefined): string {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleDateString('tr-TR', {
+        day: '2-digit', month: 'long', year: 'numeric'
+      });
+    } catch {
+      return iso;
+    }
+  }
+}

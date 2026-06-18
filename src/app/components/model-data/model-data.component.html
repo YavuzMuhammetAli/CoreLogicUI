@@ -6,8 +6,15 @@
   }
 </div>
 
-@if (!model) {
-  <!-- Model bulunamadı -->
+@if (!model && loadingRows) {
+  <!-- Model meta yükleniyor — kısa bekleme -->
+  <div class="panel">
+    <div class="empty-state">
+      <span class="spinner" style="width: 32px; height: 32px;" aria-label="Yükleniyor"></span>
+    </div>
+  </div>
+} @else if (!model) {
+  <!-- Model bulunamadı (yükleme tamamlandıktan sonra) -->
   <div class="panel">
     <div class="empty-state">
       <div class="empty-icon" aria-hidden="true">⚠️</div>
@@ -38,12 +45,12 @@
           Yenile
         </button>
         @if (permissionService.can(typeName, 'create')) {
-          <button class="btn btn-primary btn-sm" (click)="openAddForm()" type="button">
+          <a [routerLink]="['/models', typeName, 'new']" class="btn btn-primary btn-sm">
             <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M12 5v14M5 12h14"/>
             </svg>
             Ekle
-          </button>
+          </a>
         }
       </div>
     </div>
@@ -63,13 +70,13 @@
 
     <!-- Tablo -->
     @if (!loadingRows || rows.length > 0) {
-      @if (rows.length === 0 && !loadError) {
+      @if (total === 0 && !loadError) {
         <div class="empty-state">
           <div class="empty-icon" aria-hidden="true">📋</div>
           <h3>Henüz kayıt yok</h3>
           <p>Bu modele ait kayıt eklenmemiş. "Ekle" butonuyla ilk kaydı oluşturun.</p>
           @if (permissionService.can(typeName, 'create')) {
-            <button class="btn btn-primary" (click)="openAddForm()" type="button">İlk Kaydı Ekle</button>
+            <a [routerLink]="['/models', typeName, 'new']" class="btn btn-primary">İlk Kaydı Ekle</a>
           }
         </div>
       } @else if (rows.length > 0) {
@@ -116,13 +123,12 @@
                   }
                   <td class="td-actions" (click)="$event.stopPropagation()">
                     @if (permissionService.can(typeName, 'update')) {
-                      <button
+                      <a
+                        [routerLink]="['/models', typeName, rowId(row)]"
                         class="btn btn-secondary btn-sm"
-                        (click)="openEditForm(row)"
-                        type="button"
                         aria-label="Kaydı düzenle">
                         Düzenle
-                      </button>
+                      </a>
                     }
                     @if (permissionService.can(typeName, 'delete')) {
                       <button
@@ -145,7 +151,60 @@
           </table>
         </div>
         <div class="table-footer">
-          <span class="eyebrow">{{ rows.length }} kayıt</span>
+          <!-- Kayıt aralığı -->
+          <span class="eyebrow">
+            @if (total > 0) {
+              {{ pageRangeStart }}–{{ pageRangeEnd }} / {{ total }} kayıt
+            } @else {
+              0 kayıt
+            }
+          </span>
+
+          <!-- Sayfa numarası butonları (tek sayfa ise gizle) -->
+          @if (totalPages > 1) {
+            <nav class="pagination" aria-label="Sayfalama">
+              <button class="page-btn" type="button" (click)="prevPage()"
+                      [disabled]="pageIndex === 1" aria-label="Önceki sayfa">‹</button>
+
+              @if (visiblePages[0] > 1) {
+                <button class="page-btn" type="button" (click)="goToPage(1)">1</button>
+                @if (visiblePages[0] > 2) {
+                  <span class="page-ellipsis">…</span>
+                }
+              }
+
+              @for (p of visiblePages; track p) {
+                <button
+                  class="page-btn"
+                  [class.page-btn--active]="p === pageIndex"
+                  type="button"
+                  (click)="goToPage(p)"
+                  [attr.aria-current]="p === pageIndex ? 'page' : null">{{ p }}</button>
+              }
+
+              @if (visiblePages.length > 0 && visiblePages[visiblePages.length - 1] < totalPages) {
+                @if (visiblePages[visiblePages.length - 1] < totalPages - 1) {
+                  <span class="page-ellipsis">…</span>
+                }
+                <button class="page-btn" type="button" (click)="goToPage(totalPages)">{{ totalPages }}</button>
+              }
+
+              <button class="page-btn" type="button" (click)="nextPage()"
+                      [disabled]="pageIndex === totalPages" aria-label="Sonraki sayfa">›</button>
+            </nav>
+          }
+
+          <!-- Sayfa başına kayıt seçici -->
+          <div class="page-size-selector">
+            <label class="sr-only" for="pageSizeSelect">Sayfa başına kayıt</label>
+            <select id="pageSizeSelect"
+                    (change)="changePageSize(+$any($event.target).value)"
+                    [value]="pageSize">
+              @for (opt of pageSizeOptions; track opt) {
+                <option [value]="opt">{{ opt }} / sayfa</option>
+              }
+            </select>
+          </div>
         </div>
       }
     }
@@ -205,114 +264,4 @@
     </div>
   }
 
-  <!-- Form Modal (inline) -->
-  @if (showForm) {
-    <div class="form-overlay" role="dialog" [attr.aria-label]="editingRow ? 'Kaydı düzenle' : 'Yeni kayıt ekle'" aria-modal="true">
-      <div class="form-dialog panel">
-        <div class="panel-head">
-          <h2>{{ editingRow ? 'Kaydı Düzenle' : 'Yeni Kayıt Ekle' }}</h2>
-          <button class="btn btn-ghost btn-sm" (click)="closeForm()" type="button" aria-label="Formu kapat">
-            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-
-        <div class="panel-body">
-          <form [formGroup]="recordForm" (ngSubmit)="onFormSubmit()" novalidate>
-
-            @if (formMessage) {
-              <div
-                class="alert"
-                [class.alert-success]="formSuccess"
-                [class.alert-danger]="!formSuccess"
-                [attr.role]="formSuccess ? 'status' : 'alert'"
-                style="margin-bottom: var(--space-4)">
-                {{ formMessage }}
-              </div>
-            }
-
-            <div class="form-fields">
-              @for (col of columns; track col.columnName) {
-                <div class="field">
-                  <label [attr.for]="'rec-' + col.columnName">
-                    {{ col.columnName }}
-                    @if (!col.isNullable) { <span class="req">*</span> }
-                    <span class="col-type-hint">{{ col.dataType }}</span>
-                  </label>
-
-                  @if (inputTypeFor(col.dataType) === 'checkbox') {
-                    <label class="checkbox-label" [attr.for]="'rec-' + col.columnName">
-                      <input
-                        [id]="'rec-' + col.columnName"
-                        type="checkbox"
-                        [formControlName]="col.columnName">
-                      {{ col.columnName }} aktif
-                    </label>
-                  } @else if (inputTypeFor(col.dataType) === 'file') {
-                    <!-- Dosya / resim alanı -->
-                    <input
-                      [id]="'rec-' + col.columnName"
-                      type="file"
-                      (change)="onFileSelected($event, col.columnName)"
-                      [attr.aria-describedby]="'rec-err-' + col.columnName"
-                      style="display: block; margin-bottom: var(--space-2)">
-                    @if (getControl(col.columnName).value) {
-                      @if (isImage(getControl(col.columnName).value)) {
-                        <!-- Seçili/mevcut resim önizlemesi -->
-                        <img
-                          [src]="imageSrc(getControl(col.columnName).value)"
-                          alt="Önizleme"
-                          style="max-height: 120px; max-width: 100%; border-radius: 6px; border: 1px solid var(--border); object-fit: contain; display: block; margin-bottom: var(--space-2)">
-                      } @else {
-                        <!-- Seçili/mevcut dosya -->
-                        <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2)">
-                          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                          </svg>
-                          <span class="eyebrow">Dosya mevcut</span>
-                          <button
-                            type="button"
-                            class="btn btn-ghost btn-sm"
-                            (click)="downloadFile(getControl(col.columnName).value, col.columnName)">
-                            İndir
-                          </button>
-                        </div>
-                      }
-                    }
-                  } @else {
-                    <input
-                      [id]="'rec-' + col.columnName"
-                      [type]="inputTypeFor(col.dataType)"
-                      [formControlName]="col.columnName"
-                      [attr.required]="!col.isNullable || null"
-                      [attr.aria-invalid]="getControl(col.columnName).touched && getControl(col.columnName).invalid"
-                      [attr.aria-describedby]="'rec-err-' + col.columnName">
-                  }
-
-                  @if (getControl(col.columnName).touched && getControl(col.columnName).hasError('required')) {
-                    <span [id]="'rec-err-' + col.columnName" class="field-error" role="alert">
-                      {{ col.columnName }} zorunludur.
-                    </span>
-                  }
-                </div>
-              }
-            </div>
-
-            <div class="form-actions">
-              <button type="button" class="btn btn-secondary" (click)="closeForm()">İptal</button>
-              <button type="submit" class="btn btn-primary" [disabled]="formLoading">
-                @if (formLoading) {
-                  <span class="spinner" aria-hidden="true"></span>
-                  Kaydediliyor...
-                } @else {
-                  {{ editingRow ? 'Güncelle' : 'Kaydet' }}
-                }
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  }
 }

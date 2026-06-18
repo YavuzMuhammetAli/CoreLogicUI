@@ -106,16 +106,127 @@
 
       <div class="topbar-right">
         @if (currentUser) {
-          <div class="user-chip">
-            <span class="user-avatar" aria-hidden="true">{{ currentUser.initials }}</span>
-            <div class="user-info">
-              <span class="user-name">{{ currentUser.name }}</span>
-              <span class="user-email">{{ currentUser.email }}</span>
-            </div>
+          <!-- Profil dropdown tetikleyicisi -->
+          <div class="profile-menu-wrap" #profileMenuRef>
+            <button
+              class="user-chip"
+              type="button"
+              (click)="toggleMenu(); $event.stopPropagation()"
+              [attr.aria-expanded]="menuOpen"
+              aria-haspopup="menu"
+              aria-label="Profil menüsünü aç">
+
+              <!-- Avatar: fotoğraf varsa img, yoksa baş harfler -->
+              @if (currentUser.photoUrl) {
+                <img
+                  [src]="currentUser.photoUrl"
+                  alt="Profil fotoğrafı"
+                  class="user-avatar user-avatar-img">
+              } @else {
+                <span class="user-avatar" aria-hidden="true">{{ currentUser.initials }}</span>
+              }
+
+              <div class="user-info">
+                <span class="user-name">{{ currentUser.name }}</span>
+                <span class="user-email">{{ currentUser.email }}</span>
+              </div>
+
+              <!-- Chevron ikonu -->
+              <svg
+                class="menu-chevron"
+                [class.open]="menuOpen"
+                aria-hidden="true"
+                width="14" height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+
+            <!-- Dropdown panel -->
+            @if (menuOpen) {
+              <div
+                class="profile-dropdown"
+                role="menu"
+                aria-label="Profil menüsü">
+
+                <!-- Üst bilgi başlığı -->
+                <div class="dropdown-header">
+                  <div class="dropdown-avatar-wrap">
+                    @if (currentUser.photoUrl) {
+                      <img
+                        [src]="currentUser.photoUrl"
+                        alt=""
+                        class="dropdown-avatar dropdown-avatar-img">
+                    } @else {
+                      <span class="dropdown-avatar" aria-hidden="true">{{ currentUser.initials }}</span>
+                    }
+                  </div>
+                  <div class="dropdown-user-info">
+                    <span class="dropdown-name">{{ currentUser.name }}</span>
+                    <span class="dropdown-email">{{ currentUser.email }}</span>
+                  </div>
+                </div>
+
+                <div class="dropdown-divider" role="separator"></div>
+
+                <!-- Profili Düzenle -->
+                <button
+                  class="dropdown-item"
+                  role="menuitem"
+                  type="button"
+                  (click)="goToProfile()">
+                  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                  Profili Düzenle
+                </button>
+
+                <div class="dropdown-divider" role="separator"></div>
+
+                <!-- Çıkış Yap -->
+                <button
+                  class="dropdown-item dropdown-item-danger"
+                  role="menuitem"
+                  type="button"
+                  (click)="logout()">
+                  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+                  </svg>
+                  Çıkış Yap
+                </button>
+              </div>
+            }
           </div>
         }
       </div>
     </header>
+
+    <!-- Yetki uyarı banner'ı — guard yönlendirmesi sonrası görünür -->
+    @if (notificationService.current(); as notification) {
+      <div
+        class="alert alert-{{ notification.type }}"
+        role="alert"
+        aria-live="assertive"
+        style="margin: var(--space-3) var(--space-4) 0; flex-shrink: 0;">
+        <span>{{ notification.message }}</span>
+        <button
+          class="btn btn-ghost btn-sm"
+          type="button"
+          (click)="notificationService.clear()"
+          aria-label="Uyarıyı kapat"
+          style="margin-left: auto; padding: 0 var(--space-2);">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    }
 
     <!-- Sayfa içeriği -->
     <main class="page-content">

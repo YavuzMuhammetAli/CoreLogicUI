@@ -1,13 +1,11 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { PublishedModelService, PublishedModel, PublishedColumn } from '../../services/published-model.service';
+import { PublishedModelService, PublishedModel, PublishedColumn, PagedData } from '../../services/published-model.service';
 import { PublishModelService } from '../../services/publish-model.service';
 import { PermissionService } from '../../services/permission.service';
 import { PublishedTableService, ModelVersion } from '../../services/published-table.service';
 import {
-  inputTypeFor,
   isImage,
   imageSrc,
   isBase64Value,
@@ -21,7 +19,7 @@ type DataRow = Record<string, unknown>;
 @Component({
   selector: 'app-model-data',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, DatePipe],
+  imports: [CommonModule, RouterLink, DatePipe],
   templateUrl: './model-data.component.html',
   styleUrls: ['./model-data.component.scss']
 })
@@ -34,13 +32,11 @@ export class ModelDataComponent implements OnInit {
   loadingRows = false;
   loadError: string | null = null;
 
-  // Form durumu
-  showForm = false;
-  editingRow: DataRow | null = null;
-  recordForm!: FormGroup;
-  formLoading = false;
-  formMessage: string | null = null;
-  formSuccess: boolean | null = null;
+  // Sayfalama durumu
+  pageIndex = 1;
+  pageSize  = 20;
+  total     = 0;
+  readonly pageSizeOptions = [20, 50, 100];
 
   // Silme durumu
   deletingId: number | null = null;
@@ -51,16 +47,11 @@ export class ModelDataComponent implements OnInit {
 
   // Assembly yüklenmemiş hatası için tek-seferlik retry bayrağı
   private rowsRetried = false;
-  private formRetried = false;
-
-  // Mevcut form oturumunda seçilen dosyaların adları (colName → filename)
-  private fileNames: Record<string, string> = {};
 
   constructor(
     private route: ActivatedRoute,
     private publishedModel: PublishedModelService,
     private publishModel: PublishModelService,
-    private fb: FormBuilder,
     public permissionService: PermissionService,
     public publishedTableService: PublishedTableService
   ) {}
@@ -81,15 +72,13 @@ export class ModelDataComponent implements OnInit {
     this.model = undefined;
     this.rows = [];
     this.loadError = null;
-    this.showForm = false;
-    this.editingRow = null;
-    this.formMessage = null;
-    this.formSuccess = null;
+    this.loadingRows = true; // meta yüklenene kadar "bulunamadı" paneli gösterilmez
     this.deletingId = null;
     this.rowsRetried = false;
-    this.formRetried = false;
     this.showVersionPanel.set(false);
     this.versions.set([]);
+    this.pageIndex = 1;
+    this.total     = 0;
   }
 
   get columns(): PublishedColumn[] {
@@ -109,16 +98,18 @@ export class ModelDataComponent implements OnInit {
     });
   }
 
-  /** Tüm kayıtları yükle */
+  /** Geçerli sayfanın kayıtlarını yükle */
   loadRows(): void {
     this.loadingRows = true;
     this.loadError = null;
 
-    this.publishedModel.getAll(this.typeName).subscribe({
+    this.publishedModel.getAllPaged(this.typeName, this.pageIndex, this.pageSize).subscribe({
       next: res => {
         if (res.success) {
           this.loadingRows = false;
-          this.rows = (res.data ?? []) as DataRow[];
+          const paged: PagedData<Record<string, unknown>> = res.data;
+          this.rows  = (paged?.items ?? []) as DataRow[];
+          this.total = paged?.total ?? 0;
           this.rowsRetried = false;
         } else if (!this.rowsRetried && res.message?.includes('Assembly')) {
           // Backend yeniden başlatıldıysa assembly null olur; bir kez yükleyip tekrar dene.
@@ -159,99 +150,54 @@ export class ModelDataComponent implements OnInit {
     return ['ID', ...this.columns.map(c => c.columnName)];
   }
 
-  /** Ekle formunu aç */
-  openAddForm(): void {
-    this.editingRow = null;
-    this.fileNames = {};
-    this.buildForm(null);
-    this.showForm = true;
-    this.formMessage = null;
-    this.formSuccess = null;
+  // ─── Sayfalama ─────────────────────────────────────────────────────────────────
+
+  /** Toplam sayfa sayısı */
+  get totalPages(): number {
+    return Math.ceil(this.total / this.pageSize) || 1;
   }
 
-  /** Düzenle formunu aç */
-  openEditForm(row: DataRow): void {
-    this.editingRow = row;
-    this.fileNames = {};
-    this.buildForm(row);
-    this.showForm = true;
-    this.formMessage = null;
-    this.formSuccess = null;
+  /** Footer'da "X–Y / N kayıt" gösterimi için sayfa başlangıcı */
+  get pageRangeStart(): number {
+    return this.total === 0 ? 0 : (this.pageIndex - 1) * this.pageSize + 1;
   }
 
-  closeForm(): void {
-    this.showForm = false;
-    this.editingRow = null;
+  /** Footer'da "X–Y / N kayıt" gösterimi için sayfa sonu */
+  get pageRangeEnd(): number {
+    return Math.min(this.pageIndex * this.pageSize, this.total);
   }
 
-  /** Schema sütunlarından reactive form üret */
-  private buildForm(row: DataRow | null): void {
-    const controls: Record<string, unknown> = {};
-    for (const col of this.columns) {
-      const existing = row ? (row[col.columnName] ?? row[col.columnName.toLowerCase()] ?? '') : '';
-      const validators = col.isNullable ? [] : [Validators.required];
-      controls[col.columnName] = [existing, validators];
-    }
-    this.recordForm = this.fb.group(controls);
+  /**
+   * Sayfa numarası butonları için görünür aralık — en fazla 5 sayfa.
+   * Sayfa değiştikçe pencere ortanır (ilk/son sayfa ile ellipsis gösterilir).
+   */
+  get visiblePages(): number[] {
+    const pages = this.totalPages;
+    if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
+
+    const half = 2;
+    let start = Math.max(1, this.pageIndex - half);
+    let end   = Math.min(pages, this.pageIndex + half);
+
+    if (this.pageIndex - half < 1) end   = Math.min(pages, 5);
+    if (this.pageIndex + half > pages) start = Math.max(1, pages - 4);
+
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
   }
 
-  onFormSubmit(): void {
-    if (this.recordForm.invalid || this.formLoading) {
-      this.recordForm.markAllAsTouched();
-      return;
-    }
-    this.formLoading = true;
-    this.formMessage = null;
-    this.formSuccess = null;
-
-    const jsonData: DataRow = { ...this.recordForm.value };
-
-    if (this.editingRow) {
-      // Güncelleme: ID'yi ekle
-      jsonData['ID'] = this.editingRow['ID'] ?? this.editingRow['id'];
-      this.publishedModel.update(this.typeName, jsonData).subscribe({
-        next: res => this.handleFormResponse(res, () => this.onFormSubmit()),
-        error: err => this.handleFormError(err)
-      });
-    } else {
-      this.publishedModel.add(this.typeName, jsonData).subscribe({
-        next: res => this.handleFormResponse(res, () => this.onFormSubmit()),
-        error: err => this.handleFormError(err)
-      });
-    }
+  goToPage(p: number): void {
+    if (p < 1 || p > this.totalPages || p === this.pageIndex) return;
+    this.pageIndex = p;
+    this.loadRows();
   }
 
-  private handleFormResponse(res: { success: boolean; message: string }, retryFn?: () => void): void {
-    if (!res.success && !this.formRetried && res.message?.includes('Assembly') && retryFn) {
-      // Assembly null ise bir kez yükleyip formu tekrar gönder
-      this.formRetried = true;
-      this.publishModel.loadAssembly().subscribe({
-        next: () => retryFn(),
-        error: () => {
-          this.formLoading = false;
-          this.formSuccess = false;
-          this.formMessage = 'Model backend\'de yüklü değil. "Tablo Oluştur"dan yeniden yayınlayın.';
-        }
-      });
-      return;
-    }
-    this.formLoading = false;
-    this.formSuccess = res.success;
-    this.formMessage = res.message?.includes('Assembly')
-      ? 'Model backend\'de yüklü değil. "Tablo Oluştur"dan yeniden yayınlayın.'
-      : res.message;
-    if (res.success) {
-      this.formRetried = false;
-      this.loadRows();
-      setTimeout(() => this.closeForm(), 1200);
-    }
-  }
+  prevPage(): void { this.goToPage(this.pageIndex - 1); }
+  nextPage(): void { this.goToPage(this.pageIndex + 1); }
 
-  private handleFormError(err: unknown): void {
-    this.formLoading = false;
-    this.formSuccess = false;
-    const e = err as { error?: { message?: string }; message?: string };
-    this.formMessage = e?.error?.message ?? e?.message ?? 'İşlem başarısız.';
+  changePageSize(size: number): void {
+    this.pageSize  = size;
+    this.pageIndex = 1;
+    this.loadRows();
   }
 
   /** Kayıt sil */
@@ -264,6 +210,10 @@ export class ModelDataComponent implements OnInit {
       next: res => {
         this.deletingId = null;
         if (res.success) {
+          // Sayfada tek kayıt kaldıysa ve sayfa > 1 ise önceki sayfaya dön
+          if (this.rows.length === 1 && this.pageIndex > 1) {
+            this.pageIndex--;
+          }
           this.loadRows();
         }
       },
@@ -275,7 +225,6 @@ export class ModelDataComponent implements OnInit {
 
   // ─── Util delegasyonları — template'te doğrudan çağrılabilmesi için ────────────
 
-  inputTypeFor  = inputTypeFor;
   isImage       = isImage;
   imageSrc      = imageSrc;
   isBase64Value = isBase64Value;
@@ -283,35 +232,12 @@ export class ModelDataComponent implements OnInit {
   rowVal        = rowVal;
 
   downloadFile(b64: string, colName: string): void {
-    downloadFile(b64, colName, this.fileNames);
+    // Dosya adı bu ekranda bilinmiyor; util uzantıyı MIME'den tahmin eder
+    downloadFile(b64, colName, {});
   }
 
   rowId(row: DataRow): number {
     return Number(row['ID'] ?? row['id'] ?? 0);
-  }
-
-  /**
-   * Seçilen dosyayı saf base64 olarak form control'üne yazar.
-   * Dosya adı fileNames map'inde saklanır — backend pipe karakterini kabul etmez.
-   */
-  onFileSelected(event: Event, colName: string): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-
-    this.fileNames[colName] = file.name;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      // data-URL önekini at — backend saf base64 (byte[]) bekler
-      const base64 = dataUrl.split(',')[1] ?? dataUrl;
-      this.recordForm.get(colName)?.setValue(base64);
-    };
-    reader.readAsDataURL(file);
-  }
-
-  getControl(colName: string) {
-    return this.recordForm.get(colName)!;
   }
 
   /** Sürüm geçmişini backend'den yükler */
