@@ -1,0 +1,13 @@
+@if (series.length > 0) {
+  <apx-chart
+    [chart]="chartOptions"
+    [series]="series"
+    [xaxis]="xaxis"
+    [labels]="labels"
+    [legend]="legend">
+  </apx-chart>
+} @else {
+  <div class="empty-state">
+    <p>Grafik için yeterli veri yok.</p>
+  </div>
+}

@@ -1,0 +1,71 @@
+<div class="page-header">
+  <div>
+    <span class="eyebrow">Raporlama</span>
+    <h1 class="page-title">Yeni Dashboard</h1>
+    <p class="page-subtitle">Mevcut raporlardan widget olarak eklenecekleri seçin.</p>
+  </div>
+  <a routerLink="/reports" class="btn btn-secondary">Vazgeç</a>
+</div>
+
+@if (loading) {
+  <div class="panel">
+    <div class="empty-state">
+      <span class="spinner" aria-label="Yükleniyor"></span>
+    </div>
+  </div>
+}
+
+@if (loadError) {
+  <div class="alert alert-danger" role="alert">{{ loadError }}</div>
+}
+
+@if (!loading && !loadError) {
+  @if (reports.length === 0) {
+    <div class="panel">
+      <div class="empty-state">
+        <h3>Henüz rapor yok</h3>
+        <p>Dashboard oluşturmak için önce en az bir rapor tanımlamalısınız.</p>
+        <a routerLink="/reports/new" class="btn btn-primary">Rapor Oluştur</a>
+      </div>
+    </div>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flow">
+      <div class="panel">
+        <div class="panel-head"><h3>Dashboard Adı</h3></div>
+        <div class="panel-body">
+          <div class="field">
+            <label for="name">Ad <span class="req">*</span></label>
+            <input id="name" class="input" type="text" formControlName="name" />
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>Widget Olarak Eklenecek Raporlar</h3></div>
+        <div class="panel-body">
+          <div class="checkbox-grid" formArrayName="reports">
+            @for (report of reports; track report.id; let i = $index) {
+              <label class="checkbox-label">
+                <input type="checkbox" [formControlName]="i" />
+                {{ report.name }}
+                <span class="badge badge-meta">{{ report.modelName }}</span>
+              </label>
+            }
+          </div>
+        </div>
+      </div>
+
+      @if (submitError) {
+        <div class="alert alert-danger" role="alert">{{ submitError }}</div>
+      }
+
+      <div class="cluster">
+        <button class="btn btn-primary" type="submit" [disabled]="saving">
+          @if (saving) { <span class="spinner" aria-hidden="true"></span> }
+          Kaydet
+        </button>
+        <a routerLink="/reports" class="btn btn-ghost">Vazgeç</a>
+      </div>
+    </form>
+  }
+}

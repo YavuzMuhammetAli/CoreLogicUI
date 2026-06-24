@@ -1,0 +1,86 @@
+<div class="page-header">
+  <div>
+    <span class="eyebrow">Raporlama</span>
+    <h1 class="page-title">{{ report?.name ?? 'Rapor' }}</h1>
+    @if (report) {
+      <p class="page-subtitle">Model: <span class="badge badge-meta">{{ report.modelName }}</span></p>
+    }
+  </div>
+  <div class="cluster">
+    <a [routerLink]="['/reports', id, 'edit']" class="btn btn-secondary">Düzenle</a>
+    <a routerLink="/reports" class="btn btn-ghost">Listeye Dön</a>
+  </div>
+</div>
+
+@if (loading) {
+  <div class="panel">
+    <div class="empty-state">
+      <span class="spinner" aria-label="Yükleniyor"></span>
+    </div>
+  </div>
+}
+
+@if (loadError) {
+  <div class="alert alert-danger" role="alert">{{ loadError }}</div>
+}
+
+@if (!loading && !loadError && result) {
+  <div class="panel">
+    <div class="panel-head">
+      <h3>Export</h3>
+      <div class="panel-actions">
+        <button class="btn btn-secondary btn-sm" type="button" (click)="exportExcel()" [disabled]="exporting !== null">
+          @if (exporting === 'excel') { <span class="spinner" aria-hidden="true"></span> }
+          Excel (.xlsx)
+        </button>
+        <button class="btn btn-secondary btn-sm" type="button" (click)="exportPdf()" [disabled]="exporting !== null">
+          @if (exporting === 'pdf') { <span class="spinner" aria-hidden="true"></span> }
+          PDF
+        </button>
+      </div>
+    </div>
+    @if (exportError) {
+      <div class="panel-body">
+        <div class="alert alert-danger" role="alert">{{ exportError }}</div>
+      </div>
+    }
+  </div>
+
+  @if (report && report.chartType !== 'table') {
+    <div class="panel">
+      <div class="panel-head"><h3>Grafik</h3></div>
+      <div class="panel-body">
+        <app-chart [chartType]="report.chartType" [columns]="result.columns" [rows]="result.rows"></app-chart>
+      </div>
+    </div>
+  }
+
+  <div class="panel">
+    <div class="panel-head"><h3>Veri</h3></div>
+    @if (result.rows.length > 0) {
+      <table class="data-table">
+        <thead>
+          <tr>
+            @for (col of result.columns; track col.name) {
+              <th>{{ col.name }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of result.rows; track $index) {
+            <tr>
+              @for (col of result.columns; track col.name) {
+                <td>{{ row[col.name] }}</td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <div class="empty-state">
+        <h3>Sonuç yok</h3>
+        <p>Bu rapor için filtre koşullarına uyan kayıt bulunamadı.</p>
+      </div>
+    }
+  </div>
+}

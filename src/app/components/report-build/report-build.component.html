@@ -1,0 +1,214 @@
+<div class="page-header">
+  <div>
+    <span class="eyebrow">Raporlama</span>
+    <h1 class="page-title">{{ editingId ? 'Raporu Düzenle' : 'Yeni Rapor' }}</h1>
+    <p class="page-subtitle">Model, kolon, filtre, gruplama, aggregate ve grafik tipini tanımlayın.</p>
+  </div>
+  <a routerLink="/reports" class="btn btn-secondary">Vazgeç</a>
+</div>
+
+@if (loadingModels || loadingExisting) {
+  <div class="panel">
+    <div class="empty-state">
+      <span class="spinner" aria-label="Yükleniyor"></span>
+    </div>
+  </div>
+}
+
+@if (loadError) {
+  <div class="alert alert-danger" role="alert">{{ loadError }}</div>
+}
+
+@if (!loadingModels && !loadingExisting && !loadError) {
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flow">
+
+    <!-- Temel bilgiler -->
+    <div class="panel">
+      <div class="panel-head"><h3>Temel Bilgiler</h3></div>
+      <div class="panel-body">
+        <div class="field">
+          <label for="name">Rapor Adı <span class="req">*</span></label>
+          <input
+            id="name"
+            class="input"
+            type="text"
+            formControlName="name"
+            [attr.aria-invalid]="f['name'].invalid && f['name'].touched"
+          />
+          @if (f['name'].invalid && f['name'].touched) {
+            <span class="field-error" role="alert">Rapor adı zorunludur.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="modelName">Model <span class="req">*</span></label>
+          <select id="modelName" formControlName="modelName">
+            <option value="" disabled>Bir model seçin</option>
+            @for (m of models; track m.typeName) {
+              <option [value]="m.typeName">{{ m.typeName }}</option>
+            }
+          </select>
+          @if (f['modelName'].invalid && f['modelName'].touched) {
+            <span class="field-error" role="alert">Model seçimi zorunludur.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="chartType">Grafik Tipi</label>
+          <select id="chartType" formControlName="chartType">
+            @for (ct of chartTypes; track ct.value) {
+              <option [value]="ct.value">{{ ct.label }}</option>
+            }
+          </select>
+          <span class="field-help">Gruplama/aggregate tanımlıysa grafik bu sonuçlar üzerinden çizilir.</span>
+        </div>
+      </div>
+    </div>
+
+    @if (availableColumns.length > 0) {
+      <!-- Kolonlar -->
+      <div class="panel">
+        <div class="panel-head"><h3>Kolonlar</h3></div>
+        <div class="panel-body">
+          <p class="field-help">Gruplama veya aggregate tanımlandığında kolon seçimi yok sayılır.</p>
+          <div class="checkbox-grid" formArrayName="selectedColumns">
+            @for (col of availableColumns; track col.columnName; let i = $index) {
+              <label class="checkbox-label">
+                <input type="checkbox" [formControlName]="i" />
+                {{ col.columnName }}
+              </label>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Filtreler -->
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Filtreler</h3>
+          <div class="panel-actions">
+            <button class="btn btn-secondary btn-sm" type="button" (click)="addFilter()">Filtre Ekle</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          @if (filtersArray.length === 0) {
+            <p class="field-help">Henüz filtre eklenmedi.</p>
+          }
+          <div formArrayName="filters" class="stack">
+            @for (group of filtersArray.controls; track $index; let i = $index) {
+              <div [formGroupName]="i" class="row-fields">
+                <select formControlName="field">
+                  <option value="" disabled>Alan</option>
+                  @for (col of availableColumns; track col.columnName) {
+                    <option [value]="col.columnName">{{ col.columnName }}</option>
+                  }
+                </select>
+                <select formControlName="operator">
+                  @for (op of operators; track op.value) {
+                    <option [value]="op.value">{{ op.label }}</option>
+                  }
+                </select>
+                <input class="input" type="text" formControlName="value" placeholder="Değer" />
+                <button class="btn btn-danger btn-sm" type="button" (click)="removeFilter(i)">Kaldır</button>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Gruplama -->
+      <div class="panel">
+        <div class="panel-head"><h3>Gruplama</h3></div>
+        <div class="panel-body">
+          <div class="checkbox-grid" formArrayName="groupBy">
+            @for (col of availableColumns; track col.columnName; let i = $index) {
+              <label class="checkbox-label">
+                <input type="checkbox" [formControlName]="i" />
+                {{ col.columnName }}
+              </label>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Aggregate -->
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Aggregate</h3>
+          <div class="panel-actions">
+            <button class="btn btn-secondary btn-sm" type="button" (click)="addAggregate()">Aggregate Ekle</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          @if (aggregatesArray.length === 0) {
+            <p class="field-help">Henüz aggregate eklenmedi.</p>
+          }
+          <div formArrayName="aggregates" class="stack">
+            @for (group of aggregatesArray.controls; track $index; let i = $index) {
+              <div [formGroupName]="i" class="row-fields">
+                <select formControlName="field">
+                  <option value="">(COUNT için gerekli değil)</option>
+                  @for (col of availableColumns; track col.columnName) {
+                    <option [value]="col.columnName">{{ col.columnName }}</option>
+                  }
+                </select>
+                <select formControlName="function">
+                  @for (fn of aggregateFunctions; track fn.value) {
+                    <option [value]="fn.value">{{ fn.label }}</option>
+                  }
+                </select>
+                <button class="btn btn-danger btn-sm" type="button" (click)="removeAggregate(i)">Kaldır</button>
+              </div>
+            }
+          </div>
+          <span class="field-help">SUM/AVG yalnızca sayısal alanlarda kullanılabilir.</span>
+        </div>
+      </div>
+
+      <!-- Sıralama -->
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Sıralama</h3>
+          <div class="panel-actions">
+            <button class="btn btn-secondary btn-sm" type="button" (click)="addSort()">Sıralama Ekle</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          @if (sortByArray.length === 0) {
+            <p class="field-help">Henüz sıralama eklenmedi.</p>
+          }
+          <div formArrayName="sortBy" class="stack">
+            @for (group of sortByArray.controls; track $index; let i = $index) {
+              <div [formGroupName]="i" class="row-fields">
+                <select formControlName="field">
+                  <option value="" disabled>Alan</option>
+                  @for (field of outputFieldOptions; track field) {
+                    <option [value]="field">{{ field }}</option>
+                  }
+                </select>
+                <select formControlName="direction">
+                  @for (dir of sortDirections; track dir.value) {
+                    <option [value]="dir.value">{{ dir.label }}</option>
+                  }
+                </select>
+                <button class="btn btn-danger btn-sm" type="button" (click)="removeSort(i)">Kaldır</button>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (submitError) {
+      <div class="alert alert-danger" role="alert">{{ submitError }}</div>
+    }
+
+    <div class="cluster">
+      <button class="btn btn-primary" type="submit" [disabled]="saving">
+        @if (saving) { <span class="spinner" aria-hidden="true"></span> }
+        Kaydet
+      </button>
+      <a routerLink="/reports" class="btn btn-ghost">Vazgeç</a>
+    </div>
+  </form>
+}

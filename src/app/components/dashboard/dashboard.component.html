@@ -1,0 +1,66 @@
+<div class="page-header">
+  <div>
+    <span class="eyebrow">Raporlama</span>
+    <h1 class="page-title">{{ dashboard?.name ?? 'Dashboard' }}</h1>
+    <p class="page-subtitle">Birden çok rapor, tek ekranda.</p>
+  </div>
+  <a routerLink="/dashboard/new" class="btn btn-primary">Yeni Dashboard</a>
+</div>
+
+@if (loading) {
+  <div class="panel">
+    <div class="empty-state">
+      <span class="spinner" aria-label="Yükleniyor"></span>
+    </div>
+  </div>
+}
+
+@if (loadError) {
+  <div class="alert alert-danger" role="alert">{{ loadError }}</div>
+}
+
+@if (!loading && !loadError && dashboard) {
+  @if (dashboard.widgets.length > 0) {
+    <div class="widget-grid">
+      @for (item of dashboard.widgets; track item.widget.reportDefinitionId) {
+        <div class="panel widget">
+          @if (item.result) {
+            @if (item.widget.chartType !== 'table') {
+              <app-chart
+                [chartType]="item.widget.chartType"
+                [columns]="item.result.columns"
+                [rows]="item.result.rows">
+              </app-chart>
+            } @else {
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    @for (col of item.result.columns; track col.name) {
+                      <th>{{ col.name }}</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of item.result.rows; track $index) {
+                    <tr>
+                      @for (col of item.result.columns; track col.name) {
+                        <td>{{ row[col.name] }}</td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          }
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="panel">
+      <div class="empty-state">
+        <h3>Görüntülenebilir widget yok</h3>
+        <p>Widget'ların işaret ettiği raporlara erişim yetkiniz olmayabilir.</p>
+      </div>
+    </div>
+  }
+}

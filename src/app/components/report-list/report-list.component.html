@@ -1,0 +1,66 @@
+<div class="page-header">
+  <div>
+    <span class="eyebrow">Raporlama</span>
+    <h1 class="page-title">Raporlar</h1>
+    <p class="page-subtitle">Modeller üzerinde tanımladığınız metadata-driven raporlar.</p>
+  </div>
+  <a routerLink="/reports/new" class="btn btn-primary">
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M12 5v14M5 12h14"/>
+    </svg>
+    Yeni Rapor
+  </a>
+</div>
+
+@if (loading) {
+  <div class="panel">
+    <div class="empty-state">
+      <span class="spinner" aria-label="Yükleniyor"></span>
+    </div>
+  </div>
+}
+
+@if (loadError) {
+  <div class="alert alert-danger" role="alert">{{ loadError }}</div>
+}
+
+@if (!loading && !loadError) {
+  @if (reports.length > 0) {
+    <div class="panel">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Ad</th>
+            <th>Model</th>
+            <th>Grafik Tipi</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (report of reports; track report.id) {
+            <tr>
+              <td>{{ report.name }}</td>
+              <td><span class="badge badge-meta">{{ report.modelName }}</span></td>
+              <td>{{ report.chartType }}</td>
+              <td>
+                <div class="td-actions">
+                  <a class="btn btn-ghost btn-sm" [routerLink]="['/reports', report.id]">Görüntüle</a>
+                  <a class="btn btn-secondary btn-sm" [routerLink]="['/reports', report.id, 'edit']">Düzenle</a>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <div class="panel">
+      <div class="empty-state">
+        <div class="empty-icon" aria-hidden="true">📊</div>
+        <h3>Henüz rapor tanımlanmadı</h3>
+        <p>Erişebildiğiniz bir model üzerinde ilk raporunuzu oluşturun.</p>
+        <a routerLink="/reports/new" class="btn btn-primary">İlk Raporu Oluştur</a>
+      </div>
+    </div>
+  }
+}

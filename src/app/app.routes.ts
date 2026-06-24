@@ -73,6 +73,42 @@ export const routes: Routes = [
         path: 'profile',
         loadComponent: () =>
           import('./components/user-profile/user-profile.component').then(m => m.UserProfileComponent)
+      },
+
+      // Metadata-driven raporlama — yetki kontrolü backend'de (model üzerinde Read);
+      // authGuard yeterli, ayrıca adminGuard gerekmiyor.
+      {
+        path: 'reports',
+        loadComponent: () =>
+          import('./components/report-list/report-list.component').then(m => m.ReportListComponent)
+      },
+      // "new" sabit segmenti ":id" param'ından önce gelmeli — aksi halde "new" stringi ID olarak yakalanır
+      {
+        path: 'reports/new',
+        loadComponent: () =>
+          import('./components/report-build/report-build.component').then(m => m.ReportBuildComponent)
+      },
+      {
+        path: 'reports/:id/edit',
+        loadComponent: () =>
+          import('./components/report-build/report-build.component').then(m => m.ReportBuildComponent)
+      },
+      {
+        path: 'reports/:id',
+        loadComponent: () =>
+          import('./components/report-viewer/report-viewer.component').then(m => m.ReportViewerComponent)
+      },
+
+      // Dashboard — /Dashboard/list olmadığından genel liste yok; oluşturma sonrası doğrudan /dashboard/:id'ye gidilir.
+      {
+        path: 'dashboard/new',
+        loadComponent: () =>
+          import('./components/dashboard-build/dashboard-build.component').then(m => m.DashboardBuildComponent)
+      },
+      {
+        path: 'dashboard/:id',
+        loadComponent: () =>
+          import('./components/dashboard/dashboard.component').then(m => m.DashboardComponent)
       }
     ]
   },
