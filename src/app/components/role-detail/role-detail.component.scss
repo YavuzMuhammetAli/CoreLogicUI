@@ -1,0 +1,326 @@
+/* ── Rol Detay Sayfası ── */
+
+.detail-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--muted);
+  margin-bottom: var(--space-5);
+}
+
+.bc-link {
+  color: var(--accent);
+  text-decoration: none;
+  &:hover { text-decoration: underline; }
+}
+
+.bc-sep { color: var(--border); }
+
+.bc-current {
+  font-weight: 700;
+  color: var(--fg);
+}
+
+/* Yeni rol oluşturma formu */
+.new-role-form {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+
+  .field {
+    flex: 1;
+    margin-bottom: 0;
+  }
+}
+
+/* Sağ panel başlık alt metni */
+.role-subtitle {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+/* Bölüm ayırıcı */
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--border-soft);
+  margin: var(--space-6) 0;
+}
+
+/* Bölüm başlıkları */
+.section-block {
+  margin-bottom: var(--space-4);
+}
+
+.section-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: var(--space-4);
+}
+
+/* Rol adı düzenleme satırı */
+.rename-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-2);
+
+  .input {
+    flex: 1;
+  }
+}
+
+/* Üye ekleme satırı */
+.add-member-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-4);
+
+  select.input {
+    flex: 1;
+  }
+}
+
+/* E-posta sütunu — küçük ekranlarda kesilebilir */
+.email-cell {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Kaydet butonu alt çubuğu */
+.perm-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-4);
+  gap: var(--space-3);
+}
+
+/* ── Sekme çubuğu (Kullanıcılar / İzin Verilen Modeller) ── */
+/* model-detail.component.scss ile aynı token tabanlı desen */
+
+.tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border-soft);
+  margin-bottom: var(--space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard);
+
+  &:hover {
+    color: var(--fg);
+  }
+
+  &--active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.tab-panel {
+  padding-top: var(--space-2);
+}
+
+/* ── İzin Verilen Modeller: arama kutusu ── */
+
+.search-box {
+  position: relative;
+  max-width: 360px;
+  margin-bottom: var(--space-3);
+}
+
+.search-icon {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding-left: calc(var(--space-3) * 2 + 14px);
+}
+
+/* ── İzin Verilen Modeller: liste alt çubuğu (sayım + sayfalama) ── */
+
+.model-list-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--fg-2);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: var(--text-sm);
+
+  &:hover:not(:disabled):not(.page-btn--active) {
+    background: var(--surface-warm);
+    color: var(--fg);
+    border-color: var(--accent);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &--active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+}
+
+/* ── İzin Verilen Modeller: model listesi (master) ── */
+
+.model-perm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.model-perm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-standard);
+
+  &:hover {
+    background: var(--surface-warm);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring) inset;
+  }
+}
+
+.model-perm-name {
+  font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.model-perm-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  justify-content: flex-end;
+}
+
+.model-perm-empty {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+/* ── İzin Verilen Modeller: model izin detayı ── */
+
+.model-perm-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.model-perm-detail-title {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: 600;
+  margin: 0;
+}
+
+.model-perm-checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-4);
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+}

@@ -66,7 +66,33 @@ export const routes: Routes = [
         path: 'permissions',
         canActivate: [adminGuard],
         loadComponent: () =>
-          import('./components/user-permissions/user-permissions.component').then(m => m.UserPermissionsComponent)
+          import('./components/user-permission-list/user-permission-list.component').then(m => m.UserPermissionListComponent)
+      },
+      {
+        path: 'permissions/:id',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/user-permission-detail/user-permission-detail.component').then(m => m.UserPermissionDetailComponent)
+      },
+      {
+        path: 'roles',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/role-list/role-list.component').then(m => m.RoleListComponent)
+      },
+      // "new" sabit segmenti ":id" param'ından önce gelmeli — aksi halde "new" stringi ID olarak yakalanır
+      {
+        path: 'roles/new',
+        canActivate: [adminGuard],
+        data: { mode: 'new' },
+        loadComponent: () =>
+          import('./components/role-detail/role-detail.component').then(m => m.RoleDetailComponent)
+      },
+      {
+        path: 'roles/:id',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/role-detail/role-detail.component').then(m => m.RoleDetailComponent)
       },
       {
         // Kullanıcının kendi profil sayfası — authGuard layout'tan miras alınır

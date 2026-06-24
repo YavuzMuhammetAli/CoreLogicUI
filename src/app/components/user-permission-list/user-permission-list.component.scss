@@ -1,0 +1,12 @@
+/* ── Kullanıcı Yetkileri Listesi ── */
+/* Tablo/panel/buton stilleri global stylesheet'ten (data-table, panel, clickable-row vb.) gelir. */
+
+/* E-posta sütunu — küçük ekranlarda kesilebilir */
+.email-cell {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

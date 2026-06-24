@@ -1,0 +1,392 @@
+<!-- ─── Breadcrumb ──────────────────────────────────────────────────────────── -->
+<div class="detail-breadcrumb">
+  <a [routerLink]="['/roles']" class="bc-link">Roller</a>
+  <span class="bc-sep">/</span>
+  <span class="bc-current">@if (isNew) { Yeni } @else { {{ role()?.name }} }</span>
+</div>
+
+@if (isNew) {
+  <!-- ── Yeni rol oluşturma ── -->
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Yeni Rol</h2>
+      <div class="panel-actions">
+        <a [routerLink]="['/roles']" class="btn btn-ghost btn-sm">
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          Listeye Dön
+        </a>
+      </div>
+    </div>
+    <div class="panel-body">
+      <form class="new-role-form" (ngSubmit)="createRole()">
+        <div class="field">
+          <label for="newRoleName" class="sr-only">Rol adı</label>
+          <input
+            id="newRoleName"
+            class="input"
+            type="text"
+            name="newRoleName"
+            [(ngModel)]="newRoleName"
+            placeholder="Rol adı…"
+            [disabled]="creatingRole()"
+            autocomplete="off">
+        </div>
+        <button class="btn btn-primary btn-sm" type="submit" [disabled]="creatingRole()">
+          @if (creatingRole()) {
+            <span class="spinner" aria-label="Oluşturuluyor"></span>
+            Oluşturuluyor…
+          } @else {
+            Kaydet
+          }
+        </button>
+      </form>
+
+      @if (createRoleMsg()) {
+        <div class="alert" [class.alert-success]="createRoleMsgType()==='success'"
+             [class.alert-danger]="createRoleMsgType()==='danger'" role="alert">
+          {{ createRoleMsg() }}
+        </div>
+      }
+    </div>
+  </div>
+} @else {
+  <!-- ── Mevcut rol düzenleme ── -->
+
+  @if (roleLoading()) {
+    <div class="panel">
+      <div class="empty-state">
+        <span class="spinner" style="width: 32px; height: 32px;" aria-label="Yükleniyor"></span>
+      </div>
+    </div>
+  }
+
+  @if (!roleLoading() && roleError()) {
+    <div class="panel">
+      <div class="empty-state">
+        <div class="empty-icon" aria-hidden="true">⚠️</div>
+        <h3>Rol bulunamadı</h3>
+        <p>{{ roleError() }}</p>
+        <a routerLink="/roles" class="btn btn-primary">Roller'e Dön</a>
+      </div>
+    </div>
+  }
+
+  @if (!roleLoading() && !roleError() && role(); as roleVal) {
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h2 class="panel-head-title">{{ roleVal.name }}</h2>
+          <span class="role-subtitle">{{ roleVal.userCount }} üye</span>
+        </div>
+        <div class="panel-actions">
+          <a [routerLink]="['/roles']" class="btn btn-ghost btn-sm">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            Listeye Dön
+          </a>
+        </div>
+      </div>
+
+      <div class="panel-body">
+
+        <!-- ── Rol Adı / Sil ── -->
+        <section class="section-block" aria-labelledby="rename-section-title">
+          <h3 id="rename-section-title" class="section-title">Rol Adı</h3>
+
+          <div class="rename-row">
+            <input
+              class="input"
+              type="text"
+              name="roleNameEdit"
+              [(ngModel)]="roleNameEdit"
+              [disabled]="renameSaving()"
+              autocomplete="off">
+            <button class="btn btn-secondary btn-sm" type="button"
+                    (click)="renameRole()" [disabled]="renameSaving()">
+              Kaydet
+            </button>
+            <button class="btn btn-danger btn-sm" type="button"
+                    (click)="deleteRole()" [disabled]="deleteSaving()">
+              Rolü Sil
+            </button>
+          </div>
+
+          @if (renameMsg()) {
+            <div class="alert" [class.alert-success]="renameMsgType()==='success'"
+                 [class.alert-danger]="renameMsgType()==='danger'" role="alert">
+              {{ renameMsg() }}
+            </div>
+          }
+          @if (deleteMsg()) {
+            <div class="alert alert-danger" role="alert">{{ deleteMsg() }}</div>
+          }
+        </section>
+
+        <hr class="section-divider">
+
+        <!-- ── Sekme çubuğu: Kullanıcılar / İzin Verilen Modeller ── -->
+        <div class="tab-bar" role="tablist" aria-label="Rol detay sekmeleri">
+          <button
+            class="tab-btn"
+            [class.tab-btn--active]="activeTab() === 'users'"
+            role="tab"
+            [attr.aria-selected]="activeTab() === 'users'"
+            type="button"
+            (click)="setTab('users')">
+            Kullanıcılar
+            @if (members().length > 0) {
+              <span class="tab-badge">{{ members().length }}</span>
+            }
+          </button>
+          <button
+            class="tab-btn"
+            [class.tab-btn--active]="activeTab() === 'models'"
+            role="tab"
+            [attr.aria-selected]="activeTab() === 'models'"
+            type="button"
+            (click)="setTab('models')">
+            İzin Verilen Modeller
+            @if (permittedModelCount() > 0) {
+              <span class="tab-badge">{{ permittedModelCount() }}</span>
+            }
+          </button>
+        </div>
+
+        <!-- ── Sekme: Kullanıcılar ── -->
+        @if (activeTab() === 'users') {
+          <div class="tab-panel" role="tabpanel" aria-label="Rol üyeleri">
+
+            <div class="add-member-row">
+              <select class="input" name="userIdToAdd" [(ngModel)]="userIdToAdd"
+                      [disabled]="addMemberSaving() || candidateUsers().length === 0">
+                <option [ngValue]="null" disabled>Kullanıcı seçin…</option>
+                @for (u of candidateUsers(); track u.id) {
+                  <option [ngValue]="u.id">{{ fullName(u) }} — {{ u.email }}</option>
+                }
+              </select>
+              <button class="btn btn-secondary btn-sm" type="button"
+                      (click)="addMember()" [disabled]="addMemberSaving() || !userIdToAdd">
+                @if (addMemberSaving()) {
+                  <span class="spinner" aria-label="Ekleniyor"></span>
+                } @else {
+                  Kullanıcı Ekle
+                }
+              </button>
+            </div>
+
+            @if (addMemberMsg()) {
+              <div class="alert alert-danger" role="alert">{{ addMemberMsg() }}</div>
+            }
+
+            @if (membersLoading()) {
+              <div class="empty-state">
+                <span class="spinner" aria-label="Yükleniyor"></span>
+              </div>
+            }
+
+            @if (!membersLoading() && membersError()) {
+              <div class="alert alert-danger" role="alert">{{ membersError() }}</div>
+            }
+
+            @if (!membersLoading() && !membersError() && members().length > 0) {
+              <div class="table-wrapper">
+                <table class="data-table" aria-label="Rol üyeleri">
+                  <thead>
+                    <tr>
+                      <th>Ad Soyad</th>
+                      <th>E-posta</th>
+                      <th class="td-actions">İşlem</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (m of members(); track m.id) {
+                      <tr>
+                        <td>
+                          {{ fullName(m) }}
+                          @if (m.isAdmin) {
+                            <span class="badge badge-meta" title="Admin">Admin</span>
+                          }
+                        </td>
+                        <td class="email-cell">{{ m.email }}</td>
+                        <td class="td-actions">
+                          <button class="btn btn-ghost btn-sm" type="button"
+                                  (click)="removeMember(m)"
+                                  [disabled]="removingUserId() === m.id">
+                            @if (removingUserId() === m.id) {
+                              <span class="spinner" aria-label="Çıkarılıyor"></span>
+                            } @else {
+                              Çıkar
+                            }
+                          </button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+
+            @if (!membersLoading() && !membersError() && members().length === 0) {
+              <div class="empty-state">
+                <p>Bu role henüz üye eklenmedi.</p>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- ── Sekme: İzin Verilen Modeller ── -->
+        @if (activeTab() === 'models') {
+          <div class="tab-panel" role="tabpanel" aria-label="İzin verilen modeller">
+
+            @if (permLoading()) {
+              <div class="empty-state">
+                <span class="spinner" aria-label="Yükleniyor"></span>
+              </div>
+            }
+
+            @if (!permLoading() && permError()) {
+              <div class="alert alert-danger" role="alert">{{ permError() }}</div>
+            }
+
+            @if (!permLoading() && !permError() && permRows().length === 0) {
+              <div class="empty-state">
+                <p>Sistemde henüz yayınlanmış model bulunmuyor.</p>
+              </div>
+            }
+
+            @if (!permLoading() && !permError() && permRows().length > 0) {
+
+              <!-- Model listesi (master) -->
+              @if (!selectedPermRow()) {
+
+                <div class="search-box">
+                  <svg class="search-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                  </svg>
+                  <input
+                    type="search"
+                    class="input search-input"
+                    placeholder="Model ara…"
+                    [value]="modelSearchTerm()"
+                    (input)="onModelSearchChange($any($event.target).value)"
+                    aria-label="Model ara">
+                </div>
+
+                @if (filteredPermRows().length === 0) {
+                  <div class="empty-state">
+                    <p>"{{ modelSearchTerm() }}" için sonuç bulunamadı.</p>
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="onModelSearchChange('')">Aramayı Temizle</button>
+                  </div>
+                } @else {
+                  <ul class="model-perm-list">
+                    @for (row of pagedPermRows(); track row.modelName) {
+                      <li
+                        class="model-perm-row"
+                        (click)="selectModelPerm(row)"
+                        tabindex="0"
+                        (keydown.enter)="selectModelPerm(row)"
+                        (keydown.space)="selectModelPerm(row)"
+                        [attr.aria-label]="row.modelName + ' izinlerini düzenle'">
+                        <span class="model-perm-name">{{ row.modelName }}</span>
+                        <span class="model-perm-badges">
+                          @for (label of permSummary(row); track label) {
+                            <span class="badge badge-meta">{{ label }}</span>
+                          }
+                          @if (permSummary(row).length === 0) {
+                            <span class="model-perm-empty">İzin yok</span>
+                          }
+                        </span>
+                      </li>
+                    }
+                  </ul>
+
+                  <div class="model-list-footer">
+                    <span class="eyebrow">{{ modelRangeStart() }}–{{ modelRangeEnd() }} / {{ filteredPermRows().length }} model</span>
+
+                    @if (modelTotalPages() > 1) {
+                      <nav class="pagination" aria-label="Model sayfalama">
+                        <button class="page-btn" type="button" (click)="goToModelPage(modelPageIndex() - 1)"
+                                [disabled]="modelPageIndex() === 1" aria-label="Önceki sayfa">‹</button>
+                        @for (p of modelPages(); track p) {
+                          <button class="page-btn" [class.page-btn--active]="p === modelPageIndex()"
+                                  type="button" (click)="goToModelPage(p)"
+                                  [attr.aria-current]="p === modelPageIndex() ? 'page' : null">{{ p }}</button>
+                        }
+                        <button class="page-btn" type="button" (click)="goToModelPage(modelPageIndex() + 1)"
+                                [disabled]="modelPageIndex() === modelTotalPages()" aria-label="Sonraki sayfa">›</button>
+                      </nav>
+                    }
+                  </div>
+                }
+              }
+
+              <!-- İzin detay paneli -->
+              @if (selectedPermRow(); as row) {
+                <div class="model-perm-detail">
+                  <button class="btn btn-ghost btn-sm" type="button" (click)="clearModelPerm()">
+                    ← Modellere dön
+                  </button>
+
+                  <h3 class="model-perm-detail-title">{{ row.modelName }}</h3>
+
+                  <div class="model-perm-checks">
+                    <label class="checkbox-label">
+                      <input type="checkbox" [(ngModel)]="row.canRead" (change)="markDirty(row)">
+                      Okuma
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" [(ngModel)]="row.canCreate" (change)="markDirty(row)">
+                      Ekleme
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" [(ngModel)]="row.canUpdate" (change)="markDirty(row)">
+                      Güncelleme
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" [(ngModel)]="row.canDelete" (change)="markDirty(row)">
+                      Silme
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" [(ngModel)]="row.canShowInNav" (change)="markDirty(row)">
+                      Navigasyonda göster
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" [(ngModel)]="row.canOwnOnly" (change)="markDirty(row)">
+                      Sadece kendi kayıtları
+                    </label>
+                  </div>
+
+                  <div class="perm-footer">
+                    <button
+                      class="btn btn-primary"
+                      (click)="saveModelPerm(row)"
+                      [disabled]="permRowSaving()"
+                      type="button">
+                      @if (permRowSaving()) {
+                        <span class="spinner" aria-label="Kaydediliyor"></span>
+                        Kaydediliyor…
+                      } @else {
+                        Bu Model İzinlerini Kaydet
+                      }
+                    </button>
+                  </div>
+
+                  @if (permMsg()) {
+                    <div class="alert" [class.alert-success]="permMsgType()==='success'"
+                         [class.alert-danger]="permMsgType()==='danger'" role="alert">
+                      {{ permMsg() }}
+                    </div>
+                  }
+                </div>
+              }
+            }
+          </div>
+        }
+
+      </div>
+    </div>
+  }
+}
