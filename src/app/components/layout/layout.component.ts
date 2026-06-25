@@ -10,6 +10,7 @@ import { PermissionService } from '../../services/permission.service';
 import { PublishedModelService, PublishedModel } from '../../services/published-model.service';
 import { NotificationService } from '../../services/notification.service';
 import { UserProfileService } from '../../services/user-profile.service';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-layout',
@@ -35,6 +36,7 @@ export class LayoutComponent implements OnInit {
 
   private readonly platformId   = inject(PLATFORM_ID);
   private readonly userProfile  = inject(UserProfileService);
+  readonly themeService         = inject(ThemeService);
 
   constructor(
     private auth: AuthService,
@@ -140,5 +142,10 @@ export class LayoutComponent implements OnInit {
 
   toggleSidebar(): void {
     this.sidebarOpen = !this.sidebarOpen;
+  }
+
+  /** Açık/koyu tema arasında geçiş yapar */
+  toggleTheme(): void {
+    this.themeService.toggle();
   }
 }
