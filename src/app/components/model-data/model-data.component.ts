@@ -5,6 +5,8 @@ import { PublishedModelService, PublishedModel, PublishedColumn, PagedData } fro
 import { PublishModelService } from '../../services/publish-model.service';
 import { PermissionService } from '../../services/permission.service';
 import { PublishedTableService, ModelVersion } from '../../services/published-table.service';
+import { ModelColumnSettingService, ModelColumnSettingDto } from '../../services/model-column-setting.service';
+import { ColumnVisibilityComponent, ColumnVisibilityItem } from '../shared/column-visibility/column-visibility.component';
 import {
   isImage,
   imageSrc,
@@ -19,7 +21,7 @@ type DataRow = Record<string, unknown>;
 @Component({
   selector: 'app-model-data',
   standalone: true,
-  imports: [CommonModule, RouterLink, DatePipe],
+  imports: [CommonModule, RouterLink, DatePipe, ColumnVisibilityComponent],
   templateUrl: './model-data.component.html',
   styleUrls: ['./model-data.component.scss']
 })
@@ -48,12 +50,17 @@ export class ModelDataComponent implements OnInit {
   // Assembly yüklenmemiş hatası için tek-seferlik retry bayrağı
   private rowsRetried = false;
 
+  // Admin tarafından yönetilen kolon görünürlüğü — null = ayar yok, tüm kolonlar görünür
+  visibleColumnNames: string[] | null = null;
+  savingColumnVisibility = false;
+
   constructor(
     private route: ActivatedRoute,
     private publishedModel: PublishedModelService,
     private publishModel: PublishModelService,
     public permissionService: PermissionService,
-    public publishedTableService: PublishedTableService
+    public publishedTableService: PublishedTableService,
+    private modelColumnSetting: ModelColumnSettingService
   ) {}
 
   ngOnInit(): void {
@@ -64,6 +71,7 @@ export class ModelDataComponent implements OnInit {
       this.typeName = params.get('typeName') ?? '';
       this.resetState();
       this.loadModelMeta();
+      this.loadColumnVisibility();
     });
   }
 
@@ -79,10 +87,55 @@ export class ModelDataComponent implements OnInit {
     this.versions.set([]);
     this.pageIndex = 1;
     this.total     = 0;
+    this.visibleColumnNames = null;
   }
 
   get columns(): PublishedColumn[] {
     return this.model?.columns ?? [];
+  }
+
+  /** Görünür kolonlar — ayar yoksa şema kolonlarının tümü */
+  get displayColumns(): PublishedColumn[] {
+    if (!this.visibleColumnNames) return this.columns;
+    const visible = new Set(this.visibleColumnNames);
+    return this.columns.filter(c => visible.has(c.columnName));
+  }
+
+  /** Kolon görünürlüğü popover'ı için kolon listesi (liste görünümünde zorunlu kolon yok) */
+  get columnVisibilityItems(): ColumnVisibilityItem[] {
+    return this.columns.map(c => ({ name: c.columnName, required: false }));
+  }
+
+  /** Popover'ın o anki etkin seçimi — ayar yoksa tüm kolonlar işaretli gösterilir */
+  get effectiveVisibleColumnNames(): string[] {
+    return this.visibleColumnNames ?? this.columns.map(c => c.columnName);
+  }
+
+  /** Admin tarafından kayıtlı liste-görünümü kolon ayarını yükler */
+  private loadColumnVisibility(): void {
+    const typeName = this.typeName;
+    this.modelColumnSetting.get(typeName, 'list').subscribe({
+      next: res => {
+        if (typeName !== this.typeName) return; // bu sırada başka modele geçilmiş olabilir
+        this.visibleColumnNames = (res.success && res.data?.visibleColumns?.length)
+          ? res.data.visibleColumns
+          : null;
+      },
+      error: () => { /* ayar yüklenemezse tüm kolonlar görünür kalır */ }
+    });
+  }
+
+  /** Admin kolon görünürlüğü ayarını kaydeder */
+  onSaveColumnVisibility(names: string[]): void {
+    this.savingColumnVisibility = true;
+    const dto: ModelColumnSettingDto = { typeName: this.typeName, viewType: 'list', visibleColumns: names };
+    this.modelColumnSetting.set(dto).subscribe({
+      next: res => {
+        this.savingColumnVisibility = false;
+        if (res.success) this.visibleColumnNames = names;
+      },
+      error: () => { this.savingColumnVisibility = false; }
+    });
   }
 
   /** Model meta verisini backend'den çek, ardından satırları yükle */
@@ -145,9 +198,9 @@ export class ModelDataComponent implements OnInit {
     });
   }
 
-  /** Tablo başlıklarını belirle (ID + schema sütunları) */
+  /** Tablo başlıklarını belirle (ID + görünür schema sütunları) */
   get tableHeaders(): string[] {
-    return ['ID', ...this.columns.map(c => c.columnName)];
+    return ['ID', ...this.displayColumns.map(c => c.columnName)];
   }
 
   // ─── Sayfalama ─────────────────────────────────────────────────────────────────

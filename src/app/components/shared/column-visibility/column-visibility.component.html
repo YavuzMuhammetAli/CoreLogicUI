@@ -1,0 +1,54 @@
+<div class="col-vis-wrap" #wrapRef>
+  <button
+    type="button"
+    class="btn btn-ghost btn-sm"
+    (click)="toggleOpen(); $event.stopPropagation()"
+    [attr.aria-expanded]="open"
+    aria-haspopup="true"
+    aria-label="Kolonları yönet">
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="4" width="7" height="16" rx="1"/>
+      <rect x="14" y="4" width="7" height="16" rx="1"/>
+    </svg>
+    Kolonlar
+  </button>
+
+  @if (open) {
+    <div class="col-vis-dropdown" role="menu" aria-label="Kolon görünürlüğü">
+      <div class="col-vis-header">Görünür Kolonlar</div>
+
+      <div class="col-vis-list">
+        @for (col of columns; track col.name) {
+          <label class="checkbox-label" [class.checkbox-label--disabled]="col.required">
+            <input
+              type="checkbox"
+              [checked]="isChecked(col.name)"
+              [disabled]="col.required"
+              (change)="toggle(col)">
+            {{ col.name }}
+            @if (col.required) {
+              <span class="col-vis-required">zorunlu</span>
+            }
+          </label>
+        }
+        @if (columns.length === 0) {
+          <p class="col-vis-empty">Bu modelde kolon bulunmuyor.</p>
+        }
+      </div>
+
+      @if (!canSave) {
+        <p class="col-vis-hint" role="alert">En az bir kolon seçili olmalı.</p>
+      }
+
+      <div class="col-vis-footer">
+        <button type="button" class="btn btn-primary btn-sm" (click)="submit()" [disabled]="saving || !canSave">
+          @if (saving) {
+            <span class="spinner" aria-label="Kaydediliyor"></span>
+          } @else {
+            Kaydet
+          }
+        </button>
+      </div>
+    </div>
+  }
+</div>

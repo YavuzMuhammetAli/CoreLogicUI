@@ -7,12 +7,15 @@ import { catchError, map } from 'rxjs/operators';
 import { PublishedModelService, PublishedModel, PublishedColumn } from '../../services/published-model.service';
 import { PublishModelService } from '../../services/publish-model.service';
 import { PermissionService } from '../../services/permission.service';
+import { ModelColumnSettingService, ModelColumnSettingDto } from '../../services/model-column-setting.service';
+import { ColumnVisibilityComponent, ColumnVisibilityItem } from '../shared/column-visibility/column-visibility.component';
 import {
   inputTypeFor,
   isImage,
   imageSrc,
   isBase64Value,
-  downloadFile
+  downloadFile,
+  sanitizePayload
 } from '../model-data/model-data.util';
 
 type DataRow = Record<string, unknown>;
@@ -38,12 +41,17 @@ interface TabState {
   formMsg: string | null;
   formOk: boolean | null;
   fileNames: Record<string, string>;
+
+  // Admin tarafından yönetilen tablo kolon görünürlüğü — null = ayar yok, tümü görünür.
+  // Alt modelin kendi liste sayfasıyla ('list' viewType) AYNI ayarı paylaşır.
+  visibleColumnNames: string[] | null;
+  savingColumnVisibility: boolean;
 }
 
 @Component({
   selector: 'app-model-detail',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, ColumnVisibilityComponent],
   templateUrl: './model-detail.component.html',
   styleUrls: ['./model-detail.component.scss']
 })
@@ -80,6 +88,10 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   /** Toplu kayıt sonrası kaydedilemeyenlerin listesi (edit instance'ta gösterilir) */
   childSaveErrors: string[] = [];
 
+  // Admin tarafından yönetilen üst form kolon görünürlüğü — null = ayar yok, tümü görünür
+  visibleParentColumnNames: string[] | null = null;
+  savingColumnVisibility = false;
+
   private routeSub?: Subscription;
 
   constructor(
@@ -88,7 +100,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     private publishedModel: PublishedModelService,
     private publishModel: PublishModelService,
     private fb: FormBuilder,
-    public permission: PermissionService
+    public permission: PermissionService,
+    private modelColumnSetting: ModelColumnSettingService
   ) {}
 
   ngOnInit(): void {
@@ -99,6 +112,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       this.recordId = Number(params.get('id') ?? 0);
       this.reset();
       this.loadAll();
+      this.loadColumnVisibility();
     });
   }
 
@@ -140,6 +154,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.loadingChildren = false;
     this.childSaveErrors = [];
     this.localIdSeq = 0;
+    this.visibleParentColumnNames = null;
   }
 
   // ─── Veri yükleme ───────────────────────────────────────────────────────────
@@ -237,6 +252,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
             const state = this.buildTabState(name, meta?.columns ?? []);
             this.tabStates.set(name, state);
             this.loadTabRows(state);
+            this.loadTabColumnVisibility(state);
           }
         }
       },
@@ -261,6 +277,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
             const state = this.buildTabState(name, meta?.columns ?? []);
             // Yeni kayıt modunda server'dan veri çekilmez; rows boş kalır
             this.tabStates.set(name, state);
+            this.loadTabColumnVisibility(state);
           }
         }
       },
@@ -273,6 +290,56 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   /** Üst kayda ait tüm kolonlar */
   get parentColumns(): PublishedColumn[] {
     return this.model?.columns ?? [];
+  }
+
+  /**
+   * Formda render edilecek kolonlar: admin ayarına göre filtrelenmiş, ancak zorunlu
+   * (isNullable=false) kolonlar her zaman dahil edilir — aksi halde form geçersiz kalır
+   * ve güncellemede gizli alan payload'dan düşüp null'lanabilir.
+   * Not: editForm her zaman TÜM kolonlarla kurulur (openEditMode/buildNewForm); bu getter
+   * sadece render'ı filtreler, form bütünlüğünü etkilemez.
+   */
+  get visibleParentColumns(): PublishedColumn[] {
+    if (!this.visibleParentColumnNames) return this.parentColumns;
+    const visible = new Set(this.visibleParentColumnNames);
+    return this.parentColumns.filter(c => !c.isNullable || visible.has(c.columnName));
+  }
+
+  /** Kolon görünürlüğü popover'ı için kolon listesi — zorunlu alanlar gizlenemez */
+  get parentColumnVisibilityItems(): ColumnVisibilityItem[] {
+    return this.parentColumns.map(c => ({ name: c.columnName, required: !c.isNullable }));
+  }
+
+  /** Popover'ın o anki etkin seçimi — ayar yoksa tüm kolonlar işaretli gösterilir */
+  get effectiveVisibleParentColumnNames(): string[] {
+    return this.visibleParentColumnNames ?? this.parentColumns.map(c => c.columnName);
+  }
+
+  /** Admin tarafından kayıtlı detay-görünümü kolon ayarını yükler */
+  private loadColumnVisibility(): void {
+    const typeName = this.typeName;
+    this.modelColumnSetting.get(typeName, 'detail').subscribe({
+      next: res => {
+        if (typeName !== this.typeName) return; // bu sırada başka modele geçilmiş olabilir
+        this.visibleParentColumnNames = (res.success && res.data?.visibleColumns?.length)
+          ? res.data.visibleColumns
+          : null;
+      },
+      error: () => { /* ayar yüklenemezse tüm kolonlar görünür kalır */ }
+    });
+  }
+
+  /** Admin kolon görünürlüğü ayarını kaydeder */
+  onSaveColumnVisibility(names: string[]): void {
+    this.savingColumnVisibility = true;
+    const dto: ModelColumnSettingDto = { typeName: this.typeName, viewType: 'detail', visibleColumns: names };
+    this.modelColumnSetting.set(dto).subscribe({
+      next: res => {
+        this.savingColumnVisibility = false;
+        if (res.success) this.visibleParentColumnNames = names;
+      },
+      error: () => { this.savingColumnVisibility = false; }
+    });
   }
 
   /** Kayıttan belirli kolona ait ham değeri döndürür */
@@ -324,7 +391,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
     if (this.isNew) {
       // Yeni kayıt oluştur
-      const jsonData: DataRow = { ...this.editForm.value };
+      const jsonData: DataRow = sanitizePayload(this.parentColumns, this.editForm.value);
       this.publishedModel.add(this.typeName, jsonData).subscribe({
         next: res => {
           this.editLoading = false;
@@ -359,7 +426,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       });
     } else {
       // Mevcut kaydı güncelle — sayfada kal, başarı mesajı göster
-      const jsonData: DataRow = { ...this.editForm.value, ID: this.recordId };
+      const jsonData: DataRow = { ...sanitizePayload(this.parentColumns, this.editForm.value), ID: this.recordId };
       this.publishedModel.update(this.typeName, jsonData).subscribe({
         next: res => {
           this.editLoading = false;
@@ -367,7 +434,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
           this.editMsg = res.message;
           if (res.success) {
             // Kaydı optimistik güncelle, sayfada kal
-            this.record = { ...this.record, ...this.editForm!.value, ID: this.recordId };
+            this.record = { ...this.record, ...jsonData };
           }
         },
         error: err => {
@@ -429,7 +496,9 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       formLoading: false,
       formMsg: null,
       formOk: null,
-      fileNames: {}
+      fileNames: {},
+      visibleColumnNames: null,
+      savingColumnVisibility: false
     };
   }
 
@@ -452,13 +521,64 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
   // ─── Sekme filtreleme ve sıralama ────────────────────────────────────────────
 
-  /** FK kolonu dışındaki kolonlar */
+  /** FK kolonu dışındaki kolonlar — formlar (ekle/düzenle) bunu kullanır, ASLA filtrelenmez */
   visibleCols(state: TabState): PublishedColumn[] {
     return state.columns.filter(c => c.columnName !== state.fkColumn);
   }
 
+  /**
+   * Tabloda gösterilecek kolonlar: FK hariç + admin ayarına göre filtreli.
+   * Form bütünlüğünü etkilememesi için `visibleCols`'tan ayrı tutulur — admin tablo
+   * görünümünden bir kolonu gizlese de ekle/düzenle formunda o alan kaybolmaz.
+   */
+  displayCols(state: TabState): PublishedColumn[] {
+    const cols = this.visibleCols(state);
+    if (!state.visibleColumnNames) return cols;
+    const visible = new Set(state.visibleColumnNames);
+    return cols.filter(c => visible.has(c.columnName));
+  }
+
   tableHeaders(state: TabState): string[] {
-    return ['ID', ...this.visibleCols(state).map(c => c.columnName)];
+    return ['ID', ...this.displayCols(state).map(c => c.columnName)];
+  }
+
+  /** Kolon görünürlüğü popover'ı için kolon listesi — alt model tablosunda zorunlu zorlaması yok */
+  tabColumnVisibilityItems(state: TabState): ColumnVisibilityItem[] {
+    return this.visibleCols(state).map(c => ({ name: c.columnName, required: false }));
+  }
+
+  /** Popover'ın o anki etkin seçimi — ayar yoksa tüm kolonlar işaretli gösterilir */
+  effectiveTabVisibleColumnNames(state: TabState): string[] {
+    return state.visibleColumnNames ?? this.visibleCols(state).map(c => c.columnName);
+  }
+
+  /**
+   * Alt modelin kendi liste sayfasıyla (`'list'` viewType) AYNI kolon ayarını yükler —
+   * admin bir modelin kolonlarını bir kez seçer, model nerede listelenirse listelensin
+   * (kendi liste sayfası + üst kaydın bu sekmesi) aynı görünür.
+   */
+  private loadTabColumnVisibility(state: TabState): void {
+    this.modelColumnSetting.get(state.typeName, 'list').subscribe({
+      next: res => {
+        state.visibleColumnNames = (res.success && res.data?.visibleColumns?.length)
+          ? res.data.visibleColumns
+          : null;
+      },
+      error: () => { /* ayar yüklenemezse tüm kolonlar görünür kalır */ }
+    });
+  }
+
+  /** Admin alt model tablosu için kolon görünürlüğü ayarını kaydeder ('list' ayarını günceller) */
+  onSaveTabColumnVisibility(state: TabState, names: string[]): void {
+    state.savingColumnVisibility = true;
+    const dto: ModelColumnSettingDto = { typeName: state.typeName, viewType: 'list', visibleColumns: names };
+    this.modelColumnSetting.set(dto).subscribe({
+      next: res => {
+        state.savingColumnVisibility = false;
+        if (res.success) state.visibleColumnNames = names;
+      },
+      error: () => { state.savingColumnVisibility = false; }
+    });
   }
 
   toggleSort(state: TabState, col: string): void {
@@ -477,7 +597,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     const term = state.searchTerm.trim().toLowerCase();
     if (term) {
       rows = rows.filter(row =>
-        this.visibleCols(state).some(col => {
+        this.displayCols(state).some(col => {
           const v = row[col.columnName] ?? row[col.columnName.toLowerCase()];
           return v != null && String(v).toLowerCase().includes(term);
         }) ||
@@ -584,7 +704,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     state.formMsg = null;
     state.formOk = null;
 
-    const jsonData: DataRow = { ...state.form.value, [state.fkColumn]: this.recordId };
+    const jsonData: DataRow = { ...sanitizePayload(state.columns, state.form.value), [state.fkColumn]: this.recordId };
 
     if (state.formMode === 'edit' && state.editingRow) {
       jsonData['ID'] = state.editingRow['ID'] ?? state.editingRow['id'];
@@ -630,7 +750,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
         taskIdx++;
         // __localId'yi payload'dan çıkar, FK'yı ekle
         const { __localId, ...fields } = row as DataRow & { __localId?: unknown };
-        const payload: DataRow = { ...fields, [state.fkColumn]: parentId };
+        const payload: DataRow = { ...sanitizePayload(state.columns, fields), [state.fkColumn]: parentId };
         tasks.push({ typeName: state.typeName, fkColumn: state.fkColumn, row: payload, label: `${state.typeName} #${taskIdx}` });
       });
     }

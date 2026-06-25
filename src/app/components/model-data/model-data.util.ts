@@ -4,6 +4,8 @@
  * Hem ModelDataComponent hem de ModelChildrenComponent tarafından yeniden kullanılır.
  */
 
+import { PublishedColumn } from '../../services/published-model.service';
+
 type DataRow = Record<string, unknown>;
 
 /** Veri tipine göre HTML input tipi */
@@ -18,6 +20,29 @@ export function inputTypeFor(dataType: string): string {
     case 'file':    return 'file';
     default: return 'text';
   }
+}
+
+/**
+ * Form değerini backend JSON deserializasyonu için temizler.
+ * string olmayan kolonlarda boş değer ('' / null / undefined) → null
+ * (backend Nullable<DateTime>/<bool>/<int> null kabul eder, '' edemez).
+ * boolean kolonlar gerçek boolean'a normalize edilir.
+ */
+export function sanitizePayload(columns: PublishedColumn[], formValue: DataRow): DataRow {
+  const typeByName = new Map(columns.map(c => [c.columnName, c.dataType]));
+  const out: DataRow = { ...formValue };
+  for (const [key, val] of Object.entries(out)) {
+    const dataType = typeByName.get(key);
+    if (!dataType) continue;                 // ID gibi meta alanlar dokunulmaz
+    if (dataType === 'boolean') {
+      out[key] = val === '' || val == null ? null : Boolean(val);
+      continue;
+    }
+    if (dataType !== 'string' && (val === '' || val == null)) {
+      out[key] = null;                       // datetime / int / float / decimal
+    }
+  }
+  return out;
 }
 
 /**

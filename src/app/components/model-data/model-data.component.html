@@ -32,6 +32,12 @@
       </div>
       <div class="panel-actions">
         @if (permissionService.isAdmin()) {
+          <app-column-visibility
+            [columns]="columnVisibilityItems"
+            [visible]="effectiveVisibleColumnNames"
+            [saving]="savingColumnVisibility"
+            (save)="onSaveColumnVisibility($event)">
+          </app-column-visibility>
           <button class="btn btn-ghost btn-sm" type="button" (click)="toggleVersionPanel()">Sürümler</button>
         }
         <button class="btn btn-secondary btn-sm" (click)="loadRows()" type="button" [disabled]="loadingRows">
