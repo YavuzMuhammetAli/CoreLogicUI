@@ -1,0 +1,63 @@
+<div class="page-header">
+  <div>
+    <span class="eyebrow">Raporlama</span>
+    <h1 class="page-title">Dashboard'lar</h1>
+    <p class="page-subtitle">Birden çok raporu widget olarak bir araya getiren dashboard'lar.</p>
+  </div>
+  <a routerLink="/dashboard/new" class="btn btn-primary">
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M12 5v14M5 12h14"/>
+    </svg>
+    Yeni Dashboard
+  </a>
+</div>
+
+@if (loading) {
+  <div class="panel">
+    <div class="empty-state">
+      <span class="spinner" aria-label="Yükleniyor"></span>
+    </div>
+  </div>
+}
+
+@if (loadError) {
+  <div class="alert alert-danger" role="alert">{{ loadError }}</div>
+}
+
+@if (!loading && !loadError) {
+  @if (dashboards.length > 0) {
+    <div class="panel">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Ad</th>
+            <th>Widget Sayısı</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (dashboard of dashboards; track dashboard.id) {
+            <tr>
+              <td>{{ dashboard.name }}</td>
+              <td><span class="badge badge-meta">{{ dashboard.widgets.length }}</span></td>
+              <td>
+                <div class="td-actions">
+                  <a class="btn btn-ghost btn-sm" [routerLink]="['/dashboard', dashboard.id]">Görüntüle</a>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <div class="panel">
+      <div class="empty-state">
+        <div class="empty-icon" aria-hidden="true">📊</div>
+        <h3>Henüz dashboard yok</h3>
+        <p>Mevcut raporlarınızdan widget seçerek ilk dashboard'unuzu oluşturun.</p>
+        <a routerLink="/dashboard/new" class="btn btn-primary">İlk Dashboard'u Oluştur</a>
+      </div>
+    </div>
+  }
+}

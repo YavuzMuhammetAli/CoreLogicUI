@@ -125,7 +125,13 @@ export const routes: Routes = [
           import('./components/report-viewer/report-viewer.component').then(m => m.ReportViewerComponent)
       },
 
-      // Dashboard — /Dashboard/list olmadığından genel liste yok; oluşturma sonrası doğrudan /dashboard/:id'ye gidilir.
+      // Dashboard — birden çok raporu widget olarak bir araya getirir.
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./components/dashboard-list/dashboard-list.component').then(m => m.DashboardListComponent)
+      },
+      // "new" sabit segmenti ":id" param'ından önce gelmeli — aksi halde "new" stringi ID olarak yakalanır
       {
         path: 'dashboard/new',
         loadComponent: () =>
