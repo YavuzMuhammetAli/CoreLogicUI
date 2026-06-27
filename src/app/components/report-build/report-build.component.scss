@@ -18,3 +18,77 @@
     grid-template-columns: 1fr;
   }
 }
+
+.chart-type-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.chart-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
+
+  &:hover {
+    border-color: var(--accent);
+  }
+
+  &.is-selected {
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring);
+    background: var(--surface-warm);
+  }
+}
+
+.chart-type-icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  color: var(--accent);
+
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.chart-type-name {
+  font-weight: 700;
+  color: var(--fg);
+  font-size: var(--text-sm);
+}
+
+.chart-type-hint {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+/* Canlı Önizleme'deki örnek tablo — satıra tıklayınca "üstü çizili" (devre dışı) toggle.
+   Sadece bu sentetik önizleme tablosuna scoped; global .data-table'ı (report-viewer/dashboard
+   gerçek veri tabloları) etkilemez. */
+.preview-data-table {
+  tbody tr {
+    cursor: pointer;
+    transition: color var(--motion-fast) var(--ease-standard);
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--focus-ring);
+    }
+
+    &.is-struck td {
+      text-decoration: line-through;
+      color: var(--muted);
+    }
+  }
+}

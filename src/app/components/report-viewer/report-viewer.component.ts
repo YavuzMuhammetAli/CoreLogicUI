@@ -1,14 +1,31 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ReportService } from '../../services/report.service';
-import { ReportDefinition, ReportRunResult } from '../../models/report.model';
+import { AggregateFunction, ReportDefinition, ReportRunResult } from '../../models/report.model';
 import { AppChartComponent } from '../chart/chart.component';
+
+const trNumber = new Intl.NumberFormat('tr-TR');
+
+/** Aggregate fonksiyonlarının KPI kartı başlığında kullanılan Türkçe karşılıkları. */
+const AGGREGATE_LABELS: Record<AggregateFunction, string> = {
+  SUM: 'Toplam',
+  COUNT: 'Sayı',
+  AVG: 'Ortalama',
+  MIN: 'Minimum',
+  MAX: 'Maksimum'
+};
+
+export interface KpiCard {
+  label: string;
+  value: string;
+}
 
 @Component({
   selector: 'app-report-viewer',
   standalone: true,
-  imports: [RouterLink, AppChartComponent],
+  imports: [RouterLink, AppChartComponent, NgTemplateOutlet],
   templateUrl: './report-viewer.component.html',
   styleUrls: ['./report-viewer.component.scss']
 })
@@ -21,6 +38,28 @@ export class ReportViewerComponent implements OnInit {
   loadError: string | null = null;
   exporting: 'excel' | 'pdf' | null = null;
   exportError: string | null = null;
+
+  /** Grafik tipi 'table' değilse kullanıcı sonucu grafik veya tablo olarak görebilir. */
+  readonly viewMode = signal<'chart' | 'table'>('chart');
+
+  /** Rapor tanımındaki aggregate'lerden türeyen büyük-sayı kartları — tr-TR formatlı. */
+  readonly kpiCards = computed<KpiCard[]>(() => {
+    const report = this.report;
+    const result = this.result;
+    if (!report || !result) return [];
+
+    return report.aggregates
+      .map(agg => {
+        const alias = `${agg.function}_${agg.field || 'All'}`;
+        const hasColumn = result.columns.some(c => c.name === alias);
+        if (!hasColumn) return null;
+
+        const total = result.rows.reduce((sum, row) => sum + Number(row[alias] ?? 0), 0);
+        const label = agg.field ? `${AGGREGATE_LABELS[agg.function]} · ${agg.field}` : AGGREGATE_LABELS[agg.function];
+        return { label, value: trNumber.format(total) };
+      })
+      .filter((card): card is KpiCard => card !== null);
+  });
 
   constructor(
     private route: ActivatedRoute,

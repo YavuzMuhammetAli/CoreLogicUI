@@ -21,7 +21,7 @@
   height: 100vh;
   width: var(--sidebar-w);
   background: var(--sidebar-bg);
-  color: #e2e8f0;
+  color: var(--sidebar-fg-muted);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -34,7 +34,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-5) var(--space-5);
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid var(--sidebar-border);
   min-height: var(--topbar-h);
   flex-shrink: 0;
 }
@@ -55,7 +55,7 @@
 
 .logo-text {
   font: 700 var(--text-sm) / 1 var(--font-display);
-  color: #f1f5f9;
+  color: var(--sidebar-fg);
   letter-spacing: -0.01em;
 }
 
@@ -71,7 +71,7 @@
 .nav-label {
   display: block;
   padding: var(--space-2) var(--space-3);
-  color: #64748b;
+  color: var(--sidebar-fg-subtle);
   font-size: 10px;
 }
 
@@ -81,7 +81,7 @@
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  color: #94a3b8;
+  color: var(--sidebar-fg-muted);
   font: 500 var(--text-sm) / 1.4 var(--font-body);
   text-decoration: none;
   transition: background var(--motion-fast) var(--ease-standard),
@@ -95,8 +95,8 @@
   svg { flex-shrink: 0; }
 
   &:hover {
-    background: rgba(255,255,255,0.06);
-    color: #f1f5f9;
+    background: var(--sidebar-hover-bg);
+    color: var(--sidebar-fg);
   }
 
   &.active {
@@ -114,19 +114,19 @@
 .nav-empty-hint {
   display: block;
   padding: var(--space-2) var(--space-3);
-  color: #475569;
+  color: var(--sidebar-fg-faint);
   font-size: var(--text-xs);
   font-style: italic;
 }
 
 .sidebar-footer {
   padding: var(--space-3);
-  border-top: 1px solid rgba(255,255,255,0.08);
+  border-top: 1px solid var(--sidebar-border);
   flex-shrink: 0;
 }
 
 .logout-btn {
-  color: #94a3b8;
+  color: var(--sidebar-fg-muted);
 
   &:hover {
     color: #fca5a5;

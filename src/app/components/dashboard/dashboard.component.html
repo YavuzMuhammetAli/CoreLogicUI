@@ -20,30 +20,43 @@
 }
 
 @if (!loading && !loadError && dashboard) {
-  @if (dashboard.widgets.length > 0) {
+  @if (widgetViews.length > 0) {
     <div class="widget-grid">
-      @for (item of dashboard.widgets; track item.widget.reportDefinitionId) {
-        <div class="panel widget">
-          @if (item.result) {
-            @if (item.widget.chartType !== 'table') {
+      @for (item of widgetViews; track item.result.widget.reportDefinitionId) {
+        <div
+          class="panel widget"
+          [style.grid-column]="(item.result.widget.x + 1) + ' / span ' + item.result.widget.w"
+          [style.grid-row]="(item.result.widget.y + 1) + ' / span ' + item.result.widget.h"
+        >
+          <div class="widget-head">
+            <h3 class="widget-title">{{ item.reportName }}</h3>
+          </div>
+          <div class="widget-body">
+            @if (!item.result.result) {
+              <div class="alert alert-danger" role="alert">Bu rapora erişim yetkiniz yok veya rapor silinmiş.</div>
+            } @else if (item.result.result.rows.length === 0) {
+              <div class="empty-state">
+                <p>Bu rapor için kayıt bulunamadı.</p>
+              </div>
+            } @else if (item.result.widget.chartType !== 'table') {
               <app-chart
-                [chartType]="item.widget.chartType"
-                [columns]="item.result.columns"
-                [rows]="item.result.rows">
+                [chartType]="item.result.widget.chartType"
+                [columns]="item.result.result.columns"
+                [rows]="item.result.result.rows">
               </app-chart>
             } @else {
               <table class="data-table">
                 <thead>
                   <tr>
-                    @for (col of item.result.columns; track col.name) {
+                    @for (col of item.result.result.columns; track col.name) {
                       <th>{{ col.name }}</th>
                     }
                   </tr>
                 </thead>
                 <tbody>
-                  @for (row of item.result.rows; track $index) {
+                  @for (row of item.result.result.rows; track $index) {
                     <tr>
-                      @for (col of item.result.columns; track col.name) {
+                      @for (col of item.result.result.columns; track col.name) {
                         <td>{{ row[col.name] }}</td>
                       }
                     </tr>
@@ -51,7 +64,7 @@
                 </tbody>
               </table>
             }
-          }
+          </div>
         </div>
       }
     </div>

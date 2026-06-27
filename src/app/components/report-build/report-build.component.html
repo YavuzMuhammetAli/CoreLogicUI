@@ -54,14 +54,79 @@
         </div>
 
         <div class="field">
-          <label for="chartType">Grafik Tipi</label>
-          <select id="chartType" formControlName="chartType">
+          <label id="chartTypeLabel">Grafik Tipi</label>
+          <div class="chart-type-picker" role="radiogroup" aria-labelledby="chartTypeLabel">
             @for (ct of chartTypes; track ct.value) {
-              <option [value]="ct.value">{{ ct.label }}</option>
+              <button
+                type="button"
+                class="chart-type-card"
+                role="radio"
+                [class.is-selected]="f['chartType'].value === ct.value"
+                [attr.aria-checked]="f['chartType'].value === ct.value"
+                (click)="selectChartType(ct.value)"
+              >
+                <span class="chart-type-icon" [innerHTML]="ct.svg"></span>
+                <span class="chart-type-name">{{ ct.label }}</span>
+                <span class="chart-type-hint">{{ ct.hint }}</span>
+              </button>
             }
-          </select>
+          </div>
           <span class="field-help">Gruplama/aggregate tanımlıysa grafik bu sonuçlar üzerinden çizilir.</span>
+          @if (showSingleAggregateWarning) {
+            <div class="alert alert-warn" role="alert">
+              Bu grafik tipi tek bir aggregate ile en iyi sonucu verir; birden çok aggregate
+              tanımladınız, çizimde yalnızca ilki kullanılacaktır.
+            </div>
+          }
         </div>
+      </div>
+    </div>
+
+    <!-- Canlı Önizleme -->
+    <div class="panel">
+      <div class="panel-head"><h3>Canlı Önizleme</h3></div>
+      <div class="panel-body">
+        <p class="field-help">Aşağıdaki grafik örnek veriyle çizilmiştir; kaydettikten sonra gerçek veriler kullanılır.</p>
+        @if (f['chartType'].value === 'table') {
+          @if (previewResult().rows.length > 0) {
+            <p class="field-help">Devre dışı göstermek için bir satıra tıklayın; tekrar tıklayınca normale döner.</p>
+            <table class="data-table preview-data-table">
+              <thead>
+                <tr>
+                  @for (col of previewResult().columns; track col.name) {
+                    <th>{{ col.name }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of previewResult().rows; track $index; let i = $index) {
+                  <tr
+                    [class.is-struck]="struckPreviewRows().has(i)"
+                    tabindex="0"
+                    [attr.aria-pressed]="struckPreviewRows().has(i)"
+                    (click)="toggleStruckPreviewRow(i)"
+                    (keydown.enter)="toggleStruckPreviewRow(i)"
+                    (keydown.space)="toggleStruckPreviewRow(i); $event.preventDefault()"
+                  >
+                    @for (col of previewResult().columns; track col.name) {
+                      <td>{{ row[col.name] }}</td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <div class="empty-state">
+              <p>Önizleme için bir model ve kolon seçin.</p>
+            </div>
+          }
+        } @else {
+          <app-chart
+            [chartType]="f['chartType'].value"
+            [columns]="previewResult().columns"
+            [rows]="previewResult().rows">
+          </app-chart>
+        }
       </div>
     </div>
 

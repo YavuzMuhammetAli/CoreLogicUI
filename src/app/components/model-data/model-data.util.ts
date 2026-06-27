@@ -101,9 +101,24 @@ export function isBase64Value(value: unknown): boolean {
   return /^[A-Za-z0-9+/]+={0,2}$/.test(value);
 }
 
+/**
+ * Satırdan kolon adına (casing-bağımsız) karşılık gelen ham değeri döndürür.
+ * Backend kolon meta adını PascalCase (örn. "UnitPrice") döndürürken, satır verisi
+ * ASP.NET Core'un varsayılan System.Text.Json politikasıyla camelCase ("unitPrice")
+ * serileştirilir. Bu fonksiyon casing'den bağımsız eşleştirme yaparak ikisini birleştirir.
+ */
+export function fieldValue(row: DataRow, key: string): unknown {
+  if (key in row) return row[key];               // birebir eşleşme (hızlı yol)
+  const lower = key.toLowerCase();
+  for (const k of Object.keys(row)) {
+    if (k.toLowerCase() === lower) return row[k]; // camelCase dahil casing-bağımsız
+  }
+  return undefined;
+}
+
 /** Satırdan hücre değerini string olarak döndürür */
 export function cellValue(row: DataRow, key: string): string {
-  const v = row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
+  const v = fieldValue(row, key);
   if (v === null || v === undefined) return '—';
   if (typeof v === 'boolean') return v ? '✓' : '✗';
   return String(v);
@@ -111,7 +126,7 @@ export function cellValue(row: DataRow, key: string): string {
 
 /** Satırdan belirli bir anahtara ait değeri string olarak döndürür (büyük/küçük toleranslı) */
 export function rowVal(row: DataRow, key: string): string {
-  const v = row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
+  const v = fieldValue(row, key);
   return typeof v === 'string' ? v : '';
 }
 

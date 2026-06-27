@@ -1,0 +1,60 @@
+@if (open()) {
+  <div class="dialog-overlay" (click)="onBackdropClick()">
+    <div
+      class="dialog-panel panel"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="title()"
+      (click)="$event.stopPropagation()">
+      <div class="panel-head">
+        <h3>{{ title() }}</h3>
+      </div>
+
+      <div class="panel-body">
+        <p>{{ message() }}</p>
+
+        @if (hasUsage()) {
+          <div class="usage-box" role="alert">
+            <p class="usage-intro">'{{ modelName() }}' kullanılıyor:</p>
+
+            @if (usage()!.reports.length > 0) {
+              <p class="usage-group-title">Raporlarda:</p>
+              <ul class="usage-list">
+                @for (r of usage()!.reports; track r.id) {
+                  <li>{{ r.name }}</li>
+                }
+              </ul>
+            }
+
+            @if (usage()!.dashboards.length > 0) {
+              <p class="usage-group-title">Dashboardlarda:</p>
+              <ul class="usage-list">
+                @for (d of usage()!.dashboards; track d.id) {
+                  <li>{{ d.name }}</li>
+                }
+              </ul>
+            }
+          </div>
+
+          @if (isFinalStep()) {
+            <div class="alert alert-warn" role="alert">
+              Yukarıdaki rapor ve dashboardlar da modelle birlikte pasife alınacak. Emin misiniz?
+            </div>
+          }
+        }
+      </div>
+
+      <div class="panel-actions">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="busy()">
+          Vazgeç
+        </button>
+        <button type="button" class="btn btn-danger" (click)="onConfirmClick()" [disabled]="busy()">
+          @if (busy()) {
+            <span class="spinner" aria-hidden="true"></span>
+          }
+          {{ hasUsage() && !isFinalStep() ? 'Yine de Sil' : 'Sil' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

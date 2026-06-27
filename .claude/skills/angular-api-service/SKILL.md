@@ -3,7 +3,7 @@ name: angular-api-service
 description: >
   CoreLogicUI'ye yeni Angular API servisi eklerken kullan.
   Injectable, HttpClient, environment, Observable/RxJS, ResponseModel ve interceptor
-  desenlerini tanımlar. Mevcut 6 servise başvuru linkleri içerir.
+  desenlerini tanımlar. Mevcut servislere başvuru linkleri içerir.
 ---
 
 # Angular API Servis Deseni
@@ -141,8 +141,19 @@ return this.http.get<ListResponseModel<T>>(url, { params });
 | `PublishedTableService` | `src/app/services/published-table.service.ts` | `/Published/addTable`, `/Published/addMember` |
 | `PublishedModelService` | `src/app/services/published-model.service.ts` | `/PublishedModel/getall`, `get`, `add`, `update`, `delete` |
 | `PublishModelService` | `src/app/services/publish-model.service.ts` | `/PublishModel` — Roslyn derleme |
-| `DatabaseService` | `src/app/services/database.service.ts` | `/Database/createtable` |
-| `ModelRegistryService` | `src/app/services/model-registry.service.ts` | HTTP yok — `localStorage('cl_model_registry')` üzerinden yerel model kaydı |
+| `DatabaseService` | `src/app/services/database.service.ts` | `/Database/createtable`, `/Database/checkdatabase` |
+| `PermissionService` | `src/app/services/permission.service.ts` | `/Permission` — kendi izin durumu; signal tabanlı (`isAdmin()`, `can()`), APP_INITIALIZER ile önyüklenir (bkz. `angular-standalone-component` skill) |
+| `PermissionAdminService` | `src/app/services/permission-admin.service.ts` | `/Permission` — admin: kullanıcı bazlı izin atama |
+| `RoleAdminService` | `src/app/services/role-admin.service.ts` | `/Role` — RBAC rol CRUD, izin/üyelik yönetimi |
+| `UserProfileService` | `src/app/services/user-profile.service.ts` | `/Profile` — me/update/change-password/upload-photo |
+| `ModelColumnSettingService` | `src/app/services/model-column-setting.service.ts` | `/ModelColumnSetting` — get/set kolon görünürlüğü |
+| `ReportService` | `src/app/services/report.service.ts` | `/Report` — define/update/list/run/export (excel/pdf) |
+| `DashboardService` | `src/app/services/dashboard.service.ts` | `/Dashboard` — define/get/list |
+| `ThemeService` | `src/app/services/theme.service.ts` | HTTP yok — açık/koyu tema tercihi, `localStorage` |
+| `NotificationService` | `src/app/services/notification.service.ts` | HTTP yok — global toast/uyarı bildirimleri |
+
+`ModelRegistryService` (localStorage tabanlı yerel model kaydı) kaldırıldı — model kaydı artık
+tamamen backend `PublishedModelService` üzerinden yönetiliyor.
 
 Yeni bir servis eklemeden önce yukarıdaki listeyi kontrol et — benzer işlevi karşılayan servis zaten olabilir.
 

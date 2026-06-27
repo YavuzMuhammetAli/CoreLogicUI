@@ -16,11 +16,11 @@ guard ve route kaydı içindir.
 
 ## ⚠️ Önce oku: SSR fiilen kapalı, ama `isPlatformBrowser` kontrolleri bilinçli korunuyor
 
-Kök `CLAUDE.md`'de "Angular SSR (`@angular/ssr`, Express 4.x, prerender etkin)" yazıyor —
-bu **artık güncel değil**. `git log`'daki son commit "remove SSR" diyor ve doğrulanmış durum:
-`src/server.ts` ve `src/main.server.ts` **mevcut değil**, `src/` altında sadece `app/`,
-`environments/`, `index.html`, `main.ts` var. `package.json`'da `@angular/ssr`/`express`
-bağımlılıkları hâlâ duruyor ama bu temizlenmemiş kalıntı — runtime'da SSR çalışmıyor.
+Proje SSR ile kuruldu, sonradan tamamen kaldırıldı (kök `CLAUDE.md` bunu artık doğru
+yansıtıyor). `server.ts`, `src/main.server.ts`, `src/app/app.config.server.ts` **mevcut değil**,
+`src/` altında sadece `app/`, `environments/`, `index.html`, `main.ts` var. `package.json`'da
+`@angular/ssr`/`express` bağımlılıkları hâlâ duruyor ama bu temizlenmemiş kalıntı — runtime'da
+SSR çalışmıyor.
 
 Buna rağmen `app.config.ts` ve component'lerde `isPlatformBrowser(platformId)` kontrolleri
 **kasıtlı olarak korunuyor** — kod yorumunda açıkça yazıyor:

@@ -93,7 +93,6 @@
                 @for (header of tableHeaders; track header) {
                   <th scope="col">{{ header }}</th>
                 }
-                <th scope="col" class="actions-col">İşlemler</th>
               </tr>
             </thead>
             <tbody>
@@ -127,30 +126,6 @@
                       }
                     </td>
                   }
-                  <td class="td-actions" (click)="$event.stopPropagation()">
-                    @if (permissionService.can(typeName, 'update')) {
-                      <a
-                        [routerLink]="['/models', typeName, rowId(row)]"
-                        class="btn btn-secondary btn-sm"
-                        aria-label="Kaydı düzenle">
-                        Düzenle
-                      </a>
-                    }
-                    @if (permissionService.can(typeName, 'delete')) {
-                      <button
-                        class="btn btn-danger btn-sm"
-                        (click)="deleteRow(row)"
-                        type="button"
-                        [disabled]="deletingId === (row['ID'] ?? row['id'])"
-                        aria-label="Kaydı sil">
-                        @if (deletingId === (row['ID'] ?? row['id'])) {
-                          <span class="spinner" aria-hidden="true"></span>
-                        } @else {
-                          Sil
-                        }
-                      </button>
-                    }
-                  </td>
                 </tr>
               }
             </tbody>

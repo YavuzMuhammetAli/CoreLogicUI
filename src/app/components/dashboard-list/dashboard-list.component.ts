@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DashboardService } from '../../services/dashboard.service';
 import { DashboardDefinition } from '../../models/dashboard.model';
+import { PermissionService } from '../../services/permission.service';
 
 @Component({
   selector: 'app-dashboard-list',
@@ -15,10 +16,18 @@ export class DashboardListComponent implements OnInit {
   loading = false;
   loadError: string | null = null;
 
-  constructor(private dashboardService: DashboardService) {}
+  constructor(
+    private dashboardService: DashboardService,
+    private permissionService: PermissionService
+  ) {}
 
   ngOnInit(): void {
     this.load();
+  }
+
+  /** "Silinmiş Dashboard'lar" butonu yalnızca admin'e gösterilir. */
+  get isAdmin(): boolean {
+    return this.permissionService.isAdmin();
   }
 
   load(): void {

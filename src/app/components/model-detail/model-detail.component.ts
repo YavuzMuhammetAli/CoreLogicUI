@@ -15,7 +15,8 @@ import {
   imageSrc,
   isBase64Value,
   downloadFile,
-  sanitizePayload
+  sanitizePayload,
+  fieldValue
 } from '../model-data/model-data.util';
 
 type DataRow = Record<string, unknown>;
@@ -66,6 +67,9 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   model: PublishedModel | null = null;
   loadingRecord = false;
   recordError: string | null = null;
+
+  // Üst kayıt silme durumu
+  deleting = false;
 
   // Üst kayıt düzenleme / yeni kayıt formu (inline, modal değil)
   showEditForm = false;
@@ -142,6 +146,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.model = null;
     this.loadingRecord = false;
     this.recordError = null;
+    this.deleting = false;
     this.showEditForm = false;
     this.editForm = null;
     this.editMsg = null;
@@ -345,7 +350,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   /** Kayıttan belirli kolona ait ham değeri döndürür */
   recordRaw(col: PublishedColumn): unknown {
     if (!this.record) return null;
-    return this.record[col.columnName] ?? this.record[col.columnName.toLowerCase()];
+    return fieldValue(this.record, col.columnName);
   }
 
   // ─── Üst kayıt formu ────────────────────────────────────────────────────────
@@ -403,7 +408,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
               next: listRes => {
                 const rows = (listRes.success ? (listRes.data ?? []) : []) as DataRow[];
                 const maxId = rows.reduce((max, r) => {
-                  const id = Number(r['ID'] ?? r['id'] ?? 0);
+                  const id = Number(fieldValue(r, 'ID') ?? 0);
                   return id > max ? id : max;
                 }, 0);
                 if (maxId > 0) {
@@ -445,6 +450,25 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  /** Üst kaydı sil — yalnızca mevcut kayıt modunda kullanılır */
+  deleteRecord(): void {
+    if (this.isNew || this.deleting) return;
+    if (!confirm(`ID:${this.recordId} kaydını silmek istediğinize emin misiniz?`)) return;
+
+    this.deleting = true;
+    this.publishedModel.delete(this.typeName, this.recordId).subscribe({
+      next: res => {
+        this.deleting = false;
+        if (res.success) {
+          this.router.navigate(['/models', this.typeName]);
+        }
+      },
+      error: () => {
+        this.deleting = false;
+      }
+    });
   }
 
   onEditFileSelected(event: Event, colName: string): void {
@@ -598,10 +622,10 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     if (term) {
       rows = rows.filter(row =>
         this.displayCols(state).some(col => {
-          const v = row[col.columnName] ?? row[col.columnName.toLowerCase()];
+          const v = fieldValue(row, col.columnName);
           return v != null && String(v).toLowerCase().includes(term);
         }) ||
-        String(row['ID'] ?? row['id'] ?? '').includes(term)
+        String(fieldValue(row, 'ID') ?? '').includes(term)
       );
     }
 
@@ -609,8 +633,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     if (state.sortCol) {
       const col = state.sortCol;
       rows.sort((a, b) => {
-        const av = a[col] ?? a[col.toLowerCase()] ?? '';
-        const bv = b[col] ?? b[col.toLowerCase()] ?? '';
+        const av = fieldValue(a, col) ?? '';
+        const bv = fieldValue(b, col) ?? '';
         const an = Number(av), bn = Number(bv);
         let cmp = !isNaN(an) && !isNaN(bn)
           ? an - bn
@@ -623,18 +647,18 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   rowId(row: DataRow): number {
-    return Number(row['ID'] ?? row['id'] ?? 0);
+    return Number(fieldValue(row, 'ID') ?? 0);
   }
 
   cellVal(row: DataRow, col: string): string {
-    const v = row[col] ?? row[col.toLowerCase()];
+    const v = fieldValue(row, col);
     if (v === null || v === undefined) return '—';
     if (typeof v === 'boolean') return v ? '✓' : '✗';
     return String(v);
   }
 
   strVal(row: DataRow, col: string): string {
-    const v = row[col] ?? row[col.toLowerCase()];
+    const v = fieldValue(row, col);
     return typeof v === 'string' ? v : '';
   }
 
@@ -669,7 +693,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   private buildTabForm(state: TabState, row: DataRow | null): FormGroup {
     const controls: Record<string, unknown> = {};
     for (const col of this.visibleCols(state)) {
-      const v = row ? (row[col.columnName] ?? row[col.columnName.toLowerCase()] ?? '') : '';
+      const v = row ? (fieldValue(row, col.columnName) ?? '') : '';
       const validators = col.isNullable ? [] : [Validators.required];
       controls[col.columnName] = [v, validators];
     }
@@ -707,7 +731,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     const jsonData: DataRow = { ...sanitizePayload(state.columns, state.form.value), [state.fkColumn]: this.recordId };
 
     if (state.formMode === 'edit' && state.editingRow) {
-      jsonData['ID'] = state.editingRow['ID'] ?? state.editingRow['id'];
+      jsonData['ID'] = fieldValue(state.editingRow, 'ID');
       this.publishedModel.update(state.typeName, jsonData).subscribe({
         next: res => this.handleTabFormRes(state, res),
         error: err => this.handleTabFormErr(state, err)

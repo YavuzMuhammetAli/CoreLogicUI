@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -8,12 +8,16 @@ import {
   AggregateFunction,
   ChartType,
   ReportAggregate,
+  ReportColumnInfo,
   ReportDefinition,
   ReportFilter,
   ReportOperator,
+  ReportRunResult,
   ReportSort,
   SortDirection
 } from '../../models/report.model';
+import { AppChartComponent } from '../chart/chart.component';
+import { CHART_TYPE_META, SINGLE_AGGREGATE_CHART_TYPES } from '../chart/chart-types';
 
 const OPERATORS: { value: ReportOperator; label: string }[] = [
   { value: 'eq', label: '=' },
@@ -39,13 +43,10 @@ const SORT_DIRECTIONS: { value: SortDirection; label: string }[] = [
   { value: 'DESC', label: 'Azalan (Z→A, 9→0)' }
 ];
 
-const CHART_TYPES: { value: ChartType; label: string }[] = [
-  { value: 'table', label: 'Tablo' },
-  { value: 'bar', label: 'Çubuk grafik' },
-  { value: 'line', label: 'Çizgi grafik' },
-  { value: 'pie', label: 'Pasta grafik' },
-  { value: 'area', label: 'Alan grafik' }
-];
+/** Sayısal kolon tipleri — önizleme verisi üretirken hangi kolonun seri/kategori olduğunu ayırt eder. */
+function isNumericColumnType(type: string): boolean {
+  return type === 'int' || type === 'float' || type === 'decimal';
+}
 
 /**
  * Metadata-driven rapor tasarımcısı: model seç → kolon/filtre/gruplama/aggregate/sıralama
@@ -59,7 +60,7 @@ const CHART_TYPES: { value: ChartType; label: string }[] = [
 @Component({
   selector: 'app-report-build',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, AppChartComponent],
   templateUrl: './report-build.component.html',
   styleUrls: ['./report-build.component.scss']
 })
@@ -67,7 +68,7 @@ export class ReportBuildComponent implements OnInit {
   readonly operators = OPERATORS;
   readonly aggregateFunctions = AGGREGATE_FUNCTIONS;
   readonly sortDirections = SORT_DIRECTIONS;
-  readonly chartTypes = CHART_TYPES;
+  readonly chartTypes = CHART_TYPE_META;
 
   models: PublishedModel[] = [];
   availableColumns: PublishedColumn[] = [];
@@ -122,6 +123,12 @@ export class ReportBuildComponent implements OnInit {
     this.form.get('modelName')!.valueChanges.subscribe((modelName: string) => {
       this.applyModel(modelName, null);
     });
+
+    // Canlı Önizleme yalnızca form GERÇEKTEN değiştiğinde yeniden hesaplanır — sayfadaki
+    // ilgisiz tıklamalar `form.valueChanges`'i tetiklemediği için grafik gereksiz yeniden
+    // render olmaz (bkz. plan: "Canlı Önizleme her tıklamada yeniden oluşuyor" hatası).
+    this.form.valueChanges.subscribe(() => this.refreshPreview());
+    this.refreshPreview();
   }
 
   // ── Form alanları getter'ları ───────────────────────────────────────────
@@ -173,6 +180,96 @@ export class ReportBuildComponent implements OnInit {
   isNumericColumn(columnName: string): boolean {
     const col = this.availableColumns.find(c => c.columnName === columnName);
     return col?.dataType === 'int' || col?.dataType === 'float' || col?.dataType === 'decimal';
+  }
+
+  // ── Grafik tipi seçici ───────────────────────────────────────────────────
+
+  selectChartType(value: ChartType): void {
+    this.form.get('chartType')!.setValue(value);
+  }
+
+  /** Donut/pasta/radyal/KPI gibi tipler tek aggregate bekler — birden çoksa kullanıcıyı uyar. */
+  get showSingleAggregateWarning(): boolean {
+    const chartType = this.form.value.chartType as ChartType;
+    return SINGLE_AGGREGATE_CHART_TYPES.includes(chartType) && this.aggregatesArray.length > 1;
+  }
+
+  /**
+   * Builder'daki seçimlerden (groupBy/aggregate/selectedColumns) sentetik bir önizleme
+   * sonucu üretir — `/Report/run`'a gitmez, seçili grafik tipinin anında nasıl görüneceğini
+   * gösterir. Gerçek veri değildir.
+   *
+   * Signal olarak tutulur ve yalnızca `form.valueChanges`'ten (yani gerçek bir form
+   * değişikliğinden) güncellenir — bir getter olsaydı her change detection turunda (sayfadaki
+   * HERHANGİ bir tıklamada) yeni dizi/nesne referansları üretip `app-chart`'ı gereksiz yere
+   * yeniden render ettirirdi.
+   */
+  readonly previewResult = signal<ReportRunResult>({ columns: [], rows: [] });
+
+  /** Örnek tabloda "üstü çizili" (devre dışı) işaretlenmiş satırların indeksleri — yalnızca görsel, sentetik veriye uygulanır. */
+  readonly struckPreviewRows = signal<Set<number>>(new Set());
+
+  private refreshPreview(): void {
+    this.previewResult.set(this.buildPreviewResult());
+    // Veri şekli değişmiş olabilir (model/kolon değişti) — eski satır indeksleri geçersiz olur.
+    this.struckPreviewRows.set(new Set());
+  }
+
+  toggleStruckPreviewRow(index: number): void {
+    this.struckPreviewRows.update(set => {
+      const next = new Set(set);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  }
+
+  private buildPreviewResult(): ReportRunResult {
+    const groupByNames = this.checkedColumnNames(this.groupByArray);
+    const aggregates = (this.aggregatesArray.value as ReportAggregate[]).filter(a => a.function);
+    const selected = this.checkedColumnNames(this.selectedColumnsArray);
+
+    let columns: ReportColumnInfo[];
+    if (groupByNames.length > 0 || aggregates.length > 0) {
+      const groupCols = groupByNames.map(name => ({ name, type: this.columnDataType(name) }));
+      const aggCols = aggregates.map(a => ({ name: `${a.function}_${a.field || 'All'}`, type: 'int' }));
+      columns = [...groupCols, ...aggCols];
+    } else if (selected.length > 0) {
+      columns = selected.map(name => ({ name, type: this.columnDataType(name) }));
+    } else {
+      columns = this.availableColumns.slice(0, 4).map(c => ({ name: c.columnName, type: c.dataType }));
+    }
+
+    if (columns.length === 0) return { columns: [], rows: [] };
+
+    // İlk kolon sayısalsa grafik kategori ekseni bulamaz — sentetik bir kategori kolonu ekle.
+    if (isNumericColumnType(columns[0].type)) {
+      columns = [{ name: 'Kategori', type: 'string' }, ...columns];
+    }
+
+    const rowCount = 5;
+    const rows: Record<string, unknown>[] = Array.from({ length: rowCount }, (_, i) => {
+      const row: Record<string, unknown> = {};
+      columns.forEach((col, ci) => {
+        if (isNumericColumnType(col.type)) {
+          row[col.name] = Math.round(20 + (i + 1) * 11 + ci * 7);
+        } else if (col.type === 'datetime') {
+          row[col.name] = new Date(2025, 0, 1 + i * 7).toISOString();
+        } else {
+          row[col.name] = ci === 0 ? `Kategori ${i + 1}` : `Değer ${i + 1}`;
+        }
+      });
+      return row;
+    });
+
+    return { columns, rows };
+  }
+
+  private columnDataType(columnName: string): string {
+    return this.availableColumns.find(c => c.columnName === columnName)?.dataType ?? 'string';
   }
 
   // ── Filtre satırları ─────────────────────────────────────────────────────

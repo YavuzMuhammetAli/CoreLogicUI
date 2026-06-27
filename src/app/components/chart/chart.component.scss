@@ -2,8 +2,52 @@
   display: block;
 }
 
+.chart-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) 0;
+}
+
 .empty-state {
   padding: var(--space-6);
   text-align: center;
   color: var(--muted);
+}
+
+.chart-canvas {
+  display: block;
+}
+
+.chart-note {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+  text-align: center;
+}
+
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-2) 0;
+}
+
+.kpi-label {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.kpi-value {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  color: var(--fg);
+  letter-spacing: var(--tracking-display);
+}
+
+.kpi-sparkline {
+  width: 100%;
+  margin-top: var(--space-2);
 }

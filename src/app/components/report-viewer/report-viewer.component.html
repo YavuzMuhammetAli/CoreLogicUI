@@ -25,6 +25,17 @@
 }
 
 @if (!loading && !loadError && result) {
+  @if (kpiCards().length > 0) {
+    <div class="kpi-strip">
+      @for (card of kpiCards(); track card.label) {
+        <div class="panel kpi-tile">
+          <span class="kpi-tile-label">{{ card.label }}</span>
+          <span class="kpi-tile-value">{{ card.value }}</span>
+        </div>
+      }
+    </div>
+  }
+
   <div class="panel">
     <div class="panel-head">
       <h3>Export</h3>
@@ -46,17 +57,7 @@
     }
   </div>
 
-  @if (report && report.chartType !== 'table') {
-    <div class="panel">
-      <div class="panel-head"><h3>Grafik</h3></div>
-      <div class="panel-body">
-        <app-chart [chartType]="report.chartType" [columns]="result.columns" [rows]="result.rows"></app-chart>
-      </div>
-    </div>
-  }
-
-  <div class="panel">
-    <div class="panel-head"><h3>Veri</h3></div>
+  <ng-template #dataTable>
     @if (result.rows.length > 0) {
       <table class="data-table">
         <thead>
@@ -82,5 +83,45 @@
         <p>Bu rapor için filtre koşullarına uyan kayıt bulunamadı.</p>
       </div>
     }
-  </div>
+  </ng-template>
+
+  @if (report && report.chartType !== 'table') {
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Sonuç</h3>
+        <div class="panel-actions">
+          <button
+            class="btn btn-sm"
+            [class.btn-primary]="viewMode() === 'chart'"
+            [class.btn-secondary]="viewMode() !== 'chart'"
+            type="button"
+            (click)="viewMode.set('chart')"
+          >
+            Grafik
+          </button>
+          <button
+            class="btn btn-sm"
+            [class.btn-primary]="viewMode() === 'table'"
+            [class.btn-secondary]="viewMode() !== 'table'"
+            type="button"
+            (click)="viewMode.set('table')"
+          >
+            Tablo
+          </button>
+        </div>
+      </div>
+      <div class="panel-body">
+        @if (viewMode() === 'chart') {
+          <app-chart [chartType]="report.chartType" [columns]="result.columns" [rows]="result.rows"></app-chart>
+        } @else {
+          <ng-container *ngTemplateOutlet="dataTable"></ng-container>
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="panel">
+      <div class="panel-head"><h3>Veri</h3></div>
+      <ng-container *ngTemplateOutlet="dataTable"></ng-container>
+    </div>
+  }
 }

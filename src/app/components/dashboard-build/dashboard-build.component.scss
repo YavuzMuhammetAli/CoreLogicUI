@@ -33,3 +33,100 @@
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: var(--space-2);
 }
+
+/* 12 kolonluk sürükle-bırak canvas — grid-auto-rows + gap, ts'teki ROW_PITCH_PX (56px) ile eşleşir. */
+.dashboard-canvas {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-auto-rows: 48px;
+  gap: var(--space-2);
+  min-height: 200px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.canvas-widget {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elev-ring);
+  overflow: hidden;
+}
+
+.canvas-widget-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-warm);
+  border-bottom: 1px solid var(--border-soft);
+  cursor: move;
+  user-select: none;
+  touch-action: none;
+}
+
+.canvas-widget-title {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-chart-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: var(--space-2);
+}
+
+.mini-chart-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 2px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  cursor: pointer;
+
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  &.is-selected {
+    color: var(--accent-on);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+}
+
+.canvas-widget-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  touch-action: none;
+  background: linear-gradient(135deg, transparent 50%, var(--border) 50%);
+
+  &:hover {
+    background: linear-gradient(135deg, transparent 50%, var(--accent) 50%);
+  }
+}

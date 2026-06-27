@@ -28,17 +28,51 @@
   }
 }
 
+/* Kayıtlı widget x/y/w/h, 12 kolonluk grid üzerinde gerçek grid-column/row span'ı ile uygulanır
+   (dashboard-build canvas'ındaki yerleşimle birebir). */
 .widget-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(12, 1fr);
+  grid-auto-rows: 64px;
   gap: var(--space-6);
 
   @media (max-width: 900px) {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  @media (max-width: 768px) {
     grid-template-columns: 1fr;
+
+    .widget {
+      grid-column: 1 / -1 !important;
+      grid-row: auto !important;
+    }
   }
 }
 
 .widget {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  min-height: 220px;
+  overflow: hidden;
+}
+
+.widget-head {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--surface-warm);
+}
+
+.widget-title {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--fg);
+  margin: 0;
+}
+
+.widget-body {
+  flex: 1;
   padding: var(--space-4);
-  min-height: 320px;
+  overflow: auto;
 }

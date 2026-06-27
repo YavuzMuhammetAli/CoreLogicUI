@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ReportService } from '../../services/report.service';
 import { ReportDefinition } from '../../models/report.model';
+import { PermissionService } from '../../services/permission.service';
 
 @Component({
   selector: 'app-report-list',
@@ -15,10 +16,18 @@ export class ReportListComponent implements OnInit {
   loading = false;
   loadError: string | null = null;
 
-  constructor(private reportService: ReportService) {}
+  constructor(
+    private reportService: ReportService,
+    private permissionService: PermissionService
+  ) {}
 
   ngOnInit(): void {
     this.load();
+  }
+
+  /** "Silinmiş Raporlar" butonu yalnızca admin'e gösterilir. */
+  get isAdmin(): boolean {
+    return this.permissionService.isAdmin();
   }
 
   load(): void {

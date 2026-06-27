@@ -3,8 +3,21 @@
  * Bir rapor kod değil, bu yapıdaki bir metadata kaydıdır.
  */
 
-/** ReportDefinition'da kullanılabilecek grafik tipleri — ApexCharts ile eşlenir. */
-export type ChartType = 'table' | 'bar' | 'line' | 'pie' | 'area';
+/**
+ * ReportDefinition'da kullanılabilecek grafik tipleri — ApexCharts ile eşlenir.
+ * Backend'de bu alan serbest string (NVARCHAR(50), whitelist yok) — burada listelenenler
+ * yalnızca frontend'in çizebildiği zorunlu set; yeni tip eklemek backend değişikliği gerektirmez.
+ */
+export type ChartType =
+  | 'table'
+  | 'column'
+  | 'bar'
+  | 'line'
+  | 'area'
+  | 'pie'
+  | 'donut'
+  | 'radialBar'
+  | 'kpi';
 
 /** Backend whitelist'iyle birebir eşleşmeli (ReportingManager.AllowedOperators). */
 export type ReportOperator = 'eq' | 'ne' | 'gt' | 'ge' | 'lt' | 'le' | 'contains' | 'startswith';

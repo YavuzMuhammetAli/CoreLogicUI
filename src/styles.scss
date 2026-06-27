@@ -83,8 +83,14 @@
   --topbar-h: 60px;
   --container-max: 1240px;
 
-  /* Sidebar — her iki temada da sabit koyu kalır */
-  --sidebar-bg: #0f172a;
+  /* Sidebar — açık temada açık renk */
+  --sidebar-bg: #ffffff;
+  --sidebar-border: rgba(15, 23, 42, 0.08);
+  --sidebar-fg: #0f172a;
+  --sidebar-fg-muted: #475569;
+  --sidebar-fg-subtle: #94a3b8;
+  --sidebar-fg-faint: #cbd5e1;
+  --sidebar-hover-bg: rgba(15, 23, 42, 0.05);
 }
 
 /* ---- Karanlık tema override'ları ---- */
@@ -123,6 +129,15 @@
   --elev-raised: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.45);
   --elev-high: 0 8px 32px rgba(0, 0, 0, 0.55);
   --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.4);
+
+  /* Sidebar — koyu temada koyu renk */
+  --sidebar-bg: #0f172a;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-fg: #f1f5f9;
+  --sidebar-fg-muted: #94a3b8;
+  --sidebar-fg-subtle: #64748b;
+  --sidebar-fg-faint: #475569;
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.06);
 }
 
 /* ---- Sıfırlama ---- */

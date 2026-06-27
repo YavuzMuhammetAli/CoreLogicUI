@@ -1,19 +1,19 @@
-import { Component, Input, OnChanges } from '@angular/core';
-import {
-  ChartComponent as ApexChartComponent,
-  ApexAxisChartSeries,
-  ApexNonAxisChartSeries,
-  ApexChart,
-  ApexXAxis,
-  ApexLegend
-} from 'ng-apexcharts';
+import { Component, PLATFORM_ID, computed, effect, inject, input, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { ChartComponent as ApexChartComponent } from 'ng-apexcharts';
 import { ChartType, ReportColumnInfo } from '../../models/report.model';
+import { ThemeService } from '../../services/theme.service';
+import { ChartTokenColors, readChartTokenColors } from './chart-colors';
+import { ChartBuildOutput, buildChartOptions, buildKpiOutput } from './chart-mapping';
+import { chartTypeMeta } from './chart-types';
+
+const trNumber = new Intl.NumberFormat('tr-TR');
 
 /**
- * Rapor sonucunu (kolonlar + satırlar) seçilen ChartType'a göre ApexCharts grafiğine çevirir.
- * Kural: ilk kolon kategori/etiket ekseni; sayısal kolonlar seri olarak kullanılır
- * (ReportingManager.BuildProjection'ın ürettiği şema ile simetrik — aggregate alias'ları
- * da birer sayısal "kolon" olarak gelir).
+ * Tüm zorunlu grafik tiplerinin (column/bar/line/area/pie/donut/radialBar/kpi) TEK render
+ * noktası. ChartType + veri → `chart-mapping.ts`'teki `buildChartOptions`/`buildKpiOutput`
+ * üzerinden ApexOptions'a eşlenir; bu component ad-hoc dönüşüm yapmaz. Tema değişince
+ * (`ThemeService.theme`) palet `getComputedStyle` ile token'lardan yeniden okunur.
  */
 @Component({
   selector: 'app-chart',
@@ -22,53 +22,51 @@ import { ChartType, ReportColumnInfo } from '../../models/report.model';
   templateUrl: './chart.component.html',
   styleUrls: ['./chart.component.scss']
 })
-export class AppChartComponent implements OnChanges {
-  @Input({ required: true }) chartType: ChartType = 'bar';
-  @Input({ required: true }) columns: ReportColumnInfo[] = [];
-  @Input({ required: true }) rows: Record<string, unknown>[] = [];
+export class AppChartComponent {
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly isBrowser = isPlatformBrowser(this.platformId);
+  private readonly themeService = inject(ThemeService);
 
-  series: ApexAxisChartSeries | ApexNonAxisChartSeries = [];
-  labels: string[] = [];
-  chartOptions: ApexChart = { type: 'bar', height: 360 };
-  xaxis: ApexXAxis = {};
-  legend: ApexLegend = { position: 'bottom' };
+  chartType = input.required<ChartType>();
+  columns = input.required<ReportColumnInfo[]>();
+  rows = input.required<Record<string, unknown>[]>();
+  /** Üst component'in async veri çekme durumu — chart kendi adına ayrıca veri çekmez. */
+  loading = input<boolean>(false);
+  /** Üst component'ten gelen hata mesajı (örn. dashboard'da erişimi olmayan widget). */
+  error = input<string | null>(null);
 
-  ngOnChanges(): void {
-    this.build();
-  }
+  private readonly tokens = signal<ChartTokenColors | null>(null);
 
-  private isNumeric(type: string): boolean {
-    return type === 'int' || type === 'float' || type === 'decimal';
-  }
-
-  private build(): void {
-    if (this.columns.length === 0 || this.rows.length === 0) {
-      this.series = [];
-      this.labels = [];
-      return;
+  /** Tema değişince (light/dark) token'ları yeniden okur — grafik paleti otomatik güncellenir. */
+  private readonly syncTokens = effect(() => {
+    this.themeService.theme();
+    if (this.isBrowser) {
+      this.tokens.set(readChartTokenColors());
     }
+  }, { allowSignalWrites: true });
 
-    const categoryCol = this.columns[0];
-    const numericCols = this.columns.filter(c => this.isNumeric(c.type) && c.name !== categoryCol.name);
-    const valueCols = numericCols.length > 0 ? numericCols : this.columns.slice(1);
-    const categories = this.rows.map(r => String(r[categoryCol.name] ?? ''));
+  readonly build = computed<ChartBuildOutput | null>(() => {
+    const tokens = this.tokens();
+    if (!tokens || this.chartType() === 'table') return null;
 
-    if (this.chartType === 'pie') {
-      const valueCol = valueCols[0];
-      this.labels = categories;
-      this.series = valueCol ? this.rows.map(r => Number(r[valueCol.name] ?? 0)) : [];
-      this.chartOptions = { type: 'pie', height: 360 };
-    } else {
-      this.labels = [];
-      this.series = valueCols.map(col => ({
-        name: col.name,
-        data: this.rows.map(r => Number(r[col.name] ?? 0))
-      }));
-      this.xaxis = { categories };
-      this.chartOptions = {
-        type: this.chartType === 'area' ? 'area' : this.chartType === 'line' ? 'line' : 'bar',
-        height: 360
-      };
-    }
-  }
+    const mode = this.themeService.theme();
+    const result = { columns: this.columns(), rows: this.rows() };
+
+    return this.chartType() === 'kpi'
+      ? buildKpiOutput(result, tokens, mode)
+      : buildChartOptions(this.chartType(), result, tokens, mode);
+  });
+
+  readonly typeLabel = computed(() => chartTypeMeta(this.chartType())?.label ?? this.chartType());
+
+  readonly ariaSummary = computed(() => {
+    const b = this.build();
+    if (!b || b.isEmpty) return `${this.typeLabel()} grafiği — veri yok.`;
+    return `${this.typeLabel()} grafiği — ${this.rows().length} kayıt, ${this.columns().length} kolon.`;
+  });
+
+  readonly kpiValueFormatted = computed(() => {
+    const kpi = this.build()?.kpi;
+    return kpi ? trNumber.format(kpi.value) : '';
+  });
 }

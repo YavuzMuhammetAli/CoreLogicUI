@@ -45,4 +45,21 @@ export class ReportService {
     const params = new HttpParams().set('id', id);
     return this.http.get(`${this.baseUrl}/export/pdf`, { params, responseType: 'blob' });
   }
+
+  /** Raporu pasife alır (soft-delete). */
+  delete(id: number): Observable<ResponseModel> {
+    const params = new HttpParams().set('id', id);
+    return this.http.post<ResponseModel>(`${this.baseUrl}/delete`, null, { params });
+  }
+
+  /** Tenant içinde pasiflenmiş (silinmiş) raporları getirir. */
+  listDeleted(): Observable<ListResponseModel<ReportDefinition>> {
+    return this.http.get<ListResponseModel<ReportDefinition>>(`${this.baseUrl}/deleted`);
+  }
+
+  /** Silinmiş bir raporu yeniden aktif eder (Active=true). */
+  restore(id: number): Observable<ResponseModel> {
+    const params = new HttpParams().set('id', id);
+    return this.http.post<ResponseModel>(`${this.baseUrl}/restore`, null, { params });
+  }
 }

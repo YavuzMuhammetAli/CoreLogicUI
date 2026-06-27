@@ -2,7 +2,7 @@
   <div>
     <span class="eyebrow">Raporlama</span>
     <h1 class="page-title">Yeni Dashboard</h1>
-    <p class="page-subtitle">Mevcut raporlardan widget olarak eklenecekleri seçin.</p>
+    <p class="page-subtitle">Rapor ekleyin, canvas'ta sürükleyip yeniden boyutlandırın.</p>
   </div>
   <a routerLink="/reports" class="btn btn-secondary">Vazgeç</a>
 </div>
@@ -35,23 +35,92 @@
         <div class="panel-body">
           <div class="field">
             <label for="name">Ad <span class="req">*</span></label>
-            <input id="name" class="input" type="text" formControlName="name" />
+            <input
+              id="name"
+              class="input"
+              type="text"
+              formControlName="name"
+              [attr.aria-invalid]="f['name'].invalid && f['name'].touched"
+            />
+            @if (f['name'].invalid && f['name'].touched) {
+              <span class="field-error" role="alert">Dashboard adı zorunludur.</span>
+            }
           </div>
         </div>
       </div>
 
       <div class="panel">
-        <div class="panel-head"><h3>Widget Olarak Eklenecek Raporlar</h3></div>
+        <div class="panel-head"><h3>Rapor Ekle</h3></div>
         <div class="panel-body">
-          <div class="checkbox-grid" formArrayName="reports">
-            @for (report of reports; track report.id; let i = $index) {
+          <div class="checkbox-grid">
+            @for (report of reports; track report.id) {
               <label class="checkbox-label">
-                <input type="checkbox" [formControlName]="i" />
+                <input type="checkbox" [checked]="isAdded(report.id)" (change)="toggleReport(report)" />
                 {{ report.name }}
                 <span class="badge badge-meta">{{ report.modelName }}</span>
               </label>
             }
           </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>Yerleşim</h3></div>
+        <div class="panel-body">
+          @if (widgets().length === 0) {
+            <div class="empty-state">
+              <p>Yerleşimi düzenlemek için yukarıdan rapor ekleyin.</p>
+            </div>
+          } @else {
+            <p class="field-help">
+              Widget başlığından sürükleyip taşıyın; sağ-alt köşedeki tutamaçtan yeniden boyutlandırın.
+            </p>
+            <div class="dashboard-canvas" #canvas>
+              @for (widget of widgets(); track widget.reportDefinitionId) {
+                <div
+                  class="canvas-widget"
+                  [style.grid-column]="(widget.x + 1) + ' / span ' + widget.w"
+                  [style.grid-row]="(widget.y + 1) + ' / span ' + widget.h"
+                >
+                  <div class="canvas-widget-head" (pointerdown)="onDragStart($event, widget)">
+                    <span class="canvas-widget-title">{{ widget.reportName }}</span>
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-sm"
+                      (click)="removeWidget(widget.reportDefinitionId)"
+                      [attr.aria-label]="widget.reportName + ' widget\'ını kaldır'"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div
+                    class="mini-chart-picker"
+                    role="radiogroup"
+                    [attr.aria-label]="widget.reportName + ' için grafik tipi'"
+                  >
+                    @for (ct of chartTypes; track ct.value) {
+                      <button
+                        type="button"
+                        class="mini-chart-btn"
+                        role="radio"
+                        [class.is-selected]="widget.chartType === ct.value"
+                        [attr.aria-checked]="widget.chartType === ct.value"
+                        [attr.title]="ct.label"
+                        (click)="setWidgetChartType(widget.reportDefinitionId, ct.value)"
+                      >
+                        <span [innerHTML]="ct.svg"></span>
+                      </button>
+                    }
+                  </div>
+                  <div
+                    class="canvas-widget-resize"
+                    (pointerdown)="onResizeStart($event, widget)"
+                    aria-hidden="true"
+                  ></div>
+                </div>
+              }
+            </div>
+          }
         </div>
       </div>
 

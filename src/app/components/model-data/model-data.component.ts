@@ -40,9 +40,6 @@ export class ModelDataComponent implements OnInit {
   total     = 0;
   readonly pageSizeOptions = [20, 50, 100];
 
-  // Silme durumu
-  deletingId: number | null = null;
-
   // Sürüm paneli durumu
   versions = signal<ModelVersion[]>([]);
   showVersionPanel = signal(false);
@@ -81,7 +78,6 @@ export class ModelDataComponent implements OnInit {
     this.rows = [];
     this.loadError = null;
     this.loadingRows = true; // meta yüklenene kadar "bulunamadı" paneli gösterilmez
-    this.deletingId = null;
     this.rowsRetried = false;
     this.showVersionPanel.set(false);
     this.versions.set([]);
@@ -251,29 +247,6 @@ export class ModelDataComponent implements OnInit {
     this.pageSize  = size;
     this.pageIndex = 1;
     this.loadRows();
-  }
-
-  /** Kayıt sil */
-  deleteRow(row: DataRow): void {
-    const id = Number(row['ID'] ?? row['id']);
-    if (!id || !confirm(`ID:${id} kaydını silmek istediğinize emin misiniz?`)) return;
-
-    this.deletingId = id;
-    this.publishedModel.delete(this.typeName, id).subscribe({
-      next: res => {
-        this.deletingId = null;
-        if (res.success) {
-          // Sayfada tek kayıt kaldıysa ve sayfa > 1 ise önceki sayfaya dön
-          if (this.rows.length === 1 && this.pageIndex > 1) {
-            this.pageIndex--;
-          }
-          this.loadRows();
-        }
-      },
-      error: () => {
-        this.deletingId = null;
-      }
-    });
   }
 
   // ─── Util delegasyonları — template'te doğrudan çağrılabilmesi için ────────────

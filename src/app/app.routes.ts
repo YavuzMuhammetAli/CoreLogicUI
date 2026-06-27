@@ -24,6 +24,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/model-list/model-list.component').then(m => m.ModelListComponent)
       },
+      // "deleted" sabit segmenti ":typeName" param'ından önce gelmeli — aksi halde "deleted" stringi tip adı olarak yakalanır
+      {
+        path: 'models/deleted',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/deleted-models/deleted-models.component').then(m => m.DeletedModelsComponent)
+      },
       {
         path: 'models/:typeName',
         canActivate: [modelPermissionGuard('read')],
@@ -50,11 +57,25 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/form-build/form-build.component').then(m => m.FormBuildComponent)
       },
+      // ":typeName" mevcut bir modeli/taslağı düzenleme modunda açar (form-build aynı component'i kullanır)
+      {
+        path: 'build/:typeName',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/form-build/form-build.component').then(m => m.FormBuildComponent)
+      },
       {
         path: 'drafts',
         canActivate: [adminGuard],
         loadComponent: () =>
           import('./components/draft-models/draft-models.component').then(m => m.DraftModelsComponent)
+      },
+      // Hiç yayınlanmamış olup pasiflenmiş (silinmiş) taslakların listesi + geri yükleme
+      {
+        path: 'drafts/deleted',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/deleted-drafts/deleted-drafts.component').then(m => m.DeletedDraftsComponent)
       },
       {
         path: 'database',
@@ -119,6 +140,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/report-build/report-build.component').then(m => m.ReportBuildComponent)
       },
+      // "deleted" sabit segmenti ":id" param'ından önce gelmeli — aksi halde "deleted" stringi ID olarak yakalanır
+      {
+        path: 'reports/deleted',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/deleted-reports/deleted-reports.component').then(m => m.DeletedReportsComponent)
+      },
       {
         path: 'reports/:id',
         loadComponent: () =>
@@ -136,6 +164,13 @@ export const routes: Routes = [
         path: 'dashboard/new',
         loadComponent: () =>
           import('./components/dashboard-build/dashboard-build.component').then(m => m.DashboardBuildComponent)
+      },
+      // "deleted" sabit segmenti ":id" param'ından önce gelmeli — aksi halde "deleted" stringi ID olarak yakalanır
+      {
+        path: 'dashboard/deleted',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/deleted-dashboards/deleted-dashboards.component').then(m => m.DeletedDashboardsComponent)
       },
       {
         path: 'dashboard/:id',

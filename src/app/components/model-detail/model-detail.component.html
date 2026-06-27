@@ -48,6 +48,22 @@
           Listeye Dön
         </a>
 
+        @if (!isNew && permission.can(typeName, 'delete')) {
+          <button
+            type="button"
+            class="btn btn-danger btn-sm"
+            (click)="deleteRecord()"
+            [disabled]="deleting"
+            aria-label="Kaydı sil">
+            @if (deleting) {
+              <span class="spinner" aria-hidden="true"></span>
+              Siliniyor...
+            } @else {
+              Sil
+            }
+          </button>
+        }
+
         @if (editForm) {
           @if (isNew && permission.can(typeName, 'create')) {
             <button

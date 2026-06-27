@@ -29,6 +29,11 @@ export class ModelListComponent implements OnInit {
     this.load();
   }
 
+  /** "Silinmiş Modeller" butonu yalnızca admin'e gösterilir. */
+  get isAdmin(): boolean {
+    return this.permissionService.isAdmin();
+  }
+
   load(): void {
     this.loading = true;
     this.loadError = null;

@@ -1,13 +1,56 @@
-@if (series.length > 0) {
-  <apx-chart
-    [chart]="chartOptions"
-    [series]="series"
-    [xaxis]="xaxis"
-    [labels]="labels"
-    [legend]="legend">
-  </apx-chart>
-} @else {
-  <div class="empty-state">
-    <p>Grafik için yeterli veri yok.</p>
+@if (loading()) {
+  <div class="chart-state">
+    <span class="spinner" aria-label="Yükleniyor"></span>
   </div>
+} @else if (error()) {
+  <div class="alert alert-danger" role="alert">{{ error() }}</div>
+} @else if (!build()) {
+  <div class="chart-state">
+    <span class="spinner" aria-label="Yükleniyor"></span>
+  </div>
+} @else if (build()!.isEmpty) {
+  <div class="empty-state">
+    <p>{{ build()!.noData.text }}</p>
+  </div>
+} @else if (chartType() === 'kpi') {
+  <div class="kpi-card">
+    <span class="kpi-label">{{ build()!.kpi?.label }}</span>
+    <span class="kpi-value">{{ kpiValueFormatted() }}</span>
+    @if (build()!.apexType === 'line') {
+      <div class="kpi-sparkline" aria-hidden="true">
+        <apx-chart
+          [chart]="build()!.chart"
+          [series]="build()!.series"
+          [colors]="build()!.colors"
+          [stroke]="build()!.stroke"
+          [legend]="build()!.legend"
+          [dataLabels]="build()!.dataLabels">
+        </apx-chart>
+      </div>
+    }
+  </div>
+} @else {
+  <div class="chart-canvas" role="img" [attr.aria-label]="ariaSummary()">
+    <apx-chart
+      [chart]="build()!.chart"
+      [series]="build()!.series"
+      [labels]="build()!.labels"
+      [xaxis]="build()!.xaxis"
+      [yaxis]="build()!.yaxis"
+      [legend]="build()!.legend"
+      [colors]="build()!.colors"
+      [dataLabels]="build()!.dataLabels"
+      [tooltip]="build()!.tooltip"
+      [fill]="build()!.fill"
+      [stroke]="build()!.stroke"
+      [plotOptions]="build()!.plotOptions"
+      [grid]="build()!.grid"
+      [theme]="build()!.theme"
+      [responsive]="build()!.responsive"
+      [noData]="build()!.noData">
+    </apx-chart>
+  </div>
+  @if (build()!.note) {
+    <p class="chart-note">{{ build()!.note }}</p>
+  }
 }

@@ -22,9 +22,37 @@
   color: var(--muted);
 }
 
-/* Ardışık paneller arasına dikey boşluk (Export / Grafik / Veri) */
-.panel + .panel {
+/* Ardışık paneller arasına dikey boşluk (KPI / Export / Grafik / Veri) */
+.panel + .panel,
+.kpi-strip + .panel {
   margin-top: var(--space-6);
+}
+
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-4);
+}
+
+.kpi-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  box-shadow: var(--elev-raised);
+  border-radius: var(--radius-lg);
+}
+
+.kpi-tile-label {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.kpi-tile-value {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  color: var(--fg);
 }
 
 @media (max-width: 640px) {

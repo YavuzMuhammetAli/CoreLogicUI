@@ -66,9 +66,25 @@ description: >
 --tracking-display: -0.018em
 ```
 
-> ⚠️ Inter ve IBM Plex Mono fontları `index.html`'de `<link>` ile yüklenmemiş;
-> şu an `system-ui`'ye düşüyor. Fontları eklemek için `index.html`'e Google Fonts
-> veya bunlara link ekle.
+> Inter ve IBM Plex Mono fontları `index.html`'de Google Fonts `<link>` ile yüklü.
+
+---
+
+## Açık/Koyu Tema
+
+Token'lar `:root` altında açık tema değerleriyle tanımlı; `:root[data-theme="dark"]` bloğu
+aynı token isimlerini koyu değerlerle override eder (`src/styles.scss` satır ~90). Aktif tema
+`<html data-theme="dark|light">` attribute'u ile kontrol edilir:
+
+- `ThemeService` (`src/app/services/theme.service.ts`) — `signal<Theme>`, localStorage'da
+  `theme` anahtarıyla kullanıcı seçimini saklar, seçim yoksa `prefers-color-scheme` OS
+  tercihini kullanır, `document.documentElement.setAttribute('data-theme', …)` ile uygular.
+- `index.html`'de bir anti-FOUC script Angular boot'undan önce attribute'u zaten ayarlar —
+  Angular yüklenene kadar yanlış temanın bir anlık görünmesini (flash) önler.
+- **Yeni component yazarken token isimlerini kullan, asla hex hard-code etme** — her token
+  hem açık hem koyu temada doğru değeri otomatik alır. Koyu temaya özel CSS yazmana gerek yok.
+- `--sidebar-bg` gibi birkaç token bilinçli olarak her iki temada sabit kalır (sidebar her
+  zaman koyu) — bunu yeni token eklerken örnek al.
 
 ---
 

@@ -24,6 +24,7 @@ import {
   isBase64Value,
   cellValue,
   rowVal,
+  fieldValue,
   downloadFile
 } from '../model-data/model-data.util';
 
@@ -220,7 +221,7 @@ export class ModelChildrenComponent implements OnInit {
   }
 
   rowId(row: DataRow): number {
-    return Number(row['ID'] ?? row['id'] ?? 0);
+    return Number(fieldValue(row, 'ID') ?? 0);
   }
 
   // ─── Form yönetimi ───────────────────────────────────────────────────────────
@@ -252,7 +253,7 @@ export class ModelChildrenComponent implements OnInit {
   private buildForm(state: ChildModelState, row: DataRow | null): FormGroup {
     const controls: Record<string, unknown> = {};
     for (const col of this.visibleColumns(state)) {
-      const existing = row ? (row[col.columnName] ?? row[col.columnName.toLowerCase()] ?? '') : '';
+      const existing = row ? (fieldValue(row, col.columnName) ?? '') : '';
       const validators = col.isNullable ? [] : [Validators.required];
       controls[col.columnName] = [existing, validators];
     }
@@ -272,7 +273,7 @@ export class ModelChildrenComponent implements OnInit {
 
     if (state.editingRow) {
       // Güncelleme: ID + FK ekle
-      jsonData['ID'] = state.editingRow['ID'] ?? state.editingRow['id'];
+      jsonData['ID'] = fieldValue(state.editingRow, 'ID');
       jsonData[state.fkColumn] = this.parentId;
 
       this.publishedModel.update(state.typeName, jsonData).subscribe({

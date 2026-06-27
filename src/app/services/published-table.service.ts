@@ -30,6 +30,13 @@ export interface PublishedColumnSchema {
   name: string;
   dataType: string;     // UI tip adı: string / int / float / decimal / datetime / boolean
   isRequired: boolean;
+  // D3: dinamik doğrulama kuralları — düzenleme ekranının formu doldurması için
+  minLength?: number | null;
+  maxLength?: number | null;
+  min?: number | null;
+  max?: number | null;
+  regex?: string | null;
+  regexMessage?: string | null;
 }
 
 /** Tablo şeması + kolonları — GET /Published/getTable dönüşü */
@@ -113,9 +120,12 @@ export class PublishedTableService {
     );
   }
 
-  /** Kayıtlı tüm tabloları (taslak + yayınlanmış) getirir */
-  getAllTables(): Observable<ListResponseModel<{ id: number; tableName: string; description: string; version: number }>> {
-    return this.http.get<ListResponseModel<{ id: number; tableName: string; description: string; version: number }>>(
+  /**
+   * Kayıtlı tüm tabloları (taslak + yayınlanmış) getirir.
+   * D-FK: parentTableId/depth, ana/alt model ağacını client-side kurmak için kullanılır.
+   */
+  getAllTables(): Observable<ListResponseModel<{ id: number; tableName: string; description: string; version: number; parentTableId: number | null; depth: number }>> {
+    return this.http.get<ListResponseModel<{ id: number; tableName: string; description: string; version: number; parentTableId: number | null; depth: number }>>(
       `${this.baseUrl}/getAll`
     );
   }
@@ -134,5 +144,63 @@ export class PublishedTableService {
       .set('modelName', modelName)
       .set('version', version);
     return this.http.post<ResponseModel>(`${this.baseUrl}/rollback`, null, { params });
+  }
+
+  /**
+   * Bir kolonu pasif yapar (soft-delete). SQL kolonu DROP edilmez; kolon yalnızca
+   * bir sonraki publish'te şemadan/üretilen tipten düşer, mevcut veri DB'de kalır.
+   */
+  removeMember(typeName: string, memberName: string): Observable<ResponseModel> {
+    const params = new HttpParams()
+      .set('typeName', typeName)
+      .set('memberName', memberName);
+    return this.http.post<ResponseModel>(`${this.baseUrl}/removeMember`, null, { params });
+  }
+
+  /**
+   * Bir modeli ve tüm alt modellerini pasif yapar (soft-delete). SQL tabloları ve
+   * içindeki kayıtlar silinmez; model yalnızca uygulamadan (liste/derlenmiş tip) kaybolur.
+   */
+  deleteModel(typeName: string): Observable<ResponseModel> {
+    const params = new HttpParams().set('typeName', typeName);
+    return this.http.post<ResponseModel>(`${this.baseUrl}/deleteModel`, null, { params });
+  }
+
+  /**
+   * Hiç yayınlanmamış (taslak) olup silinmiş (pasiflenmiş) modelleri getirir.
+   * "Silinen Taslaklar" sayfası bu listeyi gösterir.
+   */
+  getDeletedDrafts(): Observable<ListResponseModel<{ id: number; tableName: string; description: string; version: number }>> {
+    return this.http.get<ListResponseModel<{ id: number; tableName: string; description: string; version: number }>>(
+      `${this.baseUrl}/deletedDrafts`
+    );
+  }
+
+  /**
+   * Silinmiş (pasif) bir taslağı geri yükler (Active=true). Daha önce yayınlanmış bir
+   * modelse backend reddeder — taslak geri yükleme yalnızca hiç yayınlanmamış modeller içindir.
+   */
+  restoreDraft(typeName: string): Observable<ResponseModel> {
+    const params = new HttpParams().set('typeName', typeName);
+    return this.http.post<ResponseModel>(`${this.baseUrl}/restoreDraft`, null, { params });
+  }
+
+  /**
+   * Daha önce en az bir kez yayınlanmış olup silinmiş (pasiflenmiş) modelleri getirir.
+   * "Silinmiş Modeller" sayfası bu listeyi gösterir.
+   */
+  getDeletedModels(): Observable<ListResponseModel<{ id: number; tableName: string; description: string; version: number }>> {
+    return this.http.get<ListResponseModel<{ id: number; tableName: string; description: string; version: number }>>(
+      `${this.baseUrl}/deletedModels`
+    );
+  }
+
+  /**
+   * Silinmiş (pasif) bir modeli ve alt modellerini geri yükler: tablo ağacı +
+   * ModelDefinition sürümleri aktif edilir, derlenmiş tip yeniden derlenir.
+   */
+  restoreModel(typeName: string): Observable<ResponseModel> {
+    const params = new HttpParams().set('typeName', typeName);
+    return this.http.post<ResponseModel>(`${this.baseUrl}/restoreModel`, null, { params });
   }
 }
