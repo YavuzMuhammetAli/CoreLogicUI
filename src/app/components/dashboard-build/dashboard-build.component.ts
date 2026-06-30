@@ -4,9 +4,12 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router, RouterLink } from '@angular/router';
 import { ReportService } from '../../services/report.service';
 import { DashboardService } from '../../services/dashboard.service';
+import { PermissionService } from '../../services/permission.service';
 import { ChartType, ReportDefinition } from '../../models/report.model';
 import { DashboardWidget } from '../../models/dashboard.model';
 import { CHART_TYPE_META } from '../chart/chart-types';
+import { LanguageService } from '../../services/language.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 /** Canvas üzerinde düzenlenen widget — kaydedilirken `reportName` ayıklanır (DashboardWidget'ta yok). */
 interface EditableWidget extends DashboardWidget {
@@ -27,7 +30,7 @@ const ROW_PITCH_PX = 56;
 @Component({
   selector: 'app-dashboard-build',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
   templateUrl: './dashboard-build.component.html',
   styleUrls: ['./dashboard-build.component.scss']
 })
@@ -37,6 +40,8 @@ export class DashboardBuildComponent implements OnInit {
   private readonly reportService = inject(ReportService);
   private readonly dashboardService = inject(DashboardService);
   private readonly router = inject(Router);
+  private readonly languageService = inject(LanguageService);
+  readonly permissionService = inject(PermissionService);
 
   @ViewChild('canvas') private canvasRef?: ElementRef<HTMLElement>;
 
@@ -52,7 +57,8 @@ export class DashboardBuildComponent implements OnInit {
   submitError: string | null = null;
 
   form: FormGroup = this.fb.group({
-    name: ['', Validators.required]
+    name: ['', Validators.required],
+    showInNav: [false]
   });
 
   private dragState: { id: number; startX: number; startY: number; originX: number; originY: number; colPitch: number } | null = null;
@@ -66,12 +72,12 @@ export class DashboardBuildComponent implements OnInit {
         if (res.success) {
           this.reports = res.data ?? [];
         } else {
-          this.loadError = res.message ?? 'Raporlar yüklenemedi.';
+          this.loadError = res.message ?? this.languageService.t('dashboard.build.loadReportsError');
         }
       },
       error: (err: { error?: { message?: string } }) => {
         this.loading = false;
-        this.loadError = err?.error?.message ?? 'Sunucu bağlantı hatası.';
+        this.loadError = err?.error?.message ?? this.languageService.t('dashboard.build.serverError');
       }
     });
   }
@@ -205,25 +211,30 @@ export class DashboardBuildComponent implements OnInit {
     }
 
     if (this.widgets().length === 0) {
-      this.submitError = 'En az bir rapor eklenmelidir.';
+      this.submitError = this.languageService.t('dashboard.build.atLeastOneReport');
       return;
     }
 
     const widgets: DashboardWidget[] = this.widgets().map(({ reportName, ...widget }) => widget);
 
     this.saving = true;
-    this.dashboardService.define({ name: this.form.value.name, widgets }).subscribe({
+    this.dashboardService.define({
+      name: this.form.value.name,
+      widgets,
+      // Backend yalnızca admin için bu bayrağı uygular; normal kullanıcıdan gelse de sessizce yok sayılır.
+      showInNav: this.permissionService.isAdmin() ? this.form.value.showInNav : false
+    }).subscribe({
       next: res => {
         this.saving = false;
         if (res.success) {
           this.router.navigate(['/dashboard', res.data]);
         } else {
-          this.submitError = res.message ?? 'Dashboard kaydedilemedi.';
+          this.submitError = res.message ?? this.languageService.t('dashboard.build.saveError');
         }
       },
       error: (err: { error?: { message?: string } }) => {
         this.saving = false;
-        this.submitError = err?.error?.message ?? 'Sunucu bağlantı hatası.';
+        this.submitError = err?.error?.message ?? this.languageService.t('dashboard.build.serverError');
       }
     });
   }

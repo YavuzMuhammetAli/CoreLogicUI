@@ -11,11 +11,15 @@ import { PublishedModelService, PublishedModel } from '../../services/published-
 import { NotificationService } from '../../services/notification.service';
 import { UserProfileService } from '../../services/user-profile.service';
 import { ThemeService } from '../../services/theme.service';
+import { LanguageService } from '../../services/language.service';
+import { DashboardService } from '../../services/dashboard.service';
+import { DashboardDefinition } from '../../models/dashboard.model';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe],
   templateUrl: './layout.component.html',
   styleUrls: ['./layout.component.scss']
 })
@@ -34,9 +38,14 @@ export class LayoutComponent implements OnInit {
   /** Normal kullanıcı sidebar'ında gösterilecek, okuma yetkili tablolar */
   navTables: PublishedModel[] = [];
 
+  /** Admin tarafından navigasyonda gösterilmek üzere yayınlanmış dashboard'lar — tüm kullanıcılar görür */
+  navDashboards: DashboardDefinition[] = [];
+
   private readonly platformId   = inject(PLATFORM_ID);
   private readonly userProfile  = inject(UserProfileService);
+  private readonly dashboardService = inject(DashboardService);
   readonly themeService         = inject(ThemeService);
+  readonly languageService      = inject(LanguageService);
 
   constructor(
     private auth: AuthService,
@@ -98,6 +107,17 @@ export class LayoutComponent implements OnInit {
         console.warn('[CoreLogic] Model listesi yükleme hatası:', err?.message);
       }
     });
+
+    // Admin tarafından navigasyona yayınlanmış dashboard'ları yükle — tüm kullanıcılar görür.
+    this.dashboardService.list().subscribe({
+      next: res => {
+        const all = res.success ? (res.data ?? []) : [];
+        this.navDashboards = all.filter(d => d.showInNav);
+      },
+      error: err => {
+        console.warn('[CoreLogic] Dashboard listesi yükleme hatası:', err?.message);
+      }
+    });
   }
 
   /* ──────────────── Profil dropdown ──────────────── */
@@ -147,5 +167,10 @@ export class LayoutComponent implements OnInit {
   /** Açık/koyu tema arasında geçiş yapar */
   toggleTheme(): void {
     this.themeService.toggle();
+  }
+
+  /** Arayüz dili (TR/EN) arasında geçiş yapar */
+  toggleLanguage(): void {
+    this.languageService.toggle();
   }
 }

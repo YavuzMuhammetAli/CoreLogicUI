@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, forwardRef } from '@angular/core';
+import { Component, Input, OnInit, forwardRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -7,6 +7,9 @@ import {
   FormGroup,
   Validators
 } from '@angular/forms';
+import { PublishedTableService } from '../../services/published-table.service';
+import { LanguageService } from '../../services/language.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 /** Maksimum model ağacı derinliği (kök = 1). */
 export const MAX_DEPTH = 4;
@@ -28,6 +31,7 @@ export const MAX_DEPTH = 4;
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    TranslatePipe,
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     forwardRef(() => ModelNodeComponent)
   ],
@@ -35,6 +39,8 @@ export const MAX_DEPTH = 4;
   styleUrls: ['./model-node.component.scss']
 })
 export class ModelNodeComponent implements OnInit {
+  private readonly languageService = inject(LanguageService);
+
   /** Dışarıdan gelen FormGroup: entityName + columns + subModels. */
   @Input({ required: true }) group!: FormGroup;
 
@@ -47,13 +53,71 @@ export class ModelNodeComponent implements OnInit {
   /** Alt model kaldırma olayını parent'a ilet */
   @Input() onRemoveSelf?: () => void;
 
+  /** Lookup kolon tipi için hedef model seçenekleri (form-build tarafından sağlanır). */
+  @Input() availableTables: string[] = [];
+
   readonly MAX_DEPTH = MAX_DEPTH;
 
-  dataTypes = ['string', 'int', 'float', 'decimal', 'datetime', 'boolean', 'image', 'file'];
+  /** Dropdown seçenekleri — value backend'e gönderilen anahtar, label kullanıcıya gösterilen ad. */
+  primitiveTypes: { value: string; label: string }[] = [
+    { value: 'string',   label: 'String' },
+    { value: 'int',      label: 'Int' },
+    { value: 'long',     label: 'Long' },
+    { value: 'short',    label: 'Short' },
+    { value: 'byte',     label: 'Byte' },
+    { value: 'decimal',  label: 'Decimal' },
+    { value: 'double',   label: 'Double' },
+    { value: 'float',    label: 'Float' },
+    { value: 'boolean',  label: 'Bool' },
+    { value: 'datetime', label: 'DateTime' },
+    { value: 'timeonly', label: 'TimeOnly' },
+    { value: 'dateonly', label: 'DateOnly' },
+    { value: 'guid',     label: 'Guid' }
+  ];
 
-  constructor(private fb: FormBuilder) {}
+  referenceTypes: { value: string; label: string }[] = [
+    { value: 'lookup', label: 'Lookup' },
+    { value: 'enum',   label: 'Enum' },
+    { value: 'image',  label: 'Image' },
+    { value: 'file',   label: 'File' }
+  ];
+
+  /** Sayısal kural alanlarının (Min/Max) gösterileceği tipler. */
+  private readonly numericTypes = new Set(['int', 'long', 'short', 'byte', 'decimal', 'double', 'float']);
+
+  /** lookupTargetTable → hedef tablonun kolon adları (display kolonu seçimi için, lazy yüklenir). */
+  lookupColumnsByTable: Partial<Record<string, string[]>> = {};
+  /** lookupTargetTable → yükleniyor mu (aynı hedef için tekrar istek atmamak için). */
+  private lookupColumnsLoading = new Set<string>();
+
+  constructor(private fb: FormBuilder, private publishedTableService: PublishedTableService) {}
 
   ngOnInit(): void {}
+
+  /** Bir kolonun sayısal Min/Max kural alanlarının gösterilip gösterilmeyeceği. */
+  isNumericType(dataType: string): boolean {
+    return this.numericTypes.has(dataType);
+  }
+
+  /**
+   * Kullanıcı bir kolon için lookup hedef tablosunu seçtiğinde, "display kolonu" dropdown'unu
+   * doldurmak için hedef tablonun şemasını okur (her hedef için bir kez, cache'lenir).
+   */
+  onLookupTargetChange(targetTable: string): void {
+    if (!targetTable || this.lookupColumnsByTable[targetTable] || this.lookupColumnsLoading.has(targetTable)) {
+      return;
+    }
+    this.lookupColumnsLoading.add(targetTable);
+    this.publishedTableService.getSchema(targetTable).subscribe({
+      next: res => {
+        this.lookupColumnsLoading.delete(targetTable);
+        if (res.success && res.data) {
+          this.lookupColumnsByTable[targetTable] = res.data.columns.map(c => c.name);
+        }
+      },
+      error: () => this.lookupColumnsLoading.delete(targetTable)
+    });
+  }
 
   // ─── Accessor'lar ────────────────────────────────────────────────────────────
 
@@ -86,15 +150,22 @@ export class ModelNodeComponent implements OnInit {
   /** Boş bir kolon FormGroup'u oluşturur. */
   static buildColumnGroupStatic(fb: FormBuilder): FormGroup {
     return fb.group({
-      columnName:   ['', [Validators.required, Validators.pattern(/^[A-Za-z][A-Za-z0-9_]*$/)]],
-      dataType:     ['string'],
-      isNullable:   [true],
-      minLength:    [null],
-      maxLength:    [null],
-      min:          [null],
-      max:          [null],
-      regex:        [''],
-      regexMessage: [''],
+      columnName:          ['', [Validators.required, Validators.pattern(/^[A-Za-z][A-Za-z0-9_]*$/)]],
+      dataType:            ['string'],
+      isNullable:          [true],
+      // UI metadata: kullanıcı dostu gösterim — opsiyonel
+      label:               [''],
+      description:         [''],
+      minLength:           [null],
+      maxLength:           [null],
+      min:                 [null],
+      max:                 [null],
+      regex:               [''],
+      regexMessage:        [''],
+      // Enum: izinli değerler ('A|B|C' biçiminde). Lookup: hedef model + gösterilecek kolon.
+      enumValues:          [''],
+      lookupTargetTable:   [''],
+      lookupDisplayColumn: [''],
     });
   }
 
@@ -143,8 +214,9 @@ export class ModelNodeComponent implements OnInit {
   // ─── Yardımcılar ────────────────────────────────────────────────────────────
 
   derinlikEtiketi(depth: number): string {
-    const etiketler = ['', 'Kök Model', 'Alt Model', '2. Alt Model', '3. Alt Model'];
-    return etiketler[depth] ?? `${depth}. Seviye`;
+    const keys = ['', 'model.node.depthRoot', 'model.node.depthChild', 'model.node.depthGrandchild', 'model.node.depthGreatGrandchild'];
+    const key = keys[depth];
+    return key ? this.languageService.t(key) : this.languageService.t('model.node.depthLevel', { depth });
   }
 
   /**

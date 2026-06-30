@@ -1,20 +1,22 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ReportService } from '../../services/report.service';
 import { AggregateFunction, ReportDefinition, ReportRunResult } from '../../models/report.model';
 import { AppChartComponent } from '../chart/chart.component';
+import { LanguageService } from '../../services/language.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 const trNumber = new Intl.NumberFormat('tr-TR');
 
-/** Aggregate fonksiyonlarının KPI kartı başlığında kullanılan Türkçe karşılıkları. */
-const AGGREGATE_LABELS: Record<AggregateFunction, string> = {
-  SUM: 'Toplam',
-  COUNT: 'Sayı',
-  AVG: 'Ortalama',
-  MIN: 'Minimum',
-  MAX: 'Maksimum'
+/** Aggregate fonksiyonlarının KPI kartı başlığında kullanılan i18n anahtarları (bkz. report.i18n.ts 'report.aggregateShort.*'). */
+const AGGREGATE_LABEL_KEYS: Record<AggregateFunction, string> = {
+  SUM: 'report.aggregateShort.sum',
+  COUNT: 'report.aggregateShort.count',
+  AVG: 'report.aggregateShort.avg',
+  MIN: 'report.aggregateShort.min',
+  MAX: 'report.aggregateShort.max'
 };
 
 export interface KpiCard {
@@ -25,11 +27,13 @@ export interface KpiCard {
 @Component({
   selector: 'app-report-viewer',
   standalone: true,
-  imports: [RouterLink, AppChartComponent, NgTemplateOutlet],
+  imports: [RouterLink, AppChartComponent, NgTemplateOutlet, TranslatePipe],
   templateUrl: './report-viewer.component.html',
   styleUrls: ['./report-viewer.component.scss']
 })
 export class ReportViewerComponent implements OnInit {
+  private readonly languageService = inject(LanguageService);
+
   id = 0;
   report: ReportDefinition | null = null;
   result: ReportRunResult | null = null;
@@ -55,7 +59,8 @@ export class ReportViewerComponent implements OnInit {
         if (!hasColumn) return null;
 
         const total = result.rows.reduce((sum, row) => sum + Number(row[alias] ?? 0), 0);
-        const label = agg.field ? `${AGGREGATE_LABELS[agg.function]} · ${agg.field}` : AGGREGATE_LABELS[agg.function];
+        const aggLabel = this.languageService.t(AGGREGATE_LABEL_KEYS[agg.function]);
+        const label = agg.field ? `${aggLabel} · ${agg.field}` : aggLabel;
         return { label, value: trNumber.format(total) };
       })
       .filter((card): card is KpiCard => card !== null);
@@ -86,12 +91,12 @@ export class ReportViewerComponent implements OnInit {
         if (runRes.success) {
           this.result = runRes.data;
         } else {
-          this.loadError = runRes.message ?? 'Rapor çalıştırılamadı.';
+          this.loadError = runRes.message ?? this.languageService.t('report.viewer.runFailed');
         }
       },
       error: (err: { error?: { message?: string } }) => {
         this.loading = false;
-        this.loadError = err?.error?.message ?? 'Sunucu bağlantı hatası.';
+        this.loadError = err?.error?.message ?? this.languageService.t('report.viewer.serverError');
       }
     });
   }
@@ -106,7 +111,7 @@ export class ReportViewerComponent implements OnInit {
       },
       error: () => {
         this.exporting = null;
-        this.exportError = 'Excel export başarısız oldu.';
+        this.exportError = this.languageService.t('report.viewer.excelExportFailed');
       }
     });
   }
@@ -121,7 +126,7 @@ export class ReportViewerComponent implements OnInit {
       },
       error: () => {
         this.exporting = null;
-        this.exportError = 'PDF export başarısız oldu.';
+        this.exportError = this.languageService.t('report.viewer.pdfExportFailed');
       }
     });
   }

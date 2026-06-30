@@ -1,8 +1,8 @@
 <div class="page-header">
   <div>
-    <span class="eyebrow">Raporlama</span>
-    <h1 class="page-title">Raporlar</h1>
-    <p class="page-subtitle">Modeller üzerinde tanımladığınız metadata-driven raporlar.</p>
+    <span class="eyebrow">{{ 'report.eyebrow' | t }}</span>
+    <h1 class="page-title">{{ 'report.list.title' | t }}</h1>
+    <p class="page-subtitle">{{ 'report.list.subtitle' | t }}</p>
   </div>
   <div class="cluster">
     @if (isAdmin) {
@@ -11,14 +11,14 @@
           <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
           <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
         </svg>
-        Silinmiş Raporlar
+        {{ 'report.list.deletedReports' | t }}
       </a>
     }
     <a routerLink="/reports/new" class="btn btn-primary">
       <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <path d="M12 5v14M5 12h14"/>
       </svg>
-      Yeni Rapor
+      {{ 'report.list.newReport' | t }}
     </a>
   </div>
 </div>
@@ -26,7 +26,7 @@
 @if (loading) {
   <div class="panel">
     <div class="empty-state">
-      <span class="spinner" aria-label="Yükleniyor"></span>
+      <span class="spinner" [attr.aria-label]="'common.loading' | t"></span>
     </div>
   </div>
 }
@@ -41,9 +41,9 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th>Ad</th>
-            <th>Model</th>
-            <th>Grafik Tipi</th>
+            <th>{{ 'report.list.colName' | t }}</th>
+            <th>{{ 'report.list.colModel' | t }}</th>
+            <th>{{ 'report.list.colChartType' | t }}</th>
             <th></th>
           </tr>
         </thead>
@@ -55,8 +55,8 @@
               <td>{{ report.chartType }}</td>
               <td>
                 <div class="td-actions">
-                  <a class="btn btn-ghost btn-sm" [routerLink]="['/reports', report.id]">Görüntüle</a>
-                  <a class="btn btn-secondary btn-sm" [routerLink]="['/reports', report.id, 'edit']">Düzenle</a>
+                  <a class="btn btn-ghost btn-sm" [routerLink]="['/reports', report.id]">{{ 'report.list.view' | t }}</a>
+                  <a class="btn btn-secondary btn-sm" [routerLink]="['/reports', report.id, 'edit']">{{ 'report.list.edit' | t }}</a>
                 </div>
               </td>
             </tr>
@@ -68,9 +68,9 @@
     <div class="panel">
       <div class="empty-state">
         <div class="empty-icon" aria-hidden="true">📊</div>
-        <h3>Henüz rapor tanımlanmadı</h3>
-        <p>Erişebildiğiniz bir model üzerinde ilk raporunuzu oluşturun.</p>
-        <a routerLink="/reports/new" class="btn btn-primary">İlk Raporu Oluştur</a>
+        <h3>{{ 'report.list.emptyTitle' | t }}</h3>
+        <p>{{ 'report.list.emptySubtitle' | t }}</p>
+        <a routerLink="/reports/new" class="btn btn-primary">{{ 'report.list.createFirst' | t }}</a>
       </div>
     </div>
   }

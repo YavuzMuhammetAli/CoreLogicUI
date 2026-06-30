@@ -41,6 +41,18 @@ export class RoleAdminService {
     );
   }
 
+  /**
+   * Role üye kullanıcıların login sonrası açılış sayfasını ayarlar (boş string → kaldırılır).
+   * POST /Role/setLandingPage?roleId=&page=
+   */
+  setLandingPage(roleId: number, page: string | null): Observable<ResponseModel> {
+    return this.http.post<ResponseModel>(
+      `${this.roleUrl}/setLandingPage`,
+      null,
+      { params: { roleId: roleId.toString(), page: page ?? '' } }
+    );
+  }
+
   /** Rolü siler (üyelik ve izin kayıtları dahil). POST /Role/delete?id= */
   deleteRole(roleId: number): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(

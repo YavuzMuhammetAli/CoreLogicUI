@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
@@ -7,6 +7,8 @@ import { catchError, map } from 'rxjs/operators';
 import { PermissionAdminService } from '../../services/permission-admin.service';
 import { ModelPermission } from '../../services/permission.service';
 import { AppUser } from '../../models/appUser';
+import { TranslatePipe } from '../../pipes/translate.pipe';
+import { LanguageService } from '../../services/language.service';
 
 /** "İzinli model sayısı" sütununda gösterilen, izin sayısı zenginleştirilmiş kullanıcı satırı */
 interface UserRow extends AppUser {
@@ -16,11 +18,13 @@ interface UserRow extends AppUser {
 @Component({
   selector: 'app-user-permission-list',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe],
   templateUrl: './user-permission-list.component.html',
   styleUrls: ['./user-permission-list.component.scss']
 })
 export class UserPermissionListComponent implements OnInit {
+  private readonly languageService = inject(LanguageService);
+
   rows      = signal<UserRow[]>([]);
   loading   = signal(true);
   loadError = signal('');
@@ -65,7 +69,7 @@ export class UserPermissionListComponent implements OnInit {
         });
       },
       error: () => {
-        this.loadError.set('Kullanıcı listesi yüklenemedi.');
+        this.loadError.set(this.languageService.t('permission.list.loadError'));
         this.loading.set(false);
       }
     });

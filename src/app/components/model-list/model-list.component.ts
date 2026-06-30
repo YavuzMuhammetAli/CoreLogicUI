@@ -1,18 +1,22 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { PublishedModelService, PublishedModel } from '../../services/published-model.service';
 import { PermissionService } from '../../services/permission.service';
+import { LanguageService } from '../../services/language.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 @Component({
   selector: 'app-model-list',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe],
   templateUrl: './model-list.component.html',
   styleUrls: ['./model-list.component.scss']
 })
 export class ModelListComponent implements OnInit {
+  private readonly languageService = inject(LanguageService);
+
   models: PublishedModel[] = [];
   loading = false;
   loadError: string | null = null;
@@ -47,7 +51,7 @@ export class ModelListComponent implements OnInit {
       next: ([, modelsRes]) => {
         this.loading = false;
         if (!modelsRes.success) {
-          this.loadError = modelsRes.message ?? 'Modeller yüklenemedi.';
+          this.loadError = modelsRes.message ?? this.languageService.t('model.list.loadFailed');
           return;
         }
         const allModels = modelsRes.data ?? [];
@@ -71,7 +75,7 @@ export class ModelListComponent implements OnInit {
       },
       error: err => {
         this.loading = false;
-        this.loadError = err?.error?.message ?? 'Sunucu bağlantı hatası.';
+        this.loadError = err?.error?.message ?? this.languageService.t('model.list.serverError');
       }
     });
   }

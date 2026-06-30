@@ -28,7 +28,9 @@ export interface PublishedTableDto {
 /** Tek bir kolon kaydını temsil eder (DB'den okunan) */
 export interface PublishedColumnSchema {
   name: string;
-  dataType: string;     // UI tip adı: string / int / float / decimal / datetime / boolean
+  // UI tip adı: string / int / long / short / byte / decimal / double / float / boolean /
+  // datetime / dateonly / timeonly / guid / enum / lookup / image / file
+  dataType: string;
   isRequired: boolean;
   // D3: dinamik doğrulama kuralları — düzenleme ekranının formu doldurması için
   minLength?: number | null;
@@ -37,6 +39,13 @@ export interface PublishedColumnSchema {
   max?: number | null;
   regex?: string | null;
   regexMessage?: string | null;
+  // Yeni tip metadata'sı: enum / lookup
+  enumValues?: string | null;          // 'A|B|C' biçiminde izinli değerler
+  lookupTargetTable?: string | null;   // lookup hedef model adı
+  lookupDisplayColumn?: string | null; // lookup dropdown'da gösterilecek hedef kolon
+  // UI metadata: kullanıcı dostu gösterim
+  label?: string | null;        // columnName yerine gösterilecek insan-dostu etiket
+  description?: string | null;  // detay sayfasında "i" baloncuğunda gösterilecek açıklama
 }
 
 /** Tablo şeması + kolonları — GET /Published/getTable dönüşü */
@@ -79,7 +88,12 @@ export class PublishedTableService {
     min?: number | null,
     max?: number | null,
     regex?: string | null,
-    regexMessage?: string | null
+    regexMessage?: string | null,
+    enumValues?: string | null,
+    lookupTargetTable?: string | null,
+    lookupDisplayColumn?: string | null,
+    label?: string | null,
+    description?: string | null
   ): Observable<ResponseModel> {
     let params = new HttpParams()
       .set('typeName', typeName)
@@ -87,12 +101,17 @@ export class PublishedTableService {
       .set('memberType', memberType)
       .set('isRequired', isRequired);
 
-    if (minLength != null)    params = params.set('minLength', minLength);
-    if (maxLength != null)    params = params.set('maxLength', maxLength);
-    if (min != null)          params = params.set('min', min);
-    if (max != null)          params = params.set('max', max);
-    if (regex?.trim())        params = params.set('regex', regex);
-    if (regexMessage?.trim()) params = params.set('regexMessage', regexMessage);
+    if (minLength != null)           params = params.set('minLength', minLength);
+    if (maxLength != null)           params = params.set('maxLength', maxLength);
+    if (min != null)                 params = params.set('min', min);
+    if (max != null)                 params = params.set('max', max);
+    if (regex?.trim())               params = params.set('regex', regex);
+    if (regexMessage?.trim())        params = params.set('regexMessage', regexMessage);
+    if (enumValues?.trim())          params = params.set('enumValues', enumValues);
+    if (lookupTargetTable?.trim())   params = params.set('lookupTargetTable', lookupTargetTable);
+    if (lookupDisplayColumn?.trim()) params = params.set('lookupDisplayColumn', lookupDisplayColumn);
+    if (label?.trim())               params = params.set('label', label);
+    if (description?.trim())         params = params.set('description', description);
 
     return this.http.post<ResponseModel>(`${this.baseUrl}/addMember`, null, { params });
   }

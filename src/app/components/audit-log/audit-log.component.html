@@ -1,0 +1,205 @@
+<!-- Sayfa başlığı -->
+<div class="page-header">
+  <span class="eyebrow">{{ 'audit.eyebrow' | t }}</span>
+  <h1 class="page-title">{{ 'audit.title' | t }}</h1>
+  <p class="page-subtitle">{{ 'audit.subtitle' | t }}</p>
+</div>
+
+<!-- Filtreler -->
+<div class="panel">
+  <div class="panel-head">
+    <h2>{{ 'audit.filterTitle' | t }}</h2>
+  </div>
+  <div class="panel-body">
+    <div class="cluster">
+      <div class="field">
+        <label for="entityNameFilter">{{ 'audit.entityName' | t }}</label>
+        <input
+          id="entityNameFilter"
+          type="text"
+          [(ngModel)]="entityNameFilter"
+          [placeholder]="'audit.entityNamePlaceholder' | t"
+          style="min-width: 200px;">
+      </div>
+      <div class="field">
+        <label for="fromDateFilter">{{ 'audit.fromDate' | t }}</label>
+        <input id="fromDateFilter" type="date" [(ngModel)]="fromDateFilter">
+      </div>
+      <div class="field">
+        <label for="toDateFilter">{{ 'audit.toDate' | t }}</label>
+        <input id="toDateFilter" type="date" [(ngModel)]="toDateFilter">
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <div class="cluster">
+          <button class="btn btn-primary btn-sm" type="button" [disabled]="loading()" (click)="load()">
+            @if (loading()) {
+              <span class="spinner" aria-hidden="true"></span>
+            }
+            {{ 'audit.filterTitle' | t }}
+          </button>
+          <button class="btn btn-secondary btn-sm" type="button" [disabled]="loading()" (click)="clearFilters()">
+            {{ 'audit.clear' | t }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <h2>{{ 'audit.recordsTitle' | t }}</h2>
+    <div class="panel-actions">
+      <button class="btn btn-secondary btn-sm" (click)="load()" type="button" [disabled]="loading()">
+        @if (loading()) {
+          <span class="spinner" aria-hidden="true"></span>
+        } @else {
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/>
+          </svg>
+        }
+        {{ 'common.refresh' | t }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Hata -->
+  @if (loadError()) {
+    <div class="alert alert-danger" style="margin: var(--space-4) var(--space-5)" role="alert">{{ loadError() }}</div>
+  }
+
+  <!-- Yükleniyor -->
+  @if (loading()) {
+    <div class="empty-state">
+      <span class="spinner" style="width: 32px; height: 32px;" [attr.aria-label]="'common.loading' | t"></span>
+      <p>{{ 'audit.loadingRecords' | t }}</p>
+    </div>
+  }
+
+  <!-- Boş -->
+  @if (!loading() && !loadError() && total() === 0) {
+    <div class="empty-state">
+      <div class="empty-icon" aria-hidden="true">🗒️</div>
+      <h3>{{ 'audit.noRecordsTitle' | t }}</h3>
+      <p>{{ 'audit.noRecordsBody' | t }}</p>
+    </div>
+  }
+
+  <!-- Tablo -->
+  @if (!loading() && !loadError() && total() > 0) {
+    <div class="table-wrapper">
+      <table class="data-table" [attr.aria-label]="'audit.tableAriaLabel' | t">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'audit.colDate' | t }}</th>
+            <th scope="col">{{ 'audit.colEntity' | t }}</th>
+            <th scope="col">{{ 'audit.colRecordId' | t }}</th>
+            <th scope="col">{{ 'audit.colAction' | t }}</th>
+            <th scope="col">{{ 'audit.colUserId' | t }}</th>
+            <th scope="col">{{ 'audit.colIp' | t }}</th>
+            <th scope="col" class="actions-col">{{ 'audit.colDetail' | t }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of pagedRows(); track row.id) {
+            <tr>
+              <td>{{ row.timestamp | date:'dd.MM.yyyy HH:mm:ss' }}</td>
+              <td>{{ row.entityName }}</td>
+              <td>{{ row.entityId }}</td>
+              <td><span class="badge" [ngClass]="badgeClass(row.action)">{{ row.action }}</span></td>
+              <td>{{ row.userId || '—' }}</td>
+              <td>{{ row.ip || '—' }}</td>
+              <td class="td-actions">
+                <button
+                  class="btn btn-secondary btn-sm"
+                  type="button"
+                  (click)="toggleExpanded(row)"
+                  [attr.aria-expanded]="expandedId() === row.id"
+                  [attr.aria-label]="'audit.expandAriaLabel' | t:{ id: row.id, action: (expandedId() === row.id ? ('audit.expandDetailClose' | t) : ('audit.expandDetailOpen' | t)) }">
+                  @if (expandedId() === row.id) {
+                    {{ 'audit.expandClose' | t }}
+                  } @else {
+                    {{ 'audit.expandShow' | t }}
+                  }
+                </button>
+              </td>
+            </tr>
+            @if (expandedId() === row.id) {
+              <tr>
+                <td colspan="7">
+                  <div class="audit-detail">
+                    <div>
+                      <h4>{{ 'audit.oldValues' | t }}</h4>
+                      <pre>{{ formatJson(row.oldValues) }}</pre>
+                    </div>
+                    <div>
+                      <h4>{{ 'audit.newValues' | t }}</h4>
+                      <pre>{{ formatJson(row.newValues) }}</pre>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="table-footer">
+      <!-- Kayıt aralığı -->
+      <span class="eyebrow">
+        @if (total() > 0) {
+          {{ 'audit.recordCount' | t:{ start: pageRangeStart(), end: pageRangeEnd(), total: total() } }}
+        } @else {
+          {{ 'audit.recordCountZero' | t }}
+        }
+      </span>
+
+      <!-- Sayfa numarası butonları (tek sayfa ise gizle) -->
+      @if (totalPages() > 1) {
+        <nav class="pagination" [attr.aria-label]="'audit.paginationAriaLabel' | t">
+          <button class="page-btn" type="button" (click)="prevPage()"
+                  [disabled]="pageIndex() === 1" [attr.aria-label]="'audit.prevPage' | t">‹</button>
+
+          @if (visiblePages()[0] > 1) {
+            <button class="page-btn" type="button" (click)="goToPage(1)">1</button>
+            @if (visiblePages()[0] > 2) {
+              <span class="page-ellipsis">…</span>
+            }
+          }
+
+          @for (p of visiblePages(); track p) {
+            <button
+              class="page-btn"
+              [class.page-btn--active]="p === pageIndex()"
+              type="button"
+              (click)="goToPage(p)"
+              [attr.aria-current]="p === pageIndex() ? 'page' : null">{{ p }}</button>
+          }
+
+          @if (visiblePages().length > 0 && visiblePages()[visiblePages().length - 1] < totalPages()) {
+            @if (visiblePages()[visiblePages().length - 1] < totalPages() - 1) {
+              <span class="page-ellipsis">…</span>
+            }
+            <button class="page-btn" type="button" (click)="goToPage(totalPages())">{{ totalPages() }}</button>
+          }
+
+          <button class="page-btn" type="button" (click)="nextPage()"
+                  [disabled]="pageIndex() === totalPages()" [attr.aria-label]="'audit.nextPage' | t">›</button>
+        </nav>
+      }
+
+      <!-- Sayfa başına kayıt seçici -->
+      <div class="page-size-selector">
+        <label class="sr-only" for="pageSizeSelect">{{ 'audit.pageSizeAriaLabel' | t }}</label>
+        <select id="pageSizeSelect"
+                (change)="changePageSize(+$any($event.target).value)"
+                [value]="pageSize()">
+          @for (opt of pageSizeOptions; track opt) {
+            <option [value]="opt">{{ 'audit.pageSizeOption' | t:{ count: opt } }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  }
+</div>

@@ -7,9 +7,20 @@ import { forkJoin } from 'rxjs';
 import { RoleAdminService } from '../../services/role-admin.service';
 import { PermissionAdminService, toActionInt } from '../../services/permission-admin.service';
 import { PublishedModelService, PublishedModel } from '../../services/published-model.service';
+import { DashboardService } from '../../services/dashboard.service';
 import { Role } from '../../models/role';
 import { AppUser } from '../../models/appUser';
+import { DashboardDefinition } from '../../models/dashboard.model';
 import { ModelPermission } from '../../services/permission.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
+import { LanguageService } from '../../services/language.service';
+
+/** Açılış sayfası dropdown'unda gösterilen sabit hedefler key'i — etiketler LanguageService.t() ile çözülür */
+const FIXED_LANDING_PAGE_KEYS: { value: string; labelKey: string }[] = [
+  { value: '/models', labelKey: 'role.detail.landingModels' },
+  { value: '/reports', labelKey: 'role.detail.landingReports' },
+  { value: '/dashboard', labelKey: 'role.detail.landingDashboardList' }
+];
 
 /** Düzenleme için kullanılan geçici izin satırı (user-permission-detail ile aynı yapı) */
 export interface RolePermissionRow {
@@ -29,7 +40,7 @@ export interface RolePermissionRow {
 @Component({
   selector: 'app-role-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
   templateUrl: './role-detail.component.html',
   styleUrls: ['./role-detail.component.scss']
 })
@@ -39,6 +50,13 @@ export class RoleDetailComponent implements OnInit {
   private readonly roleService  = inject(RoleAdminService);
   private readonly adminService = inject(PermissionAdminService);
   private readonly modelService = inject(PublishedModelService);
+  private readonly dashboardService = inject(DashboardService);
+  private readonly languageService  = inject(LanguageService);
+
+  /** Açılış sayfası dropdown'unda gösterilen sabit hedefler — aktif dile göre çözülmüş etiketler */
+  private get fixedLandingPagesResolved(): { value: string; label: string }[] {
+    return FIXED_LANDING_PAGE_KEYS.map(p => ({ value: p.value, label: this.languageService.t(p.labelKey) }));
+  }
 
   /** /roles/new sayfasında mı, yoksa mevcut bir rolün düzenleme sayfasında mıyız? */
   isNew = false;
@@ -72,6 +90,13 @@ export class RoleDetailComponent implements OnInit {
   renameSaving  = signal(false);
   renameMsg     = signal('');
   renameMsgType = signal<'success'|'danger'>('success');
+
+  /* ── Açılış sayfası düzenleme ── */
+  landingPageOptions   = signal<{ value: string; label: string }[]>(this.fixedLandingPagesResolved);
+  landingPageEdit       = '';
+  landingPageSaving     = signal(false);
+  landingPageMsg        = signal('');
+  landingPageMsgType    = signal<'success'|'danger'>('success');
 
   /* ── Rol silme ── */
   deleteSaving = signal(false);
@@ -149,6 +174,19 @@ export class RoleDetailComponent implements OnInit {
     this.roleId = Number(this.route.snapshot.paramMap.get('id'));
     this.loadAllUsers();
     this.loadRole();
+    this.loadLandingPageOptions();
+  }
+
+  /** Açılış sayfası dropdown'unu sabit sayfalar + mevcut dashboard'larla doldurur. */
+  private loadLandingPageOptions(): void {
+    this.dashboardService.list().subscribe({
+      next: res => {
+        const dashboards: DashboardDefinition[] = res.success ? (res.data ?? []) : [];
+        const dashboardOptions = dashboards.map(d => ({ value: `/dashboard/${d.id}`, label: this.languageService.t('role.detail.landingDashboardOption', { name: d.name }) }));
+        this.landingPageOptions.set([...this.fixedLandingPagesResolved, ...dashboardOptions]);
+      },
+      error: () => { /* sessizce atla — yalnızca sabit sayfalar gösterilir */ }
+    });
   }
 
   /* ──────────────── Yeni rol oluşturma ──────────────── */
@@ -156,7 +194,7 @@ export class RoleDetailComponent implements OnInit {
   createRole(): void {
     const name = this.newRoleName.trim();
     if (!name) {
-      this.createRoleMsg.set('Rol adı boş olamaz.');
+      this.createRoleMsg.set(this.languageService.t('role.detail.nameEmpty'));
       this.createRoleMsgType.set('danger');
       return;
     }
@@ -186,7 +224,7 @@ export class RoleDetailComponent implements OnInit {
         });
       },
       error: () => {
-        this.createRoleMsg.set('Rol oluşturulamadı.');
+        this.createRoleMsg.set(this.languageService.t('role.detail.createError'));
         this.createRoleMsgType.set('danger');
         this.creatingRole.set(false);
       }
@@ -208,18 +246,19 @@ export class RoleDetailComponent implements OnInit {
         }
         const found = (res.data ?? []).find(r => r.id === this.roleId);
         if (!found) {
-          this.roleError.set('Rol bulunamadı.');
+          this.roleError.set(this.languageService.t('role.detail.notFound'));
           this.roleLoading.set(false);
           return;
         }
         this.role.set(found);
         this.roleNameEdit = found.name;
+        this.landingPageEdit = found.defaultLandingPage ?? '';
         this.roleLoading.set(false);
         this.loadRolePermissions(found.id);
         this.loadRoleMembers(found.id);
       },
       error: () => {
-        this.roleError.set('Rol yüklenemedi.');
+        this.roleError.set(this.languageService.t('role.detail.loadError'));
         this.roleLoading.set(false);
       }
     });
@@ -244,7 +283,7 @@ export class RoleDetailComponent implements OnInit {
     const name = this.roleNameEdit.trim();
     if (!role) return;
     if (!name) {
-      this.renameMsg.set('Rol adı boş olamaz.');
+      this.renameMsg.set(this.languageService.t('role.detail.nameEmpty'));
       this.renameMsgType.set('danger');
       return;
     }
@@ -262,9 +301,35 @@ export class RoleDetailComponent implements OnInit {
         this.renameSaving.set(false);
       },
       error: () => {
-        this.renameMsg.set('Rol adı güncellenemedi.');
+        this.renameMsg.set(this.languageService.t('role.detail.renameError'));
         this.renameMsgType.set('danger');
         this.renameSaving.set(false);
+      }
+    });
+  }
+
+  /* ──────────────── Açılış sayfası ──────────────── */
+
+  saveLandingPage(): void {
+    const role = this.role();
+    if (!role) return;
+
+    this.landingPageSaving.set(true);
+    this.landingPageMsg.set('');
+
+    this.roleService.setLandingPage(role.id, this.landingPageEdit || null).subscribe({
+      next: res => {
+        this.landingPageMsg.set(res.message);
+        this.landingPageMsgType.set(res.success ? 'success' : 'danger');
+        if (res.success) {
+          this.role.set({ ...role, defaultLandingPage: this.landingPageEdit || null });
+        }
+        this.landingPageSaving.set(false);
+      },
+      error: () => {
+        this.landingPageMsg.set(this.languageService.t('role.detail.landingPageError'));
+        this.landingPageMsgType.set('danger');
+        this.landingPageSaving.set(false);
       }
     });
   }
@@ -274,7 +339,7 @@ export class RoleDetailComponent implements OnInit {
   deleteRole(): void {
     const role = this.role();
     if (!role) return;
-    if (!confirm(`'${role.name}' rolünü silmek istediğinize emin misiniz? Bu işlem rolün tüm üyelik ve izin kayıtlarını da kaldırır.`)) return;
+    if (!confirm(this.languageService.t('role.detail.deleteConfirm', { name: role.name }))) return;
 
     this.deleteSaving.set(true);
     this.deleteMsg.set('');
@@ -289,7 +354,7 @@ export class RoleDetailComponent implements OnInit {
         }
       },
       error: () => {
-        this.deleteMsg.set('Rol silinemedi.');
+        this.deleteMsg.set(this.languageService.t('role.detail.deleteError'));
         this.deleteSaving.set(false);
       }
     });
@@ -329,7 +394,7 @@ export class RoleDetailComponent implements OnInit {
         this.permLoading.set(false);
       },
       error: () => {
-        this.permError.set('Rol izinleri yüklenemedi.');
+        this.permError.set(this.languageService.t('role.detail.permissionsLoadError'));
         this.permLoading.set(false);
       }
     });
@@ -366,12 +431,12 @@ export class RoleDetailComponent implements OnInit {
   /** Seçili modelin etkin izinlerini etiket listesi olarak döndürür (rozetler için) */
   permSummary(row: RolePermissionRow): string[] {
     const labels: string[] = [];
-    if (row.canRead)      labels.push('Oku');
-    if (row.canCreate)    labels.push('Ekle');
-    if (row.canUpdate)    labels.push('Güncelle');
-    if (row.canDelete)    labels.push('Sil');
-    if (row.canShowInNav) labels.push('Nav');
-    if (row.canOwnOnly)   labels.push('Kendi');
+    if (row.canRead)      labels.push(this.languageService.t('role.detail.summaryRead'));
+    if (row.canCreate)    labels.push(this.languageService.t('role.detail.summaryCreate'));
+    if (row.canUpdate)    labels.push(this.languageService.t('role.detail.summaryUpdate'));
+    if (row.canDelete)    labels.push(this.languageService.t('role.detail.summaryDelete'));
+    if (row.canShowInNav) labels.push(this.languageService.t('role.detail.summaryNav'));
+    if (row.canOwnOnly)   labels.push(this.languageService.t('role.detail.summaryOwn'));
     return labels;
   }
 
@@ -387,7 +452,7 @@ export class RoleDetailComponent implements OnInit {
       next: res => {
         if (res.success) {
           row.dirty = false;
-          this.permMsg.set('Model izinleri kaydedildi.');
+          this.permMsg.set(this.languageService.t('role.detail.permissionsSaved'));
           this.permMsgType.set('success');
         } else {
           this.permMsg.set(res.message);
@@ -396,7 +461,7 @@ export class RoleDetailComponent implements OnInit {
         this.permRowSaving.set(false);
       },
       error: () => {
-        this.permMsg.set(`${row.modelName} izinleri kaydedilemedi.`);
+        this.permMsg.set(this.languageService.t('role.detail.permissionsSaveError', { modelName: row.modelName }));
         this.permMsgType.set('danger');
         this.permRowSaving.set(false);
       }
@@ -415,7 +480,7 @@ export class RoleDetailComponent implements OnInit {
         this.membersLoading.set(false);
       },
       error: () => {
-        this.membersError.set('Rol üyeleri yüklenemedi.');
+        this.membersError.set(this.languageService.t('role.detail.membersLoadError'));
         this.membersLoading.set(false);
       }
     });
@@ -440,7 +505,7 @@ export class RoleDetailComponent implements OnInit {
         this.addMemberSaving.set(false);
       },
       error: () => {
-        this.addMemberMsg.set('Kullanıcı eklenemedi.');
+        this.addMemberMsg.set(this.languageService.t('role.detail.addMemberError'));
         this.addMemberSaving.set(false);
       }
     });
@@ -463,7 +528,7 @@ export class RoleDetailComponent implements OnInit {
         this.removingUserId.set(null);
       },
       error: () => {
-        this.membersError.set('Kullanıcı rolden çıkarılamadı.');
+        this.membersError.set(this.languageService.t('role.detail.removeMemberError'));
         this.removingUserId.set(null);
       }
     });

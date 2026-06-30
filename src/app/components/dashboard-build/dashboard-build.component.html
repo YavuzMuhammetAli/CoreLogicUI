@@ -1,16 +1,16 @@
 <div class="page-header">
   <div>
-    <span class="eyebrow">Raporlama</span>
-    <h1 class="page-title">Yeni Dashboard</h1>
-    <p class="page-subtitle">Rapor ekleyin, canvas'ta sürükleyip yeniden boyutlandırın.</p>
+    <span class="eyebrow">{{ 'dashboard.eyebrow' | t }}</span>
+    <h1 class="page-title">{{ 'dashboard.build.title' | t }}</h1>
+    <p class="page-subtitle">{{ 'dashboard.build.subtitle' | t }}</p>
   </div>
-  <a routerLink="/reports" class="btn btn-secondary">Vazgeç</a>
+  <a routerLink="/reports" class="btn btn-secondary">{{ 'common.cancel' | t }}</a>
 </div>
 
 @if (loading) {
   <div class="panel">
     <div class="empty-state">
-      <span class="spinner" aria-label="Yükleniyor"></span>
+      <span class="spinner" [attr.aria-label]="'dashboard.list.loadingAria' | t"></span>
     </div>
   </div>
 }
@@ -23,18 +23,18 @@
   @if (reports.length === 0) {
     <div class="panel">
       <div class="empty-state">
-        <h3>Henüz rapor yok</h3>
-        <p>Dashboard oluşturmak için önce en az bir rapor tanımlamalısınız.</p>
-        <a routerLink="/reports/new" class="btn btn-primary">Rapor Oluştur</a>
+        <h3>{{ 'dashboard.build.emptyReportsTitle' | t }}</h3>
+        <p>{{ 'dashboard.build.emptyReportsText' | t }}</p>
+        <a routerLink="/reports/new" class="btn btn-primary">{{ 'dashboard.build.createReport' | t }}</a>
       </div>
     </div>
   } @else {
     <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flow">
       <div class="panel">
-        <div class="panel-head"><h3>Dashboard Adı</h3></div>
+        <div class="panel-head"><h3>{{ 'dashboard.build.nameSection' | t }}</h3></div>
         <div class="panel-body">
           <div class="field">
-            <label for="name">Ad <span class="req">*</span></label>
+            <label for="name">{{ 'dashboard.build.nameLabel' | t }} <span class="req">*</span></label>
             <input
               id="name"
               class="input"
@@ -43,14 +43,22 @@
               [attr.aria-invalid]="f['name'].invalid && f['name'].touched"
             />
             @if (f['name'].invalid && f['name'].touched) {
-              <span class="field-error" role="alert">Dashboard adı zorunludur.</span>
+              <span class="field-error" role="alert">{{ 'dashboard.build.nameRequired' | t }}</span>
             }
           </div>
+
+          @if (permissionService.isAdmin()) {
+            <label class="checkbox-label">
+              <input type="checkbox" formControlName="showInNav" />
+              {{ 'dashboard.build.showInNav' | t }}
+            </label>
+            <p class="field-help">{{ 'dashboard.build.showInNavHelp' | t }}</p>
+          }
         </div>
       </div>
 
       <div class="panel">
-        <div class="panel-head"><h3>Rapor Ekle</h3></div>
+        <div class="panel-head"><h3>{{ 'dashboard.build.addReportSection' | t }}</h3></div>
         <div class="panel-body">
           <div class="checkbox-grid">
             @for (report of reports; track report.id) {
@@ -65,15 +73,15 @@
       </div>
 
       <div class="panel">
-        <div class="panel-head"><h3>Yerleşim</h3></div>
+        <div class="panel-head"><h3>{{ 'dashboard.build.layoutSection' | t }}</h3></div>
         <div class="panel-body">
           @if (widgets().length === 0) {
             <div class="empty-state">
-              <p>Yerleşimi düzenlemek için yukarıdan rapor ekleyin.</p>
+              <p>{{ 'dashboard.build.layoutEmpty' | t }}</p>
             </div>
           } @else {
             <p class="field-help">
-              Widget başlığından sürükleyip taşıyın; sağ-alt köşedeki tutamaçtan yeniden boyutlandırın.
+              {{ 'dashboard.build.layoutHelp' | t }}
             </p>
             <div class="dashboard-canvas" #canvas>
               @for (widget of widgets(); track widget.reportDefinitionId) {
@@ -88,7 +96,7 @@
                       type="button"
                       class="btn btn-ghost btn-sm"
                       (click)="removeWidget(widget.reportDefinitionId)"
-                      [attr.aria-label]="widget.reportName + ' widget\'ını kaldır'"
+                      [attr.aria-label]="'dashboard.build.removeWidgetAria' | t:{ name: widget.reportName }"
                     >
                       ✕
                     </button>
@@ -96,7 +104,7 @@
                   <div
                     class="mini-chart-picker"
                     role="radiogroup"
-                    [attr.aria-label]="widget.reportName + ' için grafik tipi'"
+                    [attr.aria-label]="'dashboard.build.chartTypeAria' | t:{ name: widget.reportName }"
                   >
                     @for (ct of chartTypes; track ct.value) {
                       <button
@@ -105,7 +113,7 @@
                         role="radio"
                         [class.is-selected]="widget.chartType === ct.value"
                         [attr.aria-checked]="widget.chartType === ct.value"
-                        [attr.title]="ct.label"
+                        [attr.title]="ct.labelKey | t"
                         (click)="setWidgetChartType(widget.reportDefinitionId, ct.value)"
                       >
                         <span [innerHTML]="ct.svg"></span>
@@ -131,9 +139,9 @@
       <div class="cluster">
         <button class="btn btn-primary" type="submit" [disabled]="saving">
           @if (saving) { <span class="spinner" aria-hidden="true"></span> }
-          Kaydet
+          {{ 'common.save' | t }}
         </button>
-        <a routerLink="/reports" class="btn btn-ghost">Vazgeç</a>
+        <a routerLink="/reports" class="btn btn-ghost">{{ 'common.cancel' | t }}</a>
       </div>
     </form>
   }

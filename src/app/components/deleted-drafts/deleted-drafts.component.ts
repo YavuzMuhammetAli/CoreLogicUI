@@ -1,7 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { PublishedTableService } from '../../services/published-table.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
+import { LanguageService } from '../../services/language.service';
 
 interface DeletedDraftEntry {
   id: number;
@@ -23,7 +25,7 @@ interface DeletedDraftEntry {
 @Component({
   selector: 'app-deleted-drafts',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe],
   templateUrl: './deleted-drafts.component.html',
   styleUrls: ['./deleted-drafts.component.scss']
 })
@@ -31,6 +33,8 @@ export class DeletedDraftsComponent implements OnInit {
   drafts: DeletedDraftEntry[] = [];
   loading = false;
   loadError: string | null = null;
+
+  private readonly languageService = inject(LanguageService);
 
   constructor(private publishedTable: PublishedTableService) {}
 
@@ -47,7 +51,7 @@ export class DeletedDraftsComponent implements OnInit {
       next: res => {
         this.loading = false;
         if (!res.success) {
-          this.loadError = res.message ?? 'Silinen taslaklar yüklenemedi.';
+          this.loadError = res.message ?? this.languageService.t('deleted.drafts.loadFailed');
           return;
         }
 
@@ -63,7 +67,7 @@ export class DeletedDraftsComponent implements OnInit {
       },
       error: err => {
         this.loading = false;
-        this.loadError = err?.error?.message ?? 'Sunucu bağlantı hatası.';
+        this.loadError = err?.error?.message ?? this.languageService.t('deleted.serverConnectionError');
       }
     });
   }
@@ -72,7 +76,7 @@ export class DeletedDraftsComponent implements OnInit {
   restore(draft: DeletedDraftEntry): void {
     if (draft.restoring) return;
 
-    const confirmed = confirm(`'${draft.tableName}' taslağını geri yüklemek istediğinize emin misiniz?`);
+    const confirmed = confirm(this.languageService.t('deleted.drafts.restoreConfirm', { name: draft.tableName }));
     if (!confirmed) return;
 
     draft.restoring = true;
@@ -83,7 +87,9 @@ export class DeletedDraftsComponent implements OnInit {
       next: res => {
         draft.restoring = false;
         draft.restoreSuccess = res.success;
-        draft.restoreMessage = res.message ?? (res.success ? 'Taslak geri yüklendi.' : 'Geri yükleme başarısız.');
+        draft.restoreMessage = res.message ?? (res.success
+          ? this.languageService.t('deleted.drafts.restoreSuccess')
+          : this.languageService.t('deleted.restoreFailed'));
 
         if (res.success) {
           setTimeout(() => {
@@ -94,7 +100,7 @@ export class DeletedDraftsComponent implements OnInit {
       error: err => {
         draft.restoring = false;
         draft.restoreSuccess = false;
-        draft.restoreMessage = err?.error?.message ?? 'Geri yükleme sırasında sunucu hatası oluştu.';
+        draft.restoreMessage = err?.error?.message ?? this.languageService.t('deleted.restoreServerError');
       }
     });
   }

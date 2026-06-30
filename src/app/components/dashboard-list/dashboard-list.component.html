@@ -1,8 +1,8 @@
 <div class="page-header">
   <div>
-    <span class="eyebrow">Raporlama</span>
-    <h1 class="page-title">Dashboard'lar</h1>
-    <p class="page-subtitle">Birden çok raporu widget olarak bir araya getiren dashboard'lar.</p>
+    <span class="eyebrow">{{ 'dashboard.eyebrow' | t }}</span>
+    <h1 class="page-title">{{ 'dashboard.list.title' | t }}</h1>
+    <p class="page-subtitle">{{ 'dashboard.list.subtitle' | t }}</p>
   </div>
   <div class="cluster">
     @if (isAdmin) {
@@ -11,14 +11,14 @@
           <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
           <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
         </svg>
-        Silinmiş Dashboard'lar
+        {{ 'dashboard.list.deletedLink' | t }}
       </a>
     }
     <a routerLink="/dashboard/new" class="btn btn-primary">
       <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <path d="M12 5v14M5 12h14"/>
       </svg>
-      Yeni Dashboard
+      {{ 'dashboard.list.newButton' | t }}
     </a>
   </div>
 </div>
@@ -26,7 +26,7 @@
 @if (loading) {
   <div class="panel">
     <div class="empty-state">
-      <span class="spinner" aria-label="Yükleniyor"></span>
+      <span class="spinner" [attr.aria-label]="'dashboard.list.loadingAria' | t"></span>
     </div>
   </div>
 }
@@ -41,8 +41,8 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th>Ad</th>
-            <th>Widget Sayısı</th>
+            <th>{{ 'dashboard.list.colName' | t }}</th>
+            <th>{{ 'dashboard.list.colWidgetCount' | t }}</th>
             <th></th>
           </tr>
         </thead>
@@ -53,7 +53,7 @@
               <td><span class="badge badge-meta">{{ dashboard.widgets.length }}</span></td>
               <td>
                 <div class="td-actions">
-                  <a class="btn btn-ghost btn-sm" [routerLink]="['/dashboard', dashboard.id]">Görüntüle</a>
+                  <a class="btn btn-ghost btn-sm" [routerLink]="['/dashboard', dashboard.id]">{{ 'dashboard.list.view' | t }}</a>
                 </div>
               </td>
             </tr>
@@ -65,9 +65,9 @@
     <div class="panel">
       <div class="empty-state">
         <div class="empty-icon" aria-hidden="true">📊</div>
-        <h3>Henüz dashboard yok</h3>
-        <p>Mevcut raporlarınızdan widget seçerek ilk dashboard'unuzu oluşturun.</p>
-        <a routerLink="/dashboard/new" class="btn btn-primary">İlk Dashboard'u Oluştur</a>
+        <h3>{{ 'dashboard.list.emptyTitle' | t }}</h3>
+        <p>{{ 'dashboard.list.emptyText' | t }}</p>
+        <a routerLink="/dashboard/new" class="btn btn-primary">{{ 'dashboard.list.emptyCta' | t }}</a>
       </div>
     </div>
   }

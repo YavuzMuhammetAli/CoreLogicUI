@@ -1,14 +1,14 @@
 <!-- ─── Breadcrumb ──────────────────────────────────────────────────────────── -->
 <div class="detail-breadcrumb">
-  <a [routerLink]="['/permissions']" class="bc-link">Kullanıcı Yetkileri</a>
+  <a [routerLink]="['/permissions']" class="bc-link">{{ 'permission.detail.breadcrumb' | t }}</a>
   <span class="bc-sep">/</span>
-  <span class="bc-current">@if (user()) { {{ fullName(user()!) }} } @else { Detay }</span>
+  <span class="bc-current">@if (user()) { {{ fullName(user()!) }} } @else { {{ 'permission.detail.fallbackBreadcrumb' | t }} }</span>
 </div>
 
 @if (userLoading()) {
   <div class="panel">
     <div class="empty-state">
-      <span class="spinner" style="width: 32px; height: 32px;" aria-label="Yükleniyor"></span>
+      <span class="spinner" style="width: 32px; height: 32px;" [attr.aria-label]="'permission.detail.loadingAriaLabel' | t"></span>
     </div>
   </div>
 }
@@ -17,9 +17,9 @@
   <div class="panel">
     <div class="empty-state">
       <div class="empty-icon" aria-hidden="true">⚠️</div>
-      <h3>Kullanıcı bulunamadı</h3>
+      <h3>{{ 'permission.detail.notFoundTitle' | t }}</h3>
       <p>{{ userError() }}</p>
-      <a routerLink="/permissions" class="btn btn-primary">Kullanıcılar'a Dön</a>
+      <a routerLink="/permissions" class="btn btn-primary">{{ 'permission.detail.backToUsers' | t }}</a>
     </div>
   </div>
 }
@@ -36,7 +36,7 @@
           <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="15 18 9 12 15 6"/>
           </svg>
-          Listeye Dön
+          {{ 'permission.detail.backToList' | t }}
         </a>
       </div>
     </div>
@@ -45,7 +45,7 @@
 
       <!-- ── Admin Rolü ── -->
       <section class="section-block" aria-labelledby="admin-section-title">
-        <h3 id="admin-section-title" class="section-title">Admin Rolü</h3>
+        <h3 id="admin-section-title" class="section-title">{{ 'permission.detail.adminSectionTitle' | t }}</h3>
 
         <div class="admin-toggle-row">
           <label class="checkbox-label">
@@ -55,16 +55,16 @@
               [disabled]="adminSaving()"
               (change)="toggleAdmin(!userVal.isAdmin)"
               aria-describedby="admin-help">
-            Bu kullanıcıya admin yetkisi ver
+            {{ 'permission.detail.grantAdmin' | t }}
           </label>
           @if (adminSaving()) {
-            <span class="spinner" aria-label="Kaydediliyor"></span>
+            <span class="spinner" [attr.aria-label]="'permission.detail.savingAriaLabel' | t"></span>
           }
         </div>
 
         <p id="admin-help" class="field-help">
-          Admin, tüm model ve platform özelliklerine erişir.
-          <strong>Rol değişikliği kullanıcının yeni girişinde etkinleşir.</strong>
+          {{ 'permission.detail.adminHelp' | t }}
+          <strong>{{ 'permission.detail.adminHelpStrong' | t }}</strong>
         </p>
 
         @if (adminMsg()) {
@@ -80,7 +80,7 @@
       <!-- ── İzin Verilen Modeller ── -->
       <section class="section-block" aria-labelledby="perm-section-title">
         <h3 id="perm-section-title" class="section-title">
-          İzin Verilen Modeller
+          {{ 'permission.detail.permSectionTitle' | t }}
           @if (permittedModelCount() > 0 && !userVal.isAdmin) {
             <span class="tab-badge">{{ permittedModelCount() }}</span>
           }
@@ -88,13 +88,13 @@
 
         @if (userVal.isAdmin) {
           <div class="alert alert-info" role="status">
-            Bu kullanıcı admin olduğundan tüm modellere tam erişimi vardır. İzin listesi uygulanmaz.
+            {{ 'permission.detail.adminInfo' | t }}
           </div>
         } @else {
 
           @if (permLoading()) {
             <div class="empty-state">
-              <span class="spinner" aria-label="Yükleniyor"></span>
+              <span class="spinner" [attr.aria-label]="'permission.detail.loadingAriaLabel' | t"></span>
             </div>
           }
 
@@ -104,7 +104,7 @@
 
           @if (!permLoading() && !permError() && permRows().length === 0) {
             <div class="empty-state">
-              <p>Sistemde henüz yayınlanmış model bulunmuyor.</p>
+              <p>{{ 'permission.detail.noPublishedModels' | t }}</p>
             </div>
           }
 
@@ -120,16 +120,16 @@
                 <input
                   type="search"
                   class="input search-input"
-                  placeholder="Model ara…"
+                  [placeholder]="'permission.detail.modelSearchPlaceholder' | t"
                   [value]="modelSearchTerm()"
                   (input)="onModelSearchChange($any($event.target).value)"
-                  aria-label="Model ara">
+                  [attr.aria-label]="'permission.detail.modelSearchAriaLabel' | t">
               </div>
 
               @if (filteredPermRows().length === 0) {
                 <div class="empty-state">
-                  <p>"{{ modelSearchTerm() }}" için sonuç bulunamadı.</p>
-                  <button type="button" class="btn btn-ghost btn-sm" (click)="onModelSearchChange('')">Aramayı Temizle</button>
+                  <p>{{ 'permission.detail.noSearchResult' | t:{ term: modelSearchTerm() } }}</p>
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="onModelSearchChange('')">{{ 'permission.detail.clearSearch' | t }}</button>
                 </div>
               } @else {
                 <ul class="model-perm-list">
@@ -140,14 +140,14 @@
                       tabindex="0"
                       (keydown.enter)="selectModelPerm(row)"
                       (keydown.space)="selectModelPerm(row)"
-                      [attr.aria-label]="row.modelName + ' izinlerini düzenle'">
+                      [attr.aria-label]="('permission.detail.modelRowAriaLabel' | t:{ name: row.modelName })">
                       <span class="model-perm-name">{{ row.modelName }}</span>
                       <span class="model-perm-badges">
                         @for (label of permSummary(row); track label) {
                           <span class="badge badge-meta">{{ label }}</span>
                         }
                         @if (permSummary(row).length === 0) {
-                          <span class="model-perm-empty">İzin yok</span>
+                          <span class="model-perm-empty">{{ 'permission.detail.noPermission' | t }}</span>
                         }
                       </span>
                     </li>
@@ -155,19 +155,19 @@
                 </ul>
 
                 <div class="model-list-footer">
-                  <span class="eyebrow">{{ modelRangeStart() }}–{{ modelRangeEnd() }} / {{ filteredPermRows().length }} model</span>
+                  <span class="eyebrow">{{ 'permission.detail.modelRangeLabel' | t:{ start: modelRangeStart(), end: modelRangeEnd(), total: filteredPermRows().length } }}</span>
 
                   @if (modelTotalPages() > 1) {
-                    <nav class="pagination" aria-label="Model sayfalama">
+                    <nav class="pagination" [attr.aria-label]="'permission.detail.paginationAriaLabel' | t">
                       <button class="page-btn" type="button" (click)="goToModelPage(modelPageIndex() - 1)"
-                              [disabled]="modelPageIndex() === 1" aria-label="Önceki sayfa">‹</button>
+                              [disabled]="modelPageIndex() === 1" [attr.aria-label]="'permission.detail.prevPageAriaLabel' | t">‹</button>
                       @for (p of modelPages(); track p) {
                         <button class="page-btn" [class.page-btn--active]="p === modelPageIndex()"
                                 type="button" (click)="goToModelPage(p)"
                                 [attr.aria-current]="p === modelPageIndex() ? 'page' : null">{{ p }}</button>
                       }
                       <button class="page-btn" type="button" (click)="goToModelPage(modelPageIndex() + 1)"
-                              [disabled]="modelPageIndex() === modelTotalPages()" aria-label="Sonraki sayfa">›</button>
+                              [disabled]="modelPageIndex() === modelTotalPages()" [attr.aria-label]="'permission.detail.nextPageAriaLabel' | t">›</button>
                     </nav>
                   }
                 </div>
@@ -178,7 +178,7 @@
             @if (selectedPermRow(); as row) {
               <div class="model-perm-detail">
                 <button class="btn btn-ghost btn-sm" type="button" (click)="clearModelPerm()">
-                  ← Modellere dön
+                  {{ 'permission.detail.backToModels' | t }}
                 </button>
 
                 <h3 class="model-perm-detail-title">{{ row.modelName }}</h3>
@@ -186,27 +186,27 @@
                 <div class="model-perm-checks">
                   <label class="checkbox-label">
                     <input type="checkbox" [(ngModel)]="row.canRead" (change)="markDirty(row)">
-                    Okuma
+                    {{ 'permission.detail.permRead' | t }}
                   </label>
                   <label class="checkbox-label">
                     <input type="checkbox" [(ngModel)]="row.canCreate" (change)="markDirty(row)">
-                    Ekleme
+                    {{ 'permission.detail.permCreate' | t }}
                   </label>
                   <label class="checkbox-label">
                     <input type="checkbox" [(ngModel)]="row.canUpdate" (change)="markDirty(row)">
-                    Güncelleme
+                    {{ 'permission.detail.permUpdate' | t }}
                   </label>
                   <label class="checkbox-label">
                     <input type="checkbox" [(ngModel)]="row.canDelete" (change)="markDirty(row)">
-                    Silme
+                    {{ 'permission.detail.permDelete' | t }}
                   </label>
                   <label class="checkbox-label">
                     <input type="checkbox" [(ngModel)]="row.canShowInNav" (change)="markDirty(row)">
-                    Navigasyonda göster
+                    {{ 'permission.detail.permShowInNav' | t }}
                   </label>
                   <label class="checkbox-label">
                     <input type="checkbox" [(ngModel)]="row.canOwnOnly" (change)="markDirty(row)">
-                    Sadece kendi kayıtları
+                    {{ 'permission.detail.permOwnOnly' | t }}
                   </label>
                 </div>
 
@@ -217,10 +217,10 @@
                     [disabled]="permRowSaving()"
                     type="button">
                     @if (permRowSaving()) {
-                      <span class="spinner" aria-label="Kaydediliyor"></span>
-                      Kaydediliyor…
+                      <span class="spinner" [attr.aria-label]="'permission.detail.savingAriaLabel' | t"></span>
+                      {{ 'permission.detail.savingEllipsis' | t }}
                     } @else {
-                      Bu Model İzinlerini Kaydet
+                      {{ 'permission.detail.saveModelPermissions' | t }}
                     }
                   </button>
                 </div>

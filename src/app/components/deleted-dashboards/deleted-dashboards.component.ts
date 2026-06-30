@@ -1,7 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { DashboardService } from '../../services/dashboard.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
+import { LanguageService } from '../../services/language.service';
 
 interface DeletedDashboardEntry {
   id: number;
@@ -20,7 +22,7 @@ interface DeletedDashboardEntry {
 @Component({
   selector: 'app-deleted-dashboards',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe],
   templateUrl: './deleted-dashboards.component.html',
   styleUrls: ['./deleted-dashboards.component.scss']
 })
@@ -28,6 +30,8 @@ export class DeletedDashboardsComponent implements OnInit {
   dashboards: DeletedDashboardEntry[] = [];
   loading = false;
   loadError: string | null = null;
+
+  private readonly languageService = inject(LanguageService);
 
   constructor(private dashboardService: DashboardService) {}
 
@@ -44,7 +48,7 @@ export class DeletedDashboardsComponent implements OnInit {
       next: res => {
         this.loading = false;
         if (!res.success) {
-          this.loadError = res.message ?? 'Silinmiş dashboard\'lar yüklenemedi.';
+          this.loadError = res.message ?? this.languageService.t('deleted.dashboards.loadFailed');
           return;
         }
 
@@ -59,7 +63,7 @@ export class DeletedDashboardsComponent implements OnInit {
       },
       error: err => {
         this.loading = false;
-        this.loadError = err?.error?.message ?? 'Sunucu bağlantı hatası.';
+        this.loadError = err?.error?.message ?? this.languageService.t('deleted.serverConnectionError');
       }
     });
   }
@@ -68,7 +72,7 @@ export class DeletedDashboardsComponent implements OnInit {
   restore(dashboard: DeletedDashboardEntry): void {
     if (dashboard.restoring) return;
 
-    const confirmed = confirm(`'${dashboard.name}' dashboard'unu geri yüklemek istediğinize emin misiniz?`);
+    const confirmed = confirm(this.languageService.t('deleted.dashboards.restoreConfirm', { name: dashboard.name }));
     if (!confirmed) return;
 
     dashboard.restoring = true;
@@ -79,7 +83,9 @@ export class DeletedDashboardsComponent implements OnInit {
       next: res => {
         dashboard.restoring = false;
         dashboard.restoreSuccess = res.success;
-        dashboard.restoreMessage = res.message ?? (res.success ? 'Dashboard geri yüklendi.' : 'Geri yükleme başarısız.');
+        dashboard.restoreMessage = res.message ?? (res.success
+          ? this.languageService.t('deleted.dashboards.restoreSuccess')
+          : this.languageService.t('deleted.restoreFailed'));
 
         if (res.success) {
           setTimeout(() => {
@@ -90,7 +96,7 @@ export class DeletedDashboardsComponent implements OnInit {
       error: err => {
         dashboard.restoring = false;
         dashboard.restoreSuccess = false;
-        dashboard.restoreMessage = err?.error?.message ?? 'Geri yükleme sırasında sunucu hatası oluştu.';
+        dashboard.restoreMessage = err?.error?.message ?? this.languageService.t('deleted.restoreServerError');
       }
     });
   }

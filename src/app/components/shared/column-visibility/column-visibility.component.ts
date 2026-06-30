@@ -1,5 +1,6 @@
 import { Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslatePipe } from '../../../pipes/translate.pipe';
 
 /** Popover'da listelenecek tek bir kolon */
 export interface ColumnVisibilityItem {
@@ -19,7 +20,7 @@ export interface ColumnVisibilityItem {
 @Component({
   selector: 'app-column-visibility',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   templateUrl: './column-visibility.component.html',
   styleUrls: ['./column-visibility.component.scss']
 })

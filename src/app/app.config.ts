@@ -12,6 +12,7 @@ import { firstValueFrom } from 'rxjs';
 import { routes } from './app.routes';
 import { authInterceptor } from './interceptors/auth.interceptor';
 import { errorInterceptor } from './interceptors/error.interceptor';
+import { languageInterceptor } from './interceptors/language.interceptor';
 import { PermissionService } from './services/permission.service';
 
 /**
@@ -49,7 +50,7 @@ export const appConfig: ApplicationConfig = {
     // withEnabledBlockingInitialNavigation: APP_INITIALIZER (izin yüklemesi) tamamlanana
     // dek navigasyon başlamaz; guard'lar sinyal dolu olduğunda çalışır → login flash yok.
     provideRouter(routes, withEnabledBlockingInitialNavigation()),
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor, errorInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([authInterceptor, languageInterceptor, errorInterceptor])),
 
     // Guard yarış durumu düzeltmesi: izinleri router etkinleşmeden yükle
     {

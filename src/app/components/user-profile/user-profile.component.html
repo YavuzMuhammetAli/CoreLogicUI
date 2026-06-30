@@ -2,16 +2,16 @@
 
   <!-- Sayfa başlığı -->
   <div class="page-header">
-    <span class="eyebrow">Hesabım</span>
-    <h1 class="page-title">Profil Ayarları</h1>
-    <p class="page-subtitle">Kişisel bilgilerinizi, fotoğrafınızı ve şifrenizi buradan yönetebilirsiniz.</p>
+    <span class="eyebrow">{{ 'profile.eyebrow' | t }}</span>
+    <h1 class="page-title">{{ 'profile.title' | t }}</h1>
+    <p class="page-subtitle">{{ 'profile.subtitle' | t }}</p>
   </div>
 
   <!-- Yüklenme -->
   @if (loading()) {
     <div class="profile-loading">
-      <span class="spinner" aria-label="Yükleniyor"></span>
-      <span>Profil yükleniyor…</span>
+      <span class="spinner" [attr.aria-label]="'common.loading' | t"></span>
+      <span>{{ 'profile.loading' | t }}</span>
     </div>
   }
 
@@ -34,9 +34,9 @@
               @if (photoPreview()) {
                 <img
                   [src]="photoPreview()"
-                  alt="Profil fotoğrafı"
+                  [alt]="'profile.photoAlt' | t"
                   class="avatar-img"
-                  aria-label="Profil fotoğrafı">
+                  [attr.aria-label]="'profile.photoAlt' | t">
               } @else {
                 <span class="avatar-initials" aria-hidden="true">{{ initials }}</span>
               }
@@ -52,9 +52,9 @@
               <strong>{{ p.firstName }} {{ p.lastName }}</strong>
               <span class="avatar-email">{{ p.email }}</span>
               @if (p.isAdmin) {
-                <span class="badge badge-meta">Admin</span>
+                <span class="badge badge-meta">{{ 'profile.admin' | t }}</span>
               } @else {
-                <span class="badge">Kullanıcı</span>
+                <span class="badge">{{ 'profile.user' | t }}</span>
               }
             </div>
 
@@ -64,7 +64,7 @@
               type="file"
               accept="image/jpeg,image/png,image/webp"
               class="sr-only"
-              aria-label="Fotoğraf seç"
+              [attr.aria-label]="'profile.selectPhoto' | t"
               (change)="onPhotoSelected($event)">
 
             <div class="avatar-actions">
@@ -73,14 +73,14 @@
                 type="button"
                 (click)="triggerPhotoInput()"
                 [disabled]="photoUploading()"
-                aria-label="Fotoğraf yükle veya değiştir">
+                [attr.aria-label]="'profile.uploadOrChangePhoto' | t">
                 <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24"
                      fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                   <polyline points="17 8 12 3 7 8"/>
                   <line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
-                Fotoğraf Yükle
+                {{ 'profile.uploadPhoto' | t }}
               </button>
 
               @if (p.photoUrl) {
@@ -89,14 +89,14 @@
                   type="button"
                   (click)="removePhoto()"
                   [disabled]="photoUploading()"
-                  aria-label="Profil fotoğrafını sil">
-                  Kaldır
+                  [attr.aria-label]="'profile.removePhotoAria' | t">
+                  {{ 'profile.removePhoto' | t }}
                 </button>
               }
             </div>
 
             <p class="field-help" style="text-align:center; margin-top: var(--space-2);">
-              JPG, PNG veya WebP · Maks. 2 MB
+              {{ 'profile.photoHelp' | t }}
             </p>
           </div>
         </div>
@@ -104,36 +104,36 @@
         <!-- Hesap bilgileri (salt-okunur) -->
         <div class="panel" id="account">
           <div class="panel-head">
-            <h2 class="panel-head-title">Hesap Bilgileri</h2>
+            <h2 class="panel-head-title">{{ 'profile.accountInfo' | t }}</h2>
           </div>
           <div class="panel-body">
             <dl class="info-list">
               <div class="info-row">
-                <dt>Kayıt Tarihi</dt>
+                <dt>{{ 'profile.registeredOn' | t }}</dt>
                 <dd>{{ formatDate(p.createdOn) }}</dd>
               </div>
               <div class="info-row">
-                <dt>Rol</dt>
+                <dt>{{ 'profile.role' | t }}</dt>
                 <dd>
                   @if (p.isAdmin) {
-                    <span class="badge badge-meta">Admin</span>
+                    <span class="badge badge-meta">{{ 'profile.admin' | t }}</span>
                   } @else {
-                    <span class="badge">Normal Kullanıcı</span>
+                    <span class="badge">{{ 'profile.normalUser' | t }}</span>
                   }
                 </dd>
               </div>
               <div class="info-row">
-                <dt>Hesap Durumu</dt>
+                <dt>{{ 'profile.accountStatus' | t }}</dt>
                 <dd>
                   @if (p.status) {
-                    <span class="badge badge-success">Aktif</span>
+                    <span class="badge badge-success">{{ 'common.active' | t }}</span>
                   } @else {
-                    <span class="badge badge-warn">Pasif</span>
+                    <span class="badge badge-warn">{{ 'common.inactive' | t }}</span>
                   }
                 </dd>
               </div>
               <div class="info-row">
-                <dt>Kullanıcı ID</dt>
+                <dt>{{ 'profile.userId' | t }}</dt>
                 <dd class="info-meta">#{{ p.id }}</dd>
               </div>
             </dl>
@@ -148,7 +148,7 @@
         <!-- Bilgiler formu -->
         <div class="panel">
           <div class="panel-head">
-            <h2 class="panel-head-title">Kişisel Bilgiler</h2>
+            <h2 class="panel-head-title">{{ 'profile.personalInfo' | t }}</h2>
           </div>
           <div class="panel-body">
             <form
@@ -159,7 +159,7 @@
 
               <div class="field-row">
                 <div class="field">
-                  <label for="firstName">Ad <span class="req">*</span></label>
+                  <label for="firstName">{{ 'profile.firstName' | t }} <span class="req">*</span></label>
                   <input
                     id="firstName"
                     type="text"
@@ -168,12 +168,12 @@
                     [attr.aria-invalid]="fi['firstName'].touched && fi['firstName'].invalid"
                     aria-describedby="firstName-err">
                   @if (fi['firstName'].touched && fi['firstName'].hasError('required')) {
-                    <span id="firstName-err" class="field-error" role="alert">Ad zorunludur.</span>
+                    <span id="firstName-err" class="field-error" role="alert">{{ 'profile.firstNameRequired' | t }}</span>
                   }
                 </div>
 
                 <div class="field">
-                  <label for="lastName">Soyad <span class="req">*</span></label>
+                  <label for="lastName">{{ 'profile.lastName' | t }} <span class="req">*</span></label>
                   <input
                     id="lastName"
                     type="text"
@@ -182,13 +182,13 @@
                     [attr.aria-invalid]="fi['lastName'].touched && fi['lastName'].invalid"
                     aria-describedby="lastName-err">
                   @if (fi['lastName'].touched && fi['lastName'].hasError('required')) {
-                    <span id="lastName-err" class="field-error" role="alert">Soyad zorunludur.</span>
+                    <span id="lastName-err" class="field-error" role="alert">{{ 'profile.lastNameRequired' | t }}</span>
                   }
                 </div>
               </div>
 
               <div class="field">
-                <label for="email">E-posta <span class="req">*</span></label>
+                <label for="email">{{ 'profile.email' | t }} <span class="req">*</span></label>
                 <input
                   id="email"
                   type="email"
@@ -197,18 +197,18 @@
                   [attr.aria-invalid]="fi['email'].touched && fi['email'].invalid"
                   aria-describedby="email-err email-help">
                 <span id="email-help" class="field-help">
-                  E-posta değişikliği bir sonraki girişte JWT'ye yansır.
+                  {{ 'profile.emailHelp' | t }}
                 </span>
                 @if (fi['email'].touched && fi['email'].hasError('required')) {
-                  <span id="email-err" class="field-error" role="alert">E-posta zorunludur.</span>
+                  <span id="email-err" class="field-error" role="alert">{{ 'profile.emailRequired' | t }}</span>
                 } @else if (fi['email'].touched && fi['email'].hasError('email')) {
-                  <span id="email-err" class="field-error" role="alert">Geçerli bir e-posta adresi girin.</span>
+                  <span id="email-err" class="field-error" role="alert">{{ 'profile.emailInvalid' | t }}</span>
                 }
               </div>
 
               <div class="field-row">
                 <div class="field">
-                  <label for="tc">TC Kimlik No</label>
+                  <label for="tc">{{ 'profile.tc' | t }}</label>
                   <input
                     id="tc"
                     type="text"
@@ -219,12 +219,12 @@
                     [attr.aria-invalid]="fi['tc'].touched && fi['tc'].invalid"
                     aria-describedby="tc-err">
                   @if (fi['tc'].touched && fi['tc'].hasError('pattern')) {
-                    <span id="tc-err" class="field-error" role="alert">TC Kimlik No 11 haneli olmalıdır.</span>
+                    <span id="tc-err" class="field-error" role="alert">{{ 'profile.tcInvalid' | t }}</span>
                   }
                 </div>
 
                 <div class="field">
-                  <label for="birthDay">Doğum Tarihi</label>
+                  <label for="birthDay">{{ 'profile.birthDay' | t }}</label>
                   <input
                     id="birthDay"
                     type="date"
@@ -239,10 +239,10 @@
                   type="submit"
                   [disabled]="infoForm.invalid || infoSaving()">
                   @if (infoSaving()) {
-                    <span class="spinner" aria-label="Kaydediliyor"></span>
-                    Kaydediliyor…
+                    <span class="spinner" [attr.aria-label]="'profile.saving' | t"></span>
+                    {{ 'profile.saving' | t }}
                   } @else {
-                    Bilgileri Kaydet
+                    {{ 'profile.saveInfo' | t }}
                   }
                 </button>
               </div>
@@ -253,7 +253,7 @@
         <!-- Şifre değiştirme formu -->
         <div class="panel">
           <div class="panel-head">
-            <h2 class="panel-head-title">Şifre Değiştir</h2>
+            <h2 class="panel-head-title">{{ 'profile.changePasswordTitle' | t }}</h2>
           </div>
           <div class="panel-body">
             <form
@@ -263,7 +263,7 @@
               class="flow">
 
               <div class="field">
-                <label for="currentPassword">Mevcut Şifre <span class="req">*</span></label>
+                <label for="currentPassword">{{ 'profile.currentPassword' | t }} <span class="req">*</span></label>
                 <input
                   id="currentPassword"
                   type="password"
@@ -272,13 +272,13 @@
                   [attr.aria-invalid]="fp['currentPassword'].touched && fp['currentPassword'].invalid"
                   aria-describedby="curpw-err">
                 @if (fp['currentPassword'].touched && fp['currentPassword'].hasError('required')) {
-                  <span id="curpw-err" class="field-error" role="alert">Mevcut şifre zorunludur.</span>
+                  <span id="curpw-err" class="field-error" role="alert">{{ 'profile.currentPasswordRequired' | t }}</span>
                 }
               </div>
 
               <div class="field-row">
                 <div class="field">
-                  <label for="newPassword">Yeni Şifre <span class="req">*</span></label>
+                  <label for="newPassword">{{ 'profile.newPassword' | t }} <span class="req">*</span></label>
                   <input
                     id="newPassword"
                     type="password"
@@ -286,16 +286,16 @@
                     autocomplete="new-password"
                     [attr.aria-invalid]="fp['newPassword'].touched && fp['newPassword'].invalid"
                     aria-describedby="newpw-err newpw-help">
-                  <span id="newpw-help" class="field-help">En az 6 karakter</span>
+                  <span id="newpw-help" class="field-help">{{ 'profile.newPasswordHelp' | t }}</span>
                   @if (fp['newPassword'].touched && fp['newPassword'].hasError('required')) {
-                    <span id="newpw-err" class="field-error" role="alert">Yeni şifre zorunludur.</span>
+                    <span id="newpw-err" class="field-error" role="alert">{{ 'profile.newPasswordRequired' | t }}</span>
                   } @else if (fp['newPassword'].touched && fp['newPassword'].hasError('minlength')) {
-                    <span id="newpw-err" class="field-error" role="alert">Şifre en az 6 karakter olmalıdır.</span>
+                    <span id="newpw-err" class="field-error" role="alert">{{ 'profile.newPasswordMinLength' | t }}</span>
                   }
                 </div>
 
                 <div class="field">
-                  <label for="confirmPassword">Yeni Şifre Tekrar <span class="req">*</span></label>
+                  <label for="confirmPassword">{{ 'profile.confirmPassword' | t }} <span class="req">*</span></label>
                   <input
                     id="confirmPassword"
                     type="password"
@@ -304,16 +304,16 @@
                     [attr.aria-invalid]="fp['confirmPassword'].touched && (fp['confirmPassword'].invalid || pwForm.hasError('mismatch'))"
                     aria-describedby="confirmpw-err">
                   @if (fp['confirmPassword'].touched && fp['confirmPassword'].hasError('required')) {
-                    <span id="confirmpw-err" class="field-error" role="alert">Şifre tekrarı zorunludur.</span>
+                    <span id="confirmpw-err" class="field-error" role="alert">{{ 'profile.confirmPasswordRequired' | t }}</span>
                   } @else if (fp['confirmPassword'].touched && pwForm.hasError('mismatch')) {
-                    <span id="confirmpw-err" class="field-error" role="alert">Şifreler eşleşmiyor.</span>
+                    <span id="confirmpw-err" class="field-error" role="alert">{{ 'profile.passwordsMismatch' | t }}</span>
                   }
                 </div>
               </div>
 
               @if (pwSuccess()) {
                 <div class="alert alert-success" role="status">
-                  Şifreniz başarıyla değiştirildi.
+                  {{ 'profile.passwordChanged' | t }}
                 </div>
               }
 
@@ -323,10 +323,10 @@
                   type="submit"
                   [disabled]="pwForm.invalid || pwSaving()">
                   @if (pwSaving()) {
-                    <span class="spinner" aria-label="Kaydediliyor"></span>
-                    Kaydediliyor…
+                    <span class="spinner" [attr.aria-label]="'profile.saving' | t"></span>
+                    {{ 'profile.saving' | t }}
                   } @else {
-                    Şifreyi Değiştir
+                    {{ 'profile.changePassword' | t }}
                   }
                 </button>
               </div>

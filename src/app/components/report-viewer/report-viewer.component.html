@@ -1,21 +1,21 @@
 <div class="page-header">
   <div>
-    <span class="eyebrow">Raporlama</span>
-    <h1 class="page-title">{{ report?.name ?? 'Rapor' }}</h1>
+    <span class="eyebrow">{{ 'report.eyebrow' | t }}</span>
+    <h1 class="page-title">{{ report?.name ?? ('report.viewer.defaultTitle' | t) }}</h1>
     @if (report) {
-      <p class="page-subtitle">Model: <span class="badge badge-meta">{{ report.modelName }}</span></p>
+      <p class="page-subtitle">{{ 'report.viewer.modelLabel' | t }} <span class="badge badge-meta">{{ report.modelName }}</span></p>
     }
   </div>
   <div class="cluster">
-    <a [routerLink]="['/reports', id, 'edit']" class="btn btn-secondary">Düzenle</a>
-    <a routerLink="/reports" class="btn btn-ghost">Listeye Dön</a>
+    <a [routerLink]="['/reports', id, 'edit']" class="btn btn-secondary">{{ 'report.viewer.edit' | t }}</a>
+    <a routerLink="/reports" class="btn btn-ghost">{{ 'report.viewer.backToList' | t }}</a>
   </div>
 </div>
 
 @if (loading) {
   <div class="panel">
     <div class="empty-state">
-      <span class="spinner" aria-label="Yükleniyor"></span>
+      <span class="spinner" [attr.aria-label]="'common.loading' | t"></span>
     </div>
   </div>
 }
@@ -38,15 +38,15 @@
 
   <div class="panel">
     <div class="panel-head">
-      <h3>Export</h3>
+      <h3>{{ 'report.viewer.export' | t }}</h3>
       <div class="panel-actions">
         <button class="btn btn-secondary btn-sm" type="button" (click)="exportExcel()" [disabled]="exporting !== null">
           @if (exporting === 'excel') { <span class="spinner" aria-hidden="true"></span> }
-          Excel (.xlsx)
+          {{ 'report.viewer.exportExcel' | t }}
         </button>
         <button class="btn btn-secondary btn-sm" type="button" (click)="exportPdf()" [disabled]="exporting !== null">
           @if (exporting === 'pdf') { <span class="spinner" aria-hidden="true"></span> }
-          PDF
+          {{ 'report.viewer.exportPdf' | t }}
         </button>
       </div>
     </div>
@@ -79,8 +79,8 @@
       </table>
     } @else {
       <div class="empty-state">
-        <h3>Sonuç yok</h3>
-        <p>Bu rapor için filtre koşullarına uyan kayıt bulunamadı.</p>
+        <h3>{{ 'report.viewer.noResultTitle' | t }}</h3>
+        <p>{{ 'report.viewer.noResultSubtitle' | t }}</p>
       </div>
     }
   </ng-template>
@@ -88,7 +88,7 @@
   @if (report && report.chartType !== 'table') {
     <div class="panel">
       <div class="panel-head">
-        <h3>Sonuç</h3>
+        <h3>{{ 'report.viewer.result' | t }}</h3>
         <div class="panel-actions">
           <button
             class="btn btn-sm"
@@ -97,7 +97,7 @@
             type="button"
             (click)="viewMode.set('chart')"
           >
-            Grafik
+            {{ 'report.viewer.chart' | t }}
           </button>
           <button
             class="btn btn-sm"
@@ -106,7 +106,7 @@
             type="button"
             (click)="viewMode.set('table')"
           >
-            Tablo
+            {{ 'report.viewer.table' | t }}
           </button>
         </div>
       </div>
@@ -120,7 +120,7 @@
     </div>
   } @else {
     <div class="panel">
-      <div class="panel-head"><h3>Veri</h3></div>
+      <div class="panel-head"><h3>{{ 'report.viewer.data' | t }}</h3></div>
       <ng-container *ngTemplateOutlet="dataTable"></ng-container>
     </div>
   }

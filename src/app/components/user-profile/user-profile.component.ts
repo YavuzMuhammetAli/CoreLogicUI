@@ -5,8 +5,10 @@ import { isPlatformBrowser } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl } from '@angular/forms';
 import { NotificationService } from '../../services/notification.service';
 import { UserProfileService } from '../../services/user-profile.service';
+import { LanguageService } from '../../services/language.service';
 import { UserProfile } from '../../models/userProfile';
 import { environment } from '../../../environments/environment';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 /** Şifre tekrar eşleşme validasyonu */
 function passwordsMatch(control: AbstractControl) {
@@ -19,7 +21,7 @@ function passwordsMatch(control: AbstractControl) {
 @Component({
   selector: 'app-user-profile',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, TranslatePipe],
   templateUrl: './user-profile.component.html',
   styleUrls: ['./user-profile.component.scss']
 })
@@ -30,6 +32,7 @@ export class UserProfileComponent implements OnInit {
   private readonly profileSvc    = inject(UserProfileService);
   private readonly notif         = inject(NotificationService);
   private readonly platformId    = inject(PLATFORM_ID);
+  private readonly languageService = inject(LanguageService);
 
   /* ── Profil verisi ── */
   profile        = signal<UserProfile | null>(null);
@@ -81,12 +84,12 @@ export class UserProfileComponent implements OnInit {
           this.photoPreview.set(this.resolvePhotoUrl(res.data.photoUrl));
           this.patchInfoForm(res.data);
         } else {
-          this.loadError.set(res.message || 'Profil yüklenemedi.');
+          this.loadError.set(res.message || this.languageService.t('profile.loadFailed'));
         }
         this.loading.set(false);
       },
       error: () => {
-        this.loadError.set('Profil bilgileri alınamadı. Lütfen tekrar deneyin.');
+        this.loadError.set(this.languageService.t('profile.loadFailedRetry'));
         this.loading.set(false);
       }
     });
@@ -131,9 +134,9 @@ export class UserProfileComponent implements OnInit {
             this.profile.set({ ...p, photoUrl: res.data });
             this.photoPreview.set(this.resolvePhotoUrl(res.data));
           }
-          this.notif.success('Profil fotoğrafı güncellendi.');
+          this.notif.success(this.languageService.t('profile.photoUpdated'));
         } else {
-          this.notif.warn(res.message || 'Fotoğraf yüklenemedi.');
+          this.notif.warn(res.message || this.languageService.t('profile.photoUploadFailed'));
           // Önizlemeyi geri al
           const p = this.profile();
           this.photoPreview.set(this.resolvePhotoUrl(p?.photoUrl ?? null));
@@ -142,7 +145,7 @@ export class UserProfileComponent implements OnInit {
       },
       error: () => {
         this.photoUploading.set(false);
-        this.notif.warn('Fotoğraf yüklenemedi. Lütfen tekrar deneyin.');
+        this.notif.warn(this.languageService.t('profile.photoUploadFailedRetry'));
         const p = this.profile();
         this.photoPreview.set(this.resolvePhotoUrl(p?.photoUrl ?? null));
         input.value = '';
@@ -160,14 +163,14 @@ export class UserProfileComponent implements OnInit {
           const p = this.profile();
           if (p) this.profile.set({ ...p, photoUrl: null });
           this.photoPreview.set(null);
-          this.notif.success('Profil fotoğrafı silindi.');
+          this.notif.success(this.languageService.t('profile.photoDeleted'));
         } else {
-          this.notif.warn(res.message || 'Fotoğraf silinemedi.');
+          this.notif.warn(res.message || this.languageService.t('profile.photoDeleteFailed'));
         }
       },
       error: () => {
         this.photoUploading.set(false);
-        this.notif.warn('Fotoğraf silinemedi. Lütfen tekrar deneyin.');
+        this.notif.warn(this.languageService.t('profile.photoDeleteFailedRetry'));
       }
     });
   }
@@ -202,14 +205,14 @@ export class UserProfileComponent implements OnInit {
               birthDay:  birthDay ? new Date(birthDay).toISOString() : p.birthDay
             });
           }
-          this.notif.success('Profil bilgileri kaydedildi.');
+          this.notif.success(this.languageService.t('profile.infoSaved'));
         } else {
-          this.notif.warn(res.message || 'Güncelleme başarısız.');
+          this.notif.warn(res.message || this.languageService.t('profile.updateFailed'));
         }
       },
       error: () => {
         this.infoSaving.set(false);
-        this.notif.warn('Bir hata oluştu. Lütfen tekrar deneyin.');
+        this.notif.warn(this.languageService.t('profile.genericErrorRetry'));
       }
     });
   }
@@ -232,14 +235,14 @@ export class UserProfileComponent implements OnInit {
         if (res.success) {
           this.pwSuccess.set(true);
           this.pwForm.reset();
-          this.notif.success('Şifreniz başarıyla değiştirildi.');
+          this.notif.success(this.languageService.t('profile.passwordChanged'));
         } else {
-          this.notif.warn(res.message || 'Şifre değiştirilemedi.');
+          this.notif.warn(res.message || this.languageService.t('profile.passwordChangeFailed'));
         }
       },
       error: () => {
         this.pwSaving.set(false);
-        this.notif.warn('Şifre değiştirilemedi. Lütfen tekrar deneyin.');
+        this.notif.warn(this.languageService.t('profile.passwordChangeFailedRetry'));
       }
     });
   }

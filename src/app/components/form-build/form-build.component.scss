@@ -111,18 +111,6 @@
   font-style: italic;
 }
 
-.model-footer {
-  margin-top: auto;
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border-soft);
-}
-
-.model-link {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--accent);
-}
-
 @media (max-width: 640px) {
   .page-header {
     flex-direction: column;
@@ -131,86 +119,5 @@
   .model-grid {
     grid-template-columns: 1fr;
   }
-}
-
-/* ---- Sütunlar bölümü ---- */
-.columns-section {
-  margin-top: var(--space-5);
-}
-
-.columns-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-3);
-}
-
-.columns-title {
-  font-size: var(--text-base);
-  font-weight: 700;
-  color: var(--fg);
-}
-
-.no-columns {
-  font-size: var(--text-sm);
-  color: var(--muted);
-  padding: var(--space-4);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-md);
-  text-align: center;
-}
-
-.columns-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.column-row {
-  display: grid;
-  grid-template-columns: 1fr 140px auto auto;
-  gap: var(--space-2);
-  align-items: end;
-  padding: var(--space-3);
-  background: var(--surface-warm);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-md);
-}
-
-.col-type-field select {
-  min-height: 42px;
-}
-
-.col-nullable-field {
-  padding-bottom: var(--space-1);
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--fg-2);
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.col-remove-btn {
-  color: var(--muted);
-  padding: 0 var(--space-2);
-  min-height: 42px;
-}
-
-.col-remove-btn:hover {
-  color: var(--danger);
-  background: var(--danger-bg);
-}
-
-/* ---- Form aksiyonları ---- */
-.form-actions {
-  margin-top: var(--space-6);
-  display: flex;
-  justify-content: flex-end;
 }
 

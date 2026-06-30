@@ -1,16 +1,16 @@
 <div class="page-header">
   <div>
-    <span class="eyebrow">Raporlama</span>
-    <h1 class="page-title">{{ editingId ? 'Raporu Düzenle' : 'Yeni Rapor' }}</h1>
-    <p class="page-subtitle">Model, kolon, filtre, gruplama, aggregate ve grafik tipini tanımlayın.</p>
+    <span class="eyebrow">{{ 'report.eyebrow' | t }}</span>
+    <h1 class="page-title">{{ (editingId ? 'report.build.titleEdit' : 'report.build.titleNew') | t }}</h1>
+    <p class="page-subtitle">{{ 'report.build.subtitle' | t }}</p>
   </div>
-  <a routerLink="/reports" class="btn btn-secondary">Vazgeç</a>
+  <a routerLink="/reports" class="btn btn-secondary">{{ 'report.build.cancel' | t }}</a>
 </div>
 
 @if (loadingModels || loadingExisting) {
   <div class="panel">
     <div class="empty-state">
-      <span class="spinner" aria-label="Yükleniyor"></span>
+      <span class="spinner" [attr.aria-label]="'common.loading' | t"></span>
     </div>
   </div>
 }
@@ -24,10 +24,10 @@
 
     <!-- Temel bilgiler -->
     <div class="panel">
-      <div class="panel-head"><h3>Temel Bilgiler</h3></div>
+      <div class="panel-head"><h3>{{ 'report.build.basicInfo' | t }}</h3></div>
       <div class="panel-body">
         <div class="field">
-          <label for="name">Rapor Adı <span class="req">*</span></label>
+          <label for="name">{{ 'report.build.reportName' | t }} <span class="req">*</span></label>
           <input
             id="name"
             class="input"
@@ -36,25 +36,25 @@
             [attr.aria-invalid]="f['name'].invalid && f['name'].touched"
           />
           @if (f['name'].invalid && f['name'].touched) {
-            <span class="field-error" role="alert">Rapor adı zorunludur.</span>
+            <span class="field-error" role="alert">{{ 'report.build.reportNameRequired' | t }}</span>
           }
         </div>
 
         <div class="field">
-          <label for="modelName">Model <span class="req">*</span></label>
+          <label for="modelName">{{ 'report.build.model' | t }} <span class="req">*</span></label>
           <select id="modelName" formControlName="modelName">
-            <option value="" disabled>Bir model seçin</option>
+            <option value="" disabled>{{ 'report.build.selectModel' | t }}</option>
             @for (m of models; track m.typeName) {
               <option [value]="m.typeName">{{ m.typeName }}</option>
             }
           </select>
           @if (f['modelName'].invalid && f['modelName'].touched) {
-            <span class="field-error" role="alert">Model seçimi zorunludur.</span>
+            <span class="field-error" role="alert">{{ 'report.build.modelRequired' | t }}</span>
           }
         </div>
 
         <div class="field">
-          <label id="chartTypeLabel">Grafik Tipi</label>
+          <label id="chartTypeLabel">{{ 'report.build.chartType' | t }}</label>
           <div class="chart-type-picker" role="radiogroup" aria-labelledby="chartTypeLabel">
             @for (ct of chartTypes; track ct.value) {
               <button
@@ -66,16 +66,15 @@
                 (click)="selectChartType(ct.value)"
               >
                 <span class="chart-type-icon" [innerHTML]="ct.svg"></span>
-                <span class="chart-type-name">{{ ct.label }}</span>
-                <span class="chart-type-hint">{{ ct.hint }}</span>
+                <span class="chart-type-name">{{ ct.labelKey | t }}</span>
+                <span class="chart-type-hint">{{ ct.hintKey | t }}</span>
               </button>
             }
           </div>
-          <span class="field-help">Gruplama/aggregate tanımlıysa grafik bu sonuçlar üzerinden çizilir.</span>
+          <span class="field-help">{{ 'report.build.chartTypeHelp' | t }}</span>
           @if (showSingleAggregateWarning) {
             <div class="alert alert-warn" role="alert">
-              Bu grafik tipi tek bir aggregate ile en iyi sonucu verir; birden çok aggregate
-              tanımladınız, çizimde yalnızca ilki kullanılacaktır.
+              {{ 'report.build.singleAggregateWarning' | t }}
             </div>
           }
         </div>
@@ -84,12 +83,12 @@
 
     <!-- Canlı Önizleme -->
     <div class="panel">
-      <div class="panel-head"><h3>Canlı Önizleme</h3></div>
+      <div class="panel-head"><h3>{{ 'report.build.livePreview' | t }}</h3></div>
       <div class="panel-body">
-        <p class="field-help">Aşağıdaki grafik örnek veriyle çizilmiştir; kaydettikten sonra gerçek veriler kullanılır.</p>
+        <p class="field-help">{{ 'report.build.previewHelp' | t }}</p>
         @if (f['chartType'].value === 'table') {
           @if (previewResult().rows.length > 0) {
-            <p class="field-help">Devre dışı göstermek için bir satıra tıklayın; tekrar tıklayınca normale döner.</p>
+            <p class="field-help">{{ 'report.build.previewStrikeHelp' | t }}</p>
             <table class="data-table preview-data-table">
               <thead>
                 <tr>
@@ -117,7 +116,7 @@
             </table>
           } @else {
             <div class="empty-state">
-              <p>Önizleme için bir model ve kolon seçin.</p>
+              <p>{{ 'report.build.previewEmpty' | t }}</p>
             </div>
           }
         } @else {
@@ -130,12 +129,44 @@
       </div>
     </div>
 
+    <!-- SQL Önizleme -->
+    <div class="panel">
+      <div class="panel-head">
+        <h3>{{ 'report.build.sqlPreview' | t }}</h3>
+        <div class="panel-actions">
+          <button
+            class="btn btn-secondary btn-sm"
+            type="button"
+            [disabled]="sqlPreviewLoading()"
+            (click)="previewSql()">
+            @if (sqlPreviewLoading()) {
+              <span class="spinner" aria-hidden="true"></span>
+            }
+            {{ 'report.build.sqlPreviewButton' | t }}
+          </button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <p class="field-help">{{ 'report.build.sqlPreviewHelp' | t }}</p>
+        @if (sqlPreviewError()) {
+          <div class="alert alert-danger" role="alert">{{ sqlPreviewError() }}</div>
+        }
+        @if (sqlPreview()) {
+          <pre class="sql-preview-box">{{ sqlPreview() }}</pre>
+        } @else if (!sqlPreviewError()) {
+          <div class="empty-state">
+            <p>{{ 'report.build.sqlPreviewEmpty' | t }}</p>
+          </div>
+        }
+      </div>
+    </div>
+
     @if (availableColumns.length > 0) {
       <!-- Kolonlar -->
       <div class="panel">
-        <div class="panel-head"><h3>Kolonlar</h3></div>
+        <div class="panel-head"><h3>{{ 'report.build.columns' | t }}</h3></div>
         <div class="panel-body">
-          <p class="field-help">Gruplama veya aggregate tanımlandığında kolon seçimi yok sayılır.</p>
+          <p class="field-help">{{ 'report.build.columnsHelp' | t }}</p>
           <div class="checkbox-grid" formArrayName="selectedColumns">
             @for (col of availableColumns; track col.columnName; let i = $index) {
               <label class="checkbox-label">
@@ -150,31 +181,31 @@
       <!-- Filtreler -->
       <div class="panel">
         <div class="panel-head">
-          <h3>Filtreler</h3>
+          <h3>{{ 'report.build.filters' | t }}</h3>
           <div class="panel-actions">
-            <button class="btn btn-secondary btn-sm" type="button" (click)="addFilter()">Filtre Ekle</button>
+            <button class="btn btn-secondary btn-sm" type="button" (click)="addFilter()">{{ 'report.build.addFilter' | t }}</button>
           </div>
         </div>
         <div class="panel-body">
           @if (filtersArray.length === 0) {
-            <p class="field-help">Henüz filtre eklenmedi.</p>
+            <p class="field-help">{{ 'report.build.noFilters' | t }}</p>
           }
           <div formArrayName="filters" class="stack">
             @for (group of filtersArray.controls; track $index; let i = $index) {
               <div [formGroupName]="i" class="row-fields">
                 <select formControlName="field">
-                  <option value="" disabled>Alan</option>
+                  <option value="" disabled>{{ 'report.build.field' | t }}</option>
                   @for (col of availableColumns; track col.columnName) {
                     <option [value]="col.columnName">{{ col.columnName }}</option>
                   }
                 </select>
                 <select formControlName="operator">
                   @for (op of operators; track op.value) {
-                    <option [value]="op.value">{{ op.label }}</option>
+                    <option [value]="op.value">{{ op.labelKey | t }}</option>
                   }
                 </select>
-                <input class="input" type="text" formControlName="value" placeholder="Değer" />
-                <button class="btn btn-danger btn-sm" type="button" (click)="removeFilter(i)">Kaldır</button>
+                <input class="input" type="text" formControlName="value" [placeholder]="'report.build.valuePlaceholder' | t" />
+                <button class="btn btn-danger btn-sm" type="button" (click)="removeFilter(i)">{{ 'report.build.remove' | t }}</button>
               </div>
             }
           </div>
@@ -183,7 +214,7 @@
 
       <!-- Gruplama -->
       <div class="panel">
-        <div class="panel-head"><h3>Gruplama</h3></div>
+        <div class="panel-head"><h3>{{ 'report.build.groupBy' | t }}</h3></div>
         <div class="panel-body">
           <div class="checkbox-grid" formArrayName="groupBy">
             @for (col of availableColumns; track col.columnName; let i = $index) {
@@ -199,64 +230,64 @@
       <!-- Aggregate -->
       <div class="panel">
         <div class="panel-head">
-          <h3>Aggregate</h3>
+          <h3>{{ 'report.build.aggregate' | t }}</h3>
           <div class="panel-actions">
-            <button class="btn btn-secondary btn-sm" type="button" (click)="addAggregate()">Aggregate Ekle</button>
+            <button class="btn btn-secondary btn-sm" type="button" (click)="addAggregate()">{{ 'report.build.addAggregate' | t }}</button>
           </div>
         </div>
         <div class="panel-body">
           @if (aggregatesArray.length === 0) {
-            <p class="field-help">Henüz aggregate eklenmedi.</p>
+            <p class="field-help">{{ 'report.build.noAggregates' | t }}</p>
           }
           <div formArrayName="aggregates" class="stack">
             @for (group of aggregatesArray.controls; track $index; let i = $index) {
               <div [formGroupName]="i" class="row-fields">
                 <select formControlName="field">
-                  <option value="">(COUNT için gerekli değil)</option>
+                  <option value="">{{ 'report.build.countNoFieldNeeded' | t }}</option>
                   @for (col of availableColumns; track col.columnName) {
                     <option [value]="col.columnName">{{ col.columnName }}</option>
                   }
                 </select>
                 <select formControlName="function">
                   @for (fn of aggregateFunctions; track fn.value) {
-                    <option [value]="fn.value">{{ fn.label }}</option>
+                    <option [value]="fn.value">{{ fn.labelKey | t }}</option>
                   }
                 </select>
-                <button class="btn btn-danger btn-sm" type="button" (click)="removeAggregate(i)">Kaldır</button>
+                <button class="btn btn-danger btn-sm" type="button" (click)="removeAggregate(i)">{{ 'report.build.remove' | t }}</button>
               </div>
             }
           </div>
-          <span class="field-help">SUM/AVG yalnızca sayısal alanlarda kullanılabilir.</span>
+          <span class="field-help">{{ 'report.build.aggregateNumericHelp' | t }}</span>
         </div>
       </div>
 
       <!-- Sıralama -->
       <div class="panel">
         <div class="panel-head">
-          <h3>Sıralama</h3>
+          <h3>{{ 'report.build.sortBy' | t }}</h3>
           <div class="panel-actions">
-            <button class="btn btn-secondary btn-sm" type="button" (click)="addSort()">Sıralama Ekle</button>
+            <button class="btn btn-secondary btn-sm" type="button" (click)="addSort()">{{ 'report.build.addSort' | t }}</button>
           </div>
         </div>
         <div class="panel-body">
           @if (sortByArray.length === 0) {
-            <p class="field-help">Henüz sıralama eklenmedi.</p>
+            <p class="field-help">{{ 'report.build.noSorts' | t }}</p>
           }
           <div formArrayName="sortBy" class="stack">
             @for (group of sortByArray.controls; track $index; let i = $index) {
               <div [formGroupName]="i" class="row-fields">
                 <select formControlName="field">
-                  <option value="" disabled>Alan</option>
+                  <option value="" disabled>{{ 'report.build.field' | t }}</option>
                   @for (field of outputFieldOptions; track field) {
                     <option [value]="field">{{ field }}</option>
                   }
                 </select>
                 <select formControlName="direction">
                   @for (dir of sortDirections; track dir.value) {
-                    <option [value]="dir.value">{{ dir.label }}</option>
+                    <option [value]="dir.value">{{ dir.labelKey | t }}</option>
                   }
                 </select>
-                <button class="btn btn-danger btn-sm" type="button" (click)="removeSort(i)">Kaldır</button>
+                <button class="btn btn-danger btn-sm" type="button" (click)="removeSort(i)">{{ 'report.build.remove' | t }}</button>
               </div>
             }
           </div>
@@ -271,9 +302,9 @@
     <div class="cluster">
       <button class="btn btn-primary" type="submit" [disabled]="saving">
         @if (saving) { <span class="spinner" aria-hidden="true"></span> }
-        Kaydet
+        {{ 'report.build.save' | t }}
       </button>
-      <a routerLink="/reports" class="btn btn-ghost">Vazgeç</a>
+      <a routerLink="/reports" class="btn btn-ghost">{{ 'report.build.cancel' | t }}</a>
     </div>
   </form>
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
@@ -7,6 +7,8 @@ import { catchError, map } from 'rxjs/operators';
 import { RoleAdminService } from '../../services/role-admin.service';
 import { ModelPermission } from '../../services/permission.service';
 import { Role } from '../../models/role';
+import { TranslatePipe } from '../../pipes/translate.pipe';
+import { LanguageService } from '../../services/language.service';
 
 /** "İzinli model sayısı" sütununda gösterilen, üye sayısı zenginleştirilmiş rol satırı */
 interface RoleRow extends Role {
@@ -16,11 +18,13 @@ interface RoleRow extends Role {
 @Component({
   selector: 'app-role-list',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe],
   templateUrl: './role-list.component.html',
   styleUrls: ['./role-list.component.scss']
 })
 export class RoleListComponent implements OnInit {
+  private readonly languageService = inject(LanguageService);
+
   rows        = signal<RoleRow[]>([]);
   loading     = signal(true);
   loadError   = signal('');
@@ -66,7 +70,7 @@ export class RoleListComponent implements OnInit {
         });
       },
       error: () => {
-        this.loadError.set('Rol listesi yüklenemedi.');
+        this.loadError.set(this.languageService.t('role.list.loadError'));
         this.loading.set(false);
       }
     });
@@ -79,7 +83,7 @@ export class RoleListComponent implements OnInit {
   }
 
   deleteRole(row: RoleRow): void {
-    if (!confirm(`'${row.name}' rolünü silmek istediğinize emin misiniz? Bu işlem rolün tüm üyelik ve izin kayıtlarını da kaldırır.`)) return;
+    if (!confirm(this.languageService.t('role.list.deleteConfirm', { name: row.name }))) return;
 
     this.deletingId.set(row.id);
     this.roleService.deleteRole(row.id).subscribe({
@@ -93,7 +97,7 @@ export class RoleListComponent implements OnInit {
       },
       error: () => {
         this.deletingId.set(null);
-        this.loadError.set('Rol silinemedi.');
+        this.loadError.set(this.languageService.t('role.list.deleteError'));
       }
     });
   }

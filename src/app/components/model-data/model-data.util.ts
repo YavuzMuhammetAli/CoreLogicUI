@@ -12,12 +12,21 @@ type DataRow = Record<string, unknown>;
 export function inputTypeFor(dataType: string): string {
   switch (dataType) {
     case 'int':
+    case 'long':
+    case 'short':
+    case 'byte':
     case 'float':
-    case 'decimal': return 'number';
-    case 'datetime': return 'date';
-    case 'boolean': return 'checkbox';
+    case 'double':
+    case 'decimal':  return 'number';
+    case 'datetime': return 'datetime-local';
+    case 'dateonly': return 'date';
+    case 'timeonly': return 'time';
+    case 'boolean':  return 'checkbox';
+    case 'guid':     return 'text';
+    // enum/lookup özel <select> render'ı ile ele alınır (bkz. ilgili component'ler);
+    // bu fonksiyon yalnızca düz <input> tipi üreten kolonlar için kullanılır.
     case 'image':
-    case 'file':    return 'file';
+    case 'file':     return 'file';
     default: return 'text';
   }
 }
@@ -75,6 +84,12 @@ export function extFromBase64(b64: string): string {
   if (p.startsWith('UEsD'))    return '.xlsx';
   if (p.startsWith('JVBEr'))   return '.pdf';
   return '.bin';
+}
+
+/** Enum kolonu için izinli değerleri '|' ayraçlı metinden diziye çevirir. */
+export function parseEnumValues(enumValues: string | null | undefined): string[] {
+  if (!enumValues) return [];
+  return enumValues.split('|').map(v => v.trim()).filter(v => v.length > 0);
 }
 
 /** Değer bir resim base64'ü ise true döner */

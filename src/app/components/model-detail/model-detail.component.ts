@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -9,6 +9,8 @@ import { PublishModelService } from '../../services/publish-model.service';
 import { PermissionService } from '../../services/permission.service';
 import { ModelColumnSettingService, ModelColumnSettingDto } from '../../services/model-column-setting.service';
 import { ColumnVisibilityComponent, ColumnVisibilityItem } from '../shared/column-visibility/column-visibility.component';
+import { LanguageService } from '../../services/language.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 import {
   inputTypeFor,
   isImage,
@@ -16,8 +18,15 @@ import {
   isBase64Value,
   downloadFile,
   sanitizePayload,
-  fieldValue
+  fieldValue,
+  parseEnumValues
 } from '../model-data/model-data.util';
+
+/** Lookup kolonu için bir seçenek: FK olarak kaydedilecek ID + kullanıcıya gösterilecek etiket. */
+interface LookupOption {
+  id: number;
+  label: string;
+}
 
 type DataRow = Record<string, unknown>;
 
@@ -52,11 +61,13 @@ interface TabState {
 @Component({
   selector: 'app-model-detail',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, ColumnVisibilityComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, ColumnVisibilityComponent, TranslatePipe],
   templateUrl: './model-detail.component.html',
   styleUrls: ['./model-detail.component.scss']
 })
 export class ModelDetailComponent implements OnInit, OnDestroy {
+  private readonly languageService = inject(LanguageService);
+
   typeName = '';
   recordId = 0;
   /** Yeni kayıt ekleme modu (route data: { mode: 'new' }) */
@@ -126,10 +137,54 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
   // ─── Util delegasyonları ─────────────────────────────────────────────────────
 
-  inputTypeFor  = inputTypeFor;
-  isImage       = isImage;
-  imageSrc      = imageSrc;
-  isBase64Value = isBase64Value;
+  inputTypeFor   = inputTypeFor;
+  isImage        = isImage;
+  imageSrc       = imageSrc;
+  isBase64Value  = isBase64Value;
+  parseEnumValues = parseEnumValues;
+
+  // ─── Lookup seçenekleri (hedef model kayıtları, FK dropdown'u için) ─────────
+
+  /** lookupTargetTable → seçenekler (ID + LookupDisplayColumn değeri). Hedef başına bir kez yüklenir. */
+  lookupOptionsCache: Record<string, LookupOption[]> = {};
+  private lookupOptionsLoading = new Set<string>();
+
+  /** Verilen kolon listesindeki her lookup kolonu için hedef tablonun kayıtlarını (gerekirse) yükler. */
+  private ensureLookupOptions(columns: PublishedColumn[]): void {
+    for (const col of columns) {
+      if (col.dataType !== 'lookup' || !col.lookupTargetTable) continue;
+      const target = col.lookupTargetTable;
+      if (this.lookupOptionsCache[target] || this.lookupOptionsLoading.has(target)) continue;
+
+      this.lookupOptionsLoading.add(target);
+      this.publishedModel.getAll(target).subscribe({
+        next: res => {
+          this.lookupOptionsLoading.delete(target);
+          const rows = (res.success ? (res.data ?? []) : []) as DataRow[];
+          const displayCol = col.lookupDisplayColumn;
+          this.lookupOptionsCache[target] = rows.map(r => ({
+            id: Number(fieldValue(r, 'ID') ?? 0),
+            label: displayCol ? String(fieldValue(r, displayCol) ?? '') : String(fieldValue(r, 'ID') ?? '')
+          }));
+        },
+        error: () => { this.lookupOptionsLoading.delete(target); }
+      });
+    }
+  }
+
+  /** Bir lookup kolonu için dropdown seçenekleri (yüklenene kadar boş). */
+  lookupOptionsForColumn(col: PublishedColumn): LookupOption[] {
+    return (col.lookupTargetTable && this.lookupOptionsCache[col.lookupTargetTable]) || [];
+  }
+
+  /** Tablo hücresinde lookup FK ID'sini display değerine çevirir (yüklenmemişse ham ID gösterilir). */
+  lookupCellLabel(col: PublishedColumn, value: unknown): string {
+    if (value == null || value === '') return '—';
+    const target = col.lookupTargetTable;
+    const options = target ? this.lookupOptionsCache[target] : null;
+    const found = options?.find(o => o.id === Number(value));
+    return found ? found.label : String(value);
+  }
 
   downloadParentFile(b64: string, colName: string): void {
     downloadFile(b64, colName, this.editFileNames);
@@ -181,13 +236,13 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
             // Şema mevcutsa alt sekmeleri de yükle (server'dan veri çekmeden)
             this.loadChildrenForNew();
           } else {
-            this.recordError = `"${this.typeName}" modeli bulunamadı.`;
+            this.recordError = this.languageService.t('model.detail.modelNotFound', { typeName: this.typeName });
           }
         },
         error: err => {
           this.loadingRecord = false;
           const e = err as { error?: { message?: string }; message?: string };
-          this.recordError = e?.error?.message ?? e?.message ?? 'Model şeması yüklenemedi.';
+          this.recordError = e?.error?.message ?? e?.message ?? this.languageService.t('model.detail.schemaLoadFailed');
         }
       });
       return;
@@ -215,7 +270,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
           this.retryWithAssembly();
           return;
         } else {
-          this.recordError = record.message ?? 'Kayıt bulunamadı.';
+          this.recordError = record.message ?? this.languageService.t('model.detail.recordNotFound');
         }
 
         this.loadChildren();
@@ -229,7 +284,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       error: err => {
         this.loadingRecord = false;
         const e = err as { error?: { message?: string }; message?: string };
-        this.recordError = e?.error?.message ?? e?.message ?? 'Kayıt yüklenemedi.';
+        this.recordError = e?.error?.message ?? e?.message ?? this.languageService.t('model.detail.recordLoadFailed');
       }
     });
   }
@@ -239,7 +294,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       next: () => this.loadAll(),
       error: () => {
         this.loadingRecord = false;
-        this.recordError = 'Model backend\'de yüklü değil. "Tablo Oluştur"dan yeniden yayınlayın.';
+        this.recordError = this.languageService.t('model.detail.assemblyNotLoaded');
       }
     });
   }
@@ -256,6 +311,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
             const meta = this.allModels.find(m => m.typeName === name);
             const state = this.buildTabState(name, meta?.columns ?? []);
             this.tabStates.set(name, state);
+            this.ensureLookupOptions(state.columns);
             this.loadTabRows(state);
             this.loadTabColumnVisibility(state);
           }
@@ -282,6 +338,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
             const state = this.buildTabState(name, meta?.columns ?? []);
             // Yeni kayıt modunda server'dan veri çekilmez; rows boş kalır
             this.tabStates.set(name, state);
+            this.ensureLookupOptions(state.columns);
             this.loadTabColumnVisibility(state);
           }
         }
@@ -353,11 +410,17 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return fieldValue(this.record, col.columnName);
   }
 
+  /** UI'da gösterilecek etiket — admin Label tanımlamışsa onu, yoksa ham columnName'i döner. */
+  colLabel(col: PublishedColumn): string {
+    return col.label?.trim() || col.columnName;
+  }
+
   // ─── Üst kayıt formu ────────────────────────────────────────────────────────
 
   /** Mevcut kayıt ile düzenleme formunu oluştur */
   openEditMode(): void {
     if (!this.model || !this.record) return;
+    this.ensureLookupOptions(this.parentColumns);
     const controls: Record<string, unknown> = {};
     for (const col of this.parentColumns) {
       const v = this.recordRaw(col) ?? '';
@@ -373,6 +436,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
   /** Yeni kayıt modu için boş form oluştur */
   private buildNewForm(): void {
+    this.ensureLookupOptions(this.parentColumns);
     const controls: Record<string, unknown> = {};
     for (const col of this.parentColumns) {
       const validators = col.isNullable ? [] : [Validators.required];
@@ -426,7 +490,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
           this.editLoading = false;
           this.editOk = false;
           const e = err as { error?: { message?: string }; message?: string };
-          this.editMsg = e?.error?.message ?? e?.message ?? 'Kayıt oluşturulamadı.';
+          this.editMsg = e?.error?.message ?? e?.message ?? this.languageService.t('model.detail.createFailed');
         }
       });
     } else {
@@ -446,7 +510,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
           this.editLoading = false;
           this.editOk = false;
           const e = err as { error?: { message?: string }; message?: string };
-          this.editMsg = e?.error?.message ?? e?.message ?? 'Güncelleme başarısız.';
+          this.editMsg = e?.error?.message ?? e?.message ?? this.languageService.t('model.detail.updateFailed');
         }
       });
     }
@@ -455,7 +519,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   /** Üst kaydı sil — yalnızca mevcut kayıt modunda kullanılır */
   deleteRecord(): void {
     if (this.isNew || this.deleting) return;
-    if (!confirm(`ID:${this.recordId} kaydını silmek istediğinize emin misiniz?`)) return;
+    if (!confirm(this.languageService.t('model.detail.deleteConfirm', { id: this.recordId }))) return;
 
     this.deleting = true;
     this.publishedModel.delete(this.typeName, this.recordId).subscribe({
@@ -533,12 +597,12 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       next: res => {
         state.loading = false;
         state.rows = res.success ? (res.data ?? []) as DataRow[] : [];
-        if (!res.success) state.error = res.message ?? 'Kayıtlar alınamadı.';
+        if (!res.success) state.error = res.message ?? this.languageService.t('model.detail.recordsFetchFailed');
       },
       error: err => {
         state.loading = false;
         const e = err as { error?: { message?: string }; message?: string };
-        state.error = e?.error?.message ?? e?.message ?? 'Kayıtlar yüklenemedi.';
+        state.error = e?.error?.message ?? e?.message ?? this.languageService.t('model.detail.recordsLoadFailed');
       }
     });
   }
@@ -562,8 +626,12 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return cols.filter(c => visible.has(c.columnName));
   }
 
-  tableHeaders(state: TabState): string[] {
-    return ['ID', ...this.displayCols(state).map(c => c.columnName)];
+  /** Tablo başlıkları — key veri/sıralama anahtarı (ham columnName), label görünen metin. */
+  tableHeaders(state: TabState): { key: string; label: string }[] {
+    return [
+      { key: 'ID', label: 'ID' },
+      ...this.displayCols(state).map(c => ({ key: c.columnName, label: this.colLabel(c) }))
+    ];
   }
 
   /** Kolon görünürlüğü popover'ı için kolon listesi — alt model tablosunda zorunlu zorlaması yok */
@@ -655,6 +723,15 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     if (v === null || v === undefined) return '—';
     if (typeof v === 'boolean') return v ? '✓' : '✗';
     return String(v);
+  }
+
+  /** Tablo hücresi için görüntülenecek değer — lookup kolonları FK ID yerine display değerini gösterir. */
+  tabCellDisplay(state: TabState, row: DataRow, columnName: string): string {
+    const col = state.columns.find(c => c.columnName === columnName);
+    if (col?.dataType === 'lookup') {
+      return this.lookupCellLabel(col, fieldValue(row, columnName));
+    }
+    return this.cellVal(row, columnName);
   }
 
   strVal(row: DataRow, col: string): string {
@@ -758,7 +835,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     state.formLoading = false;
     state.formOk = false;
     const e = err as { error?: { message?: string }; message?: string };
-    state.formMsg = e?.error?.message ?? e?.message ?? 'İşlem başarısız.';
+    state.formMsg = e?.error?.message ?? e?.message ?? this.languageService.t('model.detail.operationFailed');
   }
 
   /**
@@ -775,7 +852,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
         // __localId'yi payload'dan çıkar, FK'yı ekle
         const { __localId, ...fields } = row as DataRow & { __localId?: unknown };
         const payload: DataRow = { ...sanitizePayload(state.columns, fields), [state.fkColumn]: parentId };
-        tasks.push({ typeName: state.typeName, fkColumn: state.fkColumn, row: payload, label: `${state.typeName} #${taskIdx}` });
+        tasks.push({ typeName: state.typeName, fkColumn: state.fkColumn, row: payload, label: state.typeName + ' #' + taskIdx });
       });
     }
 
@@ -791,7 +868,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
         map(res => ({ label: task.label, success: res.success, message: res.message })),
         catchError(err => {
           const e = err as { error?: { message?: string }; message?: string };
-          const msg = e?.error?.message ?? e?.message ?? 'İşlem başarısız.';
+          const msg = e?.error?.message ?? e?.message ?? this.languageService.t('model.detail.operationFailed');
           return of({ label: task.label, success: false, message: msg });
         })
       )
@@ -826,14 +903,14 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   deleteTabRow(state: TabState, row: DataRow): void {
     // Yeni kayıt modunda — bellekten çıkar, HTTP yapma
     if (this.isNew) {
-      if (!confirm('Bu biriktirilen satırı kaldırmak istediğinize emin misiniz?')) return;
+      if (!confirm(this.languageService.t('model.detail.removeStagedRowConfirm'))) return;
       const localId = row['__localId'] as number;
       state.rows = state.rows.filter(r => r['__localId'] !== localId);
       return;
     }
 
     const id = this.rowId(row);
-    if (!id || !confirm(`ID:${id} kaydını silmek istediğinize emin misiniz?`)) return;
+    if (!id || !confirm(this.languageService.t('model.detail.deleteConfirm', { id }))) return;
     this.publishedModel.delete(state.typeName, id).subscribe({
       next: res => { if (res.success) this.loadTabRows(state); },
       error: () => { /* sessizce geç */ }

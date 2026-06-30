@@ -15,6 +15,8 @@ export interface DashboardDefinition {
   id: number;
   name: string;
   widgets: DashboardWidget[];
+  /** Admin tarafından "navigasyonda göster" işaretlenmiş mi? Yalnızca admin set edebilir (backend zorunlu kılar). */
+  showInNav?: boolean;
 }
 
 /** DashboardWidgetResultDto ile eşleşir — yetkisiz/silinmiş rapor widget listesinde yer almaz. */

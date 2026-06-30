@@ -57,12 +57,20 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/form-build/form-build.component').then(m => m.FormBuildComponent)
       },
-      // ":typeName" mevcut bir modeli/taslağı düzenleme modunda açar (form-build aynı component'i kullanır)
+      // "new" sabit segmenti ":typeName" param'ından önce gelmeli — aksi halde Angular "new" stringini tip adı olarak yakalar
+      {
+        path: 'build/new',
+        canActivate: [adminGuard],
+        data: { mode: 'new' },
+        loadComponent: () =>
+          import('./components/table-detail/table-detail.component').then(m => m.TableDetailComponent)
+      },
+      // ":typeName" mevcut bir modeli/taslağı düzenleme modunda açar
       {
         path: 'build/:typeName',
         canActivate: [adminGuard],
         loadComponent: () =>
-          import('./components/form-build/form-build.component').then(m => m.FormBuildComponent)
+          import('./components/table-detail/table-detail.component').then(m => m.TableDetailComponent)
       },
       {
         path: 'drafts',
@@ -114,6 +122,12 @@ export const routes: Routes = [
         canActivate: [adminGuard],
         loadComponent: () =>
           import('./components/role-detail/role-detail.component').then(m => m.RoleDetailComponent)
+      },
+      {
+        path: 'audit-logs',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/audit-log/audit-log.component').then(m => m.AuditLogComponent)
       },
       {
         // Kullanıcının kendi profil sayfası — authGuard layout'tan miras alınır

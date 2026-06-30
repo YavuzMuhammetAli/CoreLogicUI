@@ -1,7 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { PublishedTableService } from '../../services/published-table.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
+import { LanguageService } from '../../services/language.service';
 
 interface DeletedModelEntry {
   id: number;
@@ -23,7 +25,7 @@ interface DeletedModelEntry {
 @Component({
   selector: 'app-deleted-models',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe],
   templateUrl: './deleted-models.component.html',
   styleUrls: ['./deleted-models.component.scss']
 })
@@ -31,6 +33,8 @@ export class DeletedModelsComponent implements OnInit {
   models: DeletedModelEntry[] = [];
   loading = false;
   loadError: string | null = null;
+
+  private readonly languageService = inject(LanguageService);
 
   constructor(private publishedTable: PublishedTableService) {}
 
@@ -47,7 +51,7 @@ export class DeletedModelsComponent implements OnInit {
       next: res => {
         this.loading = false;
         if (!res.success) {
-          this.loadError = res.message ?? 'Silinmiş modeller yüklenemedi.';
+          this.loadError = res.message ?? this.languageService.t('deleted.models.loadFailed');
           return;
         }
 
@@ -63,7 +67,7 @@ export class DeletedModelsComponent implements OnInit {
       },
       error: err => {
         this.loading = false;
-        this.loadError = err?.error?.message ?? 'Sunucu bağlantı hatası.';
+        this.loadError = err?.error?.message ?? this.languageService.t('deleted.serverConnectionError');
       }
     });
   }
@@ -72,7 +76,7 @@ export class DeletedModelsComponent implements OnInit {
   restore(model: DeletedModelEntry): void {
     if (model.restoring) return;
 
-    const confirmed = confirm(`'${model.tableName}' modelini geri yüklemek istediğinize emin misiniz?`);
+    const confirmed = confirm(this.languageService.t('deleted.models.restoreConfirm', { name: model.tableName }));
     if (!confirmed) return;
 
     model.restoring = true;
@@ -83,7 +87,9 @@ export class DeletedModelsComponent implements OnInit {
       next: res => {
         model.restoring = false;
         model.restoreSuccess = res.success;
-        model.restoreMessage = res.message ?? (res.success ? 'Model geri yüklendi.' : 'Geri yükleme başarısız.');
+        model.restoreMessage = res.message ?? (res.success
+          ? this.languageService.t('deleted.models.restoreSuccess')
+          : this.languageService.t('deleted.restoreFailed'));
 
         if (res.success) {
           setTimeout(() => {
@@ -94,7 +100,7 @@ export class DeletedModelsComponent implements OnInit {
       error: err => {
         model.restoring = false;
         model.restoreSuccess = false;
-        model.restoreMessage = err?.error?.message ?? 'Geri yükleme sırasında sunucu hatası oluştu.';
+        model.restoreMessage = err?.error?.message ?? this.languageService.t('deleted.restoreServerError');
       }
     });
   }

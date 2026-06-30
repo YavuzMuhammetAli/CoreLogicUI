@@ -9,9 +9,17 @@ import { environment } from '../../environments/environment';
 /** Kolon meta verisi — backend PublishedColumnInfo ile eşleşir */
 export interface PublishedColumn {
   columnName: string;
-  /** form-build CSHARP_TYPE_MAP anahtarları: string|int|float|decimal|datetime|boolean */
+  // UI tip anahtarları: string / int / long / short / byte / decimal / double / float / boolean /
+  // datetime / dateonly / timeonly / guid / enum / lookup / image / file
   dataType: string;
   isNullable: boolean;
+  // Yeni tip metadata'sı: enum / lookup (şemadan — reflection'dan değil)
+  enumValues?: string | null;
+  lookupTargetTable?: string | null;
+  lookupDisplayColumn?: string | null;
+  // UI metadata: kullanıcı dostu gösterim (şemadan — reflection'dan değil)
+  label?: string | null;
+  description?: string | null;
 }
 
 /** Model meta verisi — backend PublishedModelInfo ile eşleşir */

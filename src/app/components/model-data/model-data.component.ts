@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { PublishedModelService, PublishedModel, PublishedColumn, PagedData } from '../../services/published-model.service';
@@ -7,6 +7,8 @@ import { PermissionService } from '../../services/permission.service';
 import { PublishedTableService, ModelVersion } from '../../services/published-table.service';
 import { ModelColumnSettingService, ModelColumnSettingDto } from '../../services/model-column-setting.service';
 import { ColumnVisibilityComponent, ColumnVisibilityItem } from '../shared/column-visibility/column-visibility.component';
+import { LanguageService } from '../../services/language.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 import {
   isImage,
   imageSrc,
@@ -21,11 +23,13 @@ type DataRow = Record<string, unknown>;
 @Component({
   selector: 'app-model-data',
   standalone: true,
-  imports: [CommonModule, RouterLink, DatePipe, ColumnVisibilityComponent],
+  imports: [CommonModule, RouterLink, DatePipe, ColumnVisibilityComponent, TranslatePipe],
   templateUrl: './model-data.component.html',
   styleUrls: ['./model-data.component.scss']
 })
 export class ModelDataComponent implements OnInit {
+  private readonly languageService = inject(LanguageService);
+
   typeName = '';
   model: PublishedModel | undefined;
 
@@ -177,26 +181,38 @@ export class ModelDataComponent implements OnInit {
             },
             error: () => {
               this.loadingRows = false;
-              this.loadError = 'Model backend\'de yüklü değil. "Tablo Oluştur"dan yeniden yayınlayın.';
+              this.loadError = this.languageService.t('model.data.assemblyNotLoaded');
             }
           });
         } else {
           this.loadingRows = false;
           this.loadError = res.message?.includes('Assembly')
-            ? 'Model backend\'de yüklü değil. "Tablo Oluştur"dan yeniden yayınlayın.'
+            ? this.languageService.t('model.data.assemblyNotLoaded')
             : res.message;
         }
       },
       error: err => {
         this.loadingRows = false;
-        this.loadError = err?.error?.message ?? 'Veriler yüklenemedi.';
+        this.loadError = err?.error?.message ?? this.languageService.t('model.data.loadFailed');
       }
     });
   }
 
-  /** Tablo başlıklarını belirle (ID + görünür schema sütunları) */
-  get tableHeaders(): string[] {
-    return ['ID', ...this.displayColumns.map(c => c.columnName)];
+  /** UI'da gösterilecek etiket — admin Label tanımlamışsa onu, yoksa ham columnName'i döner. */
+  colLabel(col: PublishedColumn): string {
+    return col.label?.trim() || col.columnName;
+  }
+
+  /**
+   * Tablo başlıklarını belirle (ID + görünür schema sütunları).
+   * key: veri/lookup anahtarı (ham columnName) — hücre değeri bu anahtarla okunur.
+   * label: kullanıcıya gösterilen metin (admin Label tanımlamışsa onu kullanır).
+   */
+  get tableHeaders(): { key: string; label: string }[] {
+    return [
+      { key: 'ID', label: 'ID' },
+      ...this.displayColumns.map(c => ({ key: c.columnName, label: this.colLabel(c) }))
+    ];
   }
 
   // ─── Sayfalama ─────────────────────────────────────────────────────────────────
@@ -288,7 +304,7 @@ export class ModelDataComponent implements OnInit {
 
   /** Onay alındıktan sonra rollback isteği gönderir; başarıda veri + sürümleri yeniler */
   doRollback(version: number): void {
-    if (!confirm(`v${version} versiyonuna geri almak istediğinize emin misiniz?`)) return;
+    if (!confirm(this.languageService.t('model.data.rollbackConfirm', { version }))) return;
 
     this.publishedTableService.rollback(this.typeName, version).subscribe({
       next: res => {

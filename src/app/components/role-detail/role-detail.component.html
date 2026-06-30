@@ -1,44 +1,44 @@
 <!-- ─── Breadcrumb ──────────────────────────────────────────────────────────── -->
 <div class="detail-breadcrumb">
-  <a [routerLink]="['/roles']" class="bc-link">Roller</a>
+  <a [routerLink]="['/roles']" class="bc-link">{{ 'role.detail.breadcrumb' | t }}</a>
   <span class="bc-sep">/</span>
-  <span class="bc-current">@if (isNew) { Yeni } @else { {{ role()?.name }} }</span>
+  <span class="bc-current">@if (isNew) { {{ 'role.detail.newBreadcrumb' | t }} } @else { {{ role()?.name }} }</span>
 </div>
 
 @if (isNew) {
   <!-- ── Yeni rol oluşturma ── -->
   <div class="panel">
     <div class="panel-head">
-      <h2>Yeni Rol</h2>
+      <h2>{{ 'role.detail.newTitle' | t }}</h2>
       <div class="panel-actions">
         <a [routerLink]="['/roles']" class="btn btn-ghost btn-sm">
           <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="15 18 9 12 15 6"/>
           </svg>
-          Listeye Dön
+          {{ 'role.detail.backToList' | t }}
         </a>
       </div>
     </div>
     <div class="panel-body">
       <form class="new-role-form" (ngSubmit)="createRole()">
         <div class="field">
-          <label for="newRoleName" class="sr-only">Rol adı</label>
+          <label for="newRoleName" class="sr-only">{{ 'role.detail.nameLabel' | t }}</label>
           <input
             id="newRoleName"
             class="input"
             type="text"
             name="newRoleName"
             [(ngModel)]="newRoleName"
-            placeholder="Rol adı…"
+            [placeholder]="'role.detail.namePlaceholder' | t"
             [disabled]="creatingRole()"
             autocomplete="off">
         </div>
         <button class="btn btn-primary btn-sm" type="submit" [disabled]="creatingRole()">
           @if (creatingRole()) {
-            <span class="spinner" aria-label="Oluşturuluyor"></span>
-            Oluşturuluyor…
+            <span class="spinner" [attr.aria-label]="'role.detail.creatingAriaLabel' | t"></span>
+            {{ 'role.detail.creating' | t }}
           } @else {
-            Kaydet
+            {{ 'common.save' | t }}
           }
         </button>
       </form>
@@ -57,7 +57,7 @@
   @if (roleLoading()) {
     <div class="panel">
       <div class="empty-state">
-        <span class="spinner" style="width: 32px; height: 32px;" aria-label="Yükleniyor"></span>
+        <span class="spinner" style="width: 32px; height: 32px;" [attr.aria-label]="'role.detail.loadingAriaLabel' | t"></span>
       </div>
     </div>
   }
@@ -66,9 +66,9 @@
     <div class="panel">
       <div class="empty-state">
         <div class="empty-icon" aria-hidden="true">⚠️</div>
-        <h3>Rol bulunamadı</h3>
+        <h3>{{ 'role.detail.notFoundTitle' | t }}</h3>
         <p>{{ roleError() }}</p>
-        <a routerLink="/roles" class="btn btn-primary">Roller'e Dön</a>
+        <a routerLink="/roles" class="btn btn-primary">{{ 'role.detail.backToRoles' | t }}</a>
       </div>
     </div>
   }
@@ -78,14 +78,14 @@
       <div class="panel-head">
         <div>
           <h2 class="panel-head-title">{{ roleVal.name }}</h2>
-          <span class="role-subtitle">{{ roleVal.userCount }} üye</span>
+          <span class="role-subtitle">{{ 'role.detail.memberCount' | t:{ count: roleVal.userCount } }}</span>
         </div>
         <div class="panel-actions">
           <a [routerLink]="['/roles']" class="btn btn-ghost btn-sm">
             <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="15 18 9 12 15 6"/>
             </svg>
-            Listeye Dön
+            {{ 'role.detail.backToList' | t }}
           </a>
         </div>
       </div>
@@ -94,7 +94,7 @@
 
         <!-- ── Rol Adı / Sil ── -->
         <section class="section-block" aria-labelledby="rename-section-title">
-          <h3 id="rename-section-title" class="section-title">Rol Adı</h3>
+          <h3 id="rename-section-title" class="section-title">{{ 'role.detail.renameSectionTitle' | t }}</h3>
 
           <div class="rename-row">
             <input
@@ -106,11 +106,11 @@
               autocomplete="off">
             <button class="btn btn-secondary btn-sm" type="button"
                     (click)="renameRole()" [disabled]="renameSaving()">
-              Kaydet
+              {{ 'common.save' | t }}
             </button>
             <button class="btn btn-danger btn-sm" type="button"
                     (click)="deleteRole()" [disabled]="deleteSaving()">
-              Rolü Sil
+              {{ 'role.detail.deleteRole' | t }}
             </button>
           </div>
 
@@ -127,8 +127,36 @@
 
         <hr class="section-divider">
 
+        <!-- ── Açılış Sayfası ── -->
+        <section class="section-block" aria-labelledby="landing-page-section-title">
+          <h3 id="landing-page-section-title" class="section-title">{{ 'role.detail.landingSectionTitle' | t }}</h3>
+          <p class="field-help">{{ 'role.detail.landingHelp' | t }}</p>
+
+          <div class="rename-row">
+            <select class="input" name="landingPageEdit" [(ngModel)]="landingPageEdit" [disabled]="landingPageSaving()">
+              <option value="">{{ 'role.detail.landingDefaultOption' | t }}</option>
+              @for (opt of landingPageOptions(); track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
+            </select>
+            <button class="btn btn-secondary btn-sm" type="button"
+                    (click)="saveLandingPage()" [disabled]="landingPageSaving()">
+              {{ 'common.save' | t }}
+            </button>
+          </div>
+
+          @if (landingPageMsg()) {
+            <div class="alert" [class.alert-success]="landingPageMsgType()==='success'"
+                 [class.alert-danger]="landingPageMsgType()==='danger'" role="alert">
+              {{ landingPageMsg() }}
+            </div>
+          }
+        </section>
+
+        <hr class="section-divider">
+
         <!-- ── Sekme çubuğu: Kullanıcılar / İzin Verilen Modeller ── -->
-        <div class="tab-bar" role="tablist" aria-label="Rol detay sekmeleri">
+        <div class="tab-bar" role="tablist" [attr.aria-label]="'role.detail.tabsAriaLabel' | t">
           <button
             class="tab-btn"
             [class.tab-btn--active]="activeTab() === 'users'"
@@ -136,7 +164,7 @@
             [attr.aria-selected]="activeTab() === 'users'"
             type="button"
             (click)="setTab('users')">
-            Kullanıcılar
+            {{ 'role.detail.usersTab' | t }}
             @if (members().length > 0) {
               <span class="tab-badge">{{ members().length }}</span>
             }
@@ -148,7 +176,7 @@
             [attr.aria-selected]="activeTab() === 'models'"
             type="button"
             (click)="setTab('models')">
-            İzin Verilen Modeller
+            {{ 'role.detail.modelsTab' | t }}
             @if (permittedModelCount() > 0) {
               <span class="tab-badge">{{ permittedModelCount() }}</span>
             }
@@ -157,12 +185,12 @@
 
         <!-- ── Sekme: Kullanıcılar ── -->
         @if (activeTab() === 'users') {
-          <div class="tab-panel" role="tabpanel" aria-label="Rol üyeleri">
+          <div class="tab-panel" role="tabpanel" [attr.aria-label]="'role.detail.membersPanelLabel' | t">
 
             <div class="add-member-row">
               <select class="input" name="userIdToAdd" [(ngModel)]="userIdToAdd"
                       [disabled]="addMemberSaving() || candidateUsers().length === 0">
-                <option [ngValue]="null" disabled>Kullanıcı seçin…</option>
+                <option [ngValue]="null" disabled>{{ 'role.detail.selectUserPlaceholder' | t }}</option>
                 @for (u of candidateUsers(); track u.id) {
                   <option [ngValue]="u.id">{{ fullName(u) }} — {{ u.email }}</option>
                 }
@@ -170,9 +198,9 @@
               <button class="btn btn-secondary btn-sm" type="button"
                       (click)="addMember()" [disabled]="addMemberSaving() || !userIdToAdd">
                 @if (addMemberSaving()) {
-                  <span class="spinner" aria-label="Ekleniyor"></span>
+                  <span class="spinner" [attr.aria-label]="'role.detail.addingAriaLabel' | t"></span>
                 } @else {
-                  Kullanıcı Ekle
+                  {{ 'role.detail.addUser' | t }}
                 }
               </button>
             </div>
@@ -183,7 +211,7 @@
 
             @if (membersLoading()) {
               <div class="empty-state">
-                <span class="spinner" aria-label="Yükleniyor"></span>
+                <span class="spinner" [attr.aria-label]="'role.detail.loadingAriaLabel' | t"></span>
               </div>
             }
 
@@ -193,12 +221,12 @@
 
             @if (!membersLoading() && !membersError() && members().length > 0) {
               <div class="table-wrapper">
-                <table class="data-table" aria-label="Rol üyeleri">
+                <table class="data-table" [attr.aria-label]="'role.detail.membersTableLabel' | t">
                   <thead>
                     <tr>
-                      <th>Ad Soyad</th>
-                      <th>E-posta</th>
-                      <th class="td-actions">İşlem</th>
+                      <th>{{ 'role.detail.colFullName' | t }}</th>
+                      <th>{{ 'role.detail.colEmail' | t }}</th>
+                      <th class="td-actions">{{ 'role.detail.colAction' | t }}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -207,7 +235,7 @@
                         <td>
                           {{ fullName(m) }}
                           @if (m.isAdmin) {
-                            <span class="badge badge-meta" title="Admin">Admin</span>
+                            <span class="badge badge-meta" [title]="'role.detail.adminBadge' | t">{{ 'role.detail.adminBadge' | t }}</span>
                           }
                         </td>
                         <td class="email-cell">{{ m.email }}</td>
@@ -216,9 +244,9 @@
                                   (click)="removeMember(m)"
                                   [disabled]="removingUserId() === m.id">
                             @if (removingUserId() === m.id) {
-                              <span class="spinner" aria-label="Çıkarılıyor"></span>
+                              <span class="spinner" [attr.aria-label]="'role.detail.removingAriaLabel' | t"></span>
                             } @else {
-                              Çıkar
+                              {{ 'role.detail.removeMember' | t }}
                             }
                           </button>
                         </td>
@@ -231,7 +259,7 @@
 
             @if (!membersLoading() && !membersError() && members().length === 0) {
               <div class="empty-state">
-                <p>Bu role henüz üye eklenmedi.</p>
+                <p>{{ 'role.detail.noMembers' | t }}</p>
               </div>
             }
           </div>
@@ -239,11 +267,11 @@
 
         <!-- ── Sekme: İzin Verilen Modeller ── -->
         @if (activeTab() === 'models') {
-          <div class="tab-panel" role="tabpanel" aria-label="İzin verilen modeller">
+          <div class="tab-panel" role="tabpanel" [attr.aria-label]="'role.detail.permittedModelsPanelLabel' | t">
 
             @if (permLoading()) {
               <div class="empty-state">
-                <span class="spinner" aria-label="Yükleniyor"></span>
+                <span class="spinner" [attr.aria-label]="'role.detail.loadingAriaLabel' | t"></span>
               </div>
             }
 
@@ -253,7 +281,7 @@
 
             @if (!permLoading() && !permError() && permRows().length === 0) {
               <div class="empty-state">
-                <p>Sistemde henüz yayınlanmış model bulunmuyor.</p>
+                <p>{{ 'role.detail.noPublishedModels' | t }}</p>
               </div>
             }
 
@@ -269,16 +297,16 @@
                   <input
                     type="search"
                     class="input search-input"
-                    placeholder="Model ara…"
+                    [placeholder]="'role.detail.modelSearchPlaceholder' | t"
                     [value]="modelSearchTerm()"
                     (input)="onModelSearchChange($any($event.target).value)"
-                    aria-label="Model ara">
+                    [attr.aria-label]="'role.detail.modelSearchAriaLabel' | t">
                 </div>
 
                 @if (filteredPermRows().length === 0) {
                   <div class="empty-state">
-                    <p>"{{ modelSearchTerm() }}" için sonuç bulunamadı.</p>
-                    <button type="button" class="btn btn-ghost btn-sm" (click)="onModelSearchChange('')">Aramayı Temizle</button>
+                    <p>{{ 'role.detail.noSearchResult' | t:{ term: modelSearchTerm() } }}</p>
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="onModelSearchChange('')">{{ 'role.detail.clearSearch' | t }}</button>
                   </div>
                 } @else {
                   <ul class="model-perm-list">
@@ -289,14 +317,14 @@
                         tabindex="0"
                         (keydown.enter)="selectModelPerm(row)"
                         (keydown.space)="selectModelPerm(row)"
-                        [attr.aria-label]="row.modelName + ' izinlerini düzenle'">
+                        [attr.aria-label]="('role.detail.modelRowAriaLabel' | t:{ name: row.modelName })">
                         <span class="model-perm-name">{{ row.modelName }}</span>
                         <span class="model-perm-badges">
                           @for (label of permSummary(row); track label) {
                             <span class="badge badge-meta">{{ label }}</span>
                           }
                           @if (permSummary(row).length === 0) {
-                            <span class="model-perm-empty">İzin yok</span>
+                            <span class="model-perm-empty">{{ 'role.detail.noPermission' | t }}</span>
                           }
                         </span>
                       </li>
@@ -304,19 +332,19 @@
                   </ul>
 
                   <div class="model-list-footer">
-                    <span class="eyebrow">{{ modelRangeStart() }}–{{ modelRangeEnd() }} / {{ filteredPermRows().length }} model</span>
+                    <span class="eyebrow">{{ 'role.detail.modelRangeLabel' | t:{ start: modelRangeStart(), end: modelRangeEnd(), total: filteredPermRows().length } }}</span>
 
                     @if (modelTotalPages() > 1) {
-                      <nav class="pagination" aria-label="Model sayfalama">
+                      <nav class="pagination" [attr.aria-label]="'role.detail.paginationAriaLabel' | t">
                         <button class="page-btn" type="button" (click)="goToModelPage(modelPageIndex() - 1)"
-                                [disabled]="modelPageIndex() === 1" aria-label="Önceki sayfa">‹</button>
+                                [disabled]="modelPageIndex() === 1" [attr.aria-label]="'role.detail.prevPageAriaLabel' | t">‹</button>
                         @for (p of modelPages(); track p) {
                           <button class="page-btn" [class.page-btn--active]="p === modelPageIndex()"
                                   type="button" (click)="goToModelPage(p)"
                                   [attr.aria-current]="p === modelPageIndex() ? 'page' : null">{{ p }}</button>
                         }
                         <button class="page-btn" type="button" (click)="goToModelPage(modelPageIndex() + 1)"
-                                [disabled]="modelPageIndex() === modelTotalPages()" aria-label="Sonraki sayfa">›</button>
+                                [disabled]="modelPageIndex() === modelTotalPages()" [attr.aria-label]="'role.detail.nextPageAriaLabel' | t">›</button>
                       </nav>
                     }
                   </div>
@@ -327,7 +355,7 @@
               @if (selectedPermRow(); as row) {
                 <div class="model-perm-detail">
                   <button class="btn btn-ghost btn-sm" type="button" (click)="clearModelPerm()">
-                    ← Modellere dön
+                    {{ 'role.detail.backToModels' | t }}
                   </button>
 
                   <h3 class="model-perm-detail-title">{{ row.modelName }}</h3>
@@ -335,27 +363,27 @@
                   <div class="model-perm-checks">
                     <label class="checkbox-label">
                       <input type="checkbox" [(ngModel)]="row.canRead" (change)="markDirty(row)">
-                      Okuma
+                      {{ 'role.detail.permRead' | t }}
                     </label>
                     <label class="checkbox-label">
                       <input type="checkbox" [(ngModel)]="row.canCreate" (change)="markDirty(row)">
-                      Ekleme
+                      {{ 'role.detail.permCreate' | t }}
                     </label>
                     <label class="checkbox-label">
                       <input type="checkbox" [(ngModel)]="row.canUpdate" (change)="markDirty(row)">
-                      Güncelleme
+                      {{ 'role.detail.permUpdate' | t }}
                     </label>
                     <label class="checkbox-label">
                       <input type="checkbox" [(ngModel)]="row.canDelete" (change)="markDirty(row)">
-                      Silme
+                      {{ 'role.detail.permDelete' | t }}
                     </label>
                     <label class="checkbox-label">
                       <input type="checkbox" [(ngModel)]="row.canShowInNav" (change)="markDirty(row)">
-                      Navigasyonda göster
+                      {{ 'role.detail.permShowInNav' | t }}
                     </label>
                     <label class="checkbox-label">
                       <input type="checkbox" [(ngModel)]="row.canOwnOnly" (change)="markDirty(row)">
-                      Sadece kendi kayıtları
+                      {{ 'role.detail.permOwnOnly' | t }}
                     </label>
                   </div>
 
@@ -366,10 +394,10 @@
                       [disabled]="permRowSaving()"
                       type="button">
                       @if (permRowSaving()) {
-                        <span class="spinner" aria-label="Kaydediliyor"></span>
-                        Kaydediliyor…
+                        <span class="spinner" [attr.aria-label]="'role.detail.savingAriaLabel' | t"></span>
+                        {{ 'role.detail.savingEllipsis' | t }}
                       } @else {
-                        Bu Model İzinlerini Kaydet
+                        {{ 'role.detail.saveModelPermissions' | t }}
                       }
                     </button>
                   </div>

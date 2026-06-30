@@ -8,6 +8,8 @@ import { PermissionAdminService, toActionInt } from '../../services/permission-a
 import { PublishedModelService, PublishedModel } from '../../services/published-model.service';
 import { AppUser } from '../../models/appUser';
 import { ModelPermission } from '../../services/permission.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
+import { LanguageService } from '../../services/language.service';
 
 /** Düzenleme için kullanılan geçici izin satırı (role-detail ile aynı yapı) */
 export interface PermissionRow {
@@ -27,7 +29,7 @@ export interface PermissionRow {
 @Component({
   selector: 'app-user-permission-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
   templateUrl: './user-permission-detail.component.html',
   styleUrls: ['./user-permission-detail.component.scss']
 })
@@ -35,6 +37,7 @@ export class UserPermissionDetailComponent implements OnInit {
   private readonly route        = inject(ActivatedRoute);
   private readonly adminService = inject(PermissionAdminService);
   private readonly modelService = inject(PublishedModelService);
+  private readonly languageService = inject(LanguageService);
 
   userId = 0;
 
@@ -120,7 +123,7 @@ export class UserPermissionDetailComponent implements OnInit {
         }
         const found = (res.data ?? []).find(u => u.id === this.userId);
         if (!found) {
-          this.userError.set('Kullanıcı bulunamadı.');
+          this.userError.set(this.languageService.t('permission.detail.notFound'));
           this.userLoading.set(false);
           return;
         }
@@ -129,7 +132,7 @@ export class UserPermissionDetailComponent implements OnInit {
         this.loadUserPermissions(found.id);
       },
       error: () => {
-        this.userError.set('Kullanıcı yüklenemedi.');
+        this.userError.set(this.languageService.t('permission.detail.loadError'));
         this.userLoading.set(false);
       }
     });
@@ -155,7 +158,7 @@ export class UserPermissionDetailComponent implements OnInit {
         this.adminSaving.set(false);
       },
       error: () => {
-        this.adminMsg.set('Admin rolü güncellenemedi.');
+        this.adminMsg.set(this.languageService.t('permission.detail.adminUpdateError'));
         this.adminMsgType.set('danger');
         this.adminSaving.set(false);
       }
@@ -196,7 +199,7 @@ export class UserPermissionDetailComponent implements OnInit {
         this.permLoading.set(false);
       },
       error: () => {
-        this.permError.set('İzin bilgileri yüklenemedi.');
+        this.permError.set(this.languageService.t('permission.detail.permissionsLoadError'));
         this.permLoading.set(false);
       }
     });
@@ -233,12 +236,12 @@ export class UserPermissionDetailComponent implements OnInit {
   /** Seçili modelin etkin izinlerini etiket listesi olarak döndürür (rozetler için) */
   permSummary(row: PermissionRow): string[] {
     const labels: string[] = [];
-    if (row.canRead)      labels.push('Oku');
-    if (row.canCreate)    labels.push('Ekle');
-    if (row.canUpdate)    labels.push('Güncelle');
-    if (row.canDelete)    labels.push('Sil');
-    if (row.canShowInNav) labels.push('Nav');
-    if (row.canOwnOnly)   labels.push('Kendi');
+    if (row.canRead)      labels.push(this.languageService.t('permission.detail.summaryRead'));
+    if (row.canCreate)    labels.push(this.languageService.t('permission.detail.summaryCreate'));
+    if (row.canUpdate)    labels.push(this.languageService.t('permission.detail.summaryUpdate'));
+    if (row.canDelete)    labels.push(this.languageService.t('permission.detail.summaryDelete'));
+    if (row.canShowInNav) labels.push(this.languageService.t('permission.detail.summaryNav'));
+    if (row.canOwnOnly)   labels.push(this.languageService.t('permission.detail.summaryOwn'));
     return labels;
   }
 
@@ -254,7 +257,7 @@ export class UserPermissionDetailComponent implements OnInit {
       next: res => {
         if (res.success) {
           row.dirty = false;
-          this.permMsg.set('Model izinleri kaydedildi.');
+          this.permMsg.set(this.languageService.t('permission.detail.permissionsSaved'));
           this.permMsgType.set('success');
         } else {
           this.permMsg.set(res.message);
@@ -263,7 +266,7 @@ export class UserPermissionDetailComponent implements OnInit {
         this.permRowSaving.set(false);
       },
       error: () => {
-        this.permMsg.set(`${row.modelName} izinleri kaydedilemedi.`);
+        this.permMsg.set(this.languageService.t('permission.detail.permissionsSaveError', { modelName: row.modelName }));
         this.permMsgType.set('danger');
         this.permRowSaving.set(false);
       }

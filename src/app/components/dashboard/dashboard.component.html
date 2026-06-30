@@ -1,16 +1,16 @@
 <div class="page-header">
   <div>
-    <span class="eyebrow">Raporlama</span>
-    <h1 class="page-title">{{ dashboard?.name ?? 'Dashboard' }}</h1>
-    <p class="page-subtitle">Birden çok rapor, tek ekranda.</p>
+    <span class="eyebrow">{{ 'dashboard.eyebrow' | t }}</span>
+    <h1 class="page-title">{{ dashboard?.name ?? ('dashboard.view.defaultTitle' | t) }}</h1>
+    <p class="page-subtitle">{{ 'dashboard.view.subtitle' | t }}</p>
   </div>
-  <a routerLink="/dashboard/new" class="btn btn-primary">Yeni Dashboard</a>
+  <a routerLink="/dashboard/new" class="btn btn-primary">{{ 'dashboard.view.newButton' | t }}</a>
 </div>
 
 @if (loading) {
   <div class="panel">
     <div class="empty-state">
-      <span class="spinner" aria-label="Yükleniyor"></span>
+      <span class="spinner" [attr.aria-label]="'dashboard.view.loadingAria' | t"></span>
     </div>
   </div>
 }
@@ -33,10 +33,10 @@
           </div>
           <div class="widget-body">
             @if (!item.result.result) {
-              <div class="alert alert-danger" role="alert">Bu rapora erişim yetkiniz yok veya rapor silinmiş.</div>
+              <div class="alert alert-danger" role="alert">{{ 'dashboard.view.noAccess' | t }}</div>
             } @else if (item.result.result.rows.length === 0) {
               <div class="empty-state">
-                <p>Bu rapor için kayıt bulunamadı.</p>
+                <p>{{ 'dashboard.view.noRows' | t }}</p>
               </div>
             } @else if (item.result.widget.chartType !== 'table') {
               <app-chart
@@ -71,8 +71,8 @@
   } @else {
     <div class="panel">
       <div class="empty-state">
-        <h3>Görüntülenebilir widget yok</h3>
-        <p>Widget'ların işaret ettiği raporlara erişim yetkiniz olmayabilir.</p>
+        <h3>{{ 'dashboard.view.emptyWidgetsTitle' | t }}</h3>
+        <p>{{ 'dashboard.view.emptyWidgetsText' | t }}</p>
       </div>
     </div>
   }

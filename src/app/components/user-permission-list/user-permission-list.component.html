@@ -1,13 +1,13 @@
 <!-- Sayfa başlığı -->
 <div class="page-header">
-  <span class="eyebrow">Yönetim</span>
-  <h1 class="page-title">Kullanıcı Yetkileri</h1>
-  <p class="page-subtitle">Kullanıcıları seçin, model bazında okuma/yazma izni atayın ve admin rolünü yönetin.</p>
+  <span class="eyebrow">{{ 'permission.list.eyebrow' | t }}</span>
+  <h1 class="page-title">{{ 'permission.list.title' | t }}</h1>
+  <p class="page-subtitle">{{ 'permission.list.subtitle' | t }}</p>
 </div>
 
 <div class="panel">
   <div class="panel-head">
-    <h2>Kullanıcılar</h2>
+    <h2>{{ 'permission.list.panelTitle' | t }}</h2>
     <div class="panel-actions">
       <button class="btn btn-secondary btn-sm" (click)="load()" type="button" [disabled]="loading()">
         @if (loading()) {
@@ -17,7 +17,7 @@
             <path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/>
           </svg>
         }
-        Yenile
+        {{ 'common.refresh' | t }}
       </button>
     </div>
   </div>
@@ -30,8 +30,8 @@
   <!-- Yükleniyor -->
   @if (loading()) {
     <div class="empty-state">
-      <span class="spinner" style="width: 32px; height: 32px;" aria-label="Yükleniyor"></span>
-      <p>Kullanıcılar yükleniyor...</p>
+      <span class="spinner" style="width: 32px; height: 32px;" [attr.aria-label]="'common.loading' | t"></span>
+      <p>{{ 'permission.list.loading' | t }}</p>
     </div>
   }
 
@@ -39,20 +39,20 @@
   @if (!loading() && !loadError() && rows().length === 0) {
     <div class="empty-state">
       <div class="empty-icon" aria-hidden="true">📋</div>
-      <h3>Kayıtlı kullanıcı bulunamadı</h3>
+      <h3>{{ 'permission.list.emptyTitle' | t }}</h3>
     </div>
   }
 
   <!-- Tablo -->
   @if (!loading() && !loadError() && rows().length > 0) {
     <div class="table-wrapper">
-      <table class="data-table" aria-label="Kullanıcılar">
+      <table class="data-table" [attr.aria-label]="'permission.list.tableLabel' | t">
         <thead>
           <tr>
-            <th scope="col">Ad Soyad</th>
-            <th scope="col">E-posta</th>
-            <th scope="col">Durum</th>
-            <th scope="col">İzinli Model</th>
+            <th scope="col">{{ 'permission.list.colFullName' | t }}</th>
+            <th scope="col">{{ 'permission.list.colEmail' | t }}</th>
+            <th scope="col">{{ 'common.status' | t }}</th>
+            <th scope="col">{{ 'permission.list.colPermittedModel' | t }}</th>
           </tr>
         </thead>
         <tbody>
@@ -61,24 +61,24 @@
               class="clickable-row"
               [routerLink]="['/permissions', row.id]"
               role="link"
-              [attr.aria-label]="fullName(row) + ' detayını aç'">
+              [attr.aria-label]="('permission.list.rowAriaLabel' | t:{ name: fullName(row) })">
               <td>
                 {{ fullName(row) }}
                 @if (row.isAdmin) {
-                  <span class="badge badge-meta" title="Admin">Admin</span>
+                  <span class="badge badge-meta" [title]="'permission.list.adminBadge' | t">{{ 'permission.list.adminBadge' | t }}</span>
                 }
               </td>
               <td class="email-cell">{{ row.email }}</td>
               <td>
                 @if (row.status) {
-                  <span class="badge badge-success">Aktif</span>
+                  <span class="badge badge-success">{{ 'common.active' | t }}</span>
                 } @else {
-                  <span class="badge badge-warn">Pasif</span>
+                  <span class="badge badge-warn">{{ 'common.inactive' | t }}</span>
                 }
               </td>
               <td>
                 @if (row.isAdmin) {
-                  Tümü
+                  {{ 'permission.list.allModels' | t }}
                 } @else {
                   {{ row.permittedModelCount }}
                 }

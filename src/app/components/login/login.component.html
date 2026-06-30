@@ -3,13 +3,13 @@
     <!-- Logo / Başlık -->
     <div class="login-header">
       <span class="eyebrow">CoreLogic Platform</span>
-      <h1>Hoş Geldiniz</h1>
-      <p class="login-subtitle">Dinamik model yayınlama platformuna giriş yapın.</p>
+      <h1>{{ 'login.welcome' | t }}</h1>
+      <p class="login-subtitle">{{ 'login.subtitle' | t }}</p>
     </div>
 
     @if (sessionExpired) {
       <div class="alert alert-danger" role="alert" style="margin-bottom: var(--space-4)">
-        Oturumunuzun süresi doldu. Lütfen tekrar giriş yapın.
+        {{ 'login.sessionExpired' | t }}
       </div>
     }
 
@@ -21,7 +21,7 @@
         [attr.aria-selected]="activeTab === 'login'"
         (click)="activeTab = 'login'"
         type="button">
-        Giriş Yap
+        {{ 'login.tabLogin' | t }}
       </button>
       <button
         role="tab"
@@ -29,7 +29,7 @@
         [attr.aria-selected]="activeTab === 'register'"
         (click)="activeTab = 'register'"
         type="button">
-        Kayıt Ol
+        {{ 'login.tabRegister' | t }}
       </button>
     </div>
 
@@ -48,25 +48,25 @@
         }
 
         <div class="field">
-          <label for="email">E-posta <span class="req">*</span></label>
+          <label for="email">{{ 'login.email' | t }} <span class="req">*</span></label>
           <input
             id="email"
             type="email"
             formControlName="email"
-            placeholder="ad@sirket.com"
+            [placeholder]="'login.emailPlaceholder' | t"
             autocomplete="email"
             required
             [attr.aria-invalid]="f['email'].touched && f['email'].invalid"
             aria-describedby="email-err">
           @if (f['email'].touched && f['email'].hasError('required')) {
-            <span id="email-err" class="field-error" role="alert">E-posta zorunludur.</span>
+            <span id="email-err" class="field-error" role="alert">{{ 'login.emailRequired' | t }}</span>
           } @else if (f['email'].touched && f['email'].hasError('email')) {
-            <span id="email-err" class="field-error" role="alert">Geçerli bir e-posta girin.</span>
+            <span id="email-err" class="field-error" role="alert">{{ 'login.emailInvalid' | t }}</span>
           }
         </div>
 
         <div class="field">
-          <label for="password">Şifre <span class="req">*</span></label>
+          <label for="password">{{ 'login.password' | t }} <span class="req">*</span></label>
           <input
             id="password"
             type="password"
@@ -77,7 +77,7 @@
             [attr.aria-invalid]="f['password'].touched && f['password'].invalid"
             aria-describedby="pw-err">
           @if (f['password'].touched && f['password'].hasError('required')) {
-            <span id="pw-err" class="field-error" role="alert">Şifre zorunludur.</span>
+            <span id="pw-err" class="field-error" role="alert">{{ 'login.passwordRequired' | t }}</span>
           }
         </div>
 
@@ -87,9 +87,9 @@
           [disabled]="isLoading">
           @if (isLoading) {
             <span class="spinner" aria-hidden="true"></span>
-            Giriş yapılıyor...
+            {{ 'login.loggingIn' | t }}
           } @else {
-            Giriş Yap
+            {{ 'login.tabLogin' | t }}
           }
         </button>
       </form>
@@ -112,47 +112,47 @@
 
         <div class="name-row">
           <div class="field">
-            <label for="firstName">Ad <span class="req">*</span></label>
-            <input id="firstName" type="text" formControlName="firstName" placeholder="Adınız" required
+            <label for="firstName">{{ 'login.firstName' | t }} <span class="req">*</span></label>
+            <input id="firstName" type="text" formControlName="firstName" [placeholder]="'login.firstNamePlaceholder' | t" required
               [attr.aria-invalid]="rf['firstName'].touched && rf['firstName'].invalid">
             @if (rf['firstName'].touched && rf['firstName'].hasError('required')) {
-              <span class="field-error" role="alert">Ad zorunludur.</span>
+              <span class="field-error" role="alert">{{ 'login.firstNameRequired' | t }}</span>
             }
           </div>
           <div class="field">
-            <label for="lastName">Soyad <span class="req">*</span></label>
-            <input id="lastName" type="text" formControlName="lastName" placeholder="Soyadınız" required
+            <label for="lastName">{{ 'login.lastName' | t }} <span class="req">*</span></label>
+            <input id="lastName" type="text" formControlName="lastName" [placeholder]="'login.lastNamePlaceholder' | t" required
               [attr.aria-invalid]="rf['lastName'].touched && rf['lastName'].invalid">
             @if (rf['lastName'].touched && rf['lastName'].hasError('required')) {
-              <span class="field-error" role="alert">Soyad zorunludur.</span>
+              <span class="field-error" role="alert">{{ 'login.lastNameRequired' | t }}</span>
             }
           </div>
         </div>
 
         <div class="field">
-          <label for="reg-email">E-posta <span class="req">*</span></label>
-          <input id="reg-email" type="email" formControlName="email" placeholder="ad@sirket.com" required
+          <label for="reg-email">{{ 'login.email' | t }} <span class="req">*</span></label>
+          <input id="reg-email" type="email" formControlName="email" [placeholder]="'login.emailPlaceholder' | t" required
             [attr.aria-invalid]="rf['email'].touched && rf['email'].invalid">
           @if (rf['email'].touched && rf['email'].hasError('email')) {
-            <span class="field-error" role="alert">Geçerli bir e-posta girin.</span>
+            <span class="field-error" role="alert">{{ 'login.emailInvalid' | t }}</span>
           }
         </div>
 
         <div class="field">
-          <label for="reg-password">Şifre <span class="req">*</span></label>
-          <input id="reg-password" type="password" formControlName="password" placeholder="Min. 6 karakter" required
+          <label for="reg-password">{{ 'login.password' | t }} <span class="req">*</span></label>
+          <input id="reg-password" type="password" formControlName="password" [placeholder]="'login.passwordPlaceholderMin6' | t" required
             [attr.aria-invalid]="rf['password'].touched && rf['password'].invalid">
           @if (rf['password'].touched && rf['password'].hasError('minlength')) {
-            <span class="field-error" role="alert">Şifre en az 6 karakter olmalıdır.</span>
+            <span class="field-error" role="alert">{{ 'login.passwordMinLength' | t }}</span>
           }
         </div>
 
         <button type="submit" class="btn btn-primary login-btn" [disabled]="registerLoading">
           @if (registerLoading) {
             <span class="spinner" aria-hidden="true"></span>
-            Kaydediliyor...
+            {{ 'login.registering' | t }}
           } @else {
-            Kayıt Ol
+            {{ 'login.tabRegister' | t }}
           }
         </button>
       </form>

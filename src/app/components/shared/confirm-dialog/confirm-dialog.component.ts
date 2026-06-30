@@ -1,5 +1,6 @@
 import { Component, computed, effect, HostListener, input, output, signal } from '@angular/core';
 import { ModelUsage } from '../../../services/model-usage.service';
+import { TranslatePipe } from '../../../pipes/translate.pipe';
 
 /**
  * Tekrar kullanılabilir onay modalı. Basit bir evet/hayır onayı için `usage` boş bırakılır;
@@ -9,6 +10,7 @@ import { ModelUsage } from '../../../services/model-usage.service';
 @Component({
   selector: 'app-confirm-dialog',
   standalone: true,
+  imports: [TranslatePipe],
   templateUrl: './confirm-dialog.component.html',
   styleUrls: ['./confirm-dialog.component.scss']
 })

@@ -1,0 +1,197 @@
+import { Translations } from './translations.model';
+
+/**
+ * Rol (RBAC) ve kullanıcı bazlı izin yönetimi ekranlarına özel statik metinler.
+ * `role-list`, `role-detail`, `user-permission-list`, `user-permission-detail`
+ * component'lerinde kullanılır. `common.i18n.ts`'de zaten tanımlı genel anahtarlar
+ * (kaydet, vazgeç, sil, düzenle vb.) burada tekrar tanımlanmaz.
+ */
+export const PERMISSION_I18N: Translations = {
+  // ── role-list.component ──
+  'role.list.eyebrow': { tr: 'Yönetim', en: 'Administration' },
+  'role.list.title': { tr: 'Roller', en: 'Roles' },
+  'role.list.subtitle': {
+    tr: 'İsimli roller oluşturun, model izinleri tanımlayın ve kullanıcıları role üye yapın.',
+    en: 'Create named roles, define model permissions, and assign users as role members.'
+  },
+  'role.list.panelTitle': { tr: 'Roller', en: 'Roles' },
+  'role.list.loading': { tr: 'Roller yükleniyor...', en: 'Loading roles...' },
+  'role.list.emptyTitle': { tr: 'Henüz isimli rol oluşturulmadı', en: 'No named role has been created yet' },
+  'role.list.emptyHint': { tr: '"Ekle" butonuyla ilk rolü oluşturun.', en: 'Use the "Add" button to create the first role.' },
+  'role.list.addFirst': { tr: 'İlk Rolü Ekle', en: 'Add First Role' },
+  'role.list.tableLabel': { tr: 'Roller', en: 'Roles' },
+  'role.list.colMember': { tr: 'Üye', en: 'Members' },
+  'role.list.colPermittedModel': { tr: 'İzinli Model', en: 'Permitted Models' },
+  'role.list.rowAriaLabel': { tr: '{name} detayını aç', en: 'Open {name} details' },
+  'role.list.editAriaLabel': { tr: 'Rolü düzenle', en: 'Edit role' },
+  'role.list.deleteAriaLabel': { tr: 'Rolü sil', en: 'Delete role' },
+  'role.list.loadError': { tr: 'Rol listesi yüklenemedi.', en: 'Failed to load role list.' },
+  'role.list.deleteConfirm': {
+    tr: "'{name}' rolünü silmek istediğinize emin misiniz? Bu işlem rolün tüm üyelik ve izin kayıtlarını da kaldırır.",
+    en: "Are you sure you want to delete the role '{name}'? This will also remove all membership and permission records of the role."
+  },
+  'role.list.deleteError': { tr: 'Rol silinemedi.', en: 'Failed to delete role.' },
+
+  // ── role-detail.component ──
+  'role.detail.breadcrumb': { tr: 'Roller', en: 'Roles' },
+  'role.detail.newBreadcrumb': { tr: 'Yeni', en: 'New' },
+  'role.detail.newTitle': { tr: 'Yeni Rol', en: 'New Role' },
+  'role.detail.backToList': { tr: 'Listeye Dön', en: 'Back to List' },
+  'role.detail.nameLabel': { tr: 'Rol adı', en: 'Role name' },
+  'role.detail.namePlaceholder': { tr: 'Rol adı…', en: 'Role name…' },
+  'role.detail.creating': { tr: 'Oluşturuluyor…', en: 'Creating…' },
+  'role.detail.creatingAriaLabel': { tr: 'Oluşturuluyor', en: 'Creating' },
+  'role.detail.loadingAriaLabel': { tr: 'Yükleniyor', en: 'Loading' },
+  'role.detail.notFoundTitle': { tr: 'Rol bulunamadı', en: 'Role not found' },
+  'role.detail.backToRoles': { tr: "Roller'e Dön", en: 'Back to Roles' },
+  'role.detail.memberCount': { tr: '{count} üye', en: '{count} members' },
+  'role.detail.renameSectionTitle': { tr: 'Rol Adı', en: 'Role Name' },
+  'role.detail.deleteRole': { tr: 'Rolü Sil', en: 'Delete Role' },
+  'role.detail.landingSectionTitle': { tr: 'Açılış Sayfası', en: 'Landing Page' },
+  'role.detail.landingHelp': {
+    tr: 'Bu role üye kullanıcılar giriş yaptıktan sonra seçilen sayfaya yönlendirilir. Boş bırakılırsa varsayılan (Modeller) sayfası kullanılır.',
+    en: 'Users who are members of this role are redirected to the selected page after logging in. If left empty, the default (Models) page is used.'
+  },
+  'role.detail.landingDefaultOption': { tr: 'Varsayılan (Modeller)', en: 'Default (Models)' },
+  'role.detail.landingModels': { tr: 'Modeller', en: 'Models' },
+  'role.detail.landingReports': { tr: 'Raporlar', en: 'Reports' },
+  'role.detail.landingDashboardList': { tr: 'Dashboard Listesi', en: 'Dashboard List' },
+  'role.detail.landingDashboardOption': { tr: 'Dashboard: {name}', en: 'Dashboard: {name}' },
+  'role.detail.tabsAriaLabel': { tr: 'Rol detay sekmeleri', en: 'Role detail tabs' },
+  'role.detail.usersTab': { tr: 'Kullanıcılar', en: 'Users' },
+  'role.detail.modelsTab': { tr: 'İzin Verilen Modeller', en: 'Permitted Models' },
+  'role.detail.membersPanelLabel': { tr: 'Rol üyeleri', en: 'Role members' },
+  'role.detail.selectUserPlaceholder': { tr: 'Kullanıcı seçin…', en: 'Select a user…' },
+  'role.detail.addingAriaLabel': { tr: 'Ekleniyor', en: 'Adding' },
+  'role.detail.addUser': { tr: 'Kullanıcı Ekle', en: 'Add User' },
+  'role.detail.membersTableLabel': { tr: 'Rol üyeleri', en: 'Role members' },
+  'role.detail.colFullName': { tr: 'Ad Soyad', en: 'Full Name' },
+  'role.detail.colEmail': { tr: 'E-posta', en: 'Email' },
+  'role.detail.colAction': { tr: 'İşlem', en: 'Action' },
+  'role.detail.adminBadge': { tr: 'Admin', en: 'Admin' },
+  'role.detail.removingAriaLabel': { tr: 'Çıkarılıyor', en: 'Removing' },
+  'role.detail.removeMember': { tr: 'Çıkar', en: 'Remove' },
+  'role.detail.noMembers': { tr: 'Bu role henüz üye eklenmedi.', en: 'No members have been added to this role yet.' },
+  'role.detail.permittedModelsPanelLabel': { tr: 'İzin verilen modeller', en: 'Permitted models' },
+  'role.detail.noPublishedModels': { tr: 'Sistemde henüz yayınlanmış model bulunmuyor.', en: 'There are no published models in the system yet.' },
+  'role.detail.modelSearchPlaceholder': { tr: 'Model ara…', en: 'Search model…' },
+  'role.detail.modelSearchAriaLabel': { tr: 'Model ara', en: 'Search model' },
+  'role.detail.noSearchResult': { tr: '"{term}" için sonuç bulunamadı.', en: 'No results found for "{term}".' },
+  'role.detail.clearSearch': { tr: 'Aramayı Temizle', en: 'Clear Search' },
+  'role.detail.modelRowAriaLabel': { tr: '{name} izinlerini düzenle', en: 'Edit permissions for {name}' },
+  'role.detail.noPermission': { tr: 'İzin yok', en: 'No permission' },
+  'role.detail.modelRangeLabel': { tr: '{start}–{end} / {total} model', en: '{start}–{end} / {total} models' },
+  'role.detail.paginationAriaLabel': { tr: 'Model sayfalama', en: 'Model pagination' },
+  'role.detail.prevPageAriaLabel': { tr: 'Önceki sayfa', en: 'Previous page' },
+  'role.detail.nextPageAriaLabel': { tr: 'Sonraki sayfa', en: 'Next page' },
+  'role.detail.backToModels': { tr: '← Modellere dön', en: '← Back to models' },
+  'role.detail.permRead': { tr: 'Okuma', en: 'Read' },
+  'role.detail.permCreate': { tr: 'Ekleme', en: 'Create' },
+  'role.detail.permUpdate': { tr: 'Güncelleme', en: 'Update' },
+  'role.detail.permDelete': { tr: 'Silme', en: 'Delete' },
+  'role.detail.permShowInNav': { tr: 'Navigasyonda göster', en: 'Show in navigation' },
+  'role.detail.permOwnOnly': { tr: 'Sadece kendi kayıtları', en: 'Own records only' },
+  'role.detail.savingEllipsis': { tr: 'Kaydediliyor…', en: 'Saving…' },
+  'role.detail.savingAriaLabel': { tr: 'Kaydediliyor', en: 'Saving' },
+  'role.detail.saveModelPermissions': { tr: 'Bu Model İzinlerini Kaydet', en: 'Save This Model’s Permissions' },
+
+  // role-detail.component.ts — kısa izin rozet etiketleri (permSummary)
+  'role.detail.summaryRead': { tr: 'Oku', en: 'Read' },
+  'role.detail.summaryCreate': { tr: 'Ekle', en: 'Create' },
+  'role.detail.summaryUpdate': { tr: 'Güncelle', en: 'Update' },
+  'role.detail.summaryDelete': { tr: 'Sil', en: 'Delete' },
+  'role.detail.summaryNav': { tr: 'Nav', en: 'Nav' },
+  'role.detail.summaryOwn': { tr: 'Kendi', en: 'Own' },
+
+  // role-detail.component.ts — bildirim/validasyon mesajları
+  'role.detail.nameEmpty': { tr: 'Rol adı boş olamaz.', en: 'Role name cannot be empty.' },
+  'role.detail.createError': { tr: 'Rol oluşturulamadı.', en: 'Failed to create role.' },
+  'role.detail.notFound': { tr: 'Rol bulunamadı.', en: 'Role not found.' },
+  'role.detail.loadError': { tr: 'Rol yüklenemedi.', en: 'Failed to load role.' },
+  'role.detail.renameError': { tr: 'Rol adı güncellenemedi.', en: 'Failed to update role name.' },
+  'role.detail.landingPageError': { tr: 'Açılış sayfası güncellenemedi.', en: 'Failed to update landing page.' },
+  'role.detail.deleteConfirm': {
+    tr: "'{name}' rolünü silmek istediğinize emin misiniz? Bu işlem rolün tüm üyelik ve izin kayıtlarını da kaldırır.",
+    en: "Are you sure you want to delete the role '{name}'? This will also remove all membership and permission records of the role."
+  },
+  'role.detail.deleteError': { tr: 'Rol silinemedi.', en: 'Failed to delete role.' },
+  'role.detail.permissionsSaved': { tr: 'Model izinleri kaydedildi.', en: 'Model permissions saved.' },
+  'role.detail.permissionsSaveError': { tr: '{modelName} izinleri kaydedilemedi.', en: 'Failed to save permissions for {modelName}.' },
+  'role.detail.membersLoadError': { tr: 'Rol üyeleri yüklenemedi.', en: 'Failed to load role members.' },
+  'role.detail.addMemberError': { tr: 'Kullanıcı eklenemedi.', en: 'Failed to add user.' },
+  'role.detail.removeMemberError': { tr: 'Kullanıcı rolden çıkarılamadı.', en: 'Failed to remove user from role.' },
+  'role.detail.permissionsLoadError': { tr: 'Rol izinleri yüklenemedi.', en: 'Failed to load role permissions.' },
+
+  // ── user-permission-list.component ──
+  'permission.list.eyebrow': { tr: 'Yönetim', en: 'Administration' },
+  'permission.list.title': { tr: 'Kullanıcı Yetkileri', en: 'User Permissions' },
+  'permission.list.subtitle': {
+    tr: 'Kullanıcıları seçin, model bazında okuma/yazma izni atayın ve admin rolünü yönetin.',
+    en: 'Select users, assign read/write permissions per model, and manage the admin role.'
+  },
+  'permission.list.panelTitle': { tr: 'Kullanıcılar', en: 'Users' },
+  'permission.list.loading': { tr: 'Kullanıcılar yükleniyor...', en: 'Loading users...' },
+  'permission.list.emptyTitle': { tr: 'Kayıtlı kullanıcı bulunamadı', en: 'No registered users found' },
+  'permission.list.tableLabel': { tr: 'Kullanıcılar', en: 'Users' },
+  'permission.list.colFullName': { tr: 'Ad Soyad', en: 'Full Name' },
+  'permission.list.colEmail': { tr: 'E-posta', en: 'Email' },
+  'permission.list.colPermittedModel': { tr: 'İzinli Model', en: 'Permitted Models' },
+  'permission.list.rowAriaLabel': { tr: '{name} detayını aç', en: 'Open {name} details' },
+  'permission.list.adminBadge': { tr: 'Admin', en: 'Admin' },
+  'permission.list.allModels': { tr: 'Tümü', en: 'All' },
+  'permission.list.loadError': { tr: 'Kullanıcı listesi yüklenemedi.', en: 'Failed to load user list.' },
+
+  // ── user-permission-detail.component ──
+  'permission.detail.breadcrumb': { tr: 'Kullanıcı Yetkileri', en: 'User Permissions' },
+  'permission.detail.fallbackBreadcrumb': { tr: 'Detay', en: 'Detail' },
+  'permission.detail.loadingAriaLabel': { tr: 'Yükleniyor', en: 'Loading' },
+  'permission.detail.notFoundTitle': { tr: 'Kullanıcı bulunamadı', en: 'User not found' },
+  'permission.detail.backToUsers': { tr: "Kullanıcılar'a Dön", en: 'Back to Users' },
+  'permission.detail.backToList': { tr: 'Listeye Dön', en: 'Back to List' },
+  'permission.detail.adminSectionTitle': { tr: 'Admin Rolü', en: 'Admin Role' },
+  'permission.detail.grantAdmin': { tr: 'Bu kullanıcıya admin yetkisi ver', en: 'Grant this user admin privileges' },
+  'permission.detail.savingAriaLabel': { tr: 'Kaydediliyor', en: 'Saving' },
+  'permission.detail.adminHelp': { tr: 'Admin, tüm model ve platform özelliklerine erişir.', en: 'Admin has access to all model and platform features.' },
+  'permission.detail.adminHelpStrong': { tr: 'Rol değişikliği kullanıcının yeni girişinde etkinleşir.', en: 'The role change takes effect the next time the user logs in.' },
+  'permission.detail.permSectionTitle': { tr: 'İzin Verilen Modeller', en: 'Permitted Models' },
+  'permission.detail.adminInfo': {
+    tr: 'Bu kullanıcı admin olduğundan tüm modellere tam erişimi vardır. İzin listesi uygulanmaz.',
+    en: 'Since this user is an admin, they have full access to all models. The permission list does not apply.'
+  },
+  'permission.detail.noPublishedModels': { tr: 'Sistemde henüz yayınlanmış model bulunmuyor.', en: 'There are no published models in the system yet.' },
+  'permission.detail.modelSearchPlaceholder': { tr: 'Model ara…', en: 'Search model…' },
+  'permission.detail.modelSearchAriaLabel': { tr: 'Model ara', en: 'Search model' },
+  'permission.detail.noSearchResult': { tr: '"{term}" için sonuç bulunamadı.', en: 'No results found for "{term}".' },
+  'permission.detail.clearSearch': { tr: 'Aramayı Temizle', en: 'Clear Search' },
+  'permission.detail.modelRowAriaLabel': { tr: '{name} izinlerini düzenle', en: 'Edit permissions for {name}' },
+  'permission.detail.noPermission': { tr: 'İzin yok', en: 'No permission' },
+  'permission.detail.modelRangeLabel': { tr: '{start}–{end} / {total} model', en: '{start}–{end} / {total} models' },
+  'permission.detail.paginationAriaLabel': { tr: 'Model sayfalama', en: 'Model pagination' },
+  'permission.detail.prevPageAriaLabel': { tr: 'Önceki sayfa', en: 'Previous page' },
+  'permission.detail.nextPageAriaLabel': { tr: 'Sonraki sayfa', en: 'Next page' },
+  'permission.detail.backToModels': { tr: '← Modellere dön', en: '← Back to models' },
+  'permission.detail.permRead': { tr: 'Okuma', en: 'Read' },
+  'permission.detail.permCreate': { tr: 'Ekleme', en: 'Create' },
+  'permission.detail.permUpdate': { tr: 'Güncelleme', en: 'Update' },
+  'permission.detail.permDelete': { tr: 'Silme', en: 'Delete' },
+  'permission.detail.permShowInNav': { tr: 'Navigasyonda göster', en: 'Show in navigation' },
+  'permission.detail.permOwnOnly': { tr: 'Sadece kendi kayıtları', en: 'Own records only' },
+  'permission.detail.savingEllipsis': { tr: 'Kaydediliyor…', en: 'Saving…' },
+  'permission.detail.saveModelPermissions': { tr: 'Bu Model İzinlerini Kaydet', en: 'Save This Model’s Permissions' },
+
+  // user-permission-detail.component.ts — kısa izin rozet etiketleri (permSummary)
+  'permission.detail.summaryRead': { tr: 'Oku', en: 'Read' },
+  'permission.detail.summaryCreate': { tr: 'Ekle', en: 'Create' },
+  'permission.detail.summaryUpdate': { tr: 'Güncelle', en: 'Update' },
+  'permission.detail.summaryDelete': { tr: 'Sil', en: 'Delete' },
+  'permission.detail.summaryNav': { tr: 'Nav', en: 'Nav' },
+  'permission.detail.summaryOwn': { tr: 'Kendi', en: 'Own' },
+
+  // user-permission-detail.component.ts — bildirim/validasyon mesajları
+  'permission.detail.notFound': { tr: 'Kullanıcı bulunamadı.', en: 'User not found.' },
+  'permission.detail.loadError': { tr: 'Kullanıcı yüklenemedi.', en: 'Failed to load user.' },
+  'permission.detail.adminUpdateError': { tr: 'Admin rolü güncellenemedi.', en: 'Failed to update admin role.' },
+  'permission.detail.permissionsLoadError': { tr: 'İzin bilgileri yüklenemedi.', en: 'Failed to load permission information.' },
+  'permission.detail.permissionsSaved': { tr: 'Model izinleri kaydedildi.', en: 'Model permissions saved.' },
+  'permission.detail.permissionsSaveError': { tr: '{modelName} izinleri kaydedilemedi.', en: 'Failed to save permissions for {modelName}.' }
+};

@@ -3,9 +3,11 @@ import { isPlatformBrowser } from '@angular/common';
 import { ChartComponent as ApexChartComponent } from 'ng-apexcharts';
 import { ChartType, ReportColumnInfo } from '../../models/report.model';
 import { ThemeService } from '../../services/theme.service';
+import { LanguageService } from '../../services/language.service';
 import { ChartTokenColors, readChartTokenColors } from './chart-colors';
 import { ChartBuildOutput, buildChartOptions, buildKpiOutput } from './chart-mapping';
 import { chartTypeMeta } from './chart-types';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 const trNumber = new Intl.NumberFormat('tr-TR');
 
@@ -18,7 +20,7 @@ const trNumber = new Intl.NumberFormat('tr-TR');
 @Component({
   selector: 'app-chart',
   standalone: true,
-  imports: [ApexChartComponent],
+  imports: [ApexChartComponent, TranslatePipe],
   templateUrl: './chart.component.html',
   styleUrls: ['./chart.component.scss']
 })
@@ -26,6 +28,7 @@ export class AppChartComponent {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
   private readonly themeService = inject(ThemeService);
+  private readonly languageService = inject(LanguageService);
 
   chartType = input.required<ChartType>();
   columns = input.required<ReportColumnInfo[]>();
@@ -51,18 +54,26 @@ export class AppChartComponent {
 
     const mode = this.themeService.theme();
     const result = { columns: this.columns(), rows: this.rows() };
+    const t = this.languageService.t.bind(this.languageService);
 
     return this.chartType() === 'kpi'
-      ? buildKpiOutput(result, tokens, mode)
-      : buildChartOptions(this.chartType(), result, tokens, mode);
+      ? buildKpiOutput(result, tokens, mode, t)
+      : buildChartOptions(this.chartType(), result, tokens, mode, t);
   });
 
-  readonly typeLabel = computed(() => chartTypeMeta(this.chartType())?.label ?? this.chartType());
+  readonly typeLabel = computed(() => {
+    const key = chartTypeMeta(this.chartType())?.labelKey;
+    return key ? this.languageService.t(key) : this.chartType();
+  });
 
   readonly ariaSummary = computed(() => {
     const b = this.build();
-    if (!b || b.isEmpty) return `${this.typeLabel()} grafiği — veri yok.`;
-    return `${this.typeLabel()} grafiği — ${this.rows().length} kayıt, ${this.columns().length} kolon.`;
+    if (!b || b.isEmpty) return this.languageService.t('chart.ariaNoData', { type: this.typeLabel() });
+    return this.languageService.t('chart.ariaSummary', {
+      type: this.typeLabel(),
+      rows: this.rows().length,
+      cols: this.columns().length
+    });
   });
 
   readonly kpiValueFormatted = computed(() => {

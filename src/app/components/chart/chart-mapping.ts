@@ -59,6 +59,24 @@ export interface ChartBuildOutput {
 const trNumber = new Intl.NumberFormat('tr-TR');
 const trDate = new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium' });
 
+/** Çeviri fonksiyonu imzası — `LanguageService.t` ile uyumlu. Geçirilmezse TR sabit metin kullanılır. */
+export type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
+
+const defaultT: TranslateFn = (key, params) => {
+  const fallback: Record<string, string> = {
+    'chart.noDataForChart': 'Grafik için yeterli veri yok.',
+    'chart.total': 'Toplam',
+    'chart.capNote': '{total} kayıttan ilk {cap} gösteriliyor — tüm veri için Tablo görünümünü veya gruplama/aggregate kullanın.'
+  };
+  let text = fallback[key] ?? key;
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      text = text.replaceAll(`{${k}}`, String(v));
+    }
+  }
+  return text;
+};
+
 /**
  * Backend `/Report/run` sorgusunda satır limiti yok (bkz. ReportingManager.ExecuteQuery) —
  * gruplama/aggregate olmadan kurulan bir grafik modeldeki TÜM satırları döndürebilir.
@@ -69,16 +87,17 @@ const trDate = new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium' });
 const MAX_BAR_POINTS = 50;
 const MAX_LINE_POINTS = 200;
 
-function capRows(rows: Record<string, unknown>[], cap: number): { rows: Record<string, unknown>[]; note: string | null } {
+function capRows(rows: Record<string, unknown>[], cap: number, t: TranslateFn): { rows: Record<string, unknown>[]; note: string | null } {
   if (rows.length <= cap) return { rows, note: null };
   return {
     rows: rows.slice(0, cap),
-    note: `${trNumber.format(rows.length)} kayıttan ilk ${trNumber.format(cap)} gösteriliyor — tüm veri için Tablo görünümünü veya gruplama/aggregate kullanın.`
+    note: t('chart.capNote', { total: trNumber.format(rows.length), cap: trNumber.format(cap) })
   };
 }
 
 function isNumericType(type: string): boolean {
-  return type === 'int' || type === 'float' || type === 'decimal';
+  return type === 'int' || type === 'long' || type === 'short' || type === 'byte'
+      || type === 'float' || type === 'double' || type === 'decimal';
 }
 
 function toNumber(value: unknown): number {
@@ -88,7 +107,7 @@ function toNumber(value: unknown): number {
 
 function formatCategory(value: unknown, columnType: string): string {
   if (value === null || value === undefined) return '';
-  if (columnType === 'datetime') {
+  if (columnType === 'datetime' || columnType === 'dateonly') {
     const d = new Date(String(value));
     if (!Number.isNaN(d.getTime())) return trDate.format(d);
   }
@@ -110,7 +129,8 @@ export function buildChartOptions(
   chartType: ChartType,
   result: ReportRunResult,
   tokens: ChartTokenColors,
-  themeMode: 'light' | 'dark'
+  themeMode: 'light' | 'dark',
+  t: TranslateFn = defaultT
 ): ChartBuildOutput {
   const palette = buildSeriesPalette(tokens);
   const { columns, rows } = result;
@@ -133,7 +153,7 @@ export function buildChartOptions(
     grid: { borderColor: tokens.borderSoft, strokeDashArray: 4 },
     theme: { mode: themeMode },
     responsive: [],
-    noData: { text: 'Grafik için yeterli veri yok.', style: { color: tokens.muted } },
+    noData: { text: t('chart.noDataForChart'), style: { color: tokens.muted } },
     kpi: null,
     note: null
   };
@@ -149,7 +169,7 @@ export function buildChartOptions(
   // çalışınca tarayıcı kilitlenir; bu yüzden tip bazlı güvenli bir üst sınıra kırpılır.
   const isBarLike = chartType === 'pie' || chartType === 'donut' || chartType === 'column' || chartType === 'bar';
   const cap = isBarLike ? MAX_BAR_POINTS : MAX_LINE_POINTS;
-  const { rows: plotRows, note } = chartType === 'radialBar' ? { rows, note: null } : capRows(rows, cap);
+  const { rows: plotRows, note } = chartType === 'radialBar' ? { rows, note: null } : capRows(rows, cap, t);
 
   const categories = plotRows.map(r => formatCategory(r[categoryCol.name], categoryCol.type));
 
@@ -164,7 +184,7 @@ export function buildChartOptions(
     grid: { borderColor: tokens.borderSoft, strokeDashArray: 4 },
     theme: { mode: themeMode },
     responsive: base,
-    noData: { text: 'Grafik için yeterli veri yok.', style: { color: tokens.muted } },
+    noData: { text: t('chart.noDataForChart'), style: { color: tokens.muted } },
     note
   };
 
@@ -196,7 +216,7 @@ export function buildChartOptions(
                       total: {
                         show: true,
                         showAlways: true,
-                        label: 'Toplam',
+                        label: t('chart.total'),
                         color: tokens.fg,
                         formatter: (w: { globals: { seriesTotals: number[] } }) =>
                           trNumber.format(w.globals.seriesTotals.reduce((a, b) => a + b, 0))
@@ -305,9 +325,10 @@ export function buildChartOptions(
 export function buildKpiOutput(
   result: ReportRunResult,
   tokens: ChartTokenColors,
-  themeMode: 'light' | 'dark'
+  themeMode: 'light' | 'dark',
+  t: TranslateFn = defaultT
 ): ChartBuildOutput {
-  const base = buildChartOptions('bar', result, tokens, themeMode);
+  const base = buildChartOptions('bar', result, tokens, themeMode, t);
   const { columns, rows } = result;
   if (columns.length === 0 || rows.length === 0) return { ...base, apexType: null, kpi: null };
 
@@ -325,7 +346,7 @@ export function buildKpiOutput(
 
   // Birden çok satır varsa küçük bir sparkline ile eğilimi göster. KPI toplamı (yukarıda)
   // her zaman TÜM satırlardan hesaplanır — yalnızca görsel sparkline noktaları kırpılır.
-  const { rows: sparkRows, note: sparkNote } = capRows(rows, MAX_LINE_POINTS);
+  const { rows: sparkRows, note: sparkNote } = capRows(rows, MAX_LINE_POINTS, t);
   const sparkSeries = [{ name: valueCol.name, data: sparkRows.map(r => toNumber(r[valueCol.name])) }];
   return {
     ...base,

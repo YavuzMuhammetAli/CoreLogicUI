@@ -1,8 +1,8 @@
 <div class="page-header">
   <div>
-    <span class="eyebrow">CoreLogic Platform</span>
-    <h1 class="page-title">Yayınlanmış Modeller</h1>
-    <p class="page-subtitle">Çalışma zamanında yayınlanan dinamik veri modelleriniz.</p>
+    <span class="eyebrow">{{ 'model.list.eyebrow' | t }}</span>
+    <h1 class="page-title">{{ 'model.list.title' | t }}</h1>
+    <p class="page-subtitle">{{ 'model.list.subtitle' | t }}</p>
   </div>
   <!-- Sadece admin yeni model oluşturabilir / silinmiş modelleri görebilir -->
   @if (!noPermission) {
@@ -13,14 +13,14 @@
             <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
             <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
           </svg>
-          Silinmiş Modeller
+          {{ 'model.list.deletedModels' | t }}
         </a>
       }
       <a routerLink="/build" class="btn btn-primary">
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="M12 5v14M5 12h14"/>
         </svg>
-        Yeni Model
+        {{ 'model.list.newModel' | t }}
       </a>
     </div>
   }
@@ -30,7 +30,7 @@
 @if (loading) {
   <div class="panel">
     <div class="empty-state">
-      <span class="spinner" aria-label="Yükleniyor"></span>
+      <span class="spinner" [attr.aria-label]="'model.list.loadingAria' | t"></span>
     </div>
   </div>
 }
@@ -45,8 +45,8 @@
   <div class="panel">
     <div class="empty-state">
       <div class="empty-icon" aria-hidden="true">🔒</div>
-      <h3>Erişebileceğiniz tablo yok</h3>
-      <p>Henüz herhangi bir tabloya erişim yetkiniz bulunmuyor. Yöneticinizle iletişime geçin.</p>
+      <h3>{{ 'model.list.noAccessTitle' | t }}</h3>
+      <p>{{ 'model.list.noAccessMessage' | t }}</p>
     </div>
   </div>
 }
@@ -69,7 +69,7 @@
             <h2 class="model-name">{{ model.typeName }}</h2>
 
             <div class="model-meta">
-              <span class="badge badge-meta">{{ model.columns.length }} sütun</span>
+              <span class="badge badge-meta">{{ 'model.list.columnCount' | t:{ count: model.columns.length } }}</span>
             </div>
 
             <div class="model-columns">
@@ -82,7 +82,7 @@
             </div>
 
             <div class="model-footer">
-              <span class="model-link">Verileri görüntüle →</span>
+              <span class="model-link">{{ 'model.list.viewData' | t }}</span>
             </div>
           </a>
         </div>
@@ -93,13 +93,12 @@
     <div class="panel">
       <div class="empty-state">
         <div class="empty-icon" aria-hidden="true">🗂️</div>
-        <h3>Henüz model yayınlanmadı</h3>
+        <h3>{{ 'model.list.emptyTitle' | t }}</h3>
         <p>
-          C# entity kodunu çalışma zamanında derleyen dinamik model sisteminizi kullanmaya başlayın.
-          İlk modelinizi oluşturun.
+          {{ 'model.list.emptyMessage' | t }}
         </p>
         <a routerLink="/build" class="btn btn-primary">
-          İlk Modeli Oluştur
+          {{ 'model.list.createFirstModel' | t }}
         </a>
       </div>
     </div>

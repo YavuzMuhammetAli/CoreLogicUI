@@ -5,6 +5,8 @@ import { DashboardService } from '../../services/dashboard.service';
 import { ReportService } from '../../services/report.service';
 import { DashboardRunResult, DashboardWidgetResult } from '../../models/dashboard.model';
 import { AppChartComponent } from '../chart/chart.component';
+import { LanguageService } from '../../services/language.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 /** Render için widget sonucu + rapor adı (dashboard.get yalnızca reportDefinitionId taşır). */
 export interface DashboardWidgetView {
@@ -15,7 +17,7 @@ export interface DashboardWidgetView {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [RouterLink, AppChartComponent],
+  imports: [RouterLink, AppChartComponent, TranslatePipe],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
@@ -23,6 +25,7 @@ export class DashboardComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly dashboardService = inject(DashboardService);
   private readonly reportService = inject(ReportService);
+  private readonly languageService = inject(LanguageService);
 
   dashboard: DashboardRunResult | null = null;
   widgetViews: DashboardWidgetView[] = [];
@@ -39,7 +42,7 @@ export class DashboardComponent implements OnInit {
         this.loading = false;
 
         if (!dashRes.success) {
-          this.loadError = dashRes.message ?? 'Dashboard yüklenemedi.';
+          this.loadError = dashRes.message ?? this.languageService.t('dashboard.view.loadError');
           return;
         }
 
@@ -52,12 +55,13 @@ export class DashboardComponent implements OnInit {
 
         this.widgetViews = this.dashboard.widgets.map(item => ({
           result: item,
-          reportName: reportNames.get(item.widget.reportDefinitionId) ?? `Rapor #${item.widget.reportDefinitionId}`
+          reportName: reportNames.get(item.widget.reportDefinitionId)
+            ?? this.languageService.t('dashboard.view.reportFallbackName', { id: item.widget.reportDefinitionId })
         }));
       },
       error: (err: { error?: { message?: string } }) => {
         this.loading = false;
-        this.loadError = err?.error?.message ?? 'Sunucu bağlantı hatası.';
+        this.loadError = err?.error?.message ?? this.languageService.t('dashboard.view.serverError');
       }
     });
   }

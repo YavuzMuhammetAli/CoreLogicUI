@@ -8,6 +8,21 @@
   gap: var(--space-2);
 }
 
+/* Backend'in ürettiği SQL'in salt-okunur gösterimi */
+.sql-preview-box {
+  margin: 0;
+  padding: var(--space-4);
+  background: var(--surface-warm);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: var(--text-sm);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 320px;
+  overflow: auto;
+}
+
 .row-fields {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr auto;

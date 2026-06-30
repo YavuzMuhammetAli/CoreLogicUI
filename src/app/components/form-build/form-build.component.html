@@ -1,329 +1,118 @@
-@if (isEditMode) {
+<!-- ─── Liste ekranı: yayınlanmış modeller + yeni tablo oluştur ────────────── -->
+<div class="page-header">
+  <div>
+    <span class="eyebrow">{{ 'formBuild.eyebrow' | t }}</span>
+    <h1 class="page-title">{{ 'formBuild.title' | t }}</h1>
+    <p class="page-subtitle">
+      {{ 'formBuild.subtitle' | t }}
+    </p>
+  </div>
+  <a [routerLink]="['/build', 'new']" class="btn btn-primary">
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M12 5v14M5 12h14"/>
+    </svg>
+    {{ 'formBuild.createNewTable' | t }}
+  </a>
+</div>
 
-  <!-- ─── Düzenleme modu: mevcut modelin şeması ───────────────────────────── -->
-  <div class="page-header">
-    <div>
-      <span class="eyebrow">Platform</span>
-      <h1 class="page-title">Modeli Düzenle</h1>
-      <p class="page-subtitle">
-        Mevcut modelin kolonlarını ekleyin veya kaldırın. Kaldırılan kolonlar veritabanından
-        silinmez, yalnızca pasif yapılır — mevcut veriler korunur.
-      </p>
+<!-- Yükleniyor -->
+@if (loadingModels) {
+  <div class="panel">
+    <div class="empty-state">
+      <span class="spinner" [attr.aria-label]="'formBuild.loadingAria' | t"></span>
     </div>
   </div>
+}
 
-  @if (isLoadingSchema) {
-    <div class="panel">
-      <div class="panel-body">
-        <p class="muted-hint"><span class="spinner" aria-hidden="true"></span> Şema yükleniyor...</p>
-      </div>
+<!-- Hata -->
+@if (listError) {
+  <div class="alert alert-danger" role="alert">{{ listError }}</div>
+}
+
+<!-- Pasifleştirme hatası -->
+@if (deleteError) {
+  <div class="alert alert-danger" role="alert">{{ deleteError }}</div>
+}
+
+@if (!loadingModels && !listError) {
+  @if (models.length > 0) {
+    <div class="panel-head" style="padding: 0; margin-bottom: var(--space-3);">
+      <h2>{{ 'formBuild.publishedModels' | t }}</h2>
+      <p class="panel-subtitle">{{ 'formBuild.clickToEdit' | t }}</p>
     </div>
-  } @else if (loadError) {
-    <div class="panel">
-      <div class="panel-body">
-        <div class="alert alert-danger" role="alert">{{ loadError }}</div>
-      </div>
+
+    <div class="model-grid">
+      @for (model of models; track model.typeName) {
+        <div class="model-card panel">
+          <a class="model-card-link" [routerLink]="['/build', model.typeName]">
+            <div class="model-card-head">
+              <div class="model-type-badge">
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+                </svg>
+              </div>
+            </div>
+
+            <h2 class="model-name">{{ model.typeName }}</h2>
+
+            <div class="model-meta">
+              <span class="badge badge-meta">{{ model.columns.length }} {{ 'formBuild.columnCount' | t }}</span>
+            </div>
+
+            <div class="model-columns">
+              @for (col of model.columns.slice(0, 3); track col.columnName) {
+                <span class="col-chip">{{ col.columnName }}</span>
+              }
+              @if (model.columns.length > 3) {
+                <span class="col-chip col-more">+{{ model.columns.length - 3 }}</span>
+              }
+            </div>
+
+          </a>
+
+          <!-- Silme — düzenleme linkinden ayrı, nested <a> olmasın diye dışarıda -->
+          <div class="model-card-actions">
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm"
+              (click)="onDeleteModel(model.typeName)"
+              [disabled]="isDeleting[model.typeName]"
+              [attr.aria-label]="'formBuild.deactivateAria' | t:{ name: model.typeName }">
+              @if (isDeleting[model.typeName]) {
+                <span class="spinner" aria-hidden="true"></span>
+              } @else {
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                </svg>
+              }
+              {{ 'formBuild.delete' | t }}
+            </button>
+          </div>
+        </div>
+      }
     </div>
+
+    <app-confirm-dialog
+      [open]="confirmOpen"
+      [title]="'formBuild.deactivateModelTitle' | t"
+      [message]="'formBuild.deactivateModelMessage' | t"
+      [modelName]="pendingTypeName ?? ''"
+      [usage]="confirmUsage"
+      [busy]="confirmBusy || confirmUsageLoading"
+      (confirmed)="onConfirmDelete()"
+      (cancelled)="onCancelDelete()" />
   } @else {
-    <div class="panel">
-      <div class="panel-head">
-        <h2>Model Tanımı</h2>
-        <p class="panel-subtitle">
-          Model adı düzenleme modunda değiştirilemez (yeniden adlandırma kapsam dışı —
-          gerekirse eski kolonu kaldırıp yeni adla ekleyin). Bu ekrana yeni bir alt model
-          eklemek de mümkündür; mevcut alt modeller kendi düzenleme sayfalarından değiştirilir.
-        </p>
-      </div>
-
-      <div class="panel-body">
-        <form novalidate>
-
-          <!-- Kök model düğümü — form-build yalnızca orkestrasyon yapar -->
-          <app-model-node
-            [group]="rootGroup"
-            [depth]="1"
-            [canRemove]="false">
-          </app-model-node>
-
-          <!-- Durum mesajı -->
-          @if (submitMessage) {
-            <div
-              class="alert"
-              [class.alert-success]="submitSuccess"
-              [class.alert-danger]="!submitSuccess"
-              [attr.role]="submitSuccess ? 'status' : 'alert'">
-              {{ submitMessage }}
-            </div>
-          }
-
-          <!--
-            Adım bazlı aksiyon butonları
-            İş kuralı: Model Düzenle → Kaydet → Yayınla
-            • Kaydet: kolon diff'i (addMember/removeMember) + yeni alt modeller
-            • Yayınla: yalnızca isSaved === true olduğunda aktif;
-                       backend kök adından ağacı çekip derler, FK'li SQL tabloları oluşturur/ALTER ADD yapar
-          -->
-          <div class="form-actions cluster">
-
-            <!-- Adım 1: Kaydet -->
-            <button
-              type="button"
-              class="btn btn-secondary"
-              (click)="onSaveEdit()"
-              [disabled]="isSaving || isPublishing">
-              @if (isSaving) {
-                <span class="spinner" aria-hidden="true"></span>
-                Kaydediliyor...
-              } @else {
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                  <polyline points="17 21 17 13 7 13 7 21"/>
-                  <polyline points="7 3 7 8 15 8"/>
-                </svg>
-                Kaydet
-              }
-            </button>
-
-            <!-- Adım 2: Yayınla — yalnızca başarılı kayıttan sonra aktif -->
-            <button
-              type="button"
-              class="btn btn-primary"
-              (click)="onPublish()"
-              [disabled]="!isSaved || isSaving || isPublishing"
-              [attr.title]="!isSaved ? 'Yayınlamak için önce modeli kaydedin' : null">
-              @if (isPublishing) {
-                <span class="spinner" aria-hidden="true"></span>
-                Yayınlanıyor...
-              } @else {
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <line x1="22" y1="2" x2="11" y2="13"/>
-                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                </svg>
-                Yayınla
-              }
-            </button>
-
-          </div>
-        </form>
-      </div>
-    </div>
-  }
-
-} @else {
-
-  <!-- ─── Liste ekranı: yayınlanmış modeller + yeni tablo oluştur ────────── -->
-  <div class="page-header">
-    <div>
-      <span class="eyebrow">Platform</span>
-      <h1 class="page-title">Tablo Oluştur</h1>
-      <p class="page-subtitle">
-        Yayınlanmış modelleri buradan düzenleyin/silin veya yeni bir tablo tanımlayın.
-      </p>
-    </div>
-    <button type="button" class="btn btn-primary" (click)="toggleCreateForm()">
-      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="M12 5v14M5 12h14"/>
-      </svg>
-      {{ showCreateForm ? 'Formu Kapat' : 'Yeni Tablo Oluştur' }}
-    </button>
-  </div>
-
-  @if (showCreateForm) {
-    <div class="panel">
-      <div class="panel-head">
-        <h2>Model Tanımı</h2>
-        <p class="panel-subtitle">
-          Kök model ve alt modelleri aynı anda tanımlayın. Alt modeller parent'a
-          <strong>foreign key</strong> ile bağlanır (alt modelde otomatik FK kolonu eklenir).
-          En fazla 4 derinlik desteklenir.
-          Alt model FK kolonu: <code>{{ '{' }}Parent{{ '}' }}Id</code>
-        </p>
-      </div>
-
-      <div class="panel-body">
-        <form novalidate>
-
-          <!-- Kök model düğümü — form-build yalnızca orkestrasyon yapar -->
-          <app-model-node
-            [group]="rootGroup"
-            [depth]="1"
-            [canRemove]="false">
-          </app-model-node>
-
-          <!-- Durum mesajı -->
-          @if (submitMessage) {
-            <div
-              class="alert"
-              [class.alert-success]="submitSuccess"
-              [class.alert-danger]="!submitSuccess"
-              [attr.role]="submitSuccess ? 'status' : 'alert'">
-              {{ submitMessage }}
-            </div>
-          }
-
-          <!--
-            Adım bazlı aksiyon butonları
-            İş kuralı: Model Oluştur → Kaydet → Yayınla
-            • Kaydet: tüm ağaç için addTable+addMember
-            • Yayınla: yalnızca isSaved === true olduğunda aktif;
-                       backend kök adından ağacı çekip derler, FK'li SQL tabloları oluşturur
-          -->
-          <div class="form-actions cluster">
-
-            <!-- Adım 1: Kaydet -->
-            <button
-              type="button"
-              class="btn btn-secondary"
-              (click)="onSave()"
-              [disabled]="isSaving || isPublishing">
-              @if (isSaving) {
-                <span class="spinner" aria-hidden="true"></span>
-                Kaydediliyor...
-              } @else {
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                  <polyline points="17 21 17 13 7 13 7 21"/>
-                  <polyline points="7 3 7 8 15 8"/>
-                </svg>
-                Kaydet
-              }
-            </button>
-
-            <!-- Adım 2: Yayınla — yalnızca başarılı kayıttan sonra aktif -->
-            <button
-              type="button"
-              class="btn btn-primary"
-              (click)="onPublish()"
-              [disabled]="!isSaved || isSaving || isPublishing"
-              [attr.title]="!isSaved ? 'Yayınlamak için önce modeli kaydedin' : null">
-              @if (isPublishing) {
-                <span class="spinner" aria-hidden="true"></span>
-                Yayınlanıyor...
-              } @else {
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <line x1="22" y1="2" x2="11" y2="13"/>
-                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                </svg>
-                Yayınla
-              }
-            </button>
-
-          </div>
-        </form>
-      </div>
-    </div>
-  }
-
-  <!-- Yükleniyor -->
-  @if (loadingModels) {
+    <!-- Henüz model yok -->
     <div class="panel">
       <div class="empty-state">
-        <span class="spinner" aria-label="Yükleniyor"></span>
+        <div class="empty-icon" aria-hidden="true">🗂️</div>
+        <h3>{{ 'formBuild.noModelsYet' | t }}</h3>
+        <p>
+          {{ 'formBuild.noModelsHint' | t }}
+        </p>
+        <a [routerLink]="['/build', 'new']" class="btn btn-primary">{{ 'formBuild.createFirstModel' | t }}</a>
       </div>
     </div>
   }
-
-  <!-- Hata -->
-  @if (listError) {
-    <div class="alert alert-danger" role="alert">{{ listError }}</div>
-  }
-
-  <!-- Pasifleştirme hatası -->
-  @if (deleteError) {
-    <div class="alert alert-danger" role="alert">{{ deleteError }}</div>
-  }
-
-  @if (!loadingModels && !listError) {
-    @if (models.length > 0) {
-      <div class="panel-head" style="padding: 0; margin-bottom: var(--space-3);">
-        <h2>Yayınlanmış Modeller</h2>
-        <p class="panel-subtitle">Düzenlemek için bir modele tıklayın.</p>
-      </div>
-
-      <div class="model-grid">
-        @for (model of models; track model.typeName) {
-          <div class="model-card panel">
-            <a class="model-card-link" [routerLink]="['/build', model.typeName]">
-              <div class="model-card-head">
-                <div class="model-type-badge">
-                  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
-                  </svg>
-                </div>
-              </div>
-
-              <h2 class="model-name">{{ model.typeName }}</h2>
-
-              <div class="model-meta">
-                <span class="badge badge-meta">{{ model.columns.length }} sütun</span>
-              </div>
-
-              <div class="model-columns">
-                @for (col of model.columns.slice(0, 3); track col.columnName) {
-                  <span class="col-chip">{{ col.columnName }}</span>
-                }
-                @if (model.columns.length > 3) {
-                  <span class="col-chip col-more">+{{ model.columns.length - 3 }}</span>
-                }
-              </div>
-
-              <div class="model-footer">
-                <span class="model-link">Düzenle →</span>
-              </div>
-            </a>
-
-            <!-- Silme — düzenleme linkinden ayrı, nested <a> olmasın diye dışarıda -->
-            <div class="model-card-actions">
-              <button
-                type="button"
-                class="btn btn-ghost btn-sm"
-                (click)="onDeleteModel(model.typeName)"
-                [disabled]="isDeleting[model.typeName]"
-                [attr.aria-label]="'\'' + model.typeName + '\' modelini pasif yap'">
-                @if (isDeleting[model.typeName]) {
-                  <span class="spinner" aria-hidden="true"></span>
-                } @else {
-                  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                  </svg>
-                }
-                Sil
-              </button>
-            </div>
-          </div>
-        }
-      </div>
-
-      <app-confirm-dialog
-        [open]="confirmOpen"
-        title="Modeli pasif yap"
-        message="Bu modeli pasif yapmak istediğinize emin misiniz? SQL tablosu ve içindeki kayıtlar silinmez; model yalnızca uygulamadan kaldırılır."
-        [modelName]="pendingTypeName ?? ''"
-        [usage]="confirmUsage"
-        [busy]="confirmBusy || confirmUsageLoading"
-        (confirmed)="onConfirmDelete()"
-        (cancelled)="onCancelDelete()" />
-    } @else if (!showCreateForm) {
-      <!-- Henüz model yok -->
-      <div class="panel">
-        <div class="empty-state">
-          <div class="empty-icon" aria-hidden="true">🗂️</div>
-          <h3>Henüz model yayınlanmadı</h3>
-          <p>
-            C# entity kodunu çalışma zamanında derleyen dinamik model sisteminizi kullanmaya başlayın.
-            İlk modelinizi oluşturun.
-          </p>
-          <button type="button" class="btn btn-primary" (click)="toggleCreateForm()">
-            İlk Modeli Oluştur
-          </button>
-        </div>
-      </div>
-    }
-  }
-
 }

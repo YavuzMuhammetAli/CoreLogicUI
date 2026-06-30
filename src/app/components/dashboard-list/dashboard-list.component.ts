@@ -1,17 +1,21 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DashboardService } from '../../services/dashboard.service';
 import { DashboardDefinition } from '../../models/dashboard.model';
 import { PermissionService } from '../../services/permission.service';
+import { LanguageService } from '../../services/language.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 @Component({
   selector: 'app-dashboard-list',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, TranslatePipe],
   templateUrl: './dashboard-list.component.html',
   styleUrls: ['./dashboard-list.component.scss']
 })
 export class DashboardListComponent implements OnInit {
+  private readonly languageService = inject(LanguageService);
+
   dashboards: DashboardDefinition[] = [];
   loading = false;
   loadError: string | null = null;
@@ -39,12 +43,12 @@ export class DashboardListComponent implements OnInit {
         if (res.success) {
           this.dashboards = res.data ?? [];
         } else {
-          this.loadError = res.message ?? 'Dashboard\'lar yüklenemedi.';
+          this.loadError = res.message ?? this.languageService.t('dashboard.list.loadError');
         }
       },
       error: (err: { error?: { message?: string } }) => {
         this.loading = false;
-        this.loadError = err?.error?.message ?? 'Sunucu bağlantı hatası.';
+        this.loadError = err?.error?.message ?? this.languageService.t('dashboard.list.serverError');
       }
     });
   }

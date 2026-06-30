@@ -4,11 +4,13 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angula
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { PermissionService } from '../../services/permission.service';
+import { LanguageService } from '../../services/language.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
 })
@@ -30,7 +32,8 @@ export class LoginComponent {
     private auth: AuthService,
     private router: Router,
     private route: ActivatedRoute,
-    private permissionService: PermissionService
+    private permissionService: PermissionService,
+    private languageService: LanguageService
   ) {
     this.form = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -60,19 +63,28 @@ export class LoginComponent {
       password: this.f['password'].value
     }).subscribe({
       next: res => {
-        this.isLoading = false;
         if (res.success) {
-          // Önceki oturumdan kalan yetki sinyalini temizle; ensureLoaded()
-          // guard çalışınca yeni kullanıcı için taze yetki çeker.
+          // Önceki oturumdan kalan yetki sinyalini temizle, ardından yeni kullanıcının
+          // yetkilerini (ve rolünden çözülen açılış sayfasını) yükleyip o sayfaya yönlen.
           this.permissionService.clear();
-          this.router.navigate(['/models']);
+          this.permissionService.loadMyPermissions().subscribe({
+            next: () => {
+              this.isLoading = false;
+              this.router.navigateByUrl(this.permissionService.getLandingPage());
+            },
+            error: () => {
+              this.isLoading = false;
+              this.router.navigate(['/models']);
+            }
+          });
         } else {
-          this.errorMessage = res.message ?? 'Giriş başarısız.';
+          this.isLoading = false;
+          this.errorMessage = res.message ?? this.languageService.t('login.loginFailed');
         }
       },
       error: err => {
         this.isLoading = false;
-        this.errorMessage = err?.error?.message ?? err?.message ?? 'Sunucuya bağlanılamadı.';
+        this.errorMessage = err?.error?.message ?? err?.message ?? this.languageService.t('login.serverUnreachable');
       }
     });
   }
@@ -96,13 +108,13 @@ export class LoginComponent {
     }).subscribe({
       next: () => {
         this.registerLoading = false;
-        this.registerSuccess = 'Kayıt başarılı! Şimdi giriş yapabilirsiniz.';
+        this.registerSuccess = this.languageService.t('login.registerSuccess');
         this.activeTab = 'login';
         this.form.patchValue({ email: v.email });
       },
       error: err => {
         this.registerLoading = false;
-        this.registerError = err?.error?.message ?? 'Kayıt başarısız.';
+        this.registerError = err?.error?.message ?? this.languageService.t('login.registerFailed');
       }
     });
   }

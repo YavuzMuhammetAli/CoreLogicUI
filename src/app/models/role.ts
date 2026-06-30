@@ -7,4 +7,6 @@ export interface Role {
   name: string;
   /** Bu role üye olan aktif kullanıcı sayısı. */
   userCount: number;
+  /** Bu role üye kullanıcıların login sonrası yönlendirileceği route; yoksa null. */
+  defaultLandingPage?: string | null;
 }

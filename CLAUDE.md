@@ -302,6 +302,15 @@ Sonra `src/app/app.routes.ts`'e route ekle. Component yapısı/signal/guard konv
 `angular-standalone-component`, tasarım için `corelogic-design`, API entegrasyonu için
 `angular-api-service` skillini kullan. Yeni ekran üretmek için `ui-builder` agent'ını çalıştır.
 
+## CodeGraph
+
+Bu repo CodeGraph ile indekslidir (`.codegraph/` mevcut, dosya izleyici daemon'u
+ile otomatik senkron, MCP sunucusu yapılandırılmış). Kod konumlandırma/anlama/
+düzenleme görevlerinde grep/find/Read'den **ÖNCE** `mcp__codegraph__codegraph_explore`
+kullan — tek çağrıda ilgili sembollerin satır numaralı kaynak kodunu, çağrı
+yollarını ve etki alanını (blast-radius) döner; onlarca grep+read turu yerine
+genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
+
 ## Konvansiyonlar
 
 - **Standalone component'ler** — NgModule yok

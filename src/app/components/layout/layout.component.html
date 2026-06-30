@@ -1,7 +1,7 @@
 <div class="app-shell" [class.sidebar-collapsed]="!sidebarOpen">
 
   <!-- Sidebar -->
-  <aside class="sidebar" aria-label="Ana menü">
+  <aside class="sidebar" [attr.aria-label]="'layout.sidebarAriaLabel' | t">
     <div class="sidebar-logo">
       <span class="logo-mark">CL</span>
       <span class="logo-text">CoreLogic</span>
@@ -11,114 +11,138 @@
 
       <!-- Admin: model genel listesi + platform yönetim linkleri -->
       @if (permissionService.isAdmin()) {
-        <span class="nav-label eyebrow">Veri</span>
+        <span class="nav-label eyebrow">{{ 'layout.navData' | t }}</span>
         <a
           class="nav-item"
           routerLink="/models"
           routerLinkActive="active"
           [routerLinkActiveOptions]="{ exact: true }"
-          aria-label="Model listesi">
+          [attr.aria-label]="'layout.modelsAria' | t">
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
           </svg>
-          Modeller
+          {{ 'layout.models' | t }}
         </a>
 
-        <span class="nav-label eyebrow" style="margin-top: var(--space-4)">Platform</span>
+        <span class="nav-label eyebrow" style="margin-top: var(--space-4)">{{ 'layout.navPlatform' | t }}</span>
         <a
           class="nav-item"
           routerLink="/build"
           routerLinkActive="active"
-          aria-label="Yeni tablo oluştur">
+          [attr.aria-label]="'layout.createTableAria' | t">
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 5v14M5 12h14"/>
           </svg>
-          Tablo Oluştur
+          {{ 'layout.createTable' | t }}
         </a>
         <a
           class="nav-item"
           routerLink="/drafts"
           routerLinkActive="active"
-          aria-label="Yayınlanmamış modeller">
+          [attr.aria-label]="'layout.unpublishedAria' | t">
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
           </svg>
-          Yayınlanmamış
+          {{ 'layout.unpublished' | t }}
         </a>
         <a
           class="nav-item"
           routerLink="/permissions"
           routerLinkActive="active"
-          aria-label="Kullanıcı yetki yönetimi">
+          [attr.aria-label]="'layout.userPermissionsAria' | t">
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
             <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
           </svg>
-          Kullanıcı Yetkileri
+          {{ 'layout.userPermissions' | t }}
         </a>
         <a
           class="nav-item"
           routerLink="/roles"
           routerLinkActive="active"
-          aria-label="Rol yönetimi">
+          [attr.aria-label]="'layout.rolesAria' | t">
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.82 0l4.6-4.6a2 2 0 0 0 0-2.82Z"/>
             <circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/>
           </svg>
-          Roller
+          {{ 'layout.roles' | t }}
+        </a>
+        <a
+          class="nav-item"
+          routerLink="/audit-logs"
+          routerLinkActive="active"
+          [attr.aria-label]="'layout.auditLogsAria' | t">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13l2 2 4-4"/>
+          </svg>
+          {{ 'layout.auditLogs' | t }}
         </a>
       }
 
       <!-- Normal kullanıcı: yalnızca okuma yetkili tablolar -->
       @if (!permissionService.isAdmin()) {
-        <span class="nav-label eyebrow">Tablolar</span>
+        <span class="nav-label eyebrow">{{ 'layout.navTables' | t }}</span>
         @for (t of navTables; track t.typeName) {
           <a
             class="nav-item"
             [routerLink]="['/models', t.typeName]"
             routerLinkActive="active"
-            [attr.aria-label]="t.typeName + ' tablosu'">
+            [attr.aria-label]="'layout.tableAria' | t:{ name: t.typeName }">
             <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
             </svg>
             {{ t.typeName }}
           </a>
         } @empty {
-          <span class="nav-empty-hint">Erişebileceğiniz tablo yok.</span>
+          <span class="nav-empty-hint">{{ 'layout.noAccessibleTables' | t }}</span>
         }
       }
 
       <!-- Raporlama: tüm kullanıcılara görünür — yetki kontrolü model bazında backend'de yapılır -->
-      <span class="nav-label eyebrow" style="margin-top: var(--space-4)">Raporlama</span>
+      <span class="nav-label eyebrow" style="margin-top: var(--space-4)">{{ 'layout.navReporting' | t }}</span>
       <a
         class="nav-item"
         routerLink="/reports"
         routerLinkActive="active"
-        aria-label="Raporlar">
+        [attr.aria-label]="'layout.reportsAria' | t">
         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/>
         </svg>
-        Raporlar
+        {{ 'layout.reports' | t }}
       </a>
       <a
         class="nav-item"
         routerLink="/dashboard"
         routerLinkActive="active"
-        aria-label="Dashboard">
+        [attr.aria-label]="'layout.dashboardAria' | t">
         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
         </svg>
-        Dashboard
+        {{ 'layout.dashboard' | t }}
       </a>
+
+      <!-- Admin tarafından navigasyona yayınlanmış dashboard'lar — tüm kullanıcılar görür -->
+      @for (d of navDashboards; track d.id) {
+        <a
+          class="nav-item"
+          [routerLink]="['/dashboard', d.id]"
+          routerLinkActive="active"
+          [attr.aria-label]="'layout.dashboardNavAria' | t:{ name: d.name }">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
+          </svg>
+          {{ d.name }}
+        </a>
+      }
 
     </nav>
 
     <div class="sidebar-footer">
-      <button class="nav-item logout-btn" (click)="logout()" type="button" aria-label="Çıkış yap">
+      <button class="nav-item logout-btn" (click)="logout()" type="button" [attr.aria-label]="'layout.logoutAria' | t">
         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
         </svg>
-        Çıkış Yap
+        {{ 'layout.logout' | t }}
       </button>
     </div>
   </aside>
@@ -132,7 +156,7 @@
         (click)="toggleSidebar()"
         type="button"
         [attr.aria-expanded]="sidebarOpen"
-        aria-label="Menüyü aç/kapat">
+        [attr.aria-label]="'layout.toggleMenuAria' | t">
         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 12h18M3 6h18M3 18h18"/>
         </svg>
@@ -140,10 +164,18 @@
 
       <div class="topbar-right">
         <button
+          class="lang-toggle btn btn-ghost btn-sm"
+          type="button"
+          (click)="toggleLanguage()"
+          [attr.aria-label]="languageService.lang() === 'tr' ? ('layout.switchToEnglish' | t) : ('layout.switchToTurkish' | t)">
+          {{ languageService.lang() === 'tr' ? 'EN' : 'TR' }}
+        </button>
+
+        <button
           class="theme-toggle btn btn-ghost btn-sm"
           type="button"
           (click)="toggleTheme()"
-          [attr.aria-label]="themeService.theme() === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç'">
+          [attr.aria-label]="themeService.theme() === 'dark' ? ('layout.switchToLight' | t) : ('layout.switchToDark' | t)">
           @if (themeService.theme() === 'dark') {
             <!-- Güneş ikonu — koyu temadayken gösterilir, tıklayınca açık temaya geçer -->
             <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -167,13 +199,13 @@
               (click)="toggleMenu(); $event.stopPropagation()"
               [attr.aria-expanded]="menuOpen"
               aria-haspopup="menu"
-              aria-label="Profil menüsünü aç">
+              [attr.aria-label]="'layout.openProfileMenuAria' | t">
 
               <!-- Avatar: fotoğraf varsa img, yoksa baş harfler -->
               @if (currentUser.photoUrl) {
                 <img
                   [src]="currentUser.photoUrl"
-                  alt="Profil fotoğrafı"
+                  [alt]="'layout.profilePhotoAlt' | t"
                   class="user-avatar user-avatar-img">
               } @else {
                 <span class="user-avatar" aria-hidden="true">{{ currentUser.initials }}</span>
@@ -203,7 +235,7 @@
               <div
                 class="profile-dropdown"
                 role="menu"
-                aria-label="Profil menüsü">
+                [attr.aria-label]="'layout.profileMenuAria' | t">
 
                 <!-- Üst bilgi başlığı -->
                 <div class="dropdown-header">
@@ -236,7 +268,7 @@
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                     <circle cx="12" cy="7" r="4"/>
                   </svg>
-                  Profili Düzenle
+                  {{ 'layout.editProfile' | t }}
                 </button>
 
                 <div class="dropdown-divider" role="separator"></div>
@@ -251,7 +283,7 @@
                        fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
                   </svg>
-                  Çıkış Yap
+                  {{ 'layout.logout' | t }}
                 </button>
               </div>
             }
@@ -272,7 +304,7 @@
           class="btn btn-ghost btn-sm"
           type="button"
           (click)="notificationService.clear()"
-          aria-label="Uyarıyı kapat"
+          [attr.aria-label]="'layout.closeAlertAria' | t"
           style="margin-left: auto; padding: 0 var(--space-2);">
           <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>

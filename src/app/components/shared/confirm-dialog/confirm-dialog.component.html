@@ -15,10 +15,10 @@
 
         @if (hasUsage()) {
           <div class="usage-box" role="alert">
-            <p class="usage-intro">'{{ modelName() }}' kullanılıyor:</p>
+            <p class="usage-intro">{{ 'confirm.usageIntro' | t:{ name: modelName() } }}</p>
 
             @if (usage()!.reports.length > 0) {
-              <p class="usage-group-title">Raporlarda:</p>
+              <p class="usage-group-title">{{ 'confirm.usageReports' | t }}</p>
               <ul class="usage-list">
                 @for (r of usage()!.reports; track r.id) {
                   <li>{{ r.name }}</li>
@@ -27,7 +27,7 @@
             }
 
             @if (usage()!.dashboards.length > 0) {
-              <p class="usage-group-title">Dashboardlarda:</p>
+              <p class="usage-group-title">{{ 'confirm.usageDashboards' | t }}</p>
               <ul class="usage-list">
                 @for (d of usage()!.dashboards; track d.id) {
                   <li>{{ d.name }}</li>
@@ -38,7 +38,7 @@
 
           @if (isFinalStep()) {
             <div class="alert alert-warn" role="alert">
-              Yukarıdaki rapor ve dashboardlar da modelle birlikte pasife alınacak. Emin misiniz?
+              {{ 'confirm.usageWarning' | t }}
             </div>
           }
         }
@@ -46,13 +46,13 @@
 
       <div class="panel-actions">
         <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="busy()">
-          Vazgeç
+          {{ 'common.cancel' | t }}
         </button>
         <button type="button" class="btn btn-danger" (click)="onConfirmClick()" [disabled]="busy()">
           @if (busy()) {
             <span class="spinner" aria-hidden="true"></span>
           }
-          {{ hasUsage() && !isFinalStep() ? 'Yine de Sil' : 'Sil' }}
+          {{ hasUsage() && !isFinalStep() ? ('common.deleteAnyway' | t) : ('common.delete' | t) }}
         </button>
       </div>
     </div>

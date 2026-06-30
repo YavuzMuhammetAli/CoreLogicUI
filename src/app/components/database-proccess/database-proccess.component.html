@@ -1,6 +1,6 @@
 <div class="panel">
   <div class="panel-head">
-    <h1 class="eyebrow">Veritabanı İşlemleri</h1>
+    <h1 class="eyebrow">{{ 'database.title' | t }}</h1>
   </div>
 
   <div class="panel-body">
@@ -8,7 +8,7 @@
     @if (loading()) {
       <div class="loading-row" aria-live="polite">
         <span class="spinner" aria-hidden="true"></span>
-        <span class="sr-only">İşlem devam ediyor…</span>
+        <span class="sr-only">{{ 'database.inProgress' | t }}</span>
       </div>
     }
 
@@ -25,8 +25,25 @@
     <div class="action-group">
       <div class="action-card">
         <div class="action-card-info">
-          <h3>Tablo Oluştur</h3>
-          <p>Yayınlanmış modeller için SQL tablolarını oluşturur veya günceller.</p>
+          <h3>{{ 'database.createDbTitle' | t }}</h3>
+          <p>{{ 'database.createDbDesc' | t }}</p>
+        </div>
+        <button
+          class="btn btn-secondary"
+          type="button"
+          [disabled]="loading()"
+          (click)="createDatabase()">
+          @if (loading()) {
+            <span class="spinner" aria-hidden="true"></span>
+          }
+          {{ 'database.createDbButton' | t }}
+        </button>
+      </div>
+
+      <div class="action-card">
+        <div class="action-card-info">
+          <h3>{{ 'database.createTableTitle' | t }}</h3>
+          <p>{{ 'database.createTableDesc' | t }}</p>
         </div>
         <button
           class="btn btn-primary"
@@ -36,14 +53,14 @@
           @if (loading()) {
             <span class="spinner" aria-hidden="true"></span>
           }
-          Tablo Oluştur
+          {{ 'database.createTableButton' | t }}
         </button>
       </div>
 
       <div class="action-card">
         <div class="action-card-info">
-          <h3>Veritabanını Kontrol Et</h3>
-          <p>Veritabanı bağlantısını ve şemasını doğrular.</p>
+          <h3>{{ 'database.checkDbTitle' | t }}</h3>
+          <p>{{ 'database.checkDbDesc' | t }}</p>
         </div>
         <button
           class="btn btn-secondary"
@@ -53,7 +70,7 @@
           @if (loading()) {
             <span class="spinner" aria-hidden="true"></span>
           }
-          Veritabanını Kontrol Et
+          {{ 'database.checkDbButton' | t }}
         </button>
       </div>
     </div>

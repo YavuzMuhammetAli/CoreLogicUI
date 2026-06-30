@@ -34,6 +34,11 @@ export class ReportService {
     return this.http.get<DataResponseModel<ReportRunResult>>(`${this.baseUrl}/run`, { params });
   }
 
+  /** Henüz kaydedilmemiş bir rapor tanımı için üretilecek SQL'i, çalıştırmadan döndürür. */
+  previewSql(report: Partial<ReportDefinition>): Observable<DataResponseModel<string>> {
+    return this.http.post<DataResponseModel<string>>(`${this.baseUrl}/preview-sql`, report);
+  }
+
   /** Raporu .xlsx olarak indirir. */
   exportExcel(id: number): Observable<Blob> {
     const params = new HttpParams().set('id', id);

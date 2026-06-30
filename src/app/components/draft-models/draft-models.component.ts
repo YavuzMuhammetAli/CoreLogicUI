@@ -1,9 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { PublishedTableService } from '../../services/published-table.service';
 import { PublishedModelService } from '../../services/published-model.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
+import { LanguageService } from '../../services/language.service';
 
 interface DraftEntry {
   id: number;
@@ -22,12 +24,27 @@ interface DraftEntry {
   deleting: boolean;
   deleteMessage: string | null;
   deleteSuccess: boolean | null;
+  /**
+   * true ise bu düğümün gerçek parent'ı taslak listesinde yok (zaten yayınlanmış) —
+   * yani yayınlama yarım kalmış: ana model yayınlandı ama bu alt model yayınlanamadı.
+   * Ağaçta kök gibi görünür (parent'ı bu listede bulunamadığı için) ama aslında bir alt modeldir.
+   */
+  isOrphanChild: boolean;
+  /** isOrphanChild ise ata zinciri, kökten gerçek parent'a: "AnaModel → AltModel1" */
+  parentPath: string | null;
+}
+
+/** getAllTables() yanıtındaki tek tablo girdisi — parentPath için ata zinciri çözümlemesinde kullanılır. */
+interface TableRef {
+  id: number;
+  tableName: string;
+  parentTableId: number | null;
 }
 
 @Component({
   selector: 'app-draft-models',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe],
   templateUrl: './draft-models.component.html',
   styleUrls: ['./draft-models.component.scss']
 })
@@ -38,6 +55,8 @@ export class DraftModelsComponent implements OnInit {
   tree: DraftEntry[] = [];
   loading = false;
   loadError: string | null = null;
+
+  private readonly languageService = inject(LanguageService);
 
   constructor(
     private publishedTable: PublishedTableService,
@@ -63,7 +82,7 @@ export class DraftModelsComponent implements OnInit {
         this.loading = false;
 
         if (!tables.success) {
-          this.loadError = tables.message ?? 'Tablolar yüklenemedi.';
+          this.loadError = tables.message ?? this.languageService.t('draft.tablesLoadFailed');
           return;
         }
 
@@ -72,8 +91,13 @@ export class DraftModelsComponent implements OnInit {
           (published.success ? (published.data ?? []) : []).map(m => m.typeName)
         );
 
+        // Tüm tablolar (yayınlanmış + taslak) — orphan alt modellerin ata zincirini
+        // (parent zaten yayınlanmış olsa da) çözebilmek için tam liste saklanır.
+        const allTables = tables.data ?? [];
+        const allById = new Map<number, TableRef>(allTables.map(t => [t.id, t]));
+
         // Yalnızca yayınlanmamış olanları göster
-        this.drafts = (tables.data ?? [])
+        this.drafts = allTables
           .filter(t => !publishedNames.has(t.tableName))
           .map(t => ({
             id: t.id,
@@ -88,14 +112,26 @@ export class DraftModelsComponent implements OnInit {
             publishSuccess: null,
             deleting: false,
             deleteMessage: null,
-            deleteSuccess: null
+            deleteSuccess: null,
+            isOrphanChild: false,
+            parentPath: null
           }));
+
+        // Parent'ı taslak listesinde olmayan (= zaten yayınlanmış) düğümler için
+        // "yarım yayınlama" işaretini ve ata zincirini hesapla.
+        const draftIds = new Set(this.drafts.map(d => d.id));
+        for (const draft of this.drafts) {
+          if (draft.parentTableId != null && !draftIds.has(draft.parentTableId)) {
+            draft.isOrphanChild = true;
+            draft.parentPath = this.buildParentPath(draft.parentTableId, allById);
+          }
+        }
 
         this.tree = this.buildTree(this.drafts);
       },
       error: err => {
         this.loading = false;
-        this.loadError = err?.error?.message ?? 'Sunucu bağlantı hatası.';
+        this.loadError = err?.error?.message ?? this.languageService.t('draft.serverConnectionError');
       }
     });
   }
@@ -134,6 +170,24 @@ export class DraftModelsComponent implements OnInit {
     return roots;
   }
 
+  /**
+   * startId'den köke kadar ata zincirini (kök → ... → startId) isim listesi olarak döner.
+   * allById TÜM tabloları (yayınlanmış + taslak) içerir — orphan bir alt modelin parent'ı
+   * yayınlanmış olduğu için (ve dolayısıyla this.drafts'ta bulunmadığı için) zincir yalnızca
+   * bu tam liste üzerinden çözülebilir.
+   */
+  private buildParentPath(startId: number, allById: Map<number, TableRef>): string {
+    const names: string[] = [];
+    let current: TableRef | undefined = allById.get(startId);
+
+    while (current) {
+      names.unshift(current.tableName);
+      current = current.parentTableId != null ? allById.get(current.parentTableId) : undefined;
+    }
+
+    return names.join(' → ');
+  }
+
   publish(draft: DraftEntry): void {
     if (draft.publishing) return;
 
@@ -145,7 +199,9 @@ export class DraftModelsComponent implements OnInit {
       next: res => {
         draft.publishing = false;
         draft.publishSuccess = res.success;
-        draft.publishMessage = res.message ?? (res.success ? 'Başarıyla yayınlandı.' : 'Yayınlama başarısız.');
+        draft.publishMessage = res.message ?? (res.success
+          ? this.languageService.t('draft.publishedSuccess')
+          : this.languageService.t('draft.publishFailed'));
 
         // Başarılı yayınlama sonrası ağaçtan kaldır (ana model + tüm alt modelleri birlikte)
         if (res.success) {
@@ -157,7 +213,7 @@ export class DraftModelsComponent implements OnInit {
       error: err => {
         draft.publishing = false;
         draft.publishSuccess = false;
-        draft.publishMessage = err?.error?.message ?? 'Yayınlama sırasında sunucu hatası oluştu.';
+        draft.publishMessage = err?.error?.message ?? this.languageService.t('draft.publishServerError');
       }
     });
   }
@@ -172,8 +228,10 @@ export class DraftModelsComponent implements OnInit {
 
     const hasChildren = draft.children.length > 0;
     const confirmed = confirm(
-      `'${draft.tableName}'${hasChildren ? ' ve alt modellerini' : ''} pasif yapmak istediğinize emin misiniz?\n\n` +
-      `Yanlışlıkla sildiyseniz "Silinen Taslaklar" sayfasından geri yükleyebilirsiniz.`
+      this.languageService.t('draft.deactivateConfirm', {
+        name: draft.tableName,
+        childrenSuffix: hasChildren ? this.languageService.t('draft.andSubModels') : ''
+      })
     );
     if (!confirmed) return;
 
@@ -188,13 +246,13 @@ export class DraftModelsComponent implements OnInit {
           this.removeFromTree(draft.id);
         } else {
           draft.deleteSuccess = false;
-          draft.deleteMessage = res.message ?? 'Taslak pasif yapılamadı.';
+          draft.deleteMessage = res.message ?? this.languageService.t('draft.deactivateFailed');
         }
       },
       error: err => {
         draft.deleting = false;
         draft.deleteSuccess = false;
-        draft.deleteMessage = err?.error?.message ?? 'Sunucu bağlantı hatası.';
+        draft.deleteMessage = err?.error?.message ?? this.languageService.t('draft.serverConnectionError');
       }
     });
   }

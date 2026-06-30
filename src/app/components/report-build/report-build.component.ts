@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -18,34 +18,45 @@ import {
 } from '../../models/report.model';
 import { AppChartComponent } from '../chart/chart.component';
 import { CHART_TYPE_META, SINGLE_AGGREGATE_CHART_TYPES } from '../chart/chart-types';
+import { LanguageService } from '../../services/language.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
-const OPERATORS: { value: ReportOperator; label: string }[] = [
-  { value: 'eq', label: '=' },
-  { value: 'ne', label: '≠' },
-  { value: 'gt', label: '>' },
-  { value: 'ge', label: '≥' },
-  { value: 'lt', label: '<' },
-  { value: 'le', label: '≤' },
-  { value: 'contains', label: 'içerir' },
-  { value: 'startswith', label: 'ile başlar' }
+/** `labelKey` — şablonda `| t` ile çevrilir (bkz. report.i18n.ts 'report.operator.*'). */
+const OPERATORS: { value: ReportOperator; labelKey: string }[] = [
+  { value: 'eq', labelKey: 'report.operator.eq' },
+  { value: 'ne', labelKey: 'report.operator.ne' },
+  { value: 'gt', labelKey: 'report.operator.gt' },
+  { value: 'ge', labelKey: 'report.operator.ge' },
+  { value: 'lt', labelKey: 'report.operator.lt' },
+  { value: 'le', labelKey: 'report.operator.le' },
+  { value: 'contains', labelKey: 'report.operator.contains' },
+  { value: 'startswith', labelKey: 'report.operator.startswith' }
 ];
 
-const AGGREGATE_FUNCTIONS: { value: AggregateFunction; label: string }[] = [
-  { value: 'SUM', label: 'Toplam (SUM)' },
-  { value: 'COUNT', label: 'Sayı (COUNT)' },
-  { value: 'AVG', label: 'Ortalama (AVG)' },
-  { value: 'MIN', label: 'Minimum (MIN)' },
-  { value: 'MAX', label: 'Maksimum (MAX)' }
+/** `labelKey` — şablonda `| t` ile çevrilir (bkz. report.i18n.ts 'report.aggregate.*'). */
+const AGGREGATE_FUNCTIONS: { value: AggregateFunction; labelKey: string }[] = [
+  { value: 'SUM', labelKey: 'report.aggregate.sum' },
+  { value: 'COUNT', labelKey: 'report.aggregate.count' },
+  { value: 'AVG', labelKey: 'report.aggregate.avg' },
+  { value: 'MIN', labelKey: 'report.aggregate.min' },
+  { value: 'MAX', labelKey: 'report.aggregate.max' }
 ];
 
-const SORT_DIRECTIONS: { value: SortDirection; label: string }[] = [
-  { value: 'ASC', label: 'Artan (A→Z, 0→9)' },
-  { value: 'DESC', label: 'Azalan (Z→A, 9→0)' }
+/** `labelKey` — şablonda `| t` ile çevrilir (bkz. report.i18n.ts 'report.sort.*'). */
+const SORT_DIRECTIONS: { value: SortDirection; labelKey: string }[] = [
+  { value: 'ASC', labelKey: 'report.sort.asc' },
+  { value: 'DESC', labelKey: 'report.sort.desc' }
 ];
 
 /** Sayısal kolon tipleri — önizleme verisi üretirken hangi kolonun seri/kategori olduğunu ayırt eder. */
 function isNumericColumnType(type: string): boolean {
-  return type === 'int' || type === 'float' || type === 'decimal';
+  return type === 'int' || type === 'long' || type === 'short' || type === 'byte'
+      || type === 'float' || type === 'double' || type === 'decimal';
+}
+
+/** Tarih/saat kolon tipleri — önizlemede tarih formatlama ve grafik kategori eksenleri için. */
+function isDateColumnType(type: string): boolean {
+  return type === 'datetime' || type === 'dateonly' || type === 'timeonly';
 }
 
 /**
@@ -60,11 +71,13 @@ function isNumericColumnType(type: string): boolean {
 @Component({
   selector: 'app-report-build',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, AppChartComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, AppChartComponent, TranslatePipe],
   templateUrl: './report-build.component.html',
   styleUrls: ['./report-build.component.scss']
 })
 export class ReportBuildComponent implements OnInit {
+  private readonly languageService = inject(LanguageService);
+
   readonly operators = OPERATORS;
   readonly aggregateFunctions = AGGREGATE_FUNCTIONS;
   readonly sortDirections = SORT_DIRECTIONS;
@@ -110,13 +123,13 @@ export class ReportBuildComponent implements OnInit {
         if (res.success) {
           this.models = res.data ?? [];
         } else {
-          this.loadError = res.message ?? 'Modeller yüklenemedi.';
+          this.loadError = res.message ?? this.languageService.t('report.build.modelsLoadFailed');
         }
         this.maybeLoadExisting();
       },
       error: (err: { error?: { message?: string } }) => {
         this.loadingModels = false;
-        this.loadError = err?.error?.message ?? 'Sunucu bağlantı hatası.';
+        this.loadError = err?.error?.message ?? this.languageService.t('report.build.serverError');
       }
     });
 
@@ -179,7 +192,7 @@ export class ReportBuildComponent implements OnInit {
 
   isNumericColumn(columnName: string): boolean {
     const col = this.availableColumns.find(c => c.columnName === columnName);
-    return col?.dataType === 'int' || col?.dataType === 'float' || col?.dataType === 'decimal';
+    return !!col && isNumericColumnType(col.dataType);
   }
 
   // ── Grafik tipi seçici ───────────────────────────────────────────────────
@@ -246,20 +259,22 @@ export class ReportBuildComponent implements OnInit {
     if (columns.length === 0) return { columns: [], rows: [] };
 
     // İlk kolon sayısalsa grafik kategori ekseni bulamaz — sentetik bir kategori kolonu ekle.
+    const categoryLabel = this.languageService.t('report.build.previewCategory');
     if (isNumericColumnType(columns[0].type)) {
-      columns = [{ name: 'Kategori', type: 'string' }, ...columns];
+      columns = [{ name: categoryLabel, type: 'string' }, ...columns];
     }
 
+    const valueLabel = this.languageService.t('report.build.previewValue');
     const rowCount = 5;
     const rows: Record<string, unknown>[] = Array.from({ length: rowCount }, (_, i) => {
       const row: Record<string, unknown> = {};
       columns.forEach((col, ci) => {
         if (isNumericColumnType(col.type)) {
           row[col.name] = Math.round(20 + (i + 1) * 11 + ci * 7);
-        } else if (col.type === 'datetime') {
+        } else if (isDateColumnType(col.type)) {
           row[col.name] = new Date(2025, 0, 1 + i * 7).toISOString();
         } else {
-          row[col.name] = ci === 0 ? `Kategori ${i + 1}` : `Değer ${i + 1}`;
+          row[col.name] = ci === 0 ? `${categoryLabel} ${i + 1}` : `${valueLabel} ${i + 1}`;
         }
       });
       return row;
@@ -367,14 +382,14 @@ export class ReportBuildComponent implements OnInit {
         this.loadingExisting = false;
         const existing = (res.data ?? []).find(r => r.id === this.editingId);
         if (!existing) {
-          this.loadError = 'Rapor bulunamadı veya erişim yetkiniz yok.';
+          this.loadError = this.languageService.t('report.build.notFoundOrNoAccess');
           return;
         }
         this.populateForm(existing);
       },
       error: (err: { error?: { message?: string } }) => {
         this.loadingExisting = false;
-        this.loadError = err?.error?.message ?? 'Sunucu bağlantı hatası.';
+        this.loadError = err?.error?.message ?? this.languageService.t('report.build.serverError');
       }
     });
   }
@@ -389,6 +404,30 @@ export class ReportBuildComponent implements OnInit {
 
   // ── Kaydet ───────────────────────────────────────────────────────────────
 
+  /**
+   * Aggregate fonksiyonlarını doğrular (COUNT dışındakiler bir alan gerektirir).
+   * Geçersizse hata mesajını döndürür; geçerliyse null.
+   */
+  private validateAggregates(aggregates: ReportAggregate[]): string | null {
+    const invalidAggregate = aggregates.find(a => a.function !== 'COUNT' && !a.field);
+    return invalidAggregate ? this.languageService.t('report.build.aggregateFieldRequired') : null;
+  }
+
+  /** Form değerlerinden backend'e gönderilecek rapor tanımı DTO'sunu kurar — kaydet ve SQL önizle ortak yolu. */
+  private buildPayload(): Partial<ReportDefinition> {
+    return {
+      id: this.editingId ?? 0,
+      name: this.form.value.name,
+      modelName: this.form.value.modelName,
+      selectedColumns: this.checkedColumnNames(this.selectedColumnsArray),
+      groupBy: this.checkedColumnNames(this.groupByArray),
+      filters: this.filtersArray.value,
+      aggregates: this.aggregatesArray.value as ReportAggregate[],
+      sortBy: this.sortByArray.value,
+      chartType: this.form.value.chartType
+    };
+  }
+
   onSubmit(): void {
     this.submitError = null;
 
@@ -397,24 +436,12 @@ export class ReportBuildComponent implements OnInit {
       return;
     }
 
-    const aggregates = this.aggregatesArray.value as ReportAggregate[];
-    const invalidAggregate = aggregates.find(a => a.function !== 'COUNT' && !a.field);
-    if (invalidAggregate) {
-      this.submitError = 'COUNT dışındaki aggregate fonksiyonları için bir alan seçilmelidir.';
+    const payload = this.buildPayload();
+    const aggregateError = this.validateAggregates(payload.aggregates as ReportAggregate[]);
+    if (aggregateError) {
+      this.submitError = aggregateError;
       return;
     }
-
-    const payload: Partial<ReportDefinition> = {
-      id: this.editingId ?? 0,
-      name: this.form.value.name,
-      modelName: this.form.value.modelName,
-      selectedColumns: this.checkedColumnNames(this.selectedColumnsArray),
-      groupBy: this.checkedColumnNames(this.groupByArray),
-      filters: this.filtersArray.value,
-      aggregates,
-      sortBy: this.sortByArray.value,
-      chartType: this.form.value.chartType
-    };
 
     this.saving = true;
     const request = this.editingId
@@ -427,12 +454,53 @@ export class ReportBuildComponent implements OnInit {
         if (res.success) {
           this.router.navigate(['/reports']);
         } else {
-          this.submitError = res.message ?? 'Rapor kaydedilemedi.';
+          this.submitError = res.message ?? this.languageService.t('report.build.saveFailed');
         }
       },
       error: (err: { error?: { message?: string } }) => {
         this.saving = false;
-        this.submitError = err?.error?.message ?? 'Sunucu bağlantı hatası.';
+        this.submitError = err?.error?.message ?? this.languageService.t('report.build.serverError');
+      }
+    });
+  }
+
+  // ── SQL Önizleme ─────────────────────────────────────────────────────────
+
+  readonly sqlPreview = signal('');
+  readonly sqlPreviewLoading = signal(false);
+  readonly sqlPreviewError = signal<string | null>(null);
+
+  /** Mevcut form seçimleriyle backend'den üretilecek SQL'i çeker — çalıştırmaz, yalnızca gösterir. */
+  previewSql(): void {
+    this.sqlPreviewError.set(null);
+
+    if (!this.form.value.modelName) {
+      this.sqlPreviewError.set(this.languageService.t('report.build.sqlPreviewSelectModelFirst'));
+      return;
+    }
+
+    const payload = this.buildPayload();
+    const aggregateError = this.validateAggregates(payload.aggregates as ReportAggregate[]);
+    if (aggregateError) {
+      this.sqlPreviewError.set(aggregateError);
+      return;
+    }
+
+    this.sqlPreviewLoading.set(true);
+    this.sqlPreview.set('');
+
+    this.reportService.previewSql(payload).subscribe({
+      next: res => {
+        this.sqlPreviewLoading.set(false);
+        if (res.success) {
+          this.sqlPreview.set(res.data ?? '');
+        } else {
+          this.sqlPreviewError.set(res.message ?? this.languageService.t('report.build.sqlPreviewFailed'));
+        }
+      },
+      error: (err: { error?: { message?: string } }) => {
+        this.sqlPreviewLoading.set(false);
+        this.sqlPreviewError.set(err?.error?.message ?? this.languageService.t('report.build.serverError'));
       }
     });
   }

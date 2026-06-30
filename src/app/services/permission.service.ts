@@ -22,6 +22,8 @@ export interface MyPermissionsResponse {
   data: {
     isAdmin: boolean;
     permissions: ModelPermission[];
+    /** Kullanıcının üye olduğu rollerden çözülen açılış sayfası; tanımlı değilse null. */
+    landingPage: string | null;
   };
 }
 
@@ -150,6 +152,14 @@ export class PermissionService {
       p => p.modelName.toLowerCase() === modelName.toLowerCase()
     );
     return perm?.canShowInNav ?? false;
+  }
+
+  /**
+   * Login sonrası yönlendirilecek açılış sayfasını döndürür. Kullanıcının rolünde tanımlı
+   * bir açılış sayfası yoksa (ya da yetki verisi henüz yüklenmediyse) varsayılan /models döner.
+   */
+  getLandingPage(): string {
+    return this._data()?.landingPage ?? '/models';
   }
 
   /** Yetki verisini yeniden yükler (örn. kullanıcı değişikliğinden sonra). */

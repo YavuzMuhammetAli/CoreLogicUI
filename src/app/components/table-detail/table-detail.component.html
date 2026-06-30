@@ -1,0 +1,364 @@
+<!-- ─── Breadcrumb ──────────────────────────────────────────────────────────── -->
+<div class="detail-breadcrumb">
+  <a [routerLink]="['/build']" class="bc-link">{{ 'table.detail.breadcrumbCreateTable' | t }}</a>
+  <span class="bc-sep">/</span>
+  <span class="bc-current">@if (isNew) { {{ 'table.detail.breadcrumbNew' | t }} } @else { {{ editTypeName }} }</span>
+</div>
+
+<!-- ─── Yükleniyor / Hata ──────────────────────────────────────────────────── -->
+@if (isLoadingSchema) {
+  <div class="panel">
+    <div class="panel-body">
+      <p class="muted-hint"><span class="spinner" aria-hidden="true"></span> {{ 'table.detail.schemaLoading' | t }}</p>
+    </div>
+  </div>
+} @else if (loadError) {
+  <div class="alert alert-danger" role="alert">{{ loadError }}</div>
+} @else {
+
+  <!-- ══ ÜST PANEL: Model Tanımı ═══════════════════════════════════════════ -->
+  <div class="panel record-panel">
+    <div class="panel-head record-panel-head">
+      <div>
+        <span class="eyebrow">{{ 'table.detail.platformEyebrow' | t }}</span>
+        <h1 class="record-title">
+          @if (isNew) { {{ 'table.detail.newTableTitle' | t }} } @else { {{ editTypeName }} }
+        </h1>
+        <p class="panel-subtitle">
+          @if (isNew) {
+            {{ 'table.detail.newTableSubtitle' | t }}
+          } @else {
+            {{ 'table.detail.editTableSubtitle' | t }}
+          }
+        </p>
+      </div>
+
+      <!-- Sağ üst aksiyonlar: Listeye Dön + Kaydet + Yayınla -->
+      <div class="panel-actions">
+        <a [routerLink]="['/build']" class="btn btn-ghost btn-sm">
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          {{ 'table.detail.backToList' | t }}
+        </a>
+
+        <!-- Kaydet -->
+        <button
+          type="button"
+          class="btn btn-secondary btn-sm"
+          (click)="isNew ? onSave() : onSaveEdit()"
+          [disabled]="isSaving || isPublishing">
+          @if (isSaving) {
+            <span class="spinner" aria-hidden="true"></span>
+            {{ 'table.detail.saving' | t }}
+          } @else {
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            {{ 'table.detail.save' | t }}
+          }
+        </button>
+
+        <!-- Yayınla — yalnızca başarılı kayıttan sonra aktif -->
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          (click)="onPublish()"
+          [disabled]="!isSaved || isSaving || isPublishing"
+          [attr.title]="!isSaved ? ('table.detail.publishDisabledHint' | t) : null">
+          @if (isPublishing) {
+            <span class="spinner" aria-hidden="true"></span>
+            {{ 'table.detail.publishing' | t }}
+          } @else {
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+            {{ 'table.detail.publish' | t }}
+          }
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-body" [formGroup]="rootGroup">
+      <div class="field">
+        <label for="entityName">{{ 'table.detail.modelNameLabel' | t }} <span class="req">*</span></label>
+        <input
+          id="entityName"
+          type="text"
+          class="input"
+          formControlName="entityName"
+          [attr.placeholder]="'table.detail.modelNamePlaceholder' | t"
+          required
+          [attr.aria-invalid]="entityNameCtrl.touched && entityNameCtrl.invalid"
+          aria-describedby="entity-help">
+        <span id="entity-help" class="field-help">
+          {{ 'table.detail.modelNameHelp' | t:{ example: 'Product' } }}
+        </span>
+        @if (entityNameCtrl.touched && entityNameCtrl.hasError('required')) {
+          <span class="field-error" role="alert">{{ 'table.detail.modelNameRequired' | t }}</span>
+        } @else if (entityNameCtrl.touched && entityNameCtrl.hasError('pattern')) {
+          <span class="field-error" role="alert">{{ 'table.detail.modelNamePattern' | t }}</span>
+        }
+      </div>
+
+      @if (submitMessage) {
+        <div
+          class="alert"
+          [class.alert-success]="submitSuccess"
+          [class.alert-danger]="!submitSuccess"
+          [attr.role]="submitSuccess ? 'status' : 'alert'">
+          {{ submitMessage }}
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- ══ ALT PANEL: Sütunlar (modelin alt modeli gibi gösterilir) ══════════ -->
+  <div class="children-panel panel">
+
+    <!-- Sekme çubuğu — yalnızca "Sütunlar" sekmesi var, model-detail'deki alt model sekmeleriyle aynı görsel dil -->
+    <div class="tab-bar" role="tablist" [attr.aria-label]="'table.detail.subModelsTablistAria' | t">
+      <button type="button" class="tab-btn tab-btn--active" role="tab" aria-selected="true">
+        {{ 'table.detail.columnsTab' | t }}
+        @if (columns.length > 0) {
+          <span class="tab-badge">{{ columns.length }}</span>
+        }
+      </button>
+    </div>
+
+    <div class="tab-panel" role="tabpanel" [attr.aria-label]="'table.detail.columnsPanelAria' | t">
+
+      <!-- Araç çubuğu -->
+      <div class="tab-toolbar">
+        <div class="tab-toolbar-actions">
+          <button type="button" class="btn btn-primary btn-sm" (click)="openAddColumnModal()">
+            <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            {{ 'table.detail.newColumn' | t }}
+          </button>
+        </div>
+      </div>
+
+      @if (columns.length === 0) {
+        <div class="empty-state">
+          <div class="empty-icon" aria-hidden="true">📋</div>
+          <h3>{{ 'table.detail.noColumnsTitle' | t }}</h3>
+          <p>{{ 'table.detail.noColumnsMessage' | t }}</p>
+          <button type="button" class="btn btn-primary" (click)="openAddColumnModal()">{{ 'table.detail.newColumn' | t }}</button>
+        </div>
+      } @else {
+        <div class="tab-table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>{{ 'table.detail.colName' | t }}</th>
+                <th>{{ 'table.detail.colType' | t }}</th>
+                <th>{{ 'table.detail.colNullable' | t }}</th>
+                <th>{{ 'table.detail.colRules' | t }}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (col of columns.controls; track $index) {
+                <tr
+                  class="row-clickable"
+                  (click)="openEditColumnModal($index)"
+                  [attr.aria-label]="'table.detail.editColumnAria' | t:{ name: col.get('columnName')!.value }">
+                  <td>
+                    {{ col.get('label')!.value || col.get('columnName')!.value }}
+                    @if (col.get('label')!.value) {
+                      <span class="muted-hint">({{ col.get('columnName')!.value }})</span>
+                    }
+                  </td>
+                  <td><span class="badge badge-meta">{{ typeLabel(col.get('dataType')!.value) }}</span></td>
+                  <td>{{ col.get('isNullable')!.value ? ('table.detail.yes' | t) : ('table.detail.no' | t) }}</td>
+                  <td class="muted-hint">{{ ruleSummary(col) }}</td>
+                  <td class="td-actions">
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-sm"
+                      (click)="removeColumn($index); $event.stopPropagation()"
+                      [attr.aria-label]="'table.detail.deleteColumnAria' | t:{ name: col.get('columnName')!.value }">
+                      {{ 'table.detail.delete' | t }}
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- ══ SÜTUN POPUP'I ══════════════════════════════════════════════════════ -->
+@if (columnModalOpen) {
+  <div class="dialog-overlay" (click)="onColumnModalBackdropClick()">
+    <div
+      class="dialog-panel panel"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="editingColumnIndex === null ? ('table.detail.newColumnDialogAria' | t) : ('table.detail.editColumnDialogAria' | t)"
+      (click)="$event.stopPropagation()">
+
+      <div class="panel-head">
+        <h3>{{ editingColumnIndex === null ? ('table.detail.newColumnTitle' | t) : ('table.detail.editColumnTitle' | t) }}</h3>
+      </div>
+
+      <div class="panel-body" [formGroup]="columnDraft">
+
+        <div class="field">
+          <label for="col-name">{{ 'table.detail.colName' | t }} <span class="req">*</span></label>
+          <input
+            id="col-name"
+            type="text"
+            class="input"
+            formControlName="columnName"
+            [attr.placeholder]="'model.node.namePlaceholder' | t"
+            required
+            [attr.aria-invalid]="columnDraft.get('columnName')!.touched && columnDraft.get('columnName')!.invalid">
+          @if (columnDraft.get('columnName')!.touched && columnDraft.get('columnName')!.hasError('required')) {
+            <span class="field-error" role="alert">{{ 'table.detail.nameRequired' | t }}</span>
+          } @else if (columnDraft.get('columnName')!.touched && columnDraft.get('columnName')!.hasError('pattern')) {
+            <span class="field-error" role="alert">{{ 'table.detail.namePattern' | t }}</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="col-label">{{ 'table.detail.labelLabel' | t }}</label>
+          <input
+            id="col-label"
+            type="text"
+            class="input"
+            formControlName="label"
+            [attr.placeholder]="'table.detail.labelPlaceholder' | t">
+          <span class="field-help">{{ 'table.detail.labelHelp' | t }}</span>
+        </div>
+
+        <div class="field">
+          <label for="col-description">{{ 'table.detail.descriptionLabel' | t }}</label>
+          <input
+            id="col-description"
+            type="text"
+            class="input"
+            formControlName="description"
+            [attr.placeholder]="'table.detail.descriptionPlaceholder' | t">
+          <span class="field-help">{{ 'table.detail.descriptionHelp' | t }}</span>
+        </div>
+
+        <div class="field">
+          <label for="col-type">{{ 'model.node.typeLabel' | t }}</label>
+          <select id="col-type" class="input" formControlName="dataType">
+            <optgroup [label]="'model.node.primitiveGroup' | t">
+              @for (type of primitiveTypes; track type.value) {
+                <option [value]="type.value">{{ type.label }}</option>
+              }
+            </optgroup>
+            <optgroup [label]="'model.node.referenceGroup' | t">
+              @for (type of referenceTypes; track type.value) {
+                <option [value]="type.value">{{ type.label }}</option>
+              }
+            </optgroup>
+          </select>
+        </div>
+
+        <label class="checkbox-label" for="col-nullable">
+          <input id="col-nullable" type="checkbox" formControlName="isNullable">
+          {{ 'table.detail.nullableCheckbox' | t }}
+        </label>
+
+        <!-- String'e özel: MinLength, MaxLength, Regex -->
+        @if (columnDraft.get('dataType')!.value === 'string') {
+          <div class="col-rules-row">
+            <div class="field col-rule-field">
+              <label for="col-minlen">{{ 'table.detail.minLength' | t }}</label>
+              <input id="col-minlen" type="number" class="input" formControlName="minLength" placeholder="0" min="0">
+            </div>
+            <div class="field col-rule-field">
+              <label for="col-maxlen">{{ 'table.detail.maxLength' | t }}</label>
+              <input id="col-maxlen" type="number" class="input" formControlName="maxLength" placeholder="255" min="0">
+            </div>
+            <div class="field col-rule-field col-rule-field--wide">
+              <label for="col-regex">{{ 'table.detail.regexPattern' | t }}</label>
+              <input id="col-regex" type="text" class="input" formControlName="regex" [attr.placeholder]="'table.detail.regexPatternPlaceholder' | t">
+            </div>
+            <div class="field col-rule-field col-rule-field--wide">
+              <label for="col-regexmsg">{{ 'table.detail.regexMessage' | t }}</label>
+              <input id="col-regexmsg" type="text" class="input" formControlName="regexMessage" [attr.placeholder]="'table.detail.regexMessagePlaceholder' | t">
+            </div>
+          </div>
+        }
+
+        <!-- Sayısal tiplere özel: Min, Max -->
+        @if (isNumericType(columnDraft.get('dataType')!.value)) {
+          <div class="col-rules-row">
+            <div class="field col-rule-field">
+              <label for="col-min">{{ 'table.detail.minValue' | t }}</label>
+              <input id="col-min" type="number" class="input" formControlName="min" [attr.placeholder]="'table.detail.minValuePlaceholder' | t">
+            </div>
+            <div class="field col-rule-field">
+              <label for="col-max">{{ 'table.detail.maxValue' | t }}</label>
+              <input id="col-max" type="number" class="input" formControlName="max" [attr.placeholder]="'table.detail.maxValuePlaceholder' | t">
+            </div>
+          </div>
+        }
+
+        <!-- Enum'a özel: izinli değerler -->
+        @if (columnDraft.get('dataType')!.value === 'enum') {
+          <div class="col-rules-row">
+            <div class="field col-rule-field col-rule-field--wide">
+              <label for="col-enumvalues">{{ 'table.detail.allowedValues' | t }}</label>
+              <input
+                id="col-enumvalues"
+                type="text"
+                class="input"
+                formControlName="enumValues"
+                [attr.placeholder]="'table.detail.allowedValuesPlaceholder' | t">
+              <span class="field-help">{{ 'table.detail.allowedValuesHelp' | t:{ separator: '|' } }}</span>
+            </div>
+          </div>
+        }
+
+        <!-- Lookup'a özel: hedef model + gösterilecek kolon -->
+        @if (columnDraft.get('dataType')!.value === 'lookup') {
+          <div class="col-rules-row">
+            <div class="field col-rule-field">
+              <label for="col-lookuptarget">{{ 'table.detail.lookupTarget' | t }}</label>
+              <select
+                id="col-lookuptarget"
+                class="input"
+                formControlName="lookupTargetTable"
+                (change)="onLookupTargetChange(columnDraft.get('lookupTargetTable')!.value)">
+                <option value="">{{ 'table.detail.selectOption' | t }}</option>
+                @for (table of availableTables; track table) {
+                  <option [value]="table">{{ table }}</option>
+                }
+              </select>
+            </div>
+            <div class="field col-rule-field">
+              <label for="col-lookupdisplay">{{ 'table.detail.lookupDisplayColumn' | t }}</label>
+              <select id="col-lookupdisplay" class="input" formControlName="lookupDisplayColumn">
+                <option value="">{{ 'table.detail.selectOption' | t }}</option>
+                @for (c of lookupColumnsByTable[columnDraft.get('lookupTargetTable')!.value] ?? []; track c) {
+                  <option [value]="c">{{ c }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="panel-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeColumnModal()">{{ 'table.detail.cancel' | t }}</button>
+        <button type="button" class="btn btn-primary" (click)="saveColumnModal()">{{ 'table.detail.save2' | t }}</button>
+      </div>
+    </div>
+  </div>
+}

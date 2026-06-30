@@ -1,12 +1,12 @@
 @if (loading()) {
   <div class="chart-state">
-    <span class="spinner" aria-label="Yükleniyor"></span>
+    <span class="spinner" [attr.aria-label]="'common.loading' | t"></span>
   </div>
 } @else if (error()) {
   <div class="alert alert-danger" role="alert">{{ error() }}</div>
 } @else if (!build()) {
   <div class="chart-state">
-    <span class="spinner" aria-label="Yükleniyor"></span>
+    <span class="spinner" [attr.aria-label]="'common.loading' | t"></span>
   </div>
 } @else if (build()!.isEmpty) {
   <div class="empty-state">
