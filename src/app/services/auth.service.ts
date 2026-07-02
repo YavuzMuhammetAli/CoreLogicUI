@@ -3,6 +3,8 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { DataResponseModel } from '../models/dataResponseModel';
+import { CompanyRegisterDto, ProvisionStatus } from '../models/provision.model';
 
 export interface LoginDto {
   email: string;
@@ -54,6 +56,26 @@ export class AuthService {
     return this.http.post(`${this.baseUrl}/register`, dto);
   }
 
+  /**
+   * Yeni şirket kaydı — kurulum backend'de arka planda ilerler; data alanı
+   * provisionId (GUID) döner, ilerleme getProvisionStatus ile poll'lanır.
+   */
+  registerCompany(dto: CompanyRegisterDto): Observable<DataResponseModel<string>> {
+    return this.http.post<DataResponseModel<string>>(`${this.baseUrl}/register-company`, dto);
+  }
+
+  /** Kurulum durumu — adım listesi + süreler; tamamlandıysa otomatik login token'ı içerir. */
+  getProvisionStatus(provisionId: string): Observable<DataResponseModel<ProvisionStatus>> {
+    return this.http.get<DataResponseModel<ProvisionStatus>>(
+      `${this.baseUrl}/provision-status/${provisionId}`
+    );
+  }
+
+  /** Token'ı saklar — wizard'daki otomatik login akışı kullanır (login() ile aynı anahtar). */
+  storeToken(token: string): void {
+    this.storage?.setItem('access_token', token);
+  }
+
   logout(): void {
     this.storage?.removeItem('access_token');
   }
@@ -62,14 +84,17 @@ export class AuthService {
     return !!this.storage?.getItem('access_token');
   }
 
-  /** JWT payload'ını çözümleyip kullanıcı bilgisini döndürür. */
-  getUserFromToken(): { name: string; email: string; initials: string } | null {
+  /** JWT payload'ını çözümleyip kullanıcı bilgisini döndürür (tenant claim'leri dahil). */
+  getUserFromToken(): { name: string; email: string; initials: string; tenantId: string | null; companyId: string | null } | null {
     const token = this.storage?.getItem('access_token');
     if (!token) return null;
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const name: string = payload['unique_name'] ?? payload['name'] ?? '';
       const email: string = payload['email'] ?? '';
+      // Multi-tenant claim'leri — backend JwtHelper.SetClaims her token'a ekler
+      const tenantId: string | null = payload['tenant_id'] ?? null;
+      const companyId: string | null = payload['company_id'] ?? null;
       // Ad yoksa e-postanın @ öncesi kısmını görünen ad olarak kullan
       const display = name || email.split('@')[0] || '';
       const source = name || email;
@@ -77,7 +102,7 @@ export class AuthService {
       const initials = parts.length >= 2
         ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
         : source.slice(0, 2).toUpperCase();
-      return { name: display, email, initials };
+      return { name: display, email, initials, tenantId, companyId };
     } catch {
       return null;
     }
