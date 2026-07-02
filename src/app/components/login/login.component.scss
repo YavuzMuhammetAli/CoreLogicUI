@@ -32,34 +32,6 @@
   color: var(--muted);
 }
 
-.login-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border-bottom: 1px solid var(--border);
-
-  button {
-    padding: var(--space-3) 0;
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    font: 600 var(--text-sm) / 1 var(--font-body);
-    color: var(--muted);
-    cursor: pointer;
-    transition: color var(--motion-fast) var(--ease-standard),
-                border-color var(--motion-fast) var(--ease-standard);
-
-    &.active {
-      color: var(--accent);
-      border-bottom-color: var(--accent);
-    }
-
-    &:focus-visible {
-      outline: none;
-      box-shadow: var(--focus-ring);
-    }
-  }
-}
-
 .login-form {
   display: grid;
   gap: var(--space-4);
@@ -76,4 +48,31 @@
   width: 100%;
   min-height: 44px;
   margin-top: var(--space-2);
+}
+
+// ── Yeni şirket kaydı bölümü ────────────────────────────────────────────────
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-6);
+  color: var(--muted);
+  font-size: var(--text-xs);
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+}
+
+.login-create-company {
+  padding: var(--space-4) var(--space-6) var(--space-6);
+
+  .login-btn {
+    margin-top: 0;
+  }
 }

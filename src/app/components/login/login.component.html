@@ -13,149 +13,74 @@
       </div>
     }
 
-    <!-- Sekmeler -->
-    <div class="login-tabs" role="tablist">
-      <button
-        role="tab"
-        [class.active]="activeTab === 'login'"
-        [attr.aria-selected]="activeTab === 'login'"
-        (click)="activeTab = 'login'"
-        type="button">
-        {{ 'login.tabLogin' | t }}
-      </button>
-      <button
-        role="tab"
-        [class.active]="activeTab === 'register'"
-        [attr.aria-selected]="activeTab === 'register'"
-        (click)="activeTab = 'register'"
-        type="button">
-        {{ 'login.tabRegister' | t }}
-      </button>
-    </div>
-
     <!-- Giriş Formu -->
-    @if (activeTab === 'login') {
-      <form
-        class="login-form"
-        [formGroup]="form"
-        (ngSubmit)="onLogin()"
-        novalidate>
+    <form
+      class="login-form"
+      [formGroup]="form"
+      (ngSubmit)="onLogin()"
+      novalidate>
 
-        @if (errorMessage) {
-          <div class="alert alert-danger" role="alert">
-            {{ errorMessage }}
-          </div>
+      @if (errorMessage) {
+        <div class="alert alert-danger" role="alert">
+          {{ errorMessage }}
+        </div>
+      }
+
+      <div class="field">
+        <label for="email">{{ 'login.email' | t }} <span class="req">*</span></label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          [placeholder]="'login.emailPlaceholder' | t"
+          autocomplete="email"
+          required
+          [attr.aria-invalid]="f['email'].touched && f['email'].invalid"
+          aria-describedby="email-err">
+        @if (f['email'].touched && f['email'].hasError('required')) {
+          <span id="email-err" class="field-error" role="alert">{{ 'login.emailRequired' | t }}</span>
+        } @else if (f['email'].touched && f['email'].hasError('email')) {
+          <span id="email-err" class="field-error" role="alert">{{ 'login.emailInvalid' | t }}</span>
         }
+      </div>
 
-        <div class="field">
-          <label for="email">{{ 'login.email' | t }} <span class="req">*</span></label>
-          <input
-            id="email"
-            type="email"
-            formControlName="email"
-            [placeholder]="'login.emailPlaceholder' | t"
-            autocomplete="email"
-            required
-            [attr.aria-invalid]="f['email'].touched && f['email'].invalid"
-            aria-describedby="email-err">
-          @if (f['email'].touched && f['email'].hasError('required')) {
-            <span id="email-err" class="field-error" role="alert">{{ 'login.emailRequired' | t }}</span>
-          } @else if (f['email'].touched && f['email'].hasError('email')) {
-            <span id="email-err" class="field-error" role="alert">{{ 'login.emailInvalid' | t }}</span>
-          }
-        </div>
-
-        <div class="field">
-          <label for="password">{{ 'login.password' | t }} <span class="req">*</span></label>
-          <input
-            id="password"
-            type="password"
-            formControlName="password"
-            placeholder="••••••••"
-            autocomplete="current-password"
-            required
-            [attr.aria-invalid]="f['password'].touched && f['password'].invalid"
-            aria-describedby="pw-err">
-          @if (f['password'].touched && f['password'].hasError('required')) {
-            <span id="pw-err" class="field-error" role="alert">{{ 'login.passwordRequired' | t }}</span>
-          }
-        </div>
-
-        <button
-          type="submit"
-          class="btn btn-primary login-btn"
-          [disabled]="isLoading">
-          @if (isLoading) {
-            <span class="spinner" aria-hidden="true"></span>
-            {{ 'login.loggingIn' | t }}
-          } @else {
-            {{ 'login.tabLogin' | t }}
-          }
-        </button>
-      </form>
-    }
-
-    <!-- Kayıt Formu -->
-    @if (activeTab === 'register') {
-      <form
-        class="login-form"
-        [formGroup]="registerForm"
-        (ngSubmit)="onRegister()"
-        novalidate>
-
-        @if (registerError) {
-          <div class="alert alert-danger" role="alert">{{ registerError }}</div>
+      <div class="field">
+        <label for="password">{{ 'login.password' | t }} <span class="req">*</span></label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          placeholder="••••••••"
+          autocomplete="current-password"
+          required
+          [attr.aria-invalid]="f['password'].touched && f['password'].invalid"
+          aria-describedby="pw-err">
+        @if (f['password'].touched && f['password'].hasError('required')) {
+          <span id="pw-err" class="field-error" role="alert">{{ 'login.passwordRequired' | t }}</span>
         }
-        @if (registerSuccess) {
-          <div class="alert alert-success" role="status">{{ registerSuccess }}</div>
+      </div>
+
+      <button
+        type="submit"
+        class="btn btn-primary login-btn"
+        [disabled]="isLoading">
+        @if (isLoading) {
+          <span class="spinner" aria-hidden="true"></span>
+          {{ 'login.loggingIn' | t }}
+        } @else {
+          {{ 'login.tabLogin' | t }}
         }
+      </button>
+    </form>
 
-        <div class="name-row">
-          <div class="field">
-            <label for="firstName">{{ 'login.firstName' | t }} <span class="req">*</span></label>
-            <input id="firstName" type="text" formControlName="firstName" [placeholder]="'login.firstNamePlaceholder' | t" required
-              [attr.aria-invalid]="rf['firstName'].touched && rf['firstName'].invalid">
-            @if (rf['firstName'].touched && rf['firstName'].hasError('required')) {
-              <span class="field-error" role="alert">{{ 'login.firstNameRequired' | t }}</span>
-            }
-          </div>
-          <div class="field">
-            <label for="lastName">{{ 'login.lastName' | t }} <span class="req">*</span></label>
-            <input id="lastName" type="text" formControlName="lastName" [placeholder]="'login.lastNamePlaceholder' | t" required
-              [attr.aria-invalid]="rf['lastName'].touched && rf['lastName'].invalid">
-            @if (rf['lastName'].touched && rf['lastName'].hasError('required')) {
-              <span class="field-error" role="alert">{{ 'login.lastNameRequired' | t }}</span>
-            }
-          </div>
-        </div>
-
-        <div class="field">
-          <label for="reg-email">{{ 'login.email' | t }} <span class="req">*</span></label>
-          <input id="reg-email" type="email" formControlName="email" [placeholder]="'login.emailPlaceholder' | t" required
-            [attr.aria-invalid]="rf['email'].touched && rf['email'].invalid">
-          @if (rf['email'].touched && rf['email'].hasError('email')) {
-            <span class="field-error" role="alert">{{ 'login.emailInvalid' | t }}</span>
-          }
-        </div>
-
-        <div class="field">
-          <label for="reg-password">{{ 'login.password' | t }} <span class="req">*</span></label>
-          <input id="reg-password" type="password" formControlName="password" [placeholder]="'login.passwordPlaceholderMin6' | t" required
-            [attr.aria-invalid]="rf['password'].touched && rf['password'].invalid">
-          @if (rf['password'].touched && rf['password'].hasError('minlength')) {
-            <span class="field-error" role="alert">{{ 'login.passwordMinLength' | t }}</span>
-          }
-        </div>
-
-        <button type="submit" class="btn btn-primary login-btn" [disabled]="registerLoading">
-          @if (registerLoading) {
-            <span class="spinner" aria-hidden="true"></span>
-            {{ 'login.registering' | t }}
-          } @else {
-            {{ 'login.tabRegister' | t }}
-          }
-        </button>
-      </form>
-    }
+    <!-- Yeni şirket kaydı — self-service SaaS onboarding -->
+    <div class="login-divider" role="separator" aria-hidden="true">
+      <span>{{ 'login.noAccount' | t }}</span>
+    </div>
+    <div class="login-create-company">
+      <a routerLink="/register-company" class="btn btn-secondary login-btn">
+        {{ 'login.createCompany' | t }}
+      </a>
+    </div>
   </div>
 </div>

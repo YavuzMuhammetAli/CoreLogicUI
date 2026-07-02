@@ -1,0 +1,205 @@
+<div class="regco-page">
+  <div class="regco-card panel">
+    <!-- Başlık -->
+    <div class="regco-header">
+      <span class="eyebrow">CoreLogic Platform</span>
+      <h1>{{ 'regco.title' | t }}</h1>
+      <p class="regco-subtitle">{{ 'regco.subtitle' | t }}</p>
+    </div>
+
+    <!-- Adım göstergesi -->
+    <ol class="regco-steps" [attr.aria-label]="'regco.stepLabel' | t:{ current: step(), total: totalSteps }">
+      <li [class.active]="step() === 1" [class.done]="step() > 1">
+        <span class="step-dot">@if (step() > 1) { ✓ } @else { 1 }</span>
+        <span class="step-label">{{ 'regco.step1' | t }}</span>
+      </li>
+      <li [class.active]="step() === 2" [class.done]="step() > 2">
+        <span class="step-dot">@if (step() > 2) { ✓ } @else { 2 }</span>
+        <span class="step-label">{{ 'regco.step2' | t }}</span>
+      </li>
+      <li [class.active]="step() === 3" [class.done]="step() > 3">
+        <span class="step-dot">@if (step() > 3) { ✓ } @else { 3 }</span>
+        <span class="step-label">{{ 'regco.step3' | t }}</span>
+      </li>
+      <li [class.active]="step() === 4">
+        <span class="step-dot">4</span>
+        <span class="step-label">{{ 'regco.step4' | t }}</span>
+      </li>
+    </ol>
+
+    <!-- Adım 1: Şirket Bilgileri -->
+    @if (step() === 1) {
+      <form class="regco-form" [formGroup]="companyForm" (ngSubmit)="nextFromCompany()" novalidate>
+        <div class="field">
+          <label for="companyName">{{ 'regco.companyName' | t }} <span class="req">*</span></label>
+          <input
+            id="companyName"
+            type="text"
+            formControlName="companyName"
+            [placeholder]="'regco.companyNamePlaceholder' | t"
+            required
+            [attr.aria-invalid]="cf.companyName.touched && cf.companyName.invalid"
+            aria-describedby="companyName-err">
+          @if (cf.companyName.touched && cf.companyName.hasError('required')) {
+            <span id="companyName-err" class="field-error" role="alert">{{ 'regco.companyNameRequired' | t }}</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="companyCode">{{ 'regco.companyCode' | t }} <span class="req">*</span></label>
+          <input
+            id="companyCode"
+            type="text"
+            formControlName="companyCode"
+            [placeholder]="'regco.companyCodePlaceholder' | t"
+            autocapitalize="off"
+            autocomplete="off"
+            required
+            [attr.aria-invalid]="cf.companyCode.touched && cf.companyCode.invalid"
+            aria-describedby="companyCode-err companyCode-help">
+          <span id="companyCode-help" class="field-help">{{ 'regco.companyCodeHelp' | t }}</span>
+          @if (cf.companyCode.touched && cf.companyCode.hasError('required')) {
+            <span id="companyCode-err" class="field-error" role="alert">{{ 'regco.companyCodeRequired' | t }}</span>
+          } @else if (cf.companyCode.touched && cf.companyCode.hasError('pattern')) {
+            <span id="companyCode-err" class="field-error" role="alert">{{ 'regco.companyCodeInvalid' | t }}</span>
+          }
+        </div>
+
+        <div class="regco-actions">
+          <a routerLink="/login" class="btn btn-ghost">{{ 'regco.backToLogin' | t }}</a>
+          <button type="submit" class="btn btn-primary">{{ 'regco.next' | t }}</button>
+        </div>
+      </form>
+    }
+
+    <!-- Adım 2: Yönetici Bilgileri -->
+    @if (step() === 2) {
+      <form class="regco-form" [formGroup]="adminForm" (ngSubmit)="startProvisioning()" novalidate>
+        @if (startError()) {
+          <div class="alert alert-danger" role="alert">{{ startError() }}</div>
+        }
+
+        <p class="regco-hint">{{ 'regco.adminInfoHint' | t }}</p>
+
+        <div class="name-row">
+          <div class="field">
+            <label for="adminName">{{ 'regco.adminName' | t }} <span class="req">*</span></label>
+            <input id="adminName" type="text" formControlName="adminName" required
+              [attr.aria-invalid]="af.adminName.touched && af.adminName.invalid">
+            @if (af.adminName.touched && af.adminName.hasError('required')) {
+              <span class="field-error" role="alert">{{ 'regco.adminNameRequired' | t }}</span>
+            }
+          </div>
+          <div class="field">
+            <label for="adminSurname">{{ 'regco.adminSurname' | t }} <span class="req">*</span></label>
+            <input id="adminSurname" type="text" formControlName="adminSurname" required
+              [attr.aria-invalid]="af.adminSurname.touched && af.adminSurname.invalid">
+            @if (af.adminSurname.touched && af.adminSurname.hasError('required')) {
+              <span class="field-error" role="alert">{{ 'regco.adminSurnameRequired' | t }}</span>
+            }
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="regco-email">{{ 'login.email' | t }} <span class="req">*</span></label>
+          <input id="regco-email" type="email" formControlName="email" [placeholder]="'login.emailPlaceholder' | t"
+            autocomplete="email" required
+            [attr.aria-invalid]="af.email.touched && af.email.invalid">
+          @if (af.email.touched && af.email.hasError('required')) {
+            <span class="field-error" role="alert">{{ 'login.emailRequired' | t }}</span>
+          } @else if (af.email.touched && af.email.hasError('email')) {
+            <span class="field-error" role="alert">{{ 'login.emailInvalid' | t }}</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="regco-password">{{ 'login.password' | t }} <span class="req">*</span></label>
+          <input id="regco-password" type="password" formControlName="password"
+            [placeholder]="'login.passwordPlaceholderMin6' | t" autocomplete="new-password" required
+            [attr.aria-invalid]="af.password.touched && af.password.invalid">
+          @if (af.password.touched && af.password.hasError('required')) {
+            <span class="field-error" role="alert">{{ 'login.passwordRequired' | t }}</span>
+          } @else if (af.password.touched && af.password.hasError('minlength')) {
+            <span class="field-error" role="alert">{{ 'login.passwordMinLength' | t }}</span>
+          }
+        </div>
+
+        <div class="regco-actions">
+          <button type="button" class="btn btn-secondary" (click)="backToCompany()">{{ 'regco.back' | t }}</button>
+          <button type="submit" class="btn btn-primary" [disabled]="isStarting()">
+            @if (isStarting()) {
+              <span class="spinner" aria-hidden="true"></span>
+            }
+            {{ 'regco.start' | t }}
+          </button>
+        </div>
+      </form>
+    }
+
+    <!-- Adım 3: Kurulum (gerçek ilerleme) -->
+    @if (step() === 3) {
+      <div class="regco-form">
+        @if (!provisionFailed()) {
+          <p class="regco-provision-title">
+            <span class="spinner" aria-hidden="true"></span>
+            {{ 'regco.provisioning' | t }}
+          </p>
+          <p class="regco-hint">{{ 'regco.provisioningHint' | t }}</p>
+        } @else {
+          <div class="alert alert-danger" role="alert">
+            <div>
+              <strong>{{ 'regco.failed' | t }}</strong>
+              @if (provisionStatus()?.error) {
+                <div class="regco-error-detail">{{ provisionStatus()?.error }}</div>
+              }
+              <div>{{ 'regco.failedHint' | t }}</div>
+            </div>
+          </div>
+        }
+
+        <ul class="regco-provision-steps" aria-live="polite">
+          @for (s of displaySteps(); track s.name) {
+            <li [class]="'state-' + s.state">
+              <span class="provision-icon" aria-hidden="true">
+                @switch (s.state) {
+                  @case ('done') { ✓ }
+                  @case ('failed') { ✕ }
+                  @case ('running') { <span class="spinner"></span> }
+                  @default { • }
+                }
+              </span>
+              <span class="provision-label">{{ ('regco.step.' + s.name) | t }}</span>
+              @if (s.durationMs !== null && s.state === 'done') {
+                <span class="badge badge-meta">{{ s.durationMs }} ms</span>
+              }
+            </li>
+          }
+        </ul>
+
+        @if (provisionFailed()) {
+          <div class="regco-actions">
+            <a routerLink="/login" class="btn btn-ghost">{{ 'regco.backToLogin' | t }}</a>
+            <button type="button" class="btn btn-primary" (click)="retry()">{{ 'regco.retry' | t }}</button>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Adım 4: Tamamlandı -->
+    @if (step() === 4) {
+      <div class="regco-form regco-done">
+        <div class="regco-done-icon" aria-hidden="true">✓</div>
+        <h2>{{ 'regco.done' | t }}</h2>
+        @if (!autoLoginFailed()) {
+          <p class="regco-hint">
+            <span class="spinner" aria-hidden="true"></span>
+            {{ 'regco.doneHint' | t }}
+          </p>
+        } @else {
+          <p class="regco-hint">{{ 'regco.doneManualLogin' | t }}</p>
+          <a routerLink="/login" class="btn btn-primary">{{ 'regco.goToLogin' | t }}</a>
+        }
+      </div>
+    }
+  </div>
+</div>

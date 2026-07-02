@@ -11,6 +11,13 @@ export const routes: Routes = [
       import('./components/login/login.component').then(m => m.LoginComponent)
   },
 
+  // Yeni şirket kayıt sihirbazı (korumasız — henüz hesap yokken kullanılır)
+  {
+    path: 'register-company',
+    loadComponent: () =>
+      import('./components/register-company/register-company.component').then(m => m.RegisterCompanyComponent)
+  },
+
   // Korumalı sayfa grubu — app shell içinde
   {
     path: '',
