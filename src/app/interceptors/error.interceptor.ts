@@ -13,10 +13,16 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         return throwError(() => err);
       }
 
-      // 401: token süresi dolmuş veya geçersiz → oturumu temizle
+      // 401: token süresi dolmuş veya geçersiz → oturumu temizle.
+      // "Oturum süresi doldu" yönlendirmesi yalnızca gerçekten bir token varken
+      // anlamlıdır — anonim bir isteğin 401'i (örn. public sayfadan yapılan çağrı)
+      // kullanıcıyı bulunduğu public sayfadan koparmamalı.
       if (err.status === 401) {
-        localStorage.removeItem('access_token');
-        router.navigate(['/login'], { queryParams: { reason: 'session_expired' } });
+        const hadToken = !!localStorage.getItem('access_token');
+        if (hadToken) {
+          localStorage.removeItem('access_token');
+          router.navigate(['/login'], { queryParams: { reason: 'session_expired' } });
+        }
       }
 
       // 403: yetki yetersiz — oturum geçerli, kullanıcıyı çıkartma.

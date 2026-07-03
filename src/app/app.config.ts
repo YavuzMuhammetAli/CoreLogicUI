@@ -38,6 +38,12 @@ function permissionInitializerFactory(
     // Tarayıcı dışında (artık olmasa da guard yapısını bozmamak için korundu)
     if (!isPlatformBrowser(platformId)) return Promise.resolve();
 
+    // Token yoksa (anonim ziyaretçi — /login veya /register-company) hiç istek
+    // atma: aksi halde /Permission/my 401 döner ve error interceptor kullanıcıyı
+    // yanıltıcı "oturum süresi doldu" mesajıyla login'e yönlendirirdi
+    // (kayıt sihirbazına deep-link'i kırıyordu).
+    if (!localStorage.getItem('access_token')) return Promise.resolve();
+
     return firstValueFrom(permissionService.loadMyPermissions())
       .then(() => {}) // başarılı — sinyal set edildi
       .catch(() => {}); // hata (401, ağ vb.) — sessizce geç, authGuard devralır
