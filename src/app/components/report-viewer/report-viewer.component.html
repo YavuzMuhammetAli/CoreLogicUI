@@ -112,9 +112,13 @@
       </div>
       <div class="panel-body">
         @if (viewMode() === 'chart') {
-          <app-chart [chartType]="report.chartType" [columns]="result.columns" [rows]="result.rows"></app-chart>
+          <div class="view-panel">
+            <app-chart [chartType]="report.chartType" [columns]="result.columns" [rows]="result.rows"></app-chart>
+          </div>
         } @else {
-          <ng-container *ngTemplateOutlet="dataTable"></ng-container>
+          <div class="view-panel">
+            <ng-container *ngTemplateOutlet="dataTable"></ng-container>
+          </div>
         }
       </div>
     </div>

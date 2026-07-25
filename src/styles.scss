@@ -76,7 +76,9 @@
   /* Hareket */
   --motion-fast: 150ms;
   --motion-base: 230ms;
-  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-standard:      cubic-bezier(0.2, 0, 0, 1);
+  --ease-out-strong:    cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
 
   /* Düzen */
   --sidebar-w: 240px;
@@ -200,6 +202,11 @@ p { margin: 0; }
     cursor: not-allowed;
     transform: none !important;
   }
+
+  /* Basış geri bildirimi — her buton varyantı için geçerli */
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
 }
 
 .btn-primary {
@@ -214,7 +221,7 @@ p { margin: 0; }
 
   &:active:not(:disabled) {
     background: var(--accent-active);
-    transform: translateY(0);
+    transform: scale(0.97);
   }
 }
 
@@ -479,6 +486,18 @@ input[type="checkbox"] {
   to { transform: rotate(360deg); }
 }
 
+/* ---- Giriş animasyonu (stagger + panel) ---- */
+@keyframes fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ---- Empty state ---- */
 .empty-state {
   display: flex;
@@ -506,6 +525,31 @@ input[type="checkbox"] {
   }
 }
 
+/* ---- Sayfa başlığı (global — component SCSS'lerinden tekrar etme) ---- */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+  }
+}
+
+.page-title {
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  color: var(--fg);
+  margin: var(--space-2) 0 var(--space-1);
+}
+
+.page-subtitle {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
 /* ---- Yardımcı ---- */
 .stack > * + * { margin-block-start: var(--space-4); }
 .flow > * + * { margin-block-start: var(--space-6); }
@@ -525,4 +569,15 @@ input[type="checkbox"] {
   clip: rect(0,0,0,0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ---- Erişilebilirlik: hareketi azalt ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

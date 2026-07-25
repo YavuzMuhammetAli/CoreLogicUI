@@ -1,9 +1,9 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { Subscription, forkJoin } from 'rxjs';
 import { DashboardService } from '../../services/dashboard.service';
 import { ReportService } from '../../services/report.service';
-import { DashboardRunResult, DashboardWidgetResult } from '../../models/dashboard.model';
+import { DashboardRunResult, DashboardWidget, DashboardWidgetResult } from '../../models/dashboard.model';
 import { AppChartComponent } from '../chart/chart.component';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
@@ -21,7 +21,7 @@ export interface DashboardWidgetView {
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly dashboardService = inject(DashboardService);
   private readonly reportService = inject(ReportService);
@@ -33,9 +33,35 @@ export class DashboardComponent implements OnInit {
   loading = false;
   loadError: string | null = null;
 
+  private routeSub?: Subscription;
+
+  /**
+   * Tablo widget'ının tasarım yüksekliği (px): grid satırı 64px + satır arası boşluk 24px
+   * (bkz. .widget-grid). Grafik kartları içeriğe göre büyürken tablo kartı bu yükseklikte
+   * sabit kalır; taşan satırlar kartın içinde kaydırılır.
+   */
+  tableMaxHeight(widget: DashboardWidget): number {
+    return widget.h * 64 + (widget.h - 1) * 24;
+  }
+
   ngOnInit(): void {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
+    // Sidebar'dan dashboard'lar arası geçişte component yeniden oluşturulmaz;
+    // paramMap aboneliği her :id değişiminde veriyi yeniden yükler.
+    this.routeSub = this.route.paramMap.subscribe(params => {
+      const id = Number(params.get('id'));
+      this.load(id);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.routeSub?.unsubscribe();
+  }
+
+  private load(id: number): void {
     this.loading = true;
+    this.loadError = null;
+    this.dashboard = null;
+    this.widgetViews = [];
 
     forkJoin([this.dashboardService.get(id), this.reportService.list()]).subscribe({
       next: ([dashRes, listRes]) => {

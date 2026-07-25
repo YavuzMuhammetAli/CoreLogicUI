@@ -147,8 +147,11 @@ return this.http.get<ListResponseModel<T>>(url, { params });
 | `RoleAdminService` | `src/app/services/role-admin.service.ts` | `/Role` — RBAC rol CRUD, izin/üyelik yönetimi |
 | `UserProfileService` | `src/app/services/user-profile.service.ts` | `/Profile` — me/update/change-password/upload-photo |
 | `ModelColumnSettingService` | `src/app/services/model-column-setting.service.ts` | `/ModelColumnSetting` — get/set kolon görünürlüğü |
-| `ReportService` | `src/app/services/report.service.ts` | `/Report` — define/update/list/run/export (excel/pdf) |
-| `DashboardService` | `src/app/services/dashboard.service.ts` | `/Dashboard` — define/get/list |
+| `ReportService` | `src/app/services/report.service.ts` | `/Report` — define/update/list/run/export (excel/pdf) + soft-delete/restore |
+| `DashboardService` | `src/app/services/dashboard.service.ts` | `/Dashboard` — define/get/list + soft-delete/restore |
+| `AuditLogService` | `src/app/services/audit-log.service.ts` | `/AuditLog` — filtrelenmiş denetim kayıtları; `getFiltered(entityName?, from?, to?)` |
+| `LanguageService` | `src/app/services/language.service.ts` | HTTP yok — TR/EN dil tercihi, `localStorage`; `t(key, params?)` metodu + `lang` signal |
+| `ModelUsageService` | `src/app/services/model-usage.service.ts` | HTTP yok — `getUsage(typeName)` → `ModelUsage { reports, dashboards, isEmpty }` |
 | `ThemeService` | `src/app/services/theme.service.ts` | HTTP yok — açık/koyu tema tercihi, `localStorage` |
 | `NotificationService` | `src/app/services/notification.service.ts` | HTTP yok — global toast/uyarı bildirimleri |
 

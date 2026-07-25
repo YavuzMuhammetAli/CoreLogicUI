@@ -8,8 +8,9 @@
   max-width: 980px;
 }
 
-/* Sayfa başlığı */
+/* Sayfa başlığı — global flex'i ez, başlık grubu dikey kalmalı */
 .page-header {
+  display: block;
   margin-bottom: var(--space-6);
 
   .page-title {

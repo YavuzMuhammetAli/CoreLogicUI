@@ -126,6 +126,39 @@ emin ol — `Observable`'a `subscribe` ederek async guard yazma, mevcut deseni b
   otomatik miras alınır) — yeni admin-only sayfa için ayrıca `canActivate: [adminGuard]` ekle,
   model-bazlı izin gerekiyorsa `modelPermissionGuard('read'|'create'|...)` factory'sini kullan.
 
+## i18n — TranslatePipe ve LanguageService
+
+Tüm hardcoded UI metinleri yerine çeviri sistemi kullanılır. Yeni component yazarken:
+
+```typescript
+// Component imports'una ekle
+import { TranslatePipe } from '../../pipes/translate.pipe';
+
+@Component({
+  imports: [TranslatePipe, ...],
+})
+export class MyComponent {
+  // TS kodunda LanguageService.t() kullan
+  private readonly lang = inject(LanguageService);
+
+  someMethod() {
+    const msg = this.lang.t('common.saveSuccess');
+    // Yer tutucu ile:
+    const msg2 = this.lang.t('model.deletedCount', { count: 3 });
+  }
+}
+```
+
+```html
+<!-- Şablonda | t pipe'ı kullan -->
+<button class="btn btn-primary">{{ 'common.save' | t }}</button>
+<p>{{ 'model.empty' | t }}</p>
+```
+
+Çeviri anahtarları `src/app/i18n/` altında alan dosyalarına eklenmelidir
+(`common.i18n.ts`, `model.i18n.ts`, `admin.i18n.ts` vb.). Her anahtar `{ tr: '…', en: '…' }`
+şeklinde tanımlanır ve `src/app/i18n/index.ts`'teki `TRANSLATIONS` map'ine dahil edilir.
+
 ## Anti-Pattern'ler
 
 - ❌ `HttpClientModule`'ü component `imports`'una eklemek — deprecated, `provideHttpClient()`
@@ -136,15 +169,20 @@ emin ol — `Observable`'a `subscribe` ederek async guard yazma, mevcut deseni b
 - ❌ Component state için `BehaviorSubject` + `async` pipe kurmak — `signal()` kullan.
 - ❌ Guard'da senkron sinyal yerine `Observable.subscribe` ile async kontrol yazmak —
   APP_INITIALIZER deseni bunu önlemek için var, bozma.
-- ❌ Route'a `:id` segmentini sabit segmentten (`new`/`edit`) önce tanımlamak.
+- ❌ Route'a `:id` segmentini sabit segmentten (`new`/`edit`/`deleted`) önce tanımlamak.
+- ❌ Şablona hard-coded UI metni yazmak — `'key' | t` pipe'ı veya `lang.t('key')` kullan.
 
 ## Referans Dosyalar
 
 | Dosya | Neyi Gösterir |
 |-------|---------------|
 | `src/app/components/user-profile/user-profile.component.ts` | Tam standalone + signal şablonu |
-| `src/app/app.config.ts` | `APP_INITIALIZER` guard yarış durumu çözümü, `isPlatformBrowser` |
-| `src/app/app.routes.ts` | Lazy route kaydı, segment sıralama tuzağı |
+| `src/app/components/audit-log/audit-log.component.ts` | TranslatePipe kullanımı + client-side sayfalama |
+| `src/app/app.config.ts` | `APP_INITIALIZER` guard yarış durumu çözümü, `isPlatformBrowser`, 3 interceptor |
+| `src/app/app.routes.ts` | Lazy route kaydı, segment sıralama tuzağı (`deleted`/`new`/`edit` önce gelmeli) |
 | `src/app/services/permission.service.ts` | Signal + RxJS birlikte kullanım |
+| `src/app/services/language.service.ts` | `t()` metodu, `lang` signal, ThemeService ile aynı desen |
+| `src/app/i18n/index.ts` | TRANSLATIONS map — yeni anahtar nasıl eklenir |
+| `src/app/pipes/translate.pipe.ts` | TranslatePipe implementasyonu |
 | `angular-api-service` skill | HTTP servis deseni (bu skill'in kapsamı dışında) |
 | `corelogic-design` skill | Tasarım token'ları, global CSS sınıfları (bu skill'in kapsamı dışında) |

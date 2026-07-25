@@ -27,6 +27,7 @@
           class="panel widget"
           [style.grid-column]="(item.result.widget.x + 1) + ' / span ' + item.result.widget.w"
           [style.grid-row]="(item.result.widget.y + 1) + ' / span ' + item.result.widget.h"
+          [style.max-height.px]="item.result.widget.chartType === 'table' ? tableMaxHeight(item.result.widget) : null"
         >
           <div class="widget-head">
             <h3 class="widget-title">{{ item.reportName }}</h3>
@@ -45,24 +46,26 @@
                 [rows]="item.result.result.rows">
               </app-chart>
             } @else {
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    @for (col of item.result.result.columns; track col.name) {
-                      <th>{{ col.name }}</th>
-                    }
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (row of item.result.result.rows; track $index) {
+              <div class="table-scroll">
+                <table class="data-table">
+                  <thead>
                     <tr>
                       @for (col of item.result.result.columns; track col.name) {
-                        <td>{{ row[col.name] }}</td>
+                        <th>{{ col.name }}</th>
                       }
                     </tr>
-                  }
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    @for (row of item.result.result.rows; track $index) {
+                      <tr>
+                        @for (col of item.result.result.columns; track col.name) {
+                          <td>{{ row[col.name] }}</td>
+                        }
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
             }
           </div>
         </div>

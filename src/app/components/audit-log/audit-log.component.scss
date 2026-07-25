@@ -3,7 +3,9 @@
   padding: var(--space-6);
 }
 
+/* Global .page-header flex'ini ezerek dikey düzeni koru */
 .page-header {
+  display: block;
   margin-bottom: var(--space-6);
 }
 
@@ -109,7 +111,7 @@
     background: var(--surface-warm);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     font-size: var(--text-xs);
     white-space: pre-wrap;
     word-break: break-word;

@@ -2,26 +2,6 @@
   display: block;
 }
 
-.page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin-bottom: var(--space-6);
-}
-
-.page-title {
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  color: var(--fg);
-  margin: var(--space-2) 0 var(--space-1);
-}
-
-.page-subtitle {
-  font-size: var(--text-sm);
-  color: var(--muted);
-}
-
 /* Ardışık paneller arasına dikey boşluk (KPI / Export / Grafik / Veri) */
 .panel + .panel,
 .kpi-strip + .panel {
@@ -34,6 +14,7 @@
   gap: var(--space-4);
 }
 
+/* KPI tile'ları soldan sağa sırayla (stagger) belirir */
 .kpi-tile {
   display: flex;
   flex-direction: column;
@@ -41,6 +22,16 @@
   padding: var(--space-4);
   box-shadow: var(--elev-raised);
   border-radius: var(--radius-lg);
+  animation: fade-rise 240ms var(--ease-out-strong, ease-out) both;
+
+  @for $i from 1 through 8 {
+    &:nth-child(#{$i}) { animation-delay: #{($i - 1) * 40}ms; }
+  }
+}
+
+/* Chart ↔ Tablo toggle geçişi — yeni içerik giriş animasyonuyla belirir */
+.view-panel {
+  animation: fade-rise 180ms var(--ease-out-strong, ease-out) both;
 }
 
 .kpi-tile-label {
@@ -55,8 +46,3 @@
   color: var(--fg);
 }
 
-@media (max-width: 640px) {
-  .page-header {
-    flex-direction: column;
-  }
-}

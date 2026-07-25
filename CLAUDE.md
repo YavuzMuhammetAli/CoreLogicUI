@@ -17,6 +17,9 @@ Users can:
 - Metadata-driven rapor oluşturmak ve çalıştırmak (tablo/grafik, filtre, gruplama, export)
 - Birden çok raporu dashboard widget'ı olarak bir araya getirmek
 - Kendi profilini görüntülemek/güncellemek, açık/koyu tema seçmek
+- Silinen modelleri/taslakları/raporları/dashboardları geri yüklemek veya kalıcı silmek (admin)
+- Denetim kayıtlarını (audit log) görüntülemek — kim, ne zaman, hangi kayıtta değişiklik yaptı (admin)
+- Uygulama arayüz dilini değiştirmek (TR/EN topbar toggle)
 
 ## Tech Stack
 
@@ -61,15 +64,21 @@ CoreLogicUI-master/
         ├── app.config.ts                  # Provider'lar: router, HttpClient, interceptor'lar, APP_INITIALIZER (izin önyükleme)
         ├── components/
         │   ├── login/                     # Giriş ekranı (public, JWT alır)
-        │   ├── layout/                     # App shell (sidebar + topbar CSS Grid, tema toggle)
+        │   ├── layout/                     # App shell (sidebar + topbar CSS Grid, tema + dil toggle)
         │   ├── model-list/                # Kayıtlı model listesi
-        │   ├── model-data/                # Dinamik tablo CRUD (liste görünümü)
+        │   ├── model-data/                # Dinamik tablo CRUD (liste görünümü, sayfalama)
         │   ├── model-detail/               # Dinamik tablo tekil kayıt görünümü/düzenleme (new + :id)
         │   ├── model-children/             # Alt-model (FK ilişkili) kayıtların master-detail gösterimi
         │   ├── model-node/                 # Model ağacı/şema düğümü gösterimi
-        │   ├── form-build/                # Dinamik schema builder + C# önizleme (admin)
+        │   ├── form-build/                # Model şema listesi + seçim ekranı (admin)
+        │   ├── table-detail/               # Model şema builder/düzenleme ekranı (new + :typeName, admin)
         │   ├── draft-models/               # Taslak (henüz yayınlanmamış) modeller (admin)
-        │   ├── database-proccess/          # /Database endpoint'lerini saran ekran (admin) — implement edildi
+        │   ├── deleted-models/             # Soft-delete edilmiş modeller — geri yükleme/kalıcı silme (admin)
+        │   ├── deleted-drafts/             # Soft-delete edilmiş taslak modeller (admin)
+        │   ├── deleted-reports/            # Soft-delete edilmiş raporlar (admin)
+        │   ├── deleted-dashboards/         # Soft-delete edilmiş dashboardlar (admin)
+        │   ├── audit-log/                  # Denetim kayıtları — kim/ne zaman/ne değişti, filtre + sayfalama (admin)
+        │   ├── database-proccess/          # /Database endpoint'lerini saran ekran (admin)
         │   ├── user-permission-list/       # Kullanıcı bazlı izin listesi (admin)
         │   ├── user-permission-detail/     # Kullanıcı bazlı izin detay/düzenleme (admin)
         │   ├── role-list/                  # Rol (RBAC) listesi (admin)
@@ -83,11 +92,12 @@ CoreLogicUI-master/
         │   ├── dashboard/                   # Dashboard çalıştırma/görüntüleme
         │   ├── chart/                       # ApexCharts tabanlı grafik component'i (rapor/dashboard tarafından kullanılır)
         │   └── shared/
-        │       └── column-visibility/      # Admin-managed model kolon görünürlüğü (liste/detay/alt-model sekmeleri)
+        │       ├── column-visibility/      # Admin-managed model kolon görünürlüğü (liste/detay/alt-model sekmeleri)
+        │       └── confirm-dialog/         # Onay diyaloğu (geri yükleme/kalıcı silme akışlarında kullanılır)
         ├── services/
         │   ├── auth.service.ts               # /Auth login/register, JWT → localStorage
-        │   ├── published-table.service.ts    # /Published addTable, addMember
-        │   ├── published-model.service.ts    # /PublishedModel getall/get/add/update/delete
+        │   ├── published-table.service.ts    # /Published addTable, addMember + soft-delete/restore
+        │   ├── published-model.service.ts    # /PublishedModel getall(sayfalı)/get/add/update/delete + meta
         │   ├── publish-model.service.ts       # /PublishModel — Roslyn derleme
         │   ├── database.service.ts            # /Database createtable, checkdatabase
         │   ├── permission.service.ts          # /Permission — signal tabanlı izin durumu (isAdmin, can()), APP_INITIALIZER ile önyüklenir
@@ -95,8 +105,11 @@ CoreLogicUI-master/
         │   ├── role-admin.service.ts          # /Role — RBAC rol CRUD, izin atama, üyelik yönetimi
         │   ├── user-profile.service.ts        # /Profile — me/update/change-password/upload-photo
         │   ├── model-column-setting.service.ts # /ModelColumnSetting — get/set kolon görünürlüğü
-        │   ├── report.service.ts               # /Report — define/update/list/run/export
-        │   ├── dashboard.service.ts             # /Dashboard — define/get/list
+        │   ├── report.service.ts               # /Report — define/update/list/run/export + soft-delete/restore
+        │   ├── dashboard.service.ts             # /Dashboard — define/get/list + soft-delete/restore
+        │   ├── audit-log.service.ts             # /AuditLog — filtrelenmiş denetim kayıtları (admin-only)
+        │   ├── language.service.ts              # HTTP yok — TR/EN dil tercihi, localStorage, t() + TranslatePipe
+        │   ├── model-usage.service.ts           # HTTP yok — model kullanım özeti (raporlar + dashboardlar)
         │   ├── theme.service.ts                 # Açık/koyu tema tercihini yönetir (localStorage)
         │   └── notification.service.ts          # Global toast/uyarı bildirimleri (guard'lar dahil)
         ├── guards/
@@ -105,7 +118,23 @@ CoreLogicUI-master/
         │   └── model-permission.guard.ts       # Factory: modelPermissionGuard('read'|'create'|'update'|'delete')
         ├── interceptors/
         │   ├── auth.interceptor.ts            # Authorization: Bearer header ekler
+        │   ├── language.interceptor.ts         # Accept-Language header ekler (LanguageService'den okur)
         │   └── error.interceptor.ts            # HTTP hata yakalamak
+        ├── i18n/                              # TR/EN çeviri sözlüğü (TRANSLATIONS map)
+        │   ├── index.ts                       # TRANSLATIONS map'ini dışa aktarır
+        │   ├── translations.model.ts          # TranslationEntry { tr, en } tipi
+        │   ├── common.i18n.ts                 # Ortak: kaydet/iptal/sil/yükle vb.
+        │   ├── layout.i18n.ts                 # Sidebar + topbar metinleri
+        │   ├── login.i18n.ts                  # Giriş ekranı
+        │   ├── model.i18n.ts                  # Model CRUD ekranları
+        │   ├── report.i18n.ts                 # Rapor ekranları
+        │   ├── dashboard.i18n.ts              # Dashboard ekranları
+        │   ├── admin.i18n.ts                  # Admin ekranları (form-build, draft, db, audit-log)
+        │   ├── permission.i18n.ts             # İzin/rol ekranları
+        │   ├── profile.i18n.ts                # Profil ekranı
+        │   └── shared.i18n.ts                 # Paylaşılan diyalog metinleri
+        ├── pipes/
+        │   └── translate.pipe.ts              # TranslatePipe — şablonlarda `{{ 'key' | t }}` şeklinde kullanılır
         ├── environments/
         │   ├── environment.ts                  # apiBaseUrl: 'https://localhost:7254'
         │   └── environment.prod.ts             # apiBaseUrl: 'http://localhost:5245' (henüz gerçek prod URL değil)
@@ -114,6 +143,7 @@ CoreLogicUI-master/
             ├── responseModelList.ts            # ListResponseModel<T> extends ResponseModel { data }
             ├── dataResponseModel.ts            # DataResponseModel<T> extends ResponseModel { data: T } — tekil nesne
             ├── appUser.ts                       # AppUser — /User/getall yanıt öğesi
+            ├── auditLog.ts                      # AuditLog — denetim kaydı modeli
             ├── role.ts                          # RBAC rol modelleri
             ├── userProfile.ts                   # Profil modelleri
             ├── report.model.ts                  # ReportDefinition, ReportFilter/Aggregate/Sort, ChartType vb.
@@ -123,30 +153,37 @@ CoreLogicUI-master/
 ## Routing
 
 ```
-/login                  → LoginComponent                (public, authGuard yok)
-/                       → LayoutComponent                (authGuard korumalı app shell)
-  /                     → redirect → /models
-  /models               → ModelListComponent
-  /models/:typeName     → ModelDataComponent             (modelPermissionGuard('read'))
-  /models/:typeName/new → ModelDetailComponent           (modelPermissionGuard('create'), data.mode='new')
-  /models/:typeName/:id → ModelDetailComponent           (modelPermissionGuard('read'))
-  /build                → FormBuildComponent             (adminGuard)
-  /drafts               → DraftModelsComponent           (adminGuard)
-  /database             → DatabaseProccessComponent       (adminGuard)
-  /permissions          → UserPermissionListComponent     (adminGuard)
-  /permissions/:id      → UserPermissionDetailComponent   (adminGuard)
-  /roles                → RoleListComponent                (adminGuard)
-  /roles/new            → RoleDetailComponent              (adminGuard, data.mode='new')
-  /roles/:id            → RoleDetailComponent              (adminGuard)
-  /profile              → UserProfileComponent             (authGuard yeterli)
-  /reports              → ReportListComponent               (authGuard yeterli — yetki backend'de model üzerinde kontrol edilir)
-  /reports/new          → ReportBuildComponent
-  /reports/:id/edit     → ReportBuildComponent
-  /reports/:id          → ReportViewerComponent
-  /dashboard            → DashboardListComponent
-  /dashboard/new        → DashboardBuildComponent
-  /dashboard/:id        → DashboardComponent
-**                      → redirect → /login
+/login                      → LoginComponent                (public, authGuard yok)
+/                           → LayoutComponent                (authGuard korumalı app shell)
+  /                         → redirect → /models
+  /models                   → ModelListComponent
+  /models/deleted           → DeletedModelsComponent         (adminGuard) ⚠️ "deleted" sabit seg. ":typeName"'den önce
+  /models/:typeName         → ModelDataComponent             (modelPermissionGuard('read'))
+  /models/:typeName/new     → ModelDetailComponent           (modelPermissionGuard('create'), data.mode='new')
+  /models/:typeName/:id     → ModelDetailComponent           (modelPermissionGuard('read'))
+  /build                    → FormBuildComponent             (adminGuard — model şema listesi)
+  /build/new                → TableDetailComponent           (adminGuard, data.mode='new' — yeni şema oluştur)
+  /build/:typeName          → TableDetailComponent           (adminGuard — mevcut şemayı düzenle)
+  /drafts                   → DraftModelsComponent           (adminGuard)
+  /drafts/deleted           → DeletedDraftsComponent         (adminGuard)
+  /database                 → DatabaseProccessComponent       (adminGuard)
+  /permissions              → UserPermissionListComponent     (adminGuard)
+  /permissions/:id          → UserPermissionDetailComponent   (adminGuard)
+  /roles                    → RoleListComponent                (adminGuard)
+  /roles/new                → RoleDetailComponent              (adminGuard, data.mode='new')
+  /roles/:id                → RoleDetailComponent              (adminGuard)
+  /audit-logs               → AuditLogComponent               (adminGuard)
+  /profile                  → UserProfileComponent             (authGuard yeterli)
+  /reports                  → ReportListComponent               (authGuard yeterli)
+  /reports/new              → ReportBuildComponent
+  /reports/:id/edit         → ReportBuildComponent
+  /reports/deleted          → DeletedReportsComponent          (adminGuard) ⚠️ "deleted" sabit seg. ":id"'den önce
+  /reports/:id              → ReportViewerComponent
+  /dashboard                → DashboardListComponent
+  /dashboard/new            → DashboardBuildComponent
+  /dashboard/deleted        → DeletedDashboardsComponent       (adminGuard) ⚠️ "deleted" sabit seg. ":id"'den önce
+  /dashboard/:id            → DashboardComponent
+**                          → redirect → /login
 ```
 
 Tüm route'lar `loadComponent` ile lazy yüklenir. Sabit segmentler (`new`, `edit`) her zaman
@@ -165,6 +202,7 @@ provideHttpClient(withFetch(), withInterceptors([authInterceptor, errorIntercept
 
 - **`provideHttpClient` zaten yapılandırılmış** — yeniden ekleme.
 - `authInterceptor`: `localStorage('access_token')` JWT'yi alır, `Authorization: Bearer` header'ı ekler.
+- `languageInterceptor`: `localStorage('lang')` dil tercihini alır, `Accept-Language` header'ı ekler.
 - `errorInterceptor`: HTTP hataları yakalar.
 - `APP_INITIALIZER` (`permissionInitializerFactory`): router etkinleşmeden önce
   `PermissionService.loadMyPermissions()`'ı çağırıp izin signal'ini doldurur — `adminGuard` ve
@@ -189,7 +227,10 @@ Tüm servisler `@Injectable({ providedIn: 'root' })`, `inject(HttpClient)` (veya
 | `UserProfileService` | `/Profile` — me/update/change-password/upload-photo/sil |
 | `ModelColumnSettingService` | `/ModelColumnSetting` — get/set kolon görünürlüğü |
 | `ReportService` | `/Report` — define/update/list/run/export (excel/pdf) |
-| `DashboardService` | `/Dashboard` — define/get/list |
+| `DashboardService` | `/Dashboard` — define/get/list + soft-delete/restore |
+| `AuditLogService` | `/AuditLog` — filtrelenmiş denetim kayıtları (admin-only) |
+| `LanguageService` | HTTP yok — TR/EN dil tercihi, `localStorage`, `t()` metodu + `TranslatePipe` |
+| `ModelUsageService` | HTTP yok — model kullanım özeti: hangi raporlar/dashboardlar bu modeli kullanıyor |
 | `ThemeService` | HTTP yok — açık/koyu tema tercihi, `localStorage` |
 | `NotificationService` | HTTP yok — global toast/uyarı, guard'lar dahil kullanılır |
 
@@ -225,7 +266,7 @@ export interface DataResponseModel<T> extends ResponseModel {
 ```
 Backend `IDataResult<T>` (tekil nesne) → `{ Success, Message, Data }` ile eşleşir.
 
-Diğer alan-özel modeller: `appUser.ts`, `role.ts`, `userProfile.ts`, `report.model.ts`,
+Diğer alan-özel modeller: `appUser.ts`, `auditLog.ts`, `role.ts`, `userProfile.ts`, `report.model.ts`,
 `dashboard.model.ts` — bunlar backend `Entities.DTOs.*` ile bire bir eşleşen domain tipleridir.
 
 ## Tasarım Sistemi
@@ -319,7 +360,8 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
 - **Reactive Forms** — `FormBuilder` + `FormGroup`/`FormArray`
 - **Yanıt tipleri** — `ResponseModel`, `ListResponseModel<T>` veya `DataResponseModel<T>`
 - **Component state** — `signal()`/`computed()`/`effect()`; `BehaviorSubject` kullanılmaz
-- **Türkçe yorumlar ve mesajlar** — backend ile tutarlı
+- **i18n** — hard-coded UI metni yerine `LanguageService.t('key')` (TS kodu) veya `'key' | t` pipe'ı (şablon) kullan; çeviri anahtarları `src/app/i18n/` altında alan dosyalarında tanımlanır
+- **Türkçe kod yorumları** — backend ile tutarlı; UI metinleri çeviri sistemi üzerinden gelir
 
 ## Bilinen Eksikler ve TODO'lar
 
