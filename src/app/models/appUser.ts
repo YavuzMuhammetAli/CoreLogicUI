@@ -10,4 +10,6 @@ export interface AppUser {
   status: boolean;
   /** 'admin' OperationClaim'ine sahip olup olmadığı. Değişiklik yeni JWT'de etkinleşir. */
   isAdmin: boolean;
+  /** Kayıt tarihi (UTC ISO metni). */
+  createdOn?: string;
 }

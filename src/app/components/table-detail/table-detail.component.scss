@@ -74,8 +74,20 @@
   border: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
-  cursor: default;
+  /* G1: sekmeler artık gerçekten geçiş yapıyor (Sütunlar / İlişkiler) */
+  cursor: pointer;
   white-space: nowrap;
+  transition: color var(--motion-fast) var(--ease-standard),
+              border-color var(--motion-fast) var(--ease-standard);
+
+  &:hover {
+    color: var(--fg);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
 
   &--active {
     color: var(--accent);
@@ -95,6 +107,89 @@
   border-radius: 9px;
   background: var(--accent);
   color: #fff;
+
+  /* Doğrulama hatası varsa ilişki sekmesindeki rozet kırmızıya döner. */
+  &--danger {
+    background: var(--danger);
+  }
+}
+
+/* ── G1: İlişkiler sekmesi ────────────────────────────────────────────────── */
+
+/* Doğrulama hatası olan ilişki satırı */
+.row-invalid {
+  background: var(--danger-bg);
+}
+
+.issue-list {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+  font-size: var(--text-sm);
+
+  li + li {
+    margin-top: var(--space-1);
+  }
+}
+
+.issue-note {
+  display: block;
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  opacity: 0.85;
+}
+
+/* Tablo hücresinde property/FK adları monospace gösterilir. */
+.mono-cell {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+/* ── G1: Önizleme diyaloğu ────────────────────────────────────────────────── */
+
+/* Graph + kod bloğu için standart diyalogdan geniş varyant. */
+.dialog-panel--wide {
+  max-width: 960px;
+  width: 96vw;
+}
+
+.preview-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.preview-batch {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.preview-code-title {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--fg);
+}
+
+/* Uzun kod/SQL satırları kendi kutusunda kayar — sayfa yatayda kaymaz. */
+.preview-code {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  overflow-x: auto;
+  background: var(--surface-warm);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.55;
+  color: var(--fg-2);
+  white-space: pre;
 }
 
 .tab-panel {

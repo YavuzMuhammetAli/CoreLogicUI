@@ -121,16 +121,38 @@
   <!-- ══ ALT PANEL: Sütunlar (modelin alt modeli gibi gösterilir) ══════════ -->
   <div class="children-panel panel">
 
-    <!-- Sekme çubuğu — yalnızca "Sütunlar" sekmesi var, model-detail'deki alt model sekmeleriyle aynı görsel dil -->
-    <div class="tab-bar" role="tablist" [attr.aria-label]="'table.detail.subModelsTablistAria' | t">
-      <button type="button" class="tab-btn tab-btn--active" role="tab" aria-selected="true">
+    <!-- Sekme çubuğu — Sütunlar + İlişkiler (role-detail ile aynı görsel dil) -->
+    <div class="tab-bar" role="tablist" [attr.aria-label]="'relationship.tablistAria' | t">
+      <button
+        type="button"
+        class="tab-btn"
+        role="tab"
+        [class.tab-btn--active]="activeTab() === 'columns'"
+        [attr.aria-selected]="activeTab() === 'columns'"
+        (click)="setTab('columns')">
         {{ 'table.detail.columnsTab' | t }}
         @if (columns.length > 0) {
           <span class="tab-badge">{{ columns.length }}</span>
         }
       </button>
+
+      <button
+        type="button"
+        class="tab-btn"
+        role="tab"
+        [class.tab-btn--active]="activeTab() === 'relationships'"
+        [attr.aria-selected]="activeTab() === 'relationships'"
+        (click)="setTab('relationships')">
+        {{ 'relationship.tab' | t }}
+        @if (relationships.length > 0) {
+          <span class="tab-badge" [class.tab-badge--danger]="validation && !validation.isValid">
+            {{ relationships.length }}
+          </span>
+        }
+      </button>
     </div>
 
+    @if (activeTab() === 'columns') {
     <div class="tab-panel" role="tabpanel" [attr.aria-label]="'table.detail.columnsPanelAria' | t">
 
       <!-- Araç çubuğu -->
@@ -195,6 +217,158 @@
         </div>
       }
     </div>
+    }
+
+    <!-- ══ İLİŞKİLER SEKMESİ ══════════════════════════════════════════════ -->
+    @if (activeTab() === 'relationships') {
+      <div class="tab-panel" role="tabpanel" [attr.aria-label]="'relationship.panelAria' | t">
+
+        <div class="tab-toolbar">
+          <div class="tab-toolbar-actions">
+            <button
+              type="button"
+              class="btn btn-primary btn-sm"
+              [disabled]="!canManageRelationships"
+              (click)="openAddRelationshipModal()">
+              <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              {{ 'relationship.new' | t }}
+            </button>
+
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              [disabled]="relationshipTableId === null"
+              (click)="openPreview()">
+              {{ 'relationship.preview' | t }}
+            </button>
+          </div>
+
+          @if (validation) {
+            <span
+              class="badge"
+              [class.badge-success]="validation.maxDepth <= validation.maxAllowedDepth"
+              [class.badge-danger]="validation.maxDepth > validation.maxAllowedDepth">
+              {{ 'relationship.depthBadge' | t:{ depth: validation.maxDepth, max: validation.maxAllowedDepth } }}
+            </span>
+          }
+        </div>
+
+        <!-- Model kaydedilmeden ilişki eklenemez -->
+        @if (relationshipTableId === null && !isNew) {
+          <div class="alert alert-info">{{ 'relationship.saveModelFirst' | t }}</div>
+        }
+
+        <!-- Canlı doğrulama sonucu -->
+        @if (validation && validation.errors.length > 0) {
+          <div class="alert alert-danger" role="alert">
+            <strong>{{ 'relationship.errorsTitle' | t }}</strong>
+            <ul class="issue-list">
+              @for (issue of validation.errors; track $index) {
+                <li>{{ issue.message }}</li>
+              }
+            </ul>
+            <span class="issue-note">{{ 'relationship.blocksPublish' | t }}</span>
+          </div>
+        }
+        @if (validation && validation.warnings.length > 0) {
+          <div class="alert alert-warn" role="alert">
+            <strong>{{ 'relationship.warningsTitle' | t }}</strong>
+            <ul class="issue-list">
+              @for (issue of validation.warnings; track $index) {
+                <li>{{ issue.message }}</li>
+              }
+            </ul>
+          </div>
+        }
+        @if (relationshipError) {
+          <div class="alert alert-danger" role="alert">{{ relationshipError }}</div>
+        }
+
+        @if (relationships.length === 0) {
+          <div class="empty-state">
+            <div class="empty-icon" aria-hidden="true">🔗</div>
+            <h3>{{ 'relationship.emptyTitle' | t }}</h3>
+            <p>{{ 'relationship.emptyMessage' | t }}</p>
+            <button
+              type="button"
+              class="btn btn-primary"
+              [disabled]="!canManageRelationships"
+              (click)="openAddRelationshipModal()">
+              {{ 'relationship.new' | t }}
+            </button>
+          </div>
+        } @else {
+          <div class="tab-table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ 'relationship.colTarget' | t }}</th>
+                  <th>{{ 'relationship.colType' | t }}</th>
+                  <th>{{ 'relationship.colProperty' | t }}</th>
+                  <th>{{ 'relationship.colInverse' | t }}</th>
+                  <th>{{ 'relationship.colCascade' | t }}</th>
+                  <th>{{ 'relationship.colRequired' | t }}</th>
+                  <th>{{ 'relationship.colDisplayName' | t }}</th>
+                  <th>{{ 'relationship.colOrder' | t }}</th>
+                  <th>{{ 'relationship.colDepth' | t }}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (rel of relationships; track rel.relationshipId) {
+                  <tr
+                    class="row-clickable"
+                    [class.row-invalid]="hasErrorFor(rel.relationshipId)"
+                    (click)="openEditRelationshipModal(rel)"
+                    [attr.aria-label]="'relationship.editAria' | t:{ name: rel.propertyName }">
+                    <td>{{ rel.targetModel }}</td>
+                    <td><span class="badge badge-meta">{{ relationshipTypeLabel(rel.relationshipType) | t }}</span></td>
+                    <td>
+                      <code class="mono-cell">{{ rel.propertyName }}</code>
+                      @if (rel.foreignKeyName) {
+                        <span class="muted-hint">FK: {{ rel.foreignKeyName }}</span>
+                      }
+                      @if (rel.joinTableName) {
+                        <span class="muted-hint">JOIN: {{ rel.joinTableName }}</span>
+                      }
+                    </td>
+                    <td>
+                      @if (rel.inverseProperty) {
+                        <code class="mono-cell">{{ rel.inverseProperty }}</code>
+                      } @else { <span class="muted-hint">—</span> }
+                    </td>
+                    <td>{{ rel.cascadeDelete ? ('table.detail.yes' | t) : ('table.detail.no' | t) }}</td>
+                    <td>{{ rel.required ? ('table.detail.yes' | t) : ('table.detail.no' | t) }}</td>
+                    <td>{{ rel.displayName || '—' }}</td>
+                    <td>{{ rel.order }}</td>
+                    <td>
+                      <span
+                        class="badge"
+                        [class.badge-meta]="!validation || rel.depth <= validation.maxAllowedDepth"
+                        [class.badge-danger]="validation && rel.depth > validation.maxAllowedDepth">
+                        {{ rel.depth }}
+                      </span>
+                    </td>
+                    <td class="td-actions">
+                      <button
+                        type="button"
+                        class="btn btn-ghost btn-sm"
+                        (click)="removeRelationship(rel); $event.stopPropagation()"
+                        [attr.aria-label]="'relationship.deleteAria' | t:{ name: rel.propertyName }">
+                        {{ 'table.detail.delete' | t }}
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
   </div>
 }
 
@@ -358,6 +532,221 @@
       <div class="panel-actions">
         <button type="button" class="btn btn-secondary" (click)="closeColumnModal()">{{ 'table.detail.cancel' | t }}</button>
         <button type="button" class="btn btn-primary" (click)="saveColumnModal()">{{ 'table.detail.save2' | t }}</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══ İLİŞKİ POPUP'I ═════════════════════════════════════════════════════ -->
+@if (relationshipModalOpen) {
+  <div class="dialog-overlay" (click)="onRelationshipBackdrop($event)">
+    <div class="dialog-panel panel" role="dialog" aria-modal="true"
+         [attr.aria-label]="(editingRelationshipId ? 'relationship.dialogEditTitle' : 'relationship.dialogNewTitle') | t">
+      <div class="panel-head">
+        <h2 class="panel-title">
+          {{ (editingRelationshipId ? 'relationship.dialogEditTitle' : 'relationship.dialogNewTitle') | t }}
+        </h2>
+        <p class="panel-subtitle">{{ 'relationship.dialogSubtitle' | t }}</p>
+      </div>
+
+      <div class="panel-body" [formGroup]="relationshipDraft">
+
+        @if (relationshipError) {
+          <div class="alert alert-danger" role="alert">{{ relationshipError }}</div>
+        }
+
+        <div class="field">
+          <label for="rel-type">{{ 'relationship.fieldType' | t }}</label>
+          <select id="rel-type" class="input" formControlName="relationshipType"
+                  (change)="onRelationshipTypeChange()">
+            @for (option of relationshipTypeOptions; track option.value) {
+              <option [value]="option.value">{{ option.labelKey | t }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label>{{ 'relationship.fieldTarget' | t }}</label>
+          <app-model-autocomplete
+            [options]="publishedModelNames"
+            [placeholder]="'relationship.fieldTargetPlaceholder' | t"
+            [ariaLabel]="'relationship.fieldTarget' | t"
+            [invalid]="relationshipDraft.get('targetModel')!.touched && relationshipDraft.get('targetModel')!.invalid"
+            [value]="relationshipDraft.get('targetModel')!.value"
+            (valueChange)="relationshipDraft.get('targetModel')!.setValue($event)" />
+          @if (relationshipDraft.get('targetModel')!.touched && relationshipDraft.get('targetModel')!.invalid) {
+            <span class="field-error" role="alert">{{ 'relationship.errTargetRequired' | t }}</span>
+          } @else {
+            <span class="field-help">{{ 'relationship.fieldTargetHelp' | t }}</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="rel-prop">{{ 'relationship.fieldProperty' | t }}</label>
+          <input id="rel-prop" type="text" class="input" formControlName="propertyName"
+                 [attr.aria-invalid]="relationshipDraft.get('propertyName')!.touched && relationshipDraft.get('propertyName')!.invalid ? true : null" />
+          @if (relationshipDraft.get('propertyName')!.touched && relationshipDraft.get('propertyName')!.invalid) {
+            <span class="field-error" role="alert">
+              {{ (relationshipDraft.get('propertyName')!.hasError('required')
+                  ? 'relationship.errPropertyRequired' : 'relationship.errPropertyPattern') | t }}
+            </span>
+          } @else {
+            <span class="field-help">{{ 'relationship.fieldPropertyHelp' | t }}</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="rel-inv">{{ 'relationship.fieldInverse' | t }}</label>
+          <input id="rel-inv" type="text" class="input" formControlName="inverseProperty"
+                 [attr.aria-invalid]="relationshipDraft.get('inverseProperty')!.touched && relationshipDraft.get('inverseProperty')!.invalid ? true : null" />
+          @if (relationshipDraft.get('inverseProperty')!.touched && relationshipDraft.get('inverseProperty')!.invalid) {
+            <span class="field-error" role="alert">{{ 'relationship.errInverseRequired' | t }}</span>
+          } @else {
+            <span class="field-help">
+              {{ (draftRequiresInverse ? 'relationship.fieldInverseRequiredHelp' : 'relationship.fieldInverseHelp') | t }}
+            </span>
+          }
+        </div>
+
+        <div class="col-rules-row">
+          @if (!draftIsManyToMany) {
+            <div class="field col-rule-field">
+              <label for="rel-fk">{{ 'relationship.fieldForeignKey' | t }}</label>
+              <input id="rel-fk" type="text" class="input" formControlName="foreignKeyName" />
+              <span class="field-help">{{ 'relationship.fieldForeignKeyHelp' | t }}</span>
+            </div>
+          } @else {
+            <div class="field col-rule-field">
+              <label for="rel-join">{{ 'relationship.fieldJoinTable' | t }}</label>
+              <input id="rel-join" type="text" class="input" formControlName="joinTableName" />
+              <span class="field-help">{{ 'relationship.fieldJoinTableHelp' | t }}</span>
+            </div>
+          }
+
+          <div class="field col-rule-field">
+            <label for="rel-order">{{ 'relationship.fieldOrder' | t }}</label>
+            <input id="rel-order" type="number" class="input" formControlName="order" min="0" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="rel-display">{{ 'relationship.fieldDisplayName' | t }}</label>
+          <input id="rel-display" type="text" class="input" formControlName="displayName" />
+        </div>
+
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="required" />
+          {{ 'relationship.fieldRequired' | t }}
+        </label>
+
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="cascadeDelete" />
+          {{ 'relationship.fieldCascade' | t }}
+        </label>
+      </div>
+
+      <div class="panel-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeRelationshipModal()">
+          {{ 'table.detail.cancel' | t }}
+        </button>
+        <button type="button" class="btn btn-primary"
+                [disabled]="isRelationshipSaving"
+                (click)="saveRelationshipModal()">
+          {{ 'table.detail.save2' | t }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══ ÖNİZLEME DİYALOĞU ══════════════════════════════════════════════════ -->
+@if (previewOpen) {
+  <div class="dialog-overlay" (click)="onPreviewBackdrop($event)">
+    <div class="dialog-panel dialog-panel--wide panel" role="dialog" aria-modal="true"
+         [attr.aria-label]="'relationship.previewTitle' | t">
+      <div class="panel-head">
+        <h2 class="panel-title">{{ 'relationship.previewTitle' | t }}</h2>
+        <p class="panel-subtitle">{{ 'relationship.previewSubtitle' | t }}</p>
+      </div>
+
+      <div class="panel-body">
+        @if (isPreviewLoading) {
+          <div class="preview-loading">
+            <span class="spinner" aria-hidden="true"></span>
+            {{ 'relationship.previewLoading' | t }}
+          </div>
+        } @else if (previewError) {
+          <div class="alert alert-danger" role="alert">{{ previewError }}</div>
+        } @else if (preview) {
+
+          @if (preview.validation.errors.length > 0) {
+            <div class="alert alert-danger" role="alert">
+              <strong>{{ 'relationship.errorsTitle' | t }}</strong>
+              <ul class="issue-list">
+                @for (issue of preview.validation.errors; track $index) {
+                  <li>{{ issue.message }}</li>
+                }
+              </ul>
+            </div>
+          }
+
+          <p class="preview-batch">
+            <strong>{{ 'relationship.previewBatch' | t }}:</strong>
+            @for (m of preview.publishBatch; track m) {
+              <span class="badge badge-meta">{{ m }}</span>
+            }
+          </p>
+
+          <div class="tab-bar" role="tablist" [attr.aria-label]="'relationship.previewTitle' | t">
+            <button type="button" class="tab-btn" role="tab"
+                    [class.tab-btn--active]="previewTab === 'graph'"
+                    [attr.aria-selected]="previewTab === 'graph'"
+                    (click)="setPreviewTab('graph')">
+              {{ 'relationship.previewTabGraph' | t }}
+            </button>
+            <button type="button" class="tab-btn" role="tab"
+                    [class.tab-btn--active]="previewTab === 'code'"
+                    [attr.aria-selected]="previewTab === 'code'"
+                    (click)="setPreviewTab('code')">
+              {{ 'relationship.previewTabCode' | t }}
+            </button>
+            <button type="button" class="tab-btn" role="tab"
+                    [class.tab-btn--active]="previewTab === 'sql'"
+                    [attr.aria-selected]="previewTab === 'sql'"
+                    (click)="setPreviewTab('sql')">
+              {{ 'relationship.previewTabSql' | t }}
+            </button>
+          </div>
+
+          <div class="tab-panel" role="tabpanel">
+            @if (previewTab === 'graph') {
+              <app-entity-graph [graph]="preview.graph" />
+            }
+
+            @if (previewTab === 'code') {
+              @for (model of preview.generatedModels; track model.modelName) {
+                <h4 class="preview-code-title">{{ model.modelName }}</h4>
+                <pre class="preview-code"><code>{{ model.generatedCode }}</code></pre>
+              }
+            }
+
+            @if (previewTab === 'sql') {
+              @if (preview.migrationScripts.length === 0) {
+                <p class="muted-hint">{{ 'relationship.previewNoSql' | t }}</p>
+              } @else {
+                @for (script of preview.migrationScripts; track $index) {
+                  <pre class="preview-code"><code>{{ script }}</code></pre>
+                }
+              }
+            }
+          </div>
+        }
+      </div>
+
+      <div class="panel-actions">
+        <button type="button" class="btn btn-secondary" (click)="closePreview()">
+          {{ 'table.detail.cancel' | t }}
+        </button>
       </div>
     </div>
   </div>

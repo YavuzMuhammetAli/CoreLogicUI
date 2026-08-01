@@ -1,0 +1,54 @@
+<div class="ac-wrapper">
+  <div class="ac-input-row">
+    <input
+      type="text"
+      class="input ac-input"
+      role="combobox"
+      autocomplete="off"
+      [value]="displayText()"
+      [disabled]="disabled()"
+      [placeholder]="placeholder()"
+      [attr.aria-label]="ariaLabel() || ('relationship.autocompleteAria' | t)"
+      [attr.aria-expanded]="isOpen()"
+      [attr.aria-controls]="'model-ac-listbox'"
+      [attr.aria-activedescendant]="activeDescendantId"
+      [attr.aria-invalid]="invalid() ? true : null"
+      (focus)="onFocus()"
+      (input)="onInput($event)"
+      (keydown)="onKeydown($event)" />
+
+    @if (value() && !disabled()) {
+      <button
+        type="button"
+        class="ac-clear"
+        (click)="clear()"
+        [attr.aria-label]="'relationship.autocompleteClear' | t">
+        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
+    }
+  </div>
+
+  @if (isOpen()) {
+    <ul class="ac-list" role="listbox" id="model-ac-listbox">
+      @for (option of filtered(); track option; let i = $index) {
+        <li
+          class="ac-option"
+          role="option"
+          [id]="optionId(i)"
+          [class.ac-option--active]="activeIndex() === i"
+          [class.ac-option--selected]="value() === option"
+          [attr.aria-selected]="value() === option"
+          (mousedown)="select(option); $event.preventDefault()">
+          {{ option }}
+        </li>
+      } @empty {
+        <li class="ac-empty" role="option" aria-disabled="true" [attr.aria-selected]="false">
+          {{ 'relationship.autocompleteNoResult' | t }}
+        </li>
+      }
+    </ul>
+  }
+</div>

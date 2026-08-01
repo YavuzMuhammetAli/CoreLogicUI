@@ -98,6 +98,27 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/database-proccess/database-proccess.component').then(m => m.DatabaseProccessComponent)
       },
+      // Şirket içi kullanıcı yönetimi — kullanıcı yalnızca buradan eklenir
+      {
+        path: 'users',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/user-list/user-list.component').then(m => m.UserListComponent)
+      },
+      // "new" sabit segmenti ":id" param'ından önce gelmeli
+      {
+        path: 'users/new',
+        canActivate: [adminGuard],
+        data: { mode: 'new' },
+        loadComponent: () =>
+          import('./components/user-detail/user-detail.component').then(m => m.UserDetailComponent)
+      },
+      {
+        path: 'users/:id',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/user-detail/user-detail.component').then(m => m.UserDetailComponent)
+      },
       {
         path: 'permissions',
         canActivate: [adminGuard],

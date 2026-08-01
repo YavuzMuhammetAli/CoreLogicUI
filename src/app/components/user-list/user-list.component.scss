@@ -1,0 +1,28 @@
+/* Kullanıcı listesi — görsel dilin tamamı global styles.scss'ten gelir;
+   burada yalnızca bu ekrana özgü birkaç yardımcı sınıf var. */
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.clickable-row {
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-standard);
+
+  &:hover {
+    background: var(--surface-warm);
+  }
+}
+
+/* "(siz)" etiketi — kendi hesabını ayırt etmek için */
+.self-tag {
+  margin-left: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.muted-cell {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}

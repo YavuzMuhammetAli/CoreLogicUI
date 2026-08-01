@@ -1,0 +1,67 @@
+@if (isEmpty()) {
+  <p class="graph-empty">{{ 'relationship.graphEmpty' | t }}</p>
+} @else {
+  <div class="graph-scroll">
+    <svg
+      class="graph-svg"
+      [attr.viewBox]="viewBox()"
+      role="img"
+      [attr.aria-label]="'relationship.graphAria' | t">
+
+      <defs>
+        <marker id="rel-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" class="graph-arrow-head" />
+        </marker>
+        <marker id="rel-arrow-legacy" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" class="graph-arrow-head graph-arrow-head--legacy" />
+        </marker>
+      </defs>
+
+      <!-- Kenarlar önce çizilir ki düğümlerin altında kalsın -->
+      @for (edge of edges(); track edge.key) {
+        <path
+          class="graph-edge"
+          [class.graph-edge--legacy]="edge.isLegacy"
+          [class.graph-edge--required]="edge.required"
+          [attr.d]="edge.path"
+          [attr.marker-end]="edge.isLegacy ? 'url(#rel-arrow-legacy)' : 'url(#rel-arrow)'" />
+        <text
+          class="graph-edge-label"
+          [class.graph-edge-label--legacy]="edge.isLegacy"
+          [attr.x]="edge.labelX"
+          [attr.y]="edge.labelY"
+          text-anchor="middle">{{ edge.label }}</text>
+      }
+
+      @for (node of nodes(); track node.modelName) {
+        <g class="graph-node"
+           [class.graph-node--root]="node.isRoot"
+           [class.graph-node--exceeds]="node.exceedsMaxDepth">
+          <rect
+            [attr.x]="node.x" [attr.y]="node.y"
+            [attr.width]="node.width" [attr.height]="node.height"
+            rx="8" class="graph-node-box" />
+          <text
+            [attr.x]="node.x + node.width / 2"
+            [attr.y]="node.y + 20"
+            text-anchor="middle"
+            class="graph-node-title">{{ node.modelName }}</text>
+          <text
+            [attr.x]="node.x + node.width / 2"
+            [attr.y]="node.y + 35"
+            text-anchor="middle"
+            class="graph-node-meta">{{ 'relationship.graphLevel' | t:{ depth: node.depth } }}</text>
+        </g>
+      }
+    </svg>
+  </div>
+
+  <div class="graph-legend">
+    <span class="legend-item"><i class="legend-swatch legend-swatch--root"></i>{{ 'relationship.graphLegendRoot' | t }}</span>
+    <span class="legend-item"><i class="legend-line"></i>{{ 'relationship.graphLegendRelation' | t }}</span>
+    <span class="legend-item"><i class="legend-line legend-line--legacy"></i>{{ 'relationship.graphLegendLegacy' | t }}</span>
+    <span class="legend-item"><i class="legend-swatch legend-swatch--exceeds"></i>{{ 'relationship.graphLegendExceeds' | t }}</span>
+  </div>
+}

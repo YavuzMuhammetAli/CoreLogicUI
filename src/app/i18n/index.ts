@@ -10,6 +10,8 @@ import { ADMIN_I18N } from './admin.i18n';
 import { PERMISSION_I18N } from './permission.i18n';
 import { DASHBOARD_I18N } from './dashboard.i18n';
 import { PROFILE_I18N } from './profile.i18n';
+import { RELATIONSHIP_I18N } from './relationship.i18n';
+import { USER_I18N } from './user.i18n';
 
 /**
  * Tüm özellik bazlı çeviri sözlüklerinin birleşimi. Yeni bir ekran çevrildiğinde
@@ -27,7 +29,9 @@ export const TRANSLATIONS: Translations = {
   ...ADMIN_I18N,
   ...PERMISSION_I18N,
   ...DASHBOARD_I18N,
-  ...PROFILE_I18N
+  ...PROFILE_I18N,
+  ...RELATIONSHIP_I18N,
+  ...USER_I18N
 };
 
 export type { TranslationEntry, Translations } from './translations.model';

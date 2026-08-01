@@ -1,0 +1,209 @@
+<nav class="detail-breadcrumb" aria-label="breadcrumb">
+  <a class="bc-link" routerLink="/users">{{ 'user.list.title' | t }}</a>
+  <span class="bc-sep" aria-hidden="true">/</span>
+  <span class="bc-current">
+    {{ (isNew ? 'user.detail.newTitle' : 'user.detail.editTitle') | t }}
+  </span>
+</nav>
+
+<div class="panel">
+  <div class="panel-head">
+    <div>
+      <h2>{{ (isNew ? 'user.detail.newTitle' : 'user.detail.editTitle') | t }}</h2>
+      @if (isNew) {
+        <p class="panel-subtitle">{{ 'user.detail.newSubtitle' | t }}</p>
+      } @else if (displayName) {
+        <p class="panel-subtitle">{{ displayName }}</p>
+      }
+    </div>
+    <div class="panel-actions">
+      <a routerLink="/users" class="btn btn-secondary btn-sm">{{ 'user.detail.backToList' | t }}</a>
+    </div>
+  </div>
+
+  <div class="panel-body">
+    @if (message()) {
+      <div class="alert"
+           [class.alert-success]="messageType() === 'success'"
+           [class.alert-danger]="messageType() === 'danger'"
+           role="alert">{{ message() }}</div>
+    }
+
+    @if (loading()) {
+      <div class="empty-state">
+        <span class="spinner" aria-hidden="true"></span>
+      </div>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="save()">
+
+        <h3 class="section-title">{{ 'user.detail.sectionInfo' | t }}</h3>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="u-first">{{ 'user.detail.firstName' | t }} <span class="req">*</span></label>
+            <input id="u-first" type="text" class="input" formControlName="firstName"
+                   [attr.aria-invalid]="f['firstName'].touched && f['firstName'].invalid ? true : null" />
+            @if (f['firstName'].touched && f['firstName'].invalid) {
+              <span class="field-error" role="alert">{{ 'user.detail.firstNameRequired' | t }}</span>
+            }
+          </div>
+
+          <div class="field">
+            <label for="u-last">{{ 'user.detail.lastName' | t }} <span class="req">*</span></label>
+            <input id="u-last" type="text" class="input" formControlName="lastName"
+                   [attr.aria-invalid]="f['lastName'].touched && f['lastName'].invalid ? true : null" />
+            @if (f['lastName'].touched && f['lastName'].invalid) {
+              <span class="field-error" role="alert">{{ 'user.detail.lastNameRequired' | t }}</span>
+            }
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="u-email">{{ 'user.detail.email' | t }} <span class="req">*</span></label>
+          <input id="u-email" type="email" class="input" formControlName="email" autocomplete="off"
+                 [attr.aria-invalid]="f['email'].touched && f['email'].invalid ? true : null" />
+          @if (f['email'].touched && f['email'].hasError('required')) {
+            <span class="field-error" role="alert">{{ 'user.detail.emailRequired' | t }}</span>
+          } @else if (f['email'].touched && f['email'].hasError('email')) {
+            <span class="field-error" role="alert">{{ 'user.detail.emailInvalid' | t }}</span>
+          } @else {
+            <span class="field-help">
+              {{ (isNew ? 'user.detail.emailHelp' : 'user.detail.emailChangeWarning') | t }}
+            </span>
+          }
+        </div>
+
+        @if (isNew) {
+          <h3 class="section-title">{{ 'user.detail.sectionPassword' | t }}</h3>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="u-pwd">{{ 'user.detail.password' | t }} <span class="req">*</span></label>
+              <input id="u-pwd" type="password" class="input" formControlName="password"
+                     autocomplete="new-password"
+                     [attr.aria-invalid]="f['password'].touched && f['password'].invalid ? true : null" />
+              @if (f['password'].touched && f['password'].hasError('required')) {
+                <span class="field-error" role="alert">{{ 'user.detail.passwordRequired' | t }}</span>
+              } @else if (f['password'].touched && f['password'].hasError('minlength')) {
+                <span class="field-error" role="alert">{{ 'user.detail.passwordTooShort' | t }}</span>
+              } @else {
+                <span class="field-help">{{ 'user.detail.passwordHelp' | t }}</span>
+              }
+            </div>
+
+            <div class="field">
+              <label for="u-pwd2">{{ 'user.detail.passwordRepeat' | t }} <span class="req">*</span></label>
+              <input id="u-pwd2" type="password" class="input" formControlName="passwordRepeat"
+                     autocomplete="new-password"
+                     [attr.aria-invalid]="passwordMismatch ? true : null" />
+              @if (passwordMismatch) {
+                <span class="field-error" role="alert">{{ 'user.detail.passwordMismatch' | t }}</span>
+              }
+            </div>
+          </div>
+
+          <h3 class="section-title">{{ 'user.detail.sectionAccess' | t }}</h3>
+
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="isAdmin" />
+            {{ 'user.detail.isAdmin' | t }}
+          </label>
+          <span class="field-help">{{ 'user.detail.isAdminHelp' | t }}</span>
+
+          <div class="field">
+            <label for="u-role">{{ 'user.detail.role' | t }}</label>
+            <select id="u-role" class="input" formControlName="roleId">
+              <option [ngValue]="null">{{ 'user.detail.roleNone' | t }}</option>
+              @for (role of roles(); track role.id) {
+                <option [ngValue]="role.id">{{ role.name }}</option>
+              }
+            </select>
+            <span class="field-help">{{ 'user.detail.roleHelp' | t }}</span>
+          </div>
+        }
+
+        <div class="panel-actions form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            {{ (isNew ? 'user.detail.create' : 'common.save') | t }}
+          </button>
+        </div>
+      </form>
+
+      <!-- ══ Düzenleme modu: yetki, parola, tehlikeli bölge ══════════════════ -->
+      @if (!isNew && user()) {
+        <hr class="section-divider" />
+
+        <h3 class="section-title">{{ 'user.detail.sectionAccess' | t }}</h3>
+        <p class="field-help">{{ 'user.detail.newSessionNote' | t }}</p>
+
+        <div class="access-row">
+          <button type="button" class="btn btn-secondary btn-sm"
+                  [disabled]="saving() || isSelf()"
+                  [title]="isSelf() ? ('user.list.ownAccountHint' | t) : ''"
+                  (click)="toggleAdmin()">
+            @if (user()!.isAdmin) {
+              {{ 'user.list.roleAdmin' | t }} ✓
+            } @else {
+              {{ 'user.detail.isAdmin' | t }}
+            }
+          </button>
+
+          <button type="button" class="btn btn-secondary btn-sm"
+                  [disabled]="togglingActive() || isSelf()"
+                  [title]="isSelf() ? ('user.list.ownAccountHint' | t) : ''"
+                  (click)="toggleActive()">
+            {{ (user()!.status ? 'user.list.deactivate' : 'user.list.activate') | t }}
+          </button>
+
+          @if (isSelf()) {
+            <span class="field-help">{{ 'user.list.ownAccountHint' | t }}</span>
+          }
+        </div>
+
+        <hr class="section-divider" />
+
+        <h3 class="section-title">{{ 'user.detail.sectionPassword' | t }}</h3>
+        <form [formGroup]="resetForm" (ngSubmit)="resetPassword()">
+          @if (resetMessage()) {
+            <div class="alert"
+                 [class.alert-success]="resetMessageType() === 'success'"
+                 [class.alert-danger]="resetMessageType() === 'danger'"
+                 role="alert">{{ resetMessage() }}</div>
+          }
+          <div class="field">
+            <label for="u-newpwd">{{ 'user.detail.newPassword' | t }}</label>
+            <input id="u-newpwd" type="password" class="input" formControlName="newPassword"
+                   autocomplete="new-password" />
+            @if (resetForm.get('newPassword')!.touched && resetForm.get('newPassword')!.invalid) {
+              <span class="field-error" role="alert">{{ 'user.detail.passwordTooShort' | t }}</span>
+            } @else {
+              <span class="field-help">{{ 'user.detail.resetPasswordHelp' | t }}</span>
+            }
+          </div>
+          <button type="submit" class="btn btn-secondary" [disabled]="resetting()">
+            {{ 'user.detail.resetPassword' | t }}
+          </button>
+        </form>
+
+        <hr class="section-divider" />
+
+        <h3 class="section-title danger-title">{{ 'user.detail.sectionDanger' | t }}</h3>
+        <p class="field-help">{{ 'user.detail.deleteHelp' | t }}</p>
+        <button type="button" class="btn btn-danger btn-sm"
+                [disabled]="deleting() || isSelf()"
+                [title]="isSelf() ? ('user.list.ownAccountHint' | t) : ''"
+                (click)="openDelete()">
+          {{ 'user.detail.deleteTitle' | t }}
+        </button>
+      }
+    }
+  </div>
+</div>
+
+<app-confirm-dialog
+  [open]="confirmOpen()"
+  [title]="'user.detail.deleteConfirmTitle' | t"
+  [message]="'user.detail.deleteConfirmMessage' | t:{ name: displayName }"
+  [busy]="deleting()"
+  (confirmed)="confirmDelete()"
+  (cancelled)="cancelDelete()" />

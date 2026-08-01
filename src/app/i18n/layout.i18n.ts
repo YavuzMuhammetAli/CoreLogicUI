@@ -13,6 +13,8 @@ export const LAYOUT_I18N: Translations = {
   'layout.createTableAria': { tr: 'Yeni tablo oluştur', en: 'Create new table' },
   'layout.unpublished': { tr: 'Yayınlanmamış', en: 'Unpublished' },
   'layout.unpublishedAria': { tr: 'Yayınlanmamış modeller', en: 'Unpublished models' },
+  'layout.users': { tr: 'Kullanıcılar', en: 'Users' },
+  'layout.usersAria': { tr: 'Şirket kullanıcı yönetimi', en: 'Company user management' },
   'layout.userPermissions': { tr: 'Kullanıcı Yetkileri', en: 'User Permissions' },
   'layout.userPermissionsAria': { tr: 'Kullanıcı yetki yönetimi', en: 'User permission management' },
   'layout.roles': { tr: 'Roller', en: 'Roles' },

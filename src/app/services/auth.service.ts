@@ -84,6 +84,26 @@ export class AuthService {
     return !!this.storage?.getItem('access_token');
   }
 
+  /**
+   * Oturumdaki kullanıcının TENANT-LOCAL ID'si (JWT nameidentifier claim'i).
+   *
+   * Roller, izinler ve FK'ler bu ID'ye bağlıdır — master kullanıcı ID'si DEĞİLDİR.
+   * Kullanıcı yönetimi ekranı "bu benim hesabım mı" kontrolü için kullanır.
+   */
+  getCurrentUserId(): number | null {
+    const token = this.storage?.getItem('access_token');
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const raw = payload['nameid']
+        ?? payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'];
+      const parsed = Number(raw);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
   /** JWT payload'ını çözümleyip kullanıcı bilgisini döndürür (tenant claim'leri dahil). */
   getUserFromToken(): { name: string; email: string; initials: string; tenantId: string | null; companyId: string | null } | null {
     const token = this.storage?.getItem('access_token');

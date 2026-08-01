@@ -3,7 +3,7 @@
 ## Project Overview
 
 CoreLogicUI is the Angular 18 frontend for the **CoreLogic** dynamic model publishing platform.
-Backend: ASP.NET Core 8.0 Web API at `C:\CoreLogic\CoreLogic-master`, compiles C# entity
+Backend: ASP.NET Core 8.0 Web API at `C:\Users\muham\source\repos\YavuzMuhammetAli\CoreLogic`, compiles C# entity
 code at runtime via Roslyn and exposes dynamic CRUD endpoints.
 
 Users can:
@@ -93,7 +93,9 @@ CoreLogicUI-master/
         │   ├── chart/                       # ApexCharts tabanlı grafik component'i (rapor/dashboard tarafından kullanılır)
         │   └── shared/
         │       ├── column-visibility/      # Admin-managed model kolon görünürlüğü (liste/detay/alt-model sekmeleri)
-        │       └── confirm-dialog/         # Onay diyaloğu (geri yükleme/kalıcı silme akışlarında kullanılır)
+        │       ├── confirm-dialog/         # Onay diyaloğu (geri yükleme/kalıcı silme akışlarında kullanılır)
+        │       ├── model-autocomplete/     # Model adı seçimi (combobox, klavye + ARIA) — ilişki hedefi seçiminde
+        │       └── entity-graph/           # Entity ilişki grafiği (elle yazılmış inline SVG, bağımlılıksız)
         ├── services/
         │   ├── auth.service.ts               # /Auth login/register, JWT → localStorage
         │   ├── published-table.service.ts    # /Published addTable, addMember + soft-delete/restore
@@ -108,6 +110,8 @@ CoreLogicUI-master/
         │   ├── report.service.ts               # /Report — define/update/list/run/export + soft-delete/restore
         │   ├── dashboard.service.ts             # /Dashboard — define/get/list + soft-delete/restore
         │   ├── audit-log.service.ts             # /AuditLog — filtrelenmiş denetim kayıtları (admin-only)
+        │   ├── user-admin.service.ts             # /User — şirket içi kullanıcı CRUD + pasifle/parola/admin (admin-only)
+        │   ├── relationship.service.ts           # /publish/models/{id}/... — model ilişkileri CRUD + validate-graph + preview
         │   ├── language.service.ts              # HTTP yok — TR/EN dil tercihi, localStorage, t() + TranslatePipe
         │   ├── model-usage.service.ts           # HTTP yok — model kullanım özeti (raporlar + dashboardlar)
         │   ├── theme.service.ts                 # Açık/koyu tema tercihini yönetir (localStorage)
@@ -132,6 +136,7 @@ CoreLogicUI-master/
         │   ├── admin.i18n.ts                  # Admin ekranları (form-build, draft, db, audit-log)
         │   ├── permission.i18n.ts             # İzin/rol ekranları
         │   ├── profile.i18n.ts                # Profil ekranı
+        │   ├── relationship.i18n.ts           # Model ilişkileri sekmesi, ilişki popup'ı, önizleme
         │   └── shared.i18n.ts                 # Paylaşılan diyalog metinleri
         ├── pipes/
         │   └── translate.pipe.ts              # TranslatePipe — şablonlarda `{{ 'key' | t }}` şeklinde kullanılır
@@ -147,7 +152,8 @@ CoreLogicUI-master/
             ├── role.ts                          # RBAC rol modelleri
             ├── userProfile.ts                   # Profil modelleri
             ├── report.model.ts                  # ReportDefinition, ReportFilter/Aggregate/Sort, ChartType vb.
-            └── dashboard.model.ts                # DashboardDefinition, DashboardWidget, DashboardRunResult vb.
+            ├── dashboard.model.ts                # DashboardDefinition, DashboardWidget, DashboardRunResult vb.
+            └── relationship.model.ts             # RelationshipType/Definition, ValidationIssue, EntityGraph, PublishPreview
 ```
 
 ## Routing
@@ -167,6 +173,9 @@ CoreLogicUI-master/
   /drafts                   → DraftModelsComponent           (adminGuard)
   /drafts/deleted           → DeletedDraftsComponent         (adminGuard)
   /database                 → DatabaseProccessComponent       (adminGuard)
+  /users                    → UserListComponent               (adminGuard — şirket kullanıcıları)
+  /users/new                → UserDetailComponent             (adminGuard, data.mode='new')
+  /users/:id                → UserDetailComponent             (adminGuard)
   /permissions              → UserPermissionListComponent     (adminGuard)
   /permissions/:id          → UserPermissionDetailComponent   (adminGuard)
   /roles                    → RoleListComponent                (adminGuard)
@@ -229,6 +238,8 @@ Tüm servisler `@Injectable({ providedIn: 'root' })`, `inject(HttpClient)` (veya
 | `ReportService` | `/Report` — define/update/list/run/export (excel/pdf) |
 | `DashboardService` | `/Dashboard` — define/get/list + soft-delete/restore |
 | `AuditLogService` | `/AuditLog` — filtrelenmiş denetim kayıtları (admin-only) |
+| `UserAdminService` | `/User` — getall/create/update/setActive/resetPassword/setAdmin/delete (admin-only) |
+| `RelationshipService` | `/publish/models/{id}/relationships` (GET/POST/PUT/DELETE), `/validate-graph`, `/preview` |
 | `LanguageService` | HTTP yok — TR/EN dil tercihi, `localStorage`, `t()` metodu + `TranslatePipe` |
 | `ModelUsageService` | HTTP yok — model kullanım özeti: hangi raporlar/dashboardlar bu modeli kullanıyor |
 | `ThemeService` | HTTP yok — açık/koyu tema tercihi, `localStorage` |
@@ -302,6 +313,77 @@ tasarım sistemi kullanır (artık açık/koyu tema desteği dahil). Detaylar i�
 - İkonlar: inline stroke SVG, `currentColor`
 - A11y: `aria-invalid`, `role="alert"`, `aria-describedby`, `.sr-only`
 - **Tüm UI metni ve yorumlar Türkçe**
+
+## Şirket İçi Kullanıcı Yönetimi (G2)
+
+Bir şirket `/register-company` ile kaydolduğunda **tek bir admin** oluşur. Diğer kullanıcılar
+yalnızca `/users` ekranından, o şirketin admin'i tarafından eklenir.
+
+**Dışarıdan bir şirkete katılım YOKTUR** — "mevcut şirkete kaydol" akışı ne backend'de ne
+UI'da vardır. `/User/*` uçlarının tamamı `[Authorize(Roles = "admin")]` ve yeni kullanıcı
+her zaman **çağıran admin'in ambient tenant'ına** eklenir; istemci şirket/tenant seçemez.
+
+| İşlem | Uç |
+|---|---|
+| Liste | `GET /User/getall` |
+| Oluştur | `POST /User/create` |
+| Güncelle (ad/soyad/e-posta) | `PUT /User/update?userId=` |
+| Pasifle / aktifle | `POST /User/setActive?userId=&active=` |
+| Parola sıfırla | `POST /User/resetPassword?userId=` |
+| Admin yetkisi | `POST /User/setAdmin?userId=&isAdmin=` |
+| Kalıcı sil | `DELETE /User/delete?userId=` |
+
+**Master senkronu zorunludur.** Login `MasterAuthManager` ile master satırına karşı doğrulanır
+ve tenant'ı e-postadan çözer. Bu yüzden `SetActive`, e-posta değişikliği ve parola sıfırlama
+**her iki tarafa birlikte** yazılır (`IMasterAuthService.SetMasterUserStatus` /
+`UpdateMasterUserEmail` / `UpdateMasterUserPassword`). Yalnızca tenant güncellenirse pasifleme
+etkisiz kalır, e-posta/parola değişikliği ise kullanıcıyı **giriş yapamaz** hale getirir.
+
+**Kilitlenme korumaları** (`UserAdminManager`): admin kendi hesabını pasifleyemez/silemez ve
+kendi admin yetkisini kaldıramaz; şirketin **son admin'i** yetkisiz bırakılamaz.
+
+**Kalıcı silme korumalı**: `[User](ID)`'ye işaret eden `CreatedBy`/`LastModifiedBy` FK'ları
+(hem `[User]` kendine, hem her dinamik tabloda `FK_{tablo}_CreatedBy`) nedeniyle **kayıt üretmiş
+bir kullanıcı silinemez** — FK ihlali yakalanır, transaction geri alınır ve kullanıcı
+pasiflemeye yönlendirilir. Veri ve denetim izi hiçbir durumda bozulmaz.
+
+> Parola akışı: tenant tarafında e-posta altyapısı yoktur; admin başlangıç parolasını belirler
+> ve kullanıcıya kendi kanalından iletir. Kullanıcı `/profile` üzerinden değiştirir.
+> Yetki/pasifleme değişiklikleri kullanıcının **yeni JWT oturumunda** etkinleşir.
+
+## Model İlişkileri (Publish · G1)
+
+`/build/:typeName` ekranındaki **İlişkiler** sekmesinde, bir model yayınlanırken daha önce
+yayınlanmış modellerle ilişkilendirilir. Sonuçta üretilen assembly'de navigation property'ler,
+EF modelinde Fluent API konfigürasyonu, veritabanında FK/index/join tablosu oluşur.
+
+**Desteklenen tipler:** OneToOne, OneToMany, ManyToOne, ManyToMany, SelfReference.
+Inheritance desteklenmez.
+
+**Üç bağımsız FK mekanizması bir arada çalışır** — yenisi eskileri değiştirmez:
+
+| Mekanizma | Metadata | FK kolonu | Constraint adı |
+|---|---|---|---|
+| Alt-model ağacı | `PublishedTable.ParentTableId` | `{Parent}Id` | `FK_{tablo}_{parent}` |
+| `lookup` kolon tipi | `PublishedTableMember.LookupTargetTable` | kolonun kendi adı | `FK_{tablo}_{kolon}` |
+| **İlişki (yeni)** | `RelationshipDefinition` | property adından türetilir | `FK_{tablo}_{kolon}_**Rel**` |
+
+`_Rel` son eki ad çakışmasını engeller; validator ilişki FK'sının eski mekanizmaların
+kolonlarıyla çakışmasını reddeder.
+
+**Kurallar:** ilişki derinliği en fazla **3** (kök = 0). Döngüsel ilişki yasaktır — cycle
+kontrolü yalnızca *tanımlı* kenarlar üzerinde çalışır, ters property ayrı kenar sayılmaz
+(`Customer.Orders ↔ Order.Customer` tek ilişkidir), `SelfReference` beyaz listededir.
+Dolu bir tabloya `Required` (NOT NULL) FK eklenemez — publish öncesi engellenir.
+
+**UI:** hedef model autocomplete'i yalnızca yayınlanmış modelleri önerir; her satırda derinlik
+rozeti vardır; kaydetmeden önce `validate-graph` ile döngü/derinlik uyarısı gösterilir;
+**Önizleme** diyaloğu oluşacak entity graph'ı (SVG), üretilecek C#'ı ve DDL'i assembly'e
+yazmadan gösterir.
+
+> Yayınlama akışı değişmez: ilişkiler `POST /Published/publish` çağrısına otomatik dahil olur.
+> İlişkinin karşı tarafı da yeniden derlenir (Customer'a `Orders` eklenince Order tipi
+> `CustomerId` + `Customer` navigation'ını kazanır).
 
 ## Backend Entegrasyonu
 

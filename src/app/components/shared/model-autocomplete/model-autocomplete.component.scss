@@ -1,0 +1,87 @@
+/* Model autocomplete — token tabanlı, corelogic-design ile aynı dil. */
+
+.ac-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.ac-input-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ac-input {
+  width: 100%;
+  padding-right: var(--space-8);
+}
+
+.ac-clear {
+  position: absolute;
+  right: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color var(--motion-fast) var(--ease-standard),
+              background var(--motion-fast) var(--ease-standard);
+
+  &:hover {
+    color: var(--fg);
+    background: var(--surface-warm);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+}
+
+.ac-list {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  margin: 0;
+  padding: var(--space-1);
+  overflow-y: auto;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elev-high);
+}
+
+.ac-option {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--fg);
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-standard);
+
+  &:hover,
+  &--active {
+    background: var(--surface-warm);
+  }
+
+  &--selected {
+    color: var(--accent);
+    font-weight: 600;
+  }
+}
+
+.ac-empty {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}

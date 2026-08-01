@@ -1,0 +1,108 @@
+<div class="page-header">
+  <span class="eyebrow">{{ 'user.list.eyebrow' | t }}</span>
+  <h1 class="page-title">{{ 'user.list.title' | t }}</h1>
+  <p class="page-subtitle">{{ 'user.list.subtitle' | t }}</p>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <h2>{{ 'user.list.panelTitle' | t }}</h2>
+    <div class="panel-actions">
+      <button type="button" class="btn btn-secondary btn-sm" (click)="load()" [disabled]="loading()">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+        {{ 'common.refresh' | t }}
+      </button>
+      <a routerLink="/users/new" class="btn btn-primary btn-sm">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        {{ 'common.add' | t }}
+      </a>
+    </div>
+  </div>
+
+  <div class="panel-body">
+    @if (loadError()) {
+      <div class="alert alert-danger" role="alert">{{ loadError() }}</div>
+    }
+    @if (actionError()) {
+      <div class="alert alert-danger" role="alert">{{ actionError() }}</div>
+    }
+
+    @if (loading()) {
+      <div class="empty-state">
+        <span class="spinner" aria-hidden="true"></span>
+        <p>{{ 'user.list.loading' | t }}</p>
+      </div>
+    } @else if (!hasUsers()) {
+      <div class="empty-state">
+        <div class="empty-icon" aria-hidden="true">👥</div>
+        <h3>{{ 'user.list.emptyTitle' | t }}</h3>
+        <p>{{ 'user.list.emptyHint' | t }}</p>
+        <a routerLink="/users/new" class="btn btn-primary">{{ 'user.list.addFirst' | t }}</a>
+      </div>
+    } @else {
+      <div class="table-wrapper">
+        <table class="data-table" [attr.aria-label]="'user.list.tableLabel' | t">
+          <thead>
+            <tr>
+              <th>{{ 'user.list.colName' | t }}</th>
+              <th>{{ 'user.list.colEmail' | t }}</th>
+              <th>{{ 'user.list.colRole' | t }}</th>
+              <th>{{ 'user.list.colStatus' | t }}</th>
+              <th>{{ 'user.list.colCreatedOn' | t }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of users(); track user.id) {
+              <tr
+                class="clickable-row"
+                [routerLink]="['/users', user.id]"
+                role="link"
+                [attr.aria-label]="'user.list.rowAria' | t:{ name: user.firstName + ' ' + user.lastName }">
+                <td>
+                  {{ user.firstName }} {{ user.lastName }}
+                  @if (isSelf(user)) {
+                    <span class="self-tag">({{ 'user.list.you' | t }})</span>
+                  }
+                </td>
+                <td>{{ user.email }}</td>
+                <td>
+                  @if (user.isAdmin) {
+                    <span class="badge badge-warn">{{ 'user.list.roleAdmin' | t }}</span>
+                  } @else {
+                    <span class="badge badge-meta">{{ 'user.list.roleUser' | t }}</span>
+                  }
+                </td>
+                <td>
+                  @if (user.status) {
+                    <span class="badge badge-success">{{ 'user.list.statusActive' | t }}</span>
+                  } @else {
+                    <span class="badge badge-danger">{{ 'user.list.statusPassive' | t }}</span>
+                  }
+                </td>
+                <td class="muted-cell">{{ user.createdOn ? (user.createdOn | date:'dd.MM.yyyy') : '—' }}</td>
+                <td class="td-actions" (click)="$event.stopPropagation()">
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-sm"
+                    [disabled]="isSelf(user) || busyId() === user.id"
+                    [title]="isSelf(user) ? ('user.list.ownAccountHint' | t) : ''"
+                    (click)="toggleActive(user, $event)">
+                    {{ (user.status ? 'user.list.deactivate' : 'user.list.activate') | t }}
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>
