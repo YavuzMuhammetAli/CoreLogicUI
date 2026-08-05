@@ -1,0 +1,91 @@
+@if (open) {
+  <div class="dialog-overlay" (click)="onBackdrop($event)">
+    <div class="dialog-panel dialog-panel--wide panel" role="dialog" aria-modal="true"
+         [attr.aria-label]="'relationship.previewTitle' | t">
+      <div class="panel-head">
+        <h2 class="panel-title">{{ 'relationship.previewTitle' | t }}</h2>
+        <p class="panel-subtitle">{{ 'relationship.previewSubtitle' | t }}</p>
+      </div>
+
+      <div class="panel-body">
+        @if (isLoading) {
+          <div class="preview-loading">
+            <span class="spinner" aria-hidden="true"></span>
+            {{ 'relationship.previewLoading' | t }}
+          </div>
+        } @else if (errorMessage) {
+          <div class="alert alert-danger" role="alert">{{ errorMessage }}</div>
+        } @else if (preview) {
+
+          @if (preview.validation.errors.length > 0) {
+            <div class="alert alert-danger" role="alert">
+              <strong>{{ 'relationship.errorsTitle' | t }}</strong>
+              <ul class="issue-list">
+                @for (issue of preview.validation.errors; track $index) {
+                  <li>{{ issue.message }}</li>
+                }
+              </ul>
+            </div>
+          }
+
+          <p class="preview-batch">
+            <strong>{{ 'relationship.previewBatch' | t }}:</strong>
+            @for (m of preview.publishBatch; track m) {
+              <span class="badge badge-meta">{{ m }}</span>
+            }
+          </p>
+
+          <div class="tab-bar" role="tablist" [attr.aria-label]="'relationship.previewTitle' | t">
+            <button type="button" class="tab-btn" role="tab"
+                    [class.tab-btn--active]="activeTab === 'graph'"
+                    [attr.aria-selected]="activeTab === 'graph'"
+                    (click)="setTab('graph')">
+              {{ 'relationship.previewTabGraph' | t }}
+            </button>
+            <button type="button" class="tab-btn" role="tab"
+                    [class.tab-btn--active]="activeTab === 'code'"
+                    [attr.aria-selected]="activeTab === 'code'"
+                    (click)="setTab('code')">
+              {{ 'relationship.previewTabCode' | t }}
+            </button>
+            <button type="button" class="tab-btn" role="tab"
+                    [class.tab-btn--active]="activeTab === 'sql'"
+                    [attr.aria-selected]="activeTab === 'sql'"
+                    (click)="setTab('sql')">
+              {{ 'relationship.previewTabSql' | t }}
+            </button>
+          </div>
+
+          <div class="tab-panel" role="tabpanel">
+            @if (activeTab === 'graph') {
+              <app-entity-graph [graph]="preview.graph" />
+            }
+
+            @if (activeTab === 'code') {
+              @for (model of preview.generatedModels; track model.modelName) {
+                <h4 class="preview-code-title">{{ model.modelName }}</h4>
+                <pre class="preview-code"><code>{{ model.generatedCode }}</code></pre>
+              }
+            }
+
+            @if (activeTab === 'sql') {
+              @if (preview.migrationScripts.length === 0) {
+                <p class="muted-hint">{{ 'relationship.previewNoSql' | t }}</p>
+              } @else {
+                @for (script of preview.migrationScripts; track $index) {
+                  <pre class="preview-code"><code>{{ script }}</code></pre>
+                }
+              }
+            }
+          </div>
+        }
+      </div>
+
+      <div class="panel-actions">
+        <button type="button" class="btn btn-secondary" (click)="close()">
+          {{ 'table.detail.cancel' | t }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

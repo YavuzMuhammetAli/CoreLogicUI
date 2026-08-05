@@ -1,0 +1,184 @@
+@if (active) {
+<div class="tab-panel" role="tabpanel" [attr.aria-label]="'relationship.panelAria' | t">
+
+  <div class="tab-toolbar">
+    <div class="tab-toolbar-actions">
+      <button
+        type="button"
+        class="btn btn-primary btn-sm"
+        [disabled]="!canManage"
+        (click)="openAdd()">
+        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        {{ 'relationship.new' | t }}
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-secondary btn-sm"
+        [disabled]="tableId === null"
+        (click)="openPreview()">
+        {{ 'relationship.preview' | t }}
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-ghost btn-sm help-btn"
+        (click)="helpRequested.emit()"
+        [attr.aria-label]="'help.howItWorks' | t">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+        </svg>
+        {{ 'help.howItWorks' | t }}
+      </button>
+    </div>
+
+    @if (validation) {
+      <span
+        class="badge"
+        [class.badge-success]="validation.maxDepth <= validation.maxAllowedDepth"
+        [class.badge-danger]="validation.maxDepth > validation.maxAllowedDepth">
+        {{ 'relationship.depthBadge' | t:{ depth: validation.maxDepth, max: validation.maxAllowedDepth } }}
+      </span>
+    }
+  </div>
+
+  <!-- Model kaydedilmeden ilişki eklenemez -->
+  @if (tableId === null && !isNew) {
+    <div class="alert alert-info">{{ 'relationship.saveModelFirst' | t }}</div>
+  }
+
+  <!-- Canlı doğrulama sonucu -->
+  @if (validation && validation.errors.length > 0) {
+    <div class="alert alert-danger" role="alert">
+      <strong>{{ 'relationship.errorsTitle' | t }}</strong>
+      <ul class="issue-list">
+        @for (issue of validation.errors; track $index) {
+          <li>{{ issue.message }}</li>
+        }
+      </ul>
+      <span class="issue-note">{{ 'relationship.blocksPublish' | t }}</span>
+    </div>
+  }
+  @if (validation && validation.warnings.length > 0) {
+    <div class="alert alert-warn" role="alert">
+      <strong>{{ 'relationship.warningsTitle' | t }}</strong>
+      <ul class="issue-list">
+        @for (issue of validation.warnings; track $index) {
+          <li>{{ issue.message }}</li>
+        }
+      </ul>
+    </div>
+  }
+  @if (errorMessage) {
+    <div class="alert alert-danger" role="alert">{{ errorMessage }}</div>
+  }
+
+  @if (relationships.length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon" aria-hidden="true">🔗</div>
+      <h3>{{ 'relationship.emptyTitle' | t }}</h3>
+      <p>{{ 'relationship.emptyMessage' | t }}</p>
+      <button
+        type="button"
+        class="btn btn-primary"
+        [disabled]="!canManage"
+        (click)="openAdd()">
+        {{ 'relationship.new' | t }}
+      </button>
+    </div>
+  } @else {
+    <div class="tab-table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>{{ 'relationship.colTarget' | t }}</th>
+            <th>{{ 'relationship.colType' | t }}</th>
+            <th>{{ 'relationship.colProperty' | t }}</th>
+            <th>{{ 'relationship.colInverse' | t }}</th>
+            <th>{{ 'relationship.colCascade' | t }}</th>
+            <th>{{ 'relationship.colRequired' | t }}</th>
+            <th>{{ 'relationship.colDisplayName' | t }}</th>
+            <th>{{ 'relationship.colOrder' | t }}</th>
+            <th>{{ 'relationship.colDepth' | t }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (rel of relationships; track rel.relationshipId) {
+            <tr
+              class="row-clickable"
+              [class.row-invalid]="hasErrorFor(rel.relationshipId)"
+              (click)="openEdit(rel)"
+              [attr.aria-label]="'relationship.editAria' | t:{ name: rel.propertyName }">
+              <td>{{ rel.targetModel }}</td>
+              <td><span class="badge badge-meta">{{ relationshipTypeLabel(rel.relationshipType) | t }}</span></td>
+              <td>
+                <code class="mono-cell">{{ rel.propertyName }}</code>
+                @if (rel.foreignKeyName) {
+                  <span class="muted-hint">FK: {{ rel.foreignKeyName }}</span>
+                }
+                @if (rel.joinTableName) {
+                  <span class="muted-hint">JOIN: {{ rel.joinTableName }}</span>
+                }
+              </td>
+              <td>
+                @if (rel.inverseProperty) {
+                  <code class="mono-cell">{{ rel.inverseProperty }}</code>
+                } @else { <span class="muted-hint">—</span> }
+              </td>
+              <td>{{ rel.cascadeDelete ? ('table.detail.yes' | t) : ('table.detail.no' | t) }}</td>
+              <td>{{ rel.required ? ('table.detail.yes' | t) : ('table.detail.no' | t) }}</td>
+              <td>{{ rel.displayName || '—' }}</td>
+              <td>{{ rel.order }}</td>
+              <td>
+                <span
+                  class="badge"
+                  [class.badge-meta]="!validation || rel.depth <= validation.maxAllowedDepth"
+                  [class.badge-danger]="validation && rel.depth > validation.maxAllowedDepth">
+                  {{ rel.depth }}
+                </span>
+              </td>
+              <td class="td-actions">
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm"
+                  (click)="askRemove(rel); $event.stopPropagation()"
+                  [attr.aria-label]="'relationship.deleteAria' | t:{ name: rel.propertyName }">
+                  {{ 'table.detail.delete' | t }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+}
+
+<!-- Diyaloglar sekme kapalıyken de şablonda kalır: kendi `open` bayraklarıyla
+     gizlenirler, böylece @ViewChild referansları her zaman çözülür. -->
+
+<!-- İlişki ekleme/düzenleme popup'ı -->
+<app-relationship-dialog
+  [publishedModelNames]="publishedModelNames"
+  [currentModelName]="modelName"
+  [saving]="isSaving"
+  [errorMessage]="errorMessage"
+  (save)="onDialogSave($event)"
+  (typeHelpRequested)="typeHelpRequested.emit($event)" />
+
+<!-- Yayınlama önizlemesi -->
+<app-publish-preview-dialog [tableId]="tableId" />
+
+<!-- İlişki silme onayı — native confirm() yerine tasarım sistemine uygun diyalog -->
+<app-confirm-dialog
+  [open]="toRemove !== null"
+  [title]="'relationship.deleteConfirmTitle' | t"
+  [message]="'relationship.deleteConfirmMessage' | t:{ name: toRemove?.propertyName ?? '' }"
+  [busy]="isDeleting"
+  (confirmed)="confirmRemove()"
+  (cancelled)="cancelRemove()" />

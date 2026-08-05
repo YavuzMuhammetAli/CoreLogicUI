@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, inject, OnDestroy, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, ViewChild, inject, OnDestroy, signal } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { ReactiveFormsModule, AbstractControl, FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
@@ -6,26 +6,15 @@ import { Observable, Subscription } from 'rxjs';
 import { from, concatMap, switchMap, throwError, of, catchError } from 'rxjs';
 import { PublishedTableService, PublishedColumnSchema, PublishedTableSchema } from '../../services/published-table.service';
 import { PublishedModelService } from '../../services/published-model.service';
-import { RelationshipService } from '../../services/relationship.service';
 import { ModelNodeComponent, MAX_DEPTH } from '../model-node/model-node.component';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
-import { ModelAutocompleteComponent } from '../shared/model-autocomplete/model-autocomplete.component';
-import { EntityGraphComponent } from '../shared/entity-graph/entity-graph.component';
 import { HelpHintComponent } from '../shared/help-hint/help-hint.component';
 import { DatatypeHelpComponent } from '../shared/datatype-help/datatype-help.component';
-import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { HelpTopicId } from '../shared/datatype-help/datatype-help.data';
 import { RegexPreset } from '../shared/datatype-help/regex-presets';
-import {
-  RelationshipDefinition,
-  RelationshipType,
-  RelationshipUpsert,
-  RelationshipValidationResult,
-  PublishPreview,
-  RELATIONSHIP_TYPE_OPTIONS,
-  requiresInverse
-} from '../../models/relationship.model';
+import { RelationshipType } from '../../models/relationship.model';
+import { RelationshipsTabComponent } from './relationships/relationships-tab.component';
 import { markDirty } from '../../utils/change-detection';
 
 /** Ekrandaki sekmeler. */
@@ -81,8 +70,8 @@ interface TreeNode {
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe,
-    ModelAutocompleteComponent, EntityGraphComponent, ModelNodeComponent,
-    HelpHintComponent, DatatypeHelpComponent, ConfirmDialogComponent
+    ModelNodeComponent, HelpHintComponent, DatatypeHelpComponent,
+    RelationshipsTabComponent
   ],
   templateUrl: './table-detail.component.html',
   styleUrls: ['./table-detail.component.scss'],
@@ -188,9 +177,14 @@ export class TableDetailComponent implements OnDestroy {
   helpTopic = signal<HelpTopicId>('string');
 
   // ─── G1: İlişkiler sekmesi ──────────────────────────────────────────────────
+  //
+  // İlişkilerin tüm yaşam döngüsü RelationshipsTabComponent'tedir. Burada
+  // yalnızca sekmeye geçirilen bağlam ve sekme çubuğundaki rozet için gereken
+  // özet durum tutulur.
 
-  private readonly relationshipService = inject(RelationshipService);
   private readonly publishedModelService = inject(PublishedModelService);
+
+  @ViewChild(RelationshipsTabComponent) private relationshipsTab?: RelationshipsTabComponent;
 
   /** Aktif sekme — "Sütunlar", "Alt Modeller" veya "İlişkiler". */
   activeTab = signal<TabId>('columns');
@@ -201,59 +195,12 @@ export class TableDetailComponent implements OnDestroy {
    */
   relationshipTableId: number | null = null;
 
-  /** Sunucudaki (düzenleme modu) veya bellekte bekleyen (yeni model) ilişkiler. */
-  relationships: RelationshipDefinition[] = [];
-
-  /**
-   * Yeni model modunda henüz kaydedilmemiş ilişkiler. Model ilk kez kaydedilip
-   * tablo ID'si oluştuğunda toplu olarak POST edilir.
-   */
-  /**
-   * Geçici kimlik → bekleyen ilişki. Dizi + paralel index yerine Map kullanılır:
-   * `relationships` ile `pendingRelationships` arasındaki index eşleşmesine
-   * dayanmak, araya kaydedilmiş bir ilişki girdiğinde sessizce yanlış kaydı
-   * günceller. Kimlik üzerinden erişim bu kuplajı tamamen kaldırır.
-   *
-   * Ekleme sırası korunur (Map insertion order) — flush sırası publish için önemlidir.
-   */
-  private pendingRelationships = new Map<string, RelationshipUpsert>();
-
-  /**
-   * Bekleyen ilişkilere geçici kimlik üreten MONOTON sayaç.
-   *
-   * Map boyutu kullanılamaz: bir ilişki silinip yenisi eklendiğinde aynı kimlik
-   * ikinci kez üretilir; mevcut giriş üzerine yazılır ve @for ... track duplicate
-   * anahtarla bozulur.
-   */
-  private pendingIdSeq = 0;
-
   /** Autocomplete kaynağı — yalnızca YAYINLANMIŞ modeller (taslaklar hariç). */
   publishedModelNames: string[] = [];
 
-  relationshipTypeOptions = RELATIONSHIP_TYPE_OPTIONS;
-
-  // İlişki popup'ı
-  relationshipModalOpen = false;
-  /** null = yeni ilişki; string ise düzenlenen ilişkinin relationshipId'si. */
-  editingRelationshipId: string | null = null;
-  relationshipDraft: FormGroup;
-
-  isRelationshipSaving = false;
-  relationshipError: string | null = null;
-
-  /** Onay bekleyen silme hedefi; null ise onay diyaloğu kapalıdır. */
-  relationshipToRemove: RelationshipDefinition | null = null;
-  isRelationshipDeleting = false;
-
-  /** Canlı doğrulama sonucu — kullanıcı kaydetmeden önce döngü/derinlik uyarısı görür. */
-  validation: RelationshipValidationResult | null = null;
-
-  // Önizleme diyaloğu
-  previewOpen = false;
-  isPreviewLoading = false;
-  preview: PublishPreview | null = null;
-  previewTab: 'graph' | 'code' | 'sql' = 'graph';
-  previewError: string | null = null;
+  /** Sekme rozeti: ilişki sayısı ve graph geçerliliği (sekmeden gelir). */
+  relationshipCount = 0;
+  relationshipsValid = true;
 
   constructor(
     private fb: FormBuilder,
@@ -264,7 +211,7 @@ export class TableDetailComponent implements OnDestroy {
   ) {
     this.isNew = this.route.snapshot.data['mode'] === 'new';
     this.columnDraft = ModelNodeComponent.buildColumnGroupStatic(this.fb);
-    this.relationshipDraft = this.buildRelationshipDraft();
+
 
     if (this.isNew) {
       // Oluşturma modu — boş kolon listesiyle başla, sütunlar popup'tan eklenir
@@ -456,290 +403,8 @@ export class TableDetailComponent implements OnDestroy {
       .filter(t => t.parentTableId === own.id)
       .sort((a, b) => a.tableName.localeCompare(b.tableName, 'tr'));
 
-    // İlişki tablo ID'si yalnızca ilk kez çözülür; ilişkiler bir kez yüklenir.
-    if (this.relationshipTableId !== own.id) {
-      this.relationshipTableId = own.id;
-      this.loadRelationships();
-    }
-  }
-
-  private loadRelationships(): void {
-    if (this.relationshipTableId === null) return;
-
-    this.relationshipService.list(this.relationshipTableId).pipe(markDirty(this.cdr)).subscribe({
-      next: res => {
-        this.relationships = res.success ? (res.data ?? []) : [];
-        this.runValidation();
-      },
-      error: () => { this.relationships = []; }
-    });
-  }
-
-  /** Graph doğrulamasını çalıştırır — kullanıcı yayınlamadan önce hatayı görür. */
-  private runValidation(): void {
-    if (this.relationshipTableId === null) {
-      this.validation = null;
-      return;
-    }
-
-    this.relationshipService.validateGraph(this.relationshipTableId).pipe(markDirty(this.cdr)).subscribe({
-      next: res => {
-        this.validation = res.data ?? null;
-      },
-      error: (err: { error?: { data?: RelationshipValidationResult } }) => {
-        // Doğrulama hatası 400 ile de dönebilir; gövdedeki sonuç yine kullanılır.
-        this.validation = err?.error?.data ?? null;
-      }
-    });
-  }
-
-  // ─── G1: İlişki popup'ı ─────────────────────────────────────────────────────
-
-  private buildRelationshipDraft(): FormGroup {
-    return this.fb.group({
-      targetModel:      ['', Validators.required],
-      relationshipType: [RelationshipType.ManyToOne, Validators.required],
-      propertyName:     ['', [Validators.required, Validators.pattern(/^[A-Za-z_][A-Za-z0-9_]*$/)]],
-      inverseProperty:  ['', Validators.pattern(/^[A-Za-z_][A-Za-z0-9_]*$/)],
-      foreignKeyName:   ['', Validators.pattern(/^[A-Za-z_][A-Za-z0-9_]*$/)],
-      joinTableName:    ['', Validators.pattern(/^[A-Za-z_][A-Za-z0-9_]*$/)],
-      cascadeDelete:    [false],
-      required:         [false],
-      displayName:      [''],
-      order:            [0]
-    });
-  }
-
-  /** İlişki eklemek için modelin kaydedilmiş (tablo ID'si oluşmuş) olması gerekir. */
-  get canManageRelationships(): boolean {
-    return this.relationshipTableId !== null || this.isNew;
-  }
-
-  openAddRelationshipModal(): void {
-    this.editingRelationshipId = null;
-    this.relationshipError = null;
-    this.relationshipDraft = this.buildRelationshipDraft();
-    this.relationshipDraft.patchValue({ order: this.relationships.length + 1 });
-    this.applyInverseValidators(this.draftType);
-    this.relationshipModalOpen = true;
-  }
-
-  openEditRelationshipModal(relationship: RelationshipDefinition): void {
-    this.editingRelationshipId = relationship.relationshipId;
-    this.relationshipError = null;
-    this.relationshipDraft = this.buildRelationshipDraft();
-    this.relationshipDraft.patchValue({
-      targetModel:      relationship.targetModel,
-      relationshipType: relationship.relationshipType,
-      propertyName:     relationship.propertyName,
-      inverseProperty:  relationship.inverseProperty ?? '',
-      foreignKeyName:   relationship.foreignKeyName ?? '',
-      joinTableName:    relationship.joinTableName ?? '',
-      cascadeDelete:    relationship.cascadeDelete,
-      required:         relationship.required,
-      displayName:      relationship.displayName ?? '',
-      order:            relationship.order
-    });
-    this.applyInverseValidators(this.draftType);
-    this.relationshipModalOpen = true;
-  }
-
-  closeRelationshipModal(): void {
-    this.relationshipModalOpen = false;
-    this.editingRelationshipId = null;
-    this.relationshipError = null;
-  }
-
-  onRelationshipBackdrop(event: MouseEvent): void {
-    if (event.target === event.currentTarget) this.closeRelationshipModal();
-  }
-
-  /**
-   * Seçili ilişki tipi. Select'ten string gelebileceği için her zaman sayıya çevrilir
-   * (aksi halde '4' === 4 karşılaştırmaları sessizce false döner).
-   */
-  private get draftType(): RelationshipType {
-    return Number(this.relationshipDraft.get('relationshipType')!.value) as RelationshipType;
-  }
-
-  /** Seçili ilişki tipi ters property gerektiriyor mu (OneToMany / ManyToMany). */
-  get draftRequiresInverse(): boolean {
-    return requiresInverse(this.draftType);
-  }
-
-  /** Seçili tip ManyToMany mi — ara tablo alanı yalnızca o zaman gösterilir. */
-  get draftIsManyToMany(): boolean {
-    return this.draftType === RelationshipType.ManyToMany;
-  }
-
-  /**
-   * İlişki tipi değiştiğinde:
-   *  - değeri sayıya normalize eder,
-   *  - ters property'nin zorunluluğunu YENİDEN kurar (tip geri değiştirildiğinde
-   *    eski "required" hatası takılı kalmasın diye),
-   *  - Self Reference'ta hedef modeli otomatik olarak modelin kendisi yapar.
-   */
-  onRelationshipTypeChange(): void {
-    const type = this.draftType;
-    this.relationshipDraft.get('relationshipType')!.setValue(type, { emitEvent: false });
-
-    this.applyInverseValidators(type);
-
-    if (type === RelationshipType.SelfReference) {
-      const selfName = this.currentModelName;
-      if (selfName) this.relationshipDraft.get('targetModel')!.setValue(selfName);
-    }
-  }
-
-  /** Ters property doğrulayıcılarını seçili tipe göre kurar. */
-  private applyInverseValidators(type: RelationshipType): void {
-    const inverse = this.relationshipDraft.get('inverseProperty')!;
-    const pattern = Validators.pattern(/^[A-Za-z_][A-Za-z0-9_]*$/);
-
-    inverse.setValidators(requiresInverse(type) ? [Validators.required, pattern] : [pattern]);
-    inverse.updateValueAndValidity({ emitEvent: false });
-  }
-
-  /** Bu ekranda düzenlenen modelin adı. */
-  get currentModelName(): string {
-    return this.isNew
-      ? (this.entityNameCtrl.value as string)
-      : (this.editTypeName ?? '');
-  }
-
-  saveRelationshipModal(): void {
-    const draft = this.relationshipDraft;
-
-    // Doğrulayıcılar tip değişiminde zaten güncelleniyor; popup hiç değiştirilmeden
-    // açılıp kaydedilirse de doğru kuralın uygulandığından emin ol.
-    this.applyInverseValidators(this.draftType);
-
-    if (draft.invalid) {
-      draft.markAllAsTouched();
-      return;
-    }
-
-    const raw = draft.getRawValue();
-    const body: RelationshipUpsert = {
-      targetModel:      (raw.targetModel as string).trim(),
-      relationshipType: Number(raw.relationshipType) as RelationshipType,
-      propertyName:     (raw.propertyName as string).trim(),
-      inverseProperty:  this.emptyToNull(raw.inverseProperty),
-      foreignKeyName:   this.emptyToNull(raw.foreignKeyName),
-      joinTableName:    this.emptyToNull(raw.joinTableName),
-      cascadeDelete:    !!raw.cascadeDelete,
-      required:         !!raw.required,
-      order:            Number(raw.order) || 0,
-      displayName:      this.emptyToNull(raw.displayName)
-    };
-
-    // Model henüz kaydedilmediyse ilişki bellekte bekletilir; ilk kayıttan
-    // sonra tablo ID'si oluşunca toplu gönderilir.
-    if (this.relationshipTableId === null) {
-      this.stagePendingRelationship(body);
-      return;
-    }
-
-    this.isRelationshipSaving = true;
-    this.relationshipError = null;
-
-    const request$ = this.editingRelationshipId
-      ? this.relationshipService.update(this.relationshipTableId, this.editingRelationshipId, body)
-      : this.relationshipService.add(this.relationshipTableId, body);
-
-    request$.pipe(markDirty(this.cdr)).subscribe({
-      next: () => {
-        this.isRelationshipSaving = false;
-        this.closeRelationshipModal();
-        this.loadRelationships();
-        this.markRelationshipsPersisted();
-      },
-      error: (err: { error?: { message?: string }; message?: string }) => {
-        this.isRelationshipSaving = false;
-        this.relationshipError =
-          err?.error?.message ?? err?.message ?? this.languageService.t('common.error');
-      }
-    });
-  }
-
-  /** Yeni model modunda ilişkiyi bellekte tutar ve listede gösterir. */
-  private stagePendingRelationship(body: RelationshipUpsert): void {
-    if (this.editingRelationshipId) {
-      const stagedId = this.editingRelationshipId;
-      this.pendingRelationships.set(stagedId, body);
-      this.relationships = this.relationships.map(r =>
-        r.relationshipId === stagedId ? this.toStagedDefinition(body, stagedId) : r);
-    } else {
-      const stagedId = `pending-${++this.pendingIdSeq}`;
-      this.pendingRelationships.set(stagedId, body);
-      this.relationships = [...this.relationships, this.toStagedDefinition(body, stagedId)];
-    }
-
-    this.closeRelationshipModal();
-  }
-
-  /** Bellekte bekleyen ilişkiyi listede göstermek için görüntüleme nesnesine çevirir. */
-  private toStagedDefinition(body: RelationshipUpsert, stagedId: string): RelationshipDefinition {
-    const now = new Date().toISOString();
-    return {
-      relationshipId:   stagedId,
-      sourceModel:      this.currentModelName,
-      targetModel:      body.targetModel,
-      relationshipType: body.relationshipType,
-      propertyName:     body.propertyName,
-      inverseProperty:  body.inverseProperty ?? null,
-      foreignKeyName:   body.foreignKeyName ?? null,
-      joinTableName:    body.joinTableName ?? null,
-      cascadeDelete:    body.cascadeDelete,
-      required:         body.required,
-      depth:            0,
-      order:            body.order,
-      displayName:      body.displayName ?? null,
-      createdAt:        now,
-      updatedAt:        now
-    };
-  }
-
-  /**
-   * Silme onayını açar. Silme geri alınamaz (kalıcılaşmış ilişkinin SQL FK'sı bir
-   * sonraki yayınlamada düşer), bu yüzden doğrudan DELETE atılmaz.
-   */
-  askRemoveRelationship(relationship: RelationshipDefinition): void {
-    this.relationshipToRemove = relationship;
-  }
-
-  cancelRemoveRelationship(): void {
-    this.relationshipToRemove = null;
-  }
-
-  confirmRemoveRelationship(): void {
-    const relationship = this.relationshipToRemove;
-    if (!relationship) return;
-
-    // Bellekte bekleyen (henüz kaydedilmemiş) ilişki
-    if (this.relationshipTableId === null) {
-      this.pendingRelationships.delete(relationship.relationshipId);
-      this.relationships = this.relationships
-        .filter(r => r.relationshipId !== relationship.relationshipId);
-      this.relationshipToRemove = null;
-      return;
-    }
-
-    this.isRelationshipDeleting = true;
-
-    this.relationshipService.delete(this.relationshipTableId, relationship.relationshipId).pipe(markDirty(this.cdr)).subscribe({
-      next: () => {
-        this.isRelationshipDeleting = false;
-        this.relationshipToRemove = null;
-        this.loadRelationships();
-        this.markRelationshipsPersisted();
-      },
-      error: (err: { error?: { message?: string } }) => {
-        this.isRelationshipDeleting = false;
-        this.relationshipToRemove = null;
-        this.relationshipError = err?.error?.message ?? this.languageService.t('common.error');
-      }
-    });
+    // İlişki tablo ID'si Input olarak sekmeye iner; sekme kendi verisini yükler.
+    this.relationshipTableId = own.id;
   }
 
   /**
@@ -747,112 +412,27 @@ export class TableDetailComponent implements OnDestroy {
    * modeli yayınlanabilir sayar. Kolon düzenlemesi varsa kullanıcı yine
    * "Kaydet"e basmalıdır — kaydedilmemiş kolonlar yayınlanmasın diye.
    */
-  private markRelationshipsPersisted(): void {
+  markRelationshipsPersisted(): void {
     if (this.isNew || this.rootGroup.dirty) return;
 
     this.isSaved = true;
     this.savedRootName = this.editTypeName;
   }
-
-  /**
-   * Model ilk kez kaydedildikten sonra bekleyen ilişkileri sunucuya gönderir.
-   * onSave() tamamlandığında çağrılır.
-   */
-  private flushPendingRelationships(rootName: string): void {
-    if (this.pendingRelationships.size === 0) {
-      // Tablo ID'si ve alt model listesi loadTables() içinde çözülür.
-      this.loadTables();
-      return;
-    }
-
-    this.publishedTableService.getAllTables().pipe(markDirty(this.cdr)).subscribe({
-      next: res => {
-        const match = (res.data ?? []).find(
-          t => t.tableName.toLowerCase() === rootName.toLowerCase());
-
-        // Model kaydedildi ama tablosu listede bulunamadı — bekleyen ilişkiler
-        // gönderilemez. Sessizce dönmek yerine kullanıcıyı bilgilendir; aksi halde
-        // ilişkiler kaybolmuş gibi görünür ve neden olduğu anlaşılmaz.
-        if (!match) {
-          this.relationshipError = this.languageService.t('relationship.flushTableNotFound');
-          return;
-        }
-
-        this.relationshipTableId = match.id;
-        const pending = [...this.pendingRelationships.values()];
-        this.pendingRelationships.clear();
-
-        from(pending).pipe(
-          concatMap(body => this.relationshipService.add(match.id, body))
-        ).pipe(markDirty(this.cdr)).subscribe({
-          complete: () => this.loadRelationships(),
-          error: (err: { error?: { message?: string } }) => {
-            this.relationshipError = err?.error?.message ?? this.languageService.t('common.error');
-            this.loadRelationships();
-          }
-        });
-      },
-      // Dıştaki abonelikte hata yolu yoktu — tablo listesi alınamazsa kullanıcı
-      // hiçbir geri bildirim almıyordu.
-      error: (err: { error?: { message?: string } }) => {
-        this.relationshipError = err?.error?.message ?? this.languageService.t('common.error');
-      }
-    });
-  }
-
-  // ─── G1: Önizleme diyaloğu ──────────────────────────────────────────────────
-
-  openPreview(): void {
-    if (this.relationshipTableId === null) return;
-
-    this.previewOpen = true;
-    this.previewTab = 'graph';
-    this.isPreviewLoading = true;
-    this.preview = null;
-    this.previewError = null;
-
-    this.relationshipService.preview(this.relationshipTableId).pipe(markDirty(this.cdr)).subscribe({
-      next: res => {
-        this.isPreviewLoading = false;
-        this.preview = res.data ?? null;
-      },
-      error: (err: { error?: { message?: string } }) => {
-        this.isPreviewLoading = false;
-        this.previewError = err?.error?.message ?? this.languageService.t('common.error');
-      }
-    });
-  }
-
-  closePreview(): void {
-    this.previewOpen = false;
-    this.preview = null;
-  }
-
-  onPreviewBackdrop(event: MouseEvent): void {
-    if (event.target === event.currentTarget) this.closePreview();
-  }
-
-  setPreviewTab(tab: 'graph' | 'code' | 'sql'): void {
-    this.previewTab = tab;
-  }
-
-  // ─── G1: Görüntüleme yardımcıları ───────────────────────────────────────────
-
-  /** İlişki tipinin çeviri anahtarını döner. */
-  relationshipTypeLabel(type: RelationshipType): string {
-    return this.relationshipTypeOptions.find(o => o.value === type)?.labelKey ?? '';
-  }
-
-  hasErrorFor(relationshipId: string): boolean {
-    return !!this.validation?.errors.some(i => i.relationshipId === relationshipId);
-  }
-
-  private emptyToNull(value: unknown): string | null {
-    const text = (value as string | null | undefined)?.trim();
-    return text ? text : null;
-  }
-
   // ─── Accessor'lar ───────────────────────────────────────────────────────────
+
+  /** Bu ekranda düzenlenen modelin adı — ilişkiler sekmesine geçirilir. */
+  get currentModelName(): string {
+    return this.isNew
+      ? (this.entityNameCtrl.value as string)
+      : (this.editTypeName ?? '');
+  }
+
+  /** İlişkiler sekmesinden gelen özet — sekme çubuğundaki rozeti besler. */
+  onRelationshipStatus(status: { count: number; isValid: boolean }): void {
+    this.relationshipCount = status.count;
+    this.relationshipsValid = status.isValid;
+    markDirty(this.cdr);
+  }
 
   get entityNameCtrl() {
     return this.rootGroup.get('entityName')!;
@@ -1048,9 +628,8 @@ export class TableDetailComponent implements OnDestroy {
    * ('1'..'5') gelir; konu anahtarı ise tip ADIYLA kurulur ('rel:OneToOne').
    * Bu yüzden enum'un ters eşlemesi üzerinden ada çevrilir.
    */
-  openRelationshipTypeHelp(): void {
-    const raw = Number(this.relationshipDraft.get('relationshipType')!.value);
-    const name = RelationshipType[raw];
+  openRelationshipTypeHelp(type: RelationshipType): void {
+    const name = RelationshipType[type];
     this.openHelp(name ? `rel:${name}` : 'relationships');
   }
 
@@ -1238,7 +817,7 @@ export class TableDetailComponent implements OnDestroy {
         this.submitSuccess = true;
 
         // G1: Model artık kayıtlı — bellekte bekleyen ilişkiler sunucuya gönderilir.
-        this.flushPendingRelationships(rootName);
+        this.relationshipsTab?.flush(rootName);
 
         const nodeCount = nodes.length;
         this.submitMessage = nodeCount > 1

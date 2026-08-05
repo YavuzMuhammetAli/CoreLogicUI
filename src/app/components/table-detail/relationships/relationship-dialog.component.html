@@ -1,0 +1,158 @@
+@if (open) {
+  <div class="dialog-overlay" (click)="onBackdrop($event)">
+    <div class="dialog-panel panel" role="dialog" aria-modal="true"
+         [attr.aria-label]="(editingRelationshipId ? 'relationship.dialogEditTitle' : 'relationship.dialogNewTitle') | t">
+      <div class="panel-head">
+        <h2 class="panel-title">
+          {{ (editingRelationshipId ? 'relationship.dialogEditTitle' : 'relationship.dialogNewTitle') | t }}
+        </h2>
+        <p class="panel-subtitle">{{ 'relationship.dialogSubtitle' | t }}</p>
+      </div>
+
+      <div class="panel-body" [formGroup]="draft">
+
+        @if (errorMessage) {
+          <div class="alert alert-danger" role="alert">{{ errorMessage }}</div>
+        }
+
+        <div class="field">
+          <div class="label-with-help">
+            <label for="rel-type">
+              {{ 'relationship.fieldType' | t }}
+              <app-help-hint placement="below" [text]="'help.hint.relType' | t" />
+            </label>
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm help-btn"
+              (click)="typeHelpRequested.emit(selectedType)"
+              [attr.aria-label]="'help.openRelHelp' | t">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+              </svg>
+              {{ 'help.openRelHelp' | t }}
+            </button>
+          </div>
+          <select id="rel-type" class="input" formControlName="relationshipType"
+                  (change)="onTypeChange()">
+            @for (option of relationshipTypeOptions; track option.value) {
+              <option [value]="option.value">{{ option.labelKey | t }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label>
+            {{ 'relationship.fieldTarget' | t }}
+            <app-help-hint placement="below" [text]="'help.hint.relTarget' | t" />
+          </label>
+          <app-model-autocomplete
+            [options]="publishedModelNames"
+            [placeholder]="'relationship.fieldTargetPlaceholder' | t"
+            [ariaLabel]="'relationship.fieldTarget' | t"
+            [invalid]="draft.get('targetModel')!.touched && draft.get('targetModel')!.invalid"
+            [value]="draft.get('targetModel')!.value"
+            (valueChange)="draft.get('targetModel')!.setValue($event)" />
+          @if (draft.get('targetModel')!.touched && draft.get('targetModel')!.invalid) {
+            <span class="field-error" role="alert">{{ 'relationship.errTargetRequired' | t }}</span>
+          } @else {
+            <span class="field-help">{{ 'relationship.fieldTargetHelp' | t }}</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="rel-prop">
+            {{ 'relationship.fieldProperty' | t }}
+            <app-help-hint placement="below" [text]="'help.hint.relProperty' | t" />
+          </label>
+          <input id="rel-prop" type="text" class="input" formControlName="propertyName"
+                 [attr.aria-invalid]="draft.get('propertyName')!.touched && draft.get('propertyName')!.invalid ? true : null" />
+          @if (draft.get('propertyName')!.touched && draft.get('propertyName')!.invalid) {
+            <span class="field-error" role="alert">
+              {{ (draft.get('propertyName')!.hasError('required')
+                  ? 'relationship.errPropertyRequired' : 'relationship.errPropertyPattern') | t }}
+            </span>
+          } @else {
+            <span class="field-help">{{ 'relationship.fieldPropertyHelp' | t }}</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="rel-inv">
+            {{ 'relationship.fieldInverse' | t }}
+            <app-help-hint placement="below" [text]="'help.hint.relInverse' | t" />
+          </label>
+          <input id="rel-inv" type="text" class="input" formControlName="inverseProperty"
+                 [attr.aria-invalid]="draft.get('inverseProperty')!.touched && draft.get('inverseProperty')!.invalid ? true : null" />
+          @if (draft.get('inverseProperty')!.touched && draft.get('inverseProperty')!.invalid) {
+            <span class="field-error" role="alert">{{ 'relationship.errInverseRequired' | t }}</span>
+          } @else {
+            <span class="field-help">
+              {{ (draftRequiresInverse ? 'relationship.fieldInverseRequiredHelp' : 'relationship.fieldInverseHelp') | t }}
+            </span>
+          }
+        </div>
+
+        <div class="col-rules-row">
+          @if (!draftIsManyToMany) {
+            <div class="field col-rule-field">
+              <label for="rel-fk">
+                {{ 'relationship.fieldForeignKey' | t }}
+                <app-help-hint placement="below" [text]="'help.hint.relForeignKey' | t" />
+              </label>
+              <input id="rel-fk" type="text" class="input" formControlName="foreignKeyName" />
+              <span class="field-help">{{ 'relationship.fieldForeignKeyHelp' | t }}</span>
+            </div>
+          } @else {
+            <div class="field col-rule-field">
+              <label for="rel-join">
+                {{ 'relationship.fieldJoinTable' | t }}
+                <app-help-hint placement="below" [text]="'help.hint.relJoinTable' | t" />
+              </label>
+              <input id="rel-join" type="text" class="input" formControlName="joinTableName" />
+              <span class="field-help">{{ 'relationship.fieldJoinTableHelp' | t }}</span>
+            </div>
+          }
+
+          <div class="field col-rule-field">
+            <label for="rel-order">
+              {{ 'relationship.fieldOrder' | t }}
+              <app-help-hint placement="below" [text]="'help.hint.relOrder' | t" />
+            </label>
+            <input id="rel-order" type="number" class="input" formControlName="order" min="0" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="rel-display">
+            {{ 'relationship.fieldDisplayName' | t }}
+            <app-help-hint placement="below" [text]="'help.hint.relDisplayName' | t" />
+          </label>
+          <input id="rel-display" type="text" class="input" formControlName="displayName" />
+        </div>
+
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="required" />
+          {{ 'relationship.fieldRequired' | t }}
+          <app-help-hint placement="below" [text]="'help.hint.relRequired' | t" />
+        </label>
+
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="cascadeDelete" />
+          {{ 'relationship.fieldCascade' | t }}
+          <app-help-hint placement="below" [text]="'help.hint.relCascade' | t" />
+        </label>
+      </div>
+
+      <div class="panel-actions">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()">
+          {{ 'table.detail.cancel' | t }}
+        </button>
+        <button type="button" class="btn btn-primary"
+                [disabled]="saving"
+                (click)="onSubmit()">
+          {{ 'table.detail.save2' | t }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
