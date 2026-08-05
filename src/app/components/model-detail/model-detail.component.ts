@@ -4,6 +4,8 @@ import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin, of, Observable, Subscription } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { DisplayRowsCache, selectDisplayRows } from './display-rows.util';
+import { TreeStep, applyTreeResult, applyUpdateResults } from './tree-save.util';
 import {
   PublishedModelService, PublishedModel, PublishedColumn, TreeSaveResult
 } from '../../services/published-model.service';
@@ -48,23 +50,6 @@ import { markDirty } from '../../utils/change-detection';
 
 type DataRow = Record<string, unknown>;
 
-/**
- * "Kaydet" akışındaki tek bir sunucu adımı.
- *
- * Bir kaydetme iki farklı istek türünden oluşabilir: yeni satırların TEK transaction'da
- * yazıldığı `addTree` ve kaydedilmiş ama değiştirilmiş her satır için ayrı bir `update`.
- * İkisi `forkJoin` ile birlikte yürütülür, sonuçlar bu ortak biçimde toplanır.
- */
-interface TreeStep {
-  kind: 'tree' | 'update';
-  ok: boolean;
-  message: string;
-  /** `kind: 'tree'` için sunucunun ID/hata sözlüğü. */
-  data?: TreeSaveResult;
-  /** `kind: 'update'` için hedef düğüm. */
-  node?: StagedNode;
-}
-
 /** Bir alt model sekmesinin tüm durumu */
 interface TabState {
   typeName: string;
@@ -97,19 +82,8 @@ interface TabState {
   /** Son toplu silme denemesinde kaç kayıt gönderildi (özet metni için). */
   bulkTotal: number;
 
-  /**
-   * getDisplayRows() sonucunun önbelleği. Şablon @for'u ve seçim yardımcıları bu metodu
-   * change detection turu başına birden çok kez çağırıyor; her çağrıda kopyala+filtrele+
-   * sırala yapmak ve YENİ dizi kimliği döndürmek @for'u her turda baştan diff'letiyordu.
-   * Girdiler (rows referansı, arama, sıralama) değişmedikçe aynı dizi örneği döner.
-   */
-  displayCache?: {
-    rows: DataRow[];
-    searchTerm: string;
-    sortCol: string;
-    sortDir: 'asc' | 'desc';
-    result: DataRow[];
-  };
+  /** getDisplayRows() sonucunun önbelleği (bkz. display-rows.util). */
+  displayCache?: DisplayRowsCache;
 
   // Admin tarafından yönetilen tablo kolon görünürlüğü — null = ayar yok, tümü görünür.
   // Alt modelin kendi liste sayfasıyla ('list' viewType) AYNI ayarı paylaşır.
@@ -809,61 +783,24 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Filtrelenmiş + sıralanmış satırlar. Hesap saf bir fonksiyonda
+   * (display-rows.util) durur; burada yalnızca önbellek saklanır.
+   */
   getDisplayRows(state: TabState): DataRow[] {
-    // Önbellek: girdiler aynıysa AYNI dizi örneği döner. Kimlik sabit kaldığı için
-    // @for yeniden diff yapmaz ve pahalı localeCompare sıralaması tekrarlanmaz.
-    const cache = state.displayCache;
-    if (cache
-        && cache.rows === state.rows
-        && cache.searchTerm === state.searchTerm
-        && cache.sortCol === state.sortCol
-        && cache.sortDir === state.sortDir) {
-      return cache.result;
-    }
+    state.displayCache = selectDisplayRows(
+      {
+        rows: state.rows,
+        searchTerm: state.searchTerm,
+        sortCol: state.sortCol,
+        sortDir: state.sortDir,
+        searchableColumns: this.displayCols(state).map(c => c.columnName),
+        locale: this.languageService.lang()
+      },
+      state.displayCache
+    );
 
-    const result = this.computeDisplayRows(state);
-    state.displayCache = {
-      rows: state.rows,
-      searchTerm: state.searchTerm,
-      sortCol: state.sortCol,
-      sortDir: state.sortDir,
-      result
-    };
-    return result;
-  }
-
-  private computeDisplayRows(state: TabState): DataRow[] {
-    let rows = [...state.rows];
-
-    // Arama filtresi
-    const term = state.searchTerm.trim().toLowerCase();
-    if (term) {
-      rows = rows.filter(row =>
-        this.displayCols(state).some(col => {
-          const v = fieldValue(row, col.columnName);
-          return v != null && String(v).toLowerCase().includes(term);
-        }) ||
-        String(fieldValue(row, 'ID') ?? '').includes(term)
-      );
-    }
-
-    // Sıralama
-    if (state.sortCol) {
-      const col = state.sortCol;
-      rows.sort((a, b) => {
-        const av = fieldValue(a, col) ?? '';
-        const bv = fieldValue(b, col) ?? '';
-        const an = Number(av), bn = Number(bv);
-        // Locale sabit 'tr' DEĞİL: uygulama TR/EN arasında geçiş yapıyor ve
-        // harf sıralaması dile göre değişir (ör. TR'de i/ı, ç, ş).
-        let cmp = !isNaN(an) && !isNaN(bn)
-          ? an - bn
-          : String(av).localeCompare(String(bv), this.languageService.lang(), { numeric: true });
-        return state.sortDir === 'asc' ? cmp : -cmp;
-      });
-    }
-
-    return rows;
+    return state.displayCache.result;
   }
 
   rowId(row: DataRow): number {
@@ -1264,22 +1201,12 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       this.editLoading = false;
 
       const tree = steps.find(s => s.kind === 'tree');
-      // `applyTreeResult` childSaveErrors'ı sıfırlar; ağaç adımı yoksa burada sıfırlanmalı.
-      if (tree) this.applyTreeResult(rootNode, tree.data ?? { savedIds: {}, errors: {} });
-      else this.childSaveErrors = [];
+      // Ağaç adımı yoksa önceki turun hataları taşınmasın diye liste sıfırlanır.
+      this.childSaveErrors = tree
+        ? applyTreeResult(rootNode, tree.data ?? { savedIds: {}, errors: {} })
+        : [];
 
-      // Update sonuçlarını düğümlere yaz.
-      const errors: string[] = [];
-      for (const step of steps) {
-        if (step.kind !== 'update' || !step.node) continue;
-        if (step.ok) {
-          step.node.error = null;
-          step.node.dirty = false;
-        } else {
-          step.node.error = step.message;
-          errors.push(`${step.node.typeName}: ${step.message}`);
-        }
-      }
+      const { errors } = applyUpdateResults(steps);
       this.childSaveErrors = [...this.childSaveErrors, ...errors];
 
       const allOk = steps.every(s => s.ok);
@@ -1326,29 +1253,6 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       );
     });
   }
-
-  /**
-   * Sunucu yanıtındaki gerçek ID'leri ve satır bazlı hataları ağaca yazar.
-   * Eşleme istemcinin geçici `localId`'si (clientId) üzerinden yapılır.
-   */
-  private applyTreeResult(rootNode: StagedNode, data: TreeSaveResult): void {
-    const errors: string[] = [];
-    for (const node of flattenNodes(rootNode)) {
-      const key = String(node.localId);
-      const savedId = data.savedIds?.[key];
-      const error = data.errors?.[key];
-
-      if (savedId != null) { node.savedId = savedId; node.error = null; }
-      if (error) {
-        node.error = error;
-        errors.push(`${node.typeName}: ${error}`);
-      } else if (savedId != null) {
-        node.error = null;
-      }
-    }
-    this.childSaveErrors = errors;
-  }
-
   /** Bir tipin kolonları (payload temizliği için). */
   private columnsOf(typeName: string): PublishedColumn[] {
     return this.allModels.find(m => m.typeName === typeName)?.columns ?? [];
