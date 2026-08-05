@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -20,6 +20,7 @@ import { AppChartComponent } from '../chart/chart.component';
 import { CHART_TYPE_META, SINGLE_AGGREGATE_CHART_TYPES } from '../chart/chart-types';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { markDirty } from '../../utils/change-detection';
 
 /** `labelKey` — şablonda `| t` ile çevrilir (bkz. report.i18n.ts 'report.operator.*'). */
 const OPERATORS: { value: ReportOperator; labelKey: string }[] = [
@@ -73,9 +74,13 @@ function isDateColumnType(type: string): boolean {
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink, AppChartComponent, TranslatePipe],
   templateUrl: './report-build.component.html',
-  styleUrls: ['./report-build.component.scss']
+  styleUrls: ['./report-build.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ReportBuildComponent implements OnInit {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   private readonly languageService = inject(LanguageService);
 
   readonly operators = OPERATORS;
@@ -117,7 +122,7 @@ export class ReportBuildComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadingModels = true;
-    this.publishedModelService.getModels().subscribe({
+    this.publishedModelService.getModels().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.loadingModels = false;
         if (res.success) {
@@ -133,14 +138,14 @@ export class ReportBuildComponent implements OnInit {
       }
     });
 
-    this.form.get('modelName')!.valueChanges.subscribe((modelName: string) => {
+    this.form.get('modelName')!.valueChanges.pipe(markDirty(this.cdr)).subscribe((modelName: string) => {
       this.applyModel(modelName, null);
     });
 
     // Canlı Önizleme yalnızca form GERÇEKTEN değiştiğinde yeniden hesaplanır — sayfadaki
     // ilgisiz tıklamalar `form.valueChanges`'i tetiklemediği için grafik gereksiz yeniden
     // render olmaz (bkz. plan: "Canlı Önizleme her tıklamada yeniden oluşuyor" hatası).
-    this.form.valueChanges.subscribe(() => this.refreshPreview());
+    this.form.valueChanges.pipe(markDirty(this.cdr)).subscribe(() => this.refreshPreview());
     this.refreshPreview();
   }
 
@@ -377,7 +382,7 @@ export class ReportBuildComponent implements OnInit {
 
     this.editingId = Number(idParam);
     this.loadingExisting = true;
-    this.reportService.list().subscribe({
+    this.reportService.list().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.loadingExisting = false;
         const existing = (res.data ?? []).find(r => r.id === this.editingId);
@@ -448,7 +453,7 @@ export class ReportBuildComponent implements OnInit {
       ? this.reportService.update(payload as ReportDefinition)
       : this.reportService.define(payload);
 
-    request.subscribe({
+    request.pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.saving = false;
         if (res.success) {
@@ -489,7 +494,7 @@ export class ReportBuildComponent implements OnInit {
     this.sqlPreviewLoading.set(true);
     this.sqlPreview.set('');
 
-    this.reportService.previewSql(payload).subscribe({
+    this.reportService.previewSql(payload).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.sqlPreviewLoading.set(false);
         if (res.success) {

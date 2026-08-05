@@ -136,7 +136,7 @@
                   </button>
                   <button
                     class="btn btn-danger btn-sm"
-                    (click)="deleteRow(state, row)"
+                    (click)="askDeleteRow(state, row)"
                     type="button"
                     [attr.aria-label]="'model.children.deleteRecordAria' | t">
                     {{ 'model.children.delete' | t }}
@@ -208,12 +208,13 @@
                     </label>
 
                     @if (col.dataType === 'lookup') {
-                      <select class="input" [id]="'child-rec-' + state.typeName + '-' + col.columnName" [formControlName]="col.columnName">
-                        <option value="">{{ 'model.children.selectOption' | t }}</option>
-                        @for (opt of lookupOptionsForColumn(col); track opt.id) {
-                          <option [value]="opt.id">{{ opt.label }}</option>
-                        }
-                      </select>
+                      <!-- Tembel yuklemeli secici: 50'ser kayit, arama sunucuda. -->
+                      <app-lookup-picker
+                        [inputId]="'child-rec-' + state.typeName + '-' + col.columnName"
+                        [typeName]="col.lookupTargetTable ?? ''"
+                        [displayColumn]="col.lookupDisplayColumn"
+                        [formControlName]="col.columnName">
+                      </app-lookup-picker>
                     } @else if (col.dataType === 'enum') {
                       <select class="input" [id]="'child-rec-' + state.typeName + '-' + col.columnName" [formControlName]="col.columnName">
                         <option value="">{{ 'model.children.selectOption' | t }}</option>
@@ -259,6 +260,7 @@
                         [id]="'child-rec-' + state.typeName + '-' + col.columnName"
                         [type]="inputTypeFor(col.dataType)"
                         [formControlName]="col.columnName"
+                        [attr.step]="stepFor(col.dataType)"
                         [attr.required]="!col.isNullable || null"
                         [attr.aria-invalid]="getControl(state, col.columnName).touched && getControl(state, col.columnName).invalid"
                         [attr.aria-describedby]="'child-rec-err-' + state.typeName + '-' + col.columnName">
@@ -292,3 +294,12 @@
 
   </div>
 }
+
+<!-- Alt kayıt silme onayı — native confirm() yerine tasarım sistemine uygun diyalog -->
+<app-confirm-dialog
+  [open]="pendingDelete !== null"
+  [title]="'model.children.deleteConfirmTitle' | t"
+  [message]="'model.children.deleteConfirm' | t:{ id: pendingDelete?.id ?? 0 }"
+  [busy]="isDeletingRow"
+  (confirmed)="confirmDeleteRow()"
+  (cancelled)="cancelDeleteRow()" />

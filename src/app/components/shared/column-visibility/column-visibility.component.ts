@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, Output, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 
@@ -22,7 +22,8 @@ export interface ColumnVisibilityItem {
   standalone: true,
   imports: [CommonModule, TranslatePipe],
   templateUrl: './column-visibility.component.html',
-  styleUrls: ['./column-visibility.component.scss']
+  styleUrls: ['./column-visibility.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ColumnVisibilityComponent implements OnChanges {
   @Input() columns: ColumnVisibilityItem[] = [];

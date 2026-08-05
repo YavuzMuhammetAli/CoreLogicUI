@@ -1,0 +1,239 @@
+/* ── Kayıt pop-up'ı ───────────────────────────────────────────────────────────
+   z-index şablondan verilir (1000 + depth * 10) — iç içe katmanlar üst üste
+   binmeli ve her seviye bir öncekinin üstünde durmalı. */
+
+/* Host kendi kutusunu oluşturmasın: tek çocuğu `position: fixed` olduğu için
+   host varsayılan inline kutusu sayfa akışında sıfır boyutlu bir artık bırakır. */
+:host {
+  display: contents;
+}
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.dialog-panel {
+  width: 100%;
+  max-width: 860px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: var(--elev-high);
+}
+
+.dialog-panel .panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6) var(--space-5);
+  border-top: 1px solid var(--border-soft);
+  position: sticky;
+  bottom: 0;
+  background: var(--surface);
+}
+
+.record-dialog-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.record-dialog-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+/* ── Alan ızgarası ────────────────────────────────────────────────────────── */
+
+.record-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+}
+
+.col-type-tag {
+  margin-left: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: lowercase;
+}
+
+.record-file-input {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.record-file-preview {
+  max-height: 80px;
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  object-fit: contain;
+  display: block;
+}
+
+.record-file-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ── Alt model bölümü ─────────────────────────────────────────────────────── */
+
+.record-children {
+  margin-top: var(--space-6);
+  border-top: 1px solid var(--border-soft);
+  padding-top: var(--space-4);
+}
+
+.tab-bar {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--motion-fast) var(--ease-standard),
+              border-color var(--motion-fast) var(--ease-standard);
+
+  &:hover { color: var(--fg-2); }
+
+  &.tab-btn--active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+}
+
+.tab-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-warm);
+  color: var(--muted);
+}
+
+.tab-panel {
+  padding-top: var(--space-3);
+}
+
+.tab-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.tab-toolbar-hint {
+  margin: 0;
+}
+
+.muted-hint {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.record-empty {
+  padding: var(--space-4);
+  text-align: center;
+  background: var(--surface-warm);
+  border-radius: var(--radius-md);
+  margin: 0;
+}
+
+.record-child-table-wrap {
+  overflow-x: auto;
+}
+
+/* Araç çubuğunun sağ tarafı: toplu sil + yeni kayıt */
+.tab-toolbar-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* ── Satır seçimi (toplu silme) ────────────────────────────────────────────── */
+
+.select-col,
+.select-cell {
+  width: 40px;
+  text-align: center;
+}
+
+/* Satırın tamamı düzenleme katmanını açar — aksiyon butonları kaldırıldı. */
+.clickable-row {
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+}
+
+tr.row-selected td {
+  background: var(--surface-warm);
+}
+
+/* Global .alert flex olduğu için hata listesi kendi kapsayıcısında dikey akmalı */
+.bulk-error-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+
+  ul {
+    margin: 0;
+    padding-left: var(--space-5);
+  }
+}
+
+/* Kaydedilemeyen satır — kullanıcı düzeltebilsin diye ekranda KALIR. */
+.row-invalid td {
+  background: var(--danger-bg);
+}
+
+.record-error-row td {
+  padding-top: 0;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--danger-bg);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .record-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .dialog-overlay {
+    padding: var(--space-2);
+  }
+}

@@ -17,6 +17,8 @@ import {
 } from 'ng-apexcharts';
 import { ChartType, ReportColumnInfo, ReportRunResult } from '../../models/report.model';
 import { ChartTokenColors, buildSeriesPalette } from './chart-colors';
+import { Lang } from '../../services/language.service';
+import { formatNumber, formatDate } from '../../utils/locale-format';
 
 /** ApexCharts'ın gerçekten çizdiği tip — `kpi`/`table` apx-chart kullanmaz (host render eder). */
 export type ApexRenderType = 'bar' | 'line' | 'area' | 'pie' | 'donut' | 'radialBar';
@@ -56,26 +58,29 @@ export interface ChartBuildOutput {
   note: string | null;
 }
 
-const trNumber = new Intl.NumberFormat('tr-TR');
-const trDate = new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium' });
 
-/** Çeviri fonksiyonu imzası — `LanguageService.t` ile uyumlu. Geçirilmezse TR sabit metin kullanılır. */
+/** Çeviri fonksiyonu imzası — `LanguageService.t` ile uyumlu. */
 export type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
 
-const defaultT: TranslateFn = (key, params) => {
-  const fallback: Record<string, string> = {
-    'chart.noDataForChart': 'Grafik için yeterli veri yok.',
-    'chart.total': 'Toplam',
-    'chart.capNote': '{total} kayıttan ilk {cap} gösteriliyor — tüm veri için Tablo görünümünü veya gruplama/aggregate kullanın.'
-  };
-  let text = fallback[key] ?? key;
-  if (params) {
-    for (const [k, v] of Object.entries(params)) {
-      text = text.replaceAll(`{${k}}`, String(v));
-    }
-  }
-  return text;
-};
+/**
+ * Grafik kurulumunun dil bağlamı.
+ *
+ * `t` ve `lang` ZORUNLUDUR. Önceden `t` varsayılan bir TR sözlüğe düşüyordu ve
+ * sayı/tarih biçimlendiricileri `tr-TR` sabitiyle kuruluyordu; çağıran dili
+ * geçirmeyi unuttuğunda EN modunda Türkçe metin ve Türkçe sayı biçimi sızıyordu.
+ */
+export interface ChartLocaleContext {
+  t: TranslateFn;
+  lang: Lang;
+}
+
+/** Aktif dile göre sayı biçimi (bkz. utils/locale-format). */
+const fmtNum = (locale: ChartLocaleContext, value: number): string =>
+  formatNumber(value, locale.lang);
+
+/** Aktif dile göre tarih biçimi. */
+const fmtDate = (locale: ChartLocaleContext, value: Date): string =>
+  formatDate(value, locale.lang);
 
 /**
  * Backend `/Report/run` sorgusunda satır limiti yok (bkz. ReportingManager.ExecuteQuery) —
@@ -87,11 +92,11 @@ const defaultT: TranslateFn = (key, params) => {
 const MAX_BAR_POINTS = 50;
 const MAX_LINE_POINTS = 200;
 
-function capRows(rows: Record<string, unknown>[], cap: number, t: TranslateFn): { rows: Record<string, unknown>[]; note: string | null } {
+function capRows(rows: Record<string, unknown>[], cap: number, locale: ChartLocaleContext): { rows: Record<string, unknown>[]; note: string | null } {
   if (rows.length <= cap) return { rows, note: null };
   return {
     rows: rows.slice(0, cap),
-    note: t('chart.capNote', { total: trNumber.format(rows.length), cap: trNumber.format(cap) })
+    note: locale.t('chart.capNote', { total: fmtNum(locale, rows.length), cap: fmtNum(locale, cap) })
   };
 }
 
@@ -105,11 +110,11 @@ function toNumber(value: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function formatCategory(value: unknown, columnType: string): string {
+function formatCategory(value: unknown, columnType: string, locale: ChartLocaleContext): string {
   if (value === null || value === undefined) return '';
   if (columnType === 'datetime' || columnType === 'dateonly') {
     const d = new Date(String(value));
-    if (!Number.isNaN(d.getTime())) return trDate.format(d);
+    if (!Number.isNaN(d.getTime())) return fmtDate(locale, d);
   }
   return String(value);
 }
@@ -130,7 +135,7 @@ export function buildChartOptions(
   result: ReportRunResult,
   tokens: ChartTokenColors,
   themeMode: 'light' | 'dark',
-  t: TranslateFn = defaultT
+  locale: ChartLocaleContext
 ): ChartBuildOutput {
   const palette = buildSeriesPalette(tokens);
   const { columns, rows } = result;
@@ -153,7 +158,7 @@ export function buildChartOptions(
     grid: { borderColor: tokens.borderSoft, strokeDashArray: 4 },
     theme: { mode: themeMode },
     responsive: [],
-    noData: { text: t('chart.noDataForChart'), style: { color: tokens.muted } },
+    noData: { text: locale.t('chart.noDataForChart'), style: { color: tokens.muted } },
     kpi: null,
     note: null
   };
@@ -169,9 +174,9 @@ export function buildChartOptions(
   // çalışınca tarayıcı kilitlenir; bu yüzden tip bazlı güvenli bir üst sınıra kırpılır.
   const isBarLike = chartType === 'pie' || chartType === 'donut' || chartType === 'column' || chartType === 'bar';
   const cap = isBarLike ? MAX_BAR_POINTS : MAX_LINE_POINTS;
-  const { rows: plotRows, note } = chartType === 'radialBar' ? { rows, note: null } : capRows(rows, cap, t);
+  const { rows: plotRows, note } = chartType === 'radialBar' ? { rows, note: null } : capRows(rows, cap, locale);
 
-  const categories = plotRows.map(r => formatCategory(r[categoryCol.name], categoryCol.type));
+  const categories = plotRows.map(r => formatCategory(r[categoryCol.name], categoryCol.type, locale));
 
   const base: ApexResponsive[] = [
     { breakpoint: 900, options: { chart: { height: 300 }, legend: { position: 'bottom' } } },
@@ -180,11 +185,11 @@ export function buildChartOptions(
 
   const shared = {
     legend: { show: true, position: 'bottom' as const, labels: { colors: tokens.fg2 } },
-    tooltip: { theme: themeMode, y: { formatter: (val: number) => trNumber.format(val) } },
+    tooltip: { theme: themeMode, y: { formatter: (val: number) => fmtNum(locale, val) } },
     grid: { borderColor: tokens.borderSoft, strokeDashArray: 4 },
     theme: { mode: themeMode },
     responsive: base,
-    noData: { text: t('chart.noDataForChart'), style: { color: tokens.muted } },
+    noData: { text: locale.t('chart.noDataForChart'), style: { color: tokens.muted } },
     note
   };
 
@@ -203,7 +208,7 @@ export function buildChartOptions(
         series,
         labels: categories,
         colors,
-        dataLabels: { enabled: true, formatter: (val: number) => `%${trNumber.format(Math.round(Number(val)))}` },
+        dataLabels: { enabled: true, formatter: (val: number) => `%${fmtNum(locale, Math.round(Number(val)))}` },
         plotOptions:
           chartType === 'donut'
             ? {
@@ -212,14 +217,14 @@ export function buildChartOptions(
                     labels: {
                       show: true,
                       name: { show: true, color: tokens.fg2 },
-                      value: { show: true, color: tokens.fg, formatter: (val: string) => trNumber.format(Number(val)) },
+                      value: { show: true, color: tokens.fg, formatter: (val: string) => fmtNum(locale, Number(val)) },
                       total: {
                         show: true,
                         showAlways: true,
-                        label: t('chart.total'),
+                        label: locale.t('chart.total'),
                         color: tokens.fg,
                         formatter: (w: { globals: { seriesTotals: number[] } }) =>
-                          trNumber.format(w.globals.seriesTotals.reduce((a, b) => a + b, 0))
+                          fmtNum(locale, w.globals.seriesTotals.reduce((a, b) => a + b, 0))
                       }
                     }
                   }
@@ -231,8 +236,14 @@ export function buildChartOptions(
 
     case 'radialBar': {
       const valueCol = valueCols[0];
-      const rawValues = rows.map(r => toNumber(r[valueCol.name]));
-      const total = rawValues.reduce((a, b) => a + b, 0);
+      // Tek geçiş: ara dizi kurmadan hem toplam hem ilk değer hesaplanır.
+      // Eskiden 100k satır için tam boy bir ara dizi ayrılıp yalnız tek bir yüzde
+      // üretiliyordu (rows.map(...) + reduce). Radyal gösterge tavandan muaftır
+      // çünkü oran TÜM satırların toplamına göre hesaplanmalıdır.
+      let total = 0;
+      for (const r of rows) total += toNumber(r[valueCol.name]);
+      const firstValue = rows.length > 0 ? toNumber(rows[0][valueCol.name]) : 0;
+      const rawValues = [firstValue];
       // Radyal gösterge tek oran gösterir: ilk kategorinin toplam içindeki payı (%).
       const pct = total > 0 ? Math.min(100, Math.max(0, Math.round((rawValues[0] / total) * 100))) : 0;
       return {
@@ -254,7 +265,7 @@ export function buildChartOptions(
               value: {
                 show: true,
                 color: tokens.fg,
-                formatter: (val: number) => `%${trNumber.format(Math.round(val))}`
+                formatter: (val: number) => `%${fmtNum(locale, Math.round(val))}`
               }
             }
           }
@@ -287,7 +298,7 @@ export function buildChartOptions(
           axisTicks: { color: tokens.border }
         },
         yaxis: {
-          labels: { style: { colors: tokens.muted }, formatter: (val: number) => trNumber.format(val) }
+          labels: { style: { colors: tokens.muted }, formatter: (val: number) => fmtNum(locale, val) }
         }
       };
     }
@@ -314,7 +325,7 @@ export function buildChartOptions(
           axisTicks: { color: tokens.border }
         },
         yaxis: {
-          labels: { style: { colors: tokens.muted }, formatter: (val: number) => trNumber.format(val) }
+          labels: { style: { colors: tokens.muted }, formatter: (val: number) => fmtNum(locale, val) }
         }
       };
     }
@@ -326,9 +337,9 @@ export function buildKpiOutput(
   result: ReportRunResult,
   tokens: ChartTokenColors,
   themeMode: 'light' | 'dark',
-  t: TranslateFn = defaultT
+  locale: ChartLocaleContext
 ): ChartBuildOutput {
-  const base = buildChartOptions('bar', result, tokens, themeMode, t);
+  const base = buildChartOptions('bar', result, tokens, themeMode, locale);
   const { columns, rows } = result;
   if (columns.length === 0 || rows.length === 0) return { ...base, apexType: null, kpi: null };
 
@@ -346,7 +357,7 @@ export function buildKpiOutput(
 
   // Birden çok satır varsa küçük bir sparkline ile eğilimi göster. KPI toplamı (yukarıda)
   // her zaman TÜM satırlardan hesaplanır — yalnızca görsel sparkline noktaları kırpılır.
-  const { rows: sparkRows, note: sparkNote } = capRows(rows, MAX_LINE_POINTS, t);
+  const { rows: sparkRows, note: sparkNote } = capRows(rows, MAX_LINE_POINTS, locale);
   const sparkSeries = [{ name: valueCol.name, data: sparkRows.map(r => toNumber(r[valueCol.name])) }];
   return {
     ...base,

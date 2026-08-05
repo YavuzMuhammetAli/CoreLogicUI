@@ -1,4 +1,4 @@
-import { Component, computed, effect, HostListener, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, HostListener, input, output, signal } from '@angular/core';
 import { ModelUsage } from '../../../services/model-usage.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 
@@ -12,7 +12,8 @@ import { TranslatePipe } from '../../../pipes/translate.pipe';
   standalone: true,
   imports: [TranslatePipe],
   templateUrl: './confirm-dialog.component.html',
-  styleUrls: ['./confirm-dialog.component.scss']
+  styleUrls: ['./confirm-dialog.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ConfirmDialogComponent {
   open = input(false);
@@ -23,6 +24,12 @@ export class ConfirmDialogComponent {
   usage = input<ModelUsage | null>(null);
   /** İşlem (cascade silme) sürerken butonları kilitler. */
   busy = input(false);
+  /**
+   * Overlay'in yığın sırası. Varsayılan (null) CSS'teki 1000 değerini bırakır; yalnızca
+   * bu diyalog başka bir modalın ÜSTÜNDE açılacaksa verilir (örn. iç içe kayıt pop-up'ı
+   * `1000 + depth * 10` kullanıyor, onay kutusu bunun da üstüne çıkmalı).
+   */
+  zIndex = input<number | null>(null);
 
   confirmed = output<void>();
   cancelled = output<void>();

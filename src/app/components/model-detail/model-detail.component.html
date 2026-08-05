@@ -52,7 +52,7 @@
           <button
             type="button"
             class="btn btn-danger btn-sm"
-            (click)="deleteRecord()"
+            (click)="askDeleteRecord()"
             [disabled]="deleting"
             [attr.aria-label]="'model.detail.deleteRecordAria' | t">
             @if (deleting) {
@@ -71,7 +71,7 @@
               class="btn btn-primary btn-sm"
               (click)="submitEdit()"
               [disabled]="editLoading"
-              [attr.aria-label]="stagedChildCount > 0 ? ('model.detail.saveAllAria' | t) : ('model.detail.saveNewAria' | t)">
+              [attr.aria-label]="totalStagedCount > 0 ? ('model.detail.saveAllAria' | t) : ('model.detail.saveNewAria' | t)">
               @if (editLoading) {
                 <span class="spinner" aria-hidden="true"></span>
                 {{ 'model.detail.saving' | t }}
@@ -81,7 +81,7 @@
                   <polyline points="17 21 17 13 7 13 7 21"/>
                   <polyline points="7 3 7 8 15 8"/>
                 </svg>
-                @if (stagedChildCount > 0) { {{ 'model.detail.saveAllCount' | t:{ count: stagedChildCount + 1 } }} } @else { {{ 'model.detail.save' | t }} }
+                @if (totalStagedCount > 0) { {{ 'model.detail.saveAllCount' | t:{ count: totalStagedCount + 1 } }} } @else { {{ 'model.detail.save' | t }} }
               }
             </button>
           } @else if (!isNew && permission.can(typeName, 'update')) {
@@ -138,12 +138,14 @@
                 </label>
 
                 @if (col.dataType === 'lookup') {
-                  <select class="input" [id]="'edit-' + col.columnName" [formControlName]="col.columnName">
-                    <option value="">{{ 'model.detail.selectOption' | t }}</option>
-                    @for (opt of lookupOptionsForColumn(col); track opt.id) {
-                      <option [value]="opt.id">{{ opt.label }}</option>
-                    }
-                  </select>
+                  <!-- Tembel yüklemeli seçici: açılışta 50 kayıt, kaydırdıkça 50'şer,
+                       arama sunucuda. Kontrol değeri eskisi gibi ham FK id'sidir. -->
+                  <app-lookup-picker
+                    [inputId]="'edit-' + col.columnName"
+                    [typeName]="col.lookupTargetTable ?? ''"
+                    [displayColumn]="col.lookupDisplayColumn"
+                    [formControlName]="col.columnName">
+                  </app-lookup-picker>
                 } @else if (col.dataType === 'enum') {
                   <select class="input" [id]="'edit-' + col.columnName" [formControlName]="col.columnName">
                     <option value="">{{ 'model.detail.selectOption' | t }}</option>
@@ -178,42 +180,24 @@
                     [id]="'edit-' + col.columnName"
                     [type]="inputTypeFor(col.dataType)"
                     [formControlName]="col.columnName"
+                    [attr.step]="stepFor(col.dataType)"
                     [attr.required]="!col.isNullable || null"
                     [attr.aria-invalid]="getEditControl(col.columnName).touched && getEditControl(col.columnName).invalid"
-                    [attr.aria-describedby]="'edit-err-' + col.columnName">
+                    [attr.aria-describedby]="parentFieldError(col) ? 'edit-err-' + col.columnName : null">
                 }
 
-                @if (getEditControl(col.columnName).touched && getEditControl(col.columnName).hasError('required')) {
+                <!-- Şema kurallarından (regex/uzunluk/aralık) türetilen istemci doğrulaması -->
+                @if (parentFieldError(col); as err) {
                   <span [id]="'edit-err-' + col.columnName" class="field-error" role="alert">
-                    {{ 'model.detail.fieldRequired' | t:{ label: colLabel(col) } }}
+                    {{ err }}
                   </span>
                 }
               </div>
             }
           </div>
 
-          <!-- Form alt aksiyonları (sağ üstteki Kaydet ile aynı metot) -->
-          <div class="edit-actions">
-            @if (isNew && permission.can(typeName, 'create')) {
-              <button type="submit" class="btn btn-primary" [disabled]="editLoading">
-                @if (editLoading) {
-                  <span class="spinner" aria-hidden="true"></span>
-                  {{ 'model.detail.saving' | t }}
-                } @else {
-                  {{ 'model.detail.save' | t }}
-                }
-              </button>
-            } @else if (!isNew && permission.can(typeName, 'update')) {
-              <button type="submit" class="btn btn-primary" [disabled]="editLoading">
-                @if (editLoading) {
-                  <span class="spinner" aria-hidden="true"></span>
-                  {{ 'model.detail.saving' | t }}
-                } @else {
-                  {{ 'model.detail.save' | t }}
-                }
-              </button>
-            }
-          </div>
+          <!-- Kaydet yalnızca sağ üstte; buradaki mükerrer buton kaldırıldı.
+               <form> üzerindeki (ngSubmit) korunur — Enter ile kaydetme çalışır. -->
         </form>
       </div>
     }
@@ -243,13 +227,16 @@
         <!-- Kısmi kayıt hatası uyarısı (toplu kayıt sonrası) -->
         @if (childSaveErrors.length > 0) {
           <div class="alert alert-danger" role="alert" style="margin:var(--space-4) var(--space-4) 0">
-            <strong>{{ 'model.detail.partialSaveErrorTitle' | t }}</strong>
-            <ul style="margin:var(--space-2) 0 0 var(--space-4);padding:0">
-              @for (err of childSaveErrors; track err) {
-                <li>{{ err }}</li>
-              }
-            </ul>
-            <span class="field-help">{{ 'model.detail.partialSaveErrorHint' | t }}</span>
+            <!-- Global .alert flex olduğu için içerik tek bir kapsayıcıda dikey akmalı -->
+            <div class="partial-save-error">
+              <strong>{{ 'model.detail.partialSaveErrorTitle' | t }}</strong>
+              <ul>
+                @for (err of childSaveErrors; track err) {
+                  <li>{{ err }}</li>
+                }
+              </ul>
+              <span class="field-help">{{ 'model.detail.partialSaveErrorHint' | t }}</span>
+            </div>
           </div>
         }
 
@@ -292,6 +279,14 @@
                       [attr.aria-label]="'model.detail.searchAria' | t:{ name }">
                   </div>
                   <div class="tab-toolbar-actions">
+                    @if (selectedCount(state) > 0 && permission.can(name, 'delete')) {
+                      <button type="button" class="btn btn-danger btn-sm" (click)="openBulkDelete(state)">
+                        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                        {{ 'model.detail.bulkDelete' | t:{ count: selectedCount(state) } }}
+                      </button>
+                    }
                     @if (permission.isAdmin()) {
                       <app-column-visibility
                         [columns]="tabColumnVisibilityItems(state)"
@@ -312,136 +307,109 @@
                       <button
                         type="button"
                         class="btn btn-primary btn-sm"
-                        (click)="state.formMode === 'add' ? closeTabForm(state) : openTabAddForm(state)">
-                        @if (state.formMode === 'add') {
-                          <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <path d="M18 6L6 18M6 6l12 12"/>
-                          </svg>
-                          {{ 'model.detail.cancel' | t }}
-                        } @else {
-                          <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <path d="M12 5v14M5 12h14"/>
-                          </svg>
-                          {{ 'model.detail.newName' | t:{ name } }}
-                        }
+                        (click)="openChildAdd(state)">
+                        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                          <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        {{ 'model.detail.newName' | t:{ name } }}
                       </button>
                     }
                   </div>
                 </div>
 
-                <!-- ── Inline Form Paneli (Ekle / Düzenle) ───────────────────── -->
-                @if (state.formMode !== 'none' && state.form) {
-                  <div class="inline-form-card" role="region" [attr.aria-label]="state.formMode === 'add' ? ('model.detail.addNewAria' | t:{ name }) : ('model.detail.editName' | t:{ name })">
-                    <div class="inline-form-header">
-                      <h3 class="inline-form-title">
-                        {{ state.formMode === 'add' ? ('model.detail.newNameTitle' | t:{ name }) : ('model.detail.editNameTitle' | t:{ name }) }}
-                      </h3>
-                      <div class="fk-chip" [attr.title]="'model.detail.fkAutoTitle' | t">
-                        <svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
-                        </svg>
-                        @if (isNew) {
-                          {{ 'model.detail.fkAutoAssign' | t:{ fkColumn: state.fkColumn } }}
-                        } @else {
-                          {{ 'model.detail.fkValue' | t:{ fkColumn: state.fkColumn, recordId } }}
+                <!-- Toplu silmede silinemeyenlerin özeti — satırlar seçili kalır -->
+                @if (state.bulkErrors.length > 0) {
+                  <div class="alert alert-danger" role="alert" style="margin:var(--space-3) var(--space-4)">
+                    <div class="partial-save-error">
+                      <strong>{{ 'model.detail.bulkDeletePartial' | t:{ total: state.bulkTotal, failed: state.bulkErrors.length } }}</strong>
+                      <ul>
+                        @for (err of state.bulkErrors; track err) {
+                          <li>{{ err }}</li>
                         }
-                      </div>
-                      <button type="button" class="btn btn-ghost btn-sm" (click)="closeTabForm(state)" [attr.aria-label]="'model.detail.closeFormAria' | t">
-                        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <path d="M18 6L6 18M6 6l12 12"/>
-                        </svg>
-                      </button>
+                      </ul>
                     </div>
+                  </div>
+                }
 
-                    <form [formGroup]="state.form" (ngSubmit)="submitTabForm(state)" novalidate class="inline-form-body">
-
-                      @if (state.formMsg) {
-                        <div
-                          class="alert"
-                          [class.alert-success]="state.formOk"
-                          [class.alert-danger]="!state.formOk"
-                          [attr.role]="state.formOk ? 'status' : 'alert'"
-                          style="margin-bottom:var(--space-4)">
-                          {{ state.formMsg }}
-                        </div>
-                      }
-
-                      <div class="inline-form-fields">
-                        @for (col of visibleCols(state); track col.columnName) {
-                          <div class="field">
-                            <label [attr.for]="'tab-' + name + '-' + col.columnName">
-                              {{ colLabel(col) }}
-                              @if (!col.isNullable) { <span style="color:var(--danger)">*</span> }
-                              <span class="col-type-tag">{{ col.dataType }}</span>
-                            </label>
-
-                            @if (col.dataType === 'lookup') {
-                              <select class="input" [id]="'tab-' + name + '-' + col.columnName" [formControlName]="col.columnName">
-                                <option value="">{{ 'model.detail.selectOption' | t }}</option>
-                                @for (opt of lookupOptionsForColumn(col); track opt.id) {
-                                  <option [value]="opt.id">{{ opt.label }}</option>
-                                }
-                              </select>
-                            } @else if (col.dataType === 'enum') {
-                              <select class="input" [id]="'tab-' + name + '-' + col.columnName" [formControlName]="col.columnName">
-                                <option value="">{{ 'model.detail.selectOption' | t }}</option>
-                                @for (val of parseEnumValues(col.enumValues); track val) {
-                                  <option [value]="val">{{ val }}</option>
-                                }
-                              </select>
-                            } @else if (inputTypeFor(col.dataType) === 'checkbox') {
-                              <label class="checkbox-label" [attr.for]="'tab-' + name + '-' + col.columnName">
-                                <input [id]="'tab-' + name + '-' + col.columnName" type="checkbox" [formControlName]="col.columnName">
-                                {{ colLabel(col) }}
-                              </label>
-                            } @else if (inputTypeFor(col.dataType) === 'file') {
-                              <input [id]="'tab-' + name + '-' + col.columnName" type="file"
-                                (change)="onTabFileSelected($event, col.columnName, state)"
-                                style="display:block;margin-bottom:var(--space-2)">
-                              @if (getTabControl(state, col.columnName).value) {
-                                @if (isImage(getTabControl(state, col.columnName).value)) {
-                                  <img [src]="imageSrc(getTabControl(state, col.columnName).value)" [attr.alt]="'model.detail.preview' | t"
-                                    style="max-height:80px;max-width:100%;border-radius:4px;border:1px solid var(--border);object-fit:contain;display:block">
-                                } @else {
-                                  <div style="display:flex;align-items:center;gap:var(--space-2)">
-                                    <span class="eyebrow">{{ 'model.detail.fileExists' | t }}</span>
-                                    <button type="button" class="btn btn-ghost btn-sm"
-                                      (click)="downloadTabFile(getTabControl(state, col.columnName).value, col.columnName, state)">{{ 'model.detail.download' | t }}</button>
-                                  </div>
-                                }
-                              }
-                            } @else {
-                              <input
-                                class="input"
-                                [id]="'tab-' + name + '-' + col.columnName"
-                                [type]="inputTypeFor(col.dataType)"
-                                [formControlName]="col.columnName"
-                                [attr.required]="!col.isNullable || null"
-                                [attr.aria-invalid]="getTabControl(state, col.columnName).touched && getTabControl(state, col.columnName).invalid"
-                                [attr.aria-describedby]="'tab-err-' + name + '-' + col.columnName">
-                            }
-
-                            @if (getTabControl(state, col.columnName).touched && getTabControl(state, col.columnName).hasError('required')) {
-                              <span [id]="'tab-err-' + name + '-' + col.columnName" class="field-error" role="alert">
-                                {{ 'model.detail.fieldRequired' | t:{ label: colLabel(col) } }}
-                              </span>
-                            }
-                          </div>
-                        }
-                      </div>
-
-                      <div class="inline-form-actions">
-                        <button type="button" class="btn btn-secondary" (click)="closeTabForm(state)" [disabled]="state.formLoading">{{ 'model.detail.cancel' | t }}</button>
-                        <button type="submit" class="btn btn-primary" [disabled]="state.formLoading">
-                          @if (state.formLoading) {
-                            <span class="spinner" aria-hidden="true"></span>
-                            {{ 'model.detail.saving' | t }}
-                          } @else {
-                            {{ state.formMode === 'add' ? ('model.detail.save' | t) : ('model.detail.update' | t) }}
-                          }
+                <!-- ── Bekleyen (kaydedilmemiş / hatalı) satırlar ─────────────
+                     Kaydetme hatasında bu liste TEMİZLENMEZ; kullanıcı düzeltip
+                     tekrar "Kaydet" der. Kaydedilenler sunucu tablosuna geçer. -->
+                @if (state.staged.length > 0) {
+                  <div class="staged-block">
+                    <div class="staged-head">
+                      <span class="eyebrow">{{ 'model.detail.stagedTitle' | t }}</span>
+                      <span class="badge" [class.badge-danger]="hasStagedErrors" [class.badge-meta]="!hasStagedErrors">
+                        {{ state.staged.length }}
+                      </span>
+                      @if (selectedStagedCount(state) > 0) {
+                        <button type="button" class="btn btn-danger btn-sm staged-bulk-btn" (click)="openBulkRemoveStaged(state)">
+                          {{ 'model.detail.bulkRemoveStaged' | t:{ count: selectedStagedCount(state) } }}
                         </button>
-                      </div>
-                    </form>
+                      }
+                    </div>
+                    <div class="staged-table-wrap">
+                      <table class="data-table">
+                        <thead>
+                          <tr>
+                            <th class="select-col">
+                              <input
+                                type="checkbox"
+                                [checked]="allStagedSelected(state)"
+                                [indeterminate]="someStagedSelected(state)"
+                                (change)="toggleAllStaged(state)"
+                                [attr.aria-label]="'model.detail.selectAllAria' | t">
+                            </th>
+                            @for (col of displayCols(state); track col.columnName) {
+                              <th>{{ colLabel(col) }}</th>
+                            }
+                            <th>{{ 'record.colState' | t }}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (node of state.staged; track node.localId) {
+                            <tr
+                              class="clickable-row"
+                              [class.row-invalid]="!!node.error"
+                              [class.row-selected]="isStagedSelected(state, node)"
+                              tabindex="0"
+                              role="button"
+                              (click)="openStagedEdit(state, node)"
+                              (keydown.enter)="openStagedEdit(state, node)"
+                              [attr.aria-label]="'model.detail.editRowAria' | t">
+                              <td class="select-cell" (click)="$event.stopPropagation()">
+                                <input
+                                  type="checkbox"
+                                  [checked]="isStagedSelected(state, node)"
+                                  (change)="toggleStaged(state, node)"
+                                  [attr.aria-label]="'model.detail.selectRowAria' | t">
+                              </td>
+                              @for (col of displayCols(state); track col.columnName) {
+                                <td>{{ stagedCell(node, col.columnName) }}</td>
+                              }
+                              <td>
+                                <span class="staged-state">
+                                  @if (node.error) {
+                                    <span class="badge badge-danger">{{ 'record.stateFailed' | t }}</span>
+                                  } @else {
+                                    <span class="badge badge-meta">{{ 'record.statePending' | t }}</span>
+                                  }
+                                  @if (stagedChildTotal(node) > 0) {
+                                    <span class="badge badge-meta">{{ 'model.detail.stagedSubCount' | t:{ count: stagedChildTotal(node) } }}</span>
+                                  }
+                                </span>
+                              </td>
+                            </tr>
+                            @if (node.error) {
+                              <tr class="staged-error-row">
+                                <td [attr.colspan]="displayCols(state).length + 2">
+                                  <span class="field-error" role="alert">{{ node.error }}</span>
+                                </td>
+                              </tr>
+                            }
+                          }
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 }
 
@@ -457,13 +425,13 @@
                   </div>
                 }
 
-                @if (!state.loading && !state.error && state.rows.length === 0) {
+                @if (!state.loading && !state.error && state.rows.length === 0 && state.staged.length === 0) {
                   <div class="empty-state" style="padding:var(--space-8) var(--space-5)">
                     <div class="empty-icon" aria-hidden="true">📋</div>
                     <h3>{{ 'model.detail.noChildRecordTitle' | t:{ name } }}</h3>
                     <p>{{ 'model.detail.noChildRecordMessage' | t:{ name } }}</p>
                     @if (permission.can(name, 'create')) {
-                      <button type="button" class="btn btn-primary" (click)="openTabAddForm(state)">{{ 'model.data.addFirstRecord' | t }}</button>
+                      <button type="button" class="btn btn-primary" (click)="openChildAdd(state)">{{ 'model.data.addFirstRecord' | t }}</button>
                     }
                   </div>
                 }
@@ -474,6 +442,16 @@
                     <table class="data-table" [attr.aria-label]="'model.detail.tabPanelAria' | t:{ name }">
                       <thead>
                         <tr>
+                          @if (permission.can(name, 'delete')) {
+                            <th scope="col" class="select-col">
+                              <input
+                                type="checkbox"
+                                [checked]="allRowsSelected(state)"
+                                [indeterminate]="someRowsSelected(state)"
+                                (change)="toggleAllRows(state)"
+                                [attr.aria-label]="'model.detail.selectAllAria' | t">
+                            </th>
+                          }
                           @for (h of tableHeaders(state); track h.key) {
                             <th
                               scope="col"
@@ -490,12 +468,27 @@
                               </span>
                             </th>
                           }
-                          <th scope="col" class="detail-actions-col">{{ 'model.detail.actions' | t }}</th>
                         </tr>
                       </thead>
                       <tbody>
                         @for (row of getDisplayRows(state); track $index) {
-                          <tr>
+                          <tr
+                            [class.clickable-row]="permission.can(name, 'update')"
+                            [class.row-selected]="isRowSelected(state, row)"
+                            [attr.tabindex]="permission.can(name, 'update') ? 0 : null"
+                            [attr.role]="permission.can(name, 'update') ? 'button' : null"
+                            [attr.aria-label]="permission.can(name, 'update') ? ('model.detail.editRowAria' | t) : null"
+                            (click)="permission.can(name, 'update') && openSavedEdit(state, row)"
+                            (keydown.enter)="permission.can(name, 'update') && openSavedEdit(state, row)">
+                            @if (permission.can(name, 'delete')) {
+                              <td class="select-cell" (click)="$event.stopPropagation()">
+                                <input
+                                  type="checkbox"
+                                  [checked]="isRowSelected(state, row)"
+                                  (change)="toggleRow(state, row)"
+                                  [attr.aria-label]="'model.detail.selectRowAria' | t">
+                              </td>
+                            }
                             @for (h of tableHeaders(state); track h.key) {
                               <td [attr.data-label]="h.label">
                                 @if (isImage(strVal(row, h.key))) {
@@ -517,37 +510,6 @@
                                 }
                               </td>
                             }
-                            <td class="td-actions detail-actions-cell">
-                              <!-- Görüntüle: child detail sayfasına git (GrandChild desteği) -->
-                              <a
-                                [routerLink]="['/models', name, rowId(row)]"
-                                class="btn btn-ghost btn-sm"
-                                [attr.title]="'model.detail.viewDetailTitle' | t"
-                                [attr.aria-label]="'model.detail.viewRecordAria' | t">
-                                <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-                                </svg>
-                                {{ 'model.detail.view' | t }}
-                              </a>
-                              @if (permission.can(name, 'update')) {
-                                <button
-                                  type="button"
-                                  class="btn btn-secondary btn-sm"
-                                  (click)="openTabEditForm(state, row)"
-                                  [attr.aria-label]="'model.detail.editRecordAria' | t">
-                                  {{ 'common.edit' | t }}
-                                </button>
-                              }
-                              @if (permission.can(name, 'delete')) {
-                                <button
-                                  type="button"
-                                  class="btn btn-danger btn-sm"
-                                  (click)="deleteTabRow(state, row)"
-                                  [attr.aria-label]="'model.detail.deleteRecordRowAria' | t">
-                                  {{ 'model.detail.delete' | t }}
-                                </button>
-                              }
-                            </td>
                           </tr>
                         }
                       </tbody>
@@ -579,3 +541,34 @@
       </div>
     }
   }
+
+<!-- ══ ALT MODEL KAYIT POP-UP'I ═══════════════════════════════════════════════
+     Kayıt ve tüm alt ağacı burada bellekte kurulur; hiçbir seviye "önce üstünü
+     kaydet" zorunluluğu taşımaz. Ağaç ancak üstteki "Kaydet" ile gönderilir. -->
+@if (dialogOpen && dialogNode) {
+  <app-record-form-dialog
+    [node]="dialogNode"
+    [depth]="1"
+    [isEdit]="dialogIsEdit"
+    [fkColumn]="dialogFkColumn"
+    (saved)="onRecordDialogSaved($event)"
+    (cancelled)="closeRecordDialog()" />
+}
+
+<!-- ══ TOPLU SİLME / KALDIRMA ONAYI ═══════════════════════════════════════════ -->
+<app-confirm-dialog
+  [open]="!!bulkState"
+  [title]="bulkTitle"
+  [message]="bulkMessage"
+  [busy]="bulkBusy"
+  (confirmed)="confirmBulk()"
+  (cancelled)="cancelBulk()" />
+
+<!-- Kayıt silme onayı — native confirm() yerine tasarım sistemine uygun diyalog -->
+<app-confirm-dialog
+  [open]="deleteRecordConfirmOpen"
+  [title]="'model.detail.deleteConfirmTitle' | t"
+  [message]="'model.detail.deleteConfirm' | t:{ id: recordId }"
+  [busy]="deleting"
+  (confirmed)="confirmDeleteRecord()"
+  (cancelled)="cancelDeleteRecord()" />

@@ -1,4 +1,4 @@
-import { Component, PLATFORM_ID, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, PLATFORM_ID, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { ChartComponent as ApexChartComponent } from 'ng-apexcharts';
 import { ChartType, ReportColumnInfo } from '../../models/report.model';
@@ -8,8 +8,8 @@ import { ChartTokenColors, readChartTokenColors } from './chart-colors';
 import { ChartBuildOutput, buildChartOptions, buildKpiOutput } from './chart-mapping';
 import { chartTypeMeta } from './chart-types';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { formatNumber } from '../../utils/locale-format';
 
-const trNumber = new Intl.NumberFormat('tr-TR');
 
 /**
  * Tüm zorunlu grafik tiplerinin (column/bar/line/area/pie/donut/radialBar/kpi) TEK render
@@ -22,7 +22,8 @@ const trNumber = new Intl.NumberFormat('tr-TR');
   standalone: true,
   imports: [ApexChartComponent, TranslatePipe],
   templateUrl: './chart.component.html',
-  styleUrls: ['./chart.component.scss']
+  styleUrls: ['./chart.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AppChartComponent {
   private readonly platformId = inject(PLATFORM_ID);
@@ -54,11 +55,16 @@ export class AppChartComponent {
 
     const mode = this.themeService.theme();
     const result = { columns: this.columns(), rows: this.rows() };
-    const t = this.languageService.t.bind(this.languageService);
+    // Dil bağlamı: metin + sayı/tarih biçimi aynı kaynaktan gelir.
+    // lang() bir signal olduğu için dil değişince grafik otomatik yeniden kurulur.
+    const locale = {
+      t: this.languageService.t.bind(this.languageService),
+      lang: this.languageService.lang()
+    };
 
     return this.chartType() === 'kpi'
-      ? buildKpiOutput(result, tokens, mode, t)
-      : buildChartOptions(this.chartType(), result, tokens, mode, t);
+      ? buildKpiOutput(result, tokens, mode, locale)
+      : buildChartOptions(this.chartType(), result, tokens, mode, locale);
   });
 
   readonly typeLabel = computed(() => {
@@ -78,6 +84,6 @@ export class AppChartComponent {
 
   readonly kpiValueFormatted = computed(() => {
     const kpi = this.build()?.kpi;
-    return kpi ? trNumber.format(kpi.value) : '';
+    return kpi ? formatNumber(kpi.value, this.languageService.lang()) : '';
   });
 }

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
@@ -6,15 +6,20 @@ import { AuthService } from '../../services/auth.service';
 import { PermissionService } from '../../services/permission.service';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { markDirty } from '../../utils/change-detection';
 
 @Component({
   selector: 'app-login',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe],
   templateUrl: './login.component.html',
-  styleUrls: ['./login.component.scss']
+  styleUrls: ['./login.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LoginComponent {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   form: FormGroup;
   sessionExpired = false;
   isLoading = false;
@@ -46,13 +51,13 @@ export class LoginComponent {
     this.auth.login({
       email: this.f['email'].value,
       password: this.f['password'].value
-    }).subscribe({
+    }).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (res.success) {
           // Önceki oturumdan kalan yetki sinyalini temizle, ardından yeni kullanıcının
           // yetkilerini (ve rolünden çözülen açılış sayfasını) yükleyip o sayfaya yönlen.
           this.permissionService.clear();
-          this.permissionService.loadMyPermissions().subscribe({
+          this.permissionService.loadMyPermissions().pipe(markDirty(this.cdr)).subscribe({
             next: () => {
               this.isLoading = false;
               this.router.navigateByUrl(this.permissionService.getLandingPage());

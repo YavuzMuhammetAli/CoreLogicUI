@@ -1,0 +1,439 @@
+/**
+ * Kılavuz diyaloğunun içerik haritası.
+ *
+ * Buradaki her "konu" (topic) bir veri tipine, bir ilişki tipine veya bir
+ * kavrama (alt modeller / ilişkiler) karşılık gelir. Metinlerin tamamı i18n
+ * anahtarıdır (`help.*` namespace'i, bkz. `src/app/i18n/datatype-help.i18n.ts`);
+ * bu dosya yalnızca yapıyı ve dile bağlı olmayan örnek değerleri tutar.
+ *
+ * Veri tipi listesi tek kaynaktan gelir: `table-detail.component.ts`
+ * (`primitiveTypes` + `referenceTypes`) — 13 primitive + 4 reference = 17 tip.
+ * Yeni bir tip eklendiğinde buraya da bir kayıt eklenmelidir.
+ */
+
+/** Diyalogda çizilecek inline SVG şeması. */
+export type DiagramId =
+  | 'oneToOne'
+  | 'oneToMany'
+  | 'manyToOne'
+  | 'manyToMany'
+  | 'selfReference'
+  | 'subModelTree'
+  | 'fkMechanisms'
+  | 'lookupFlow'
+  | 'enumFlow';
+
+/** Tipe özel bir kural alanının açıklaması. */
+export interface HelpRule {
+  labelKey: string;
+  descKey: string;
+}
+
+/**
+ * "Örnekler" tablosunun bir satırı.
+ *
+ * `value` dile BAĞLI DEĞİLDİR (kod/identifier örneği: `Customer.Orders`, `A → B → A`).
+ * Örnek bir cümle ya da açıklama ise `value` yerine `valueKey` kullanılmalıdır —
+ * aksi halde metin EN dilinde çevrilmeden görünür.
+ */
+export interface HelpSample {
+  /** Dile bağlı olmayan ham değer. `valueKey` verilmişse yok sayılır. */
+  value: string;
+  /** Çevrilecek değer anahtarı; doluysa `value` yerine bu gösterilir. */
+  valueKey?: string;
+  ok: boolean;
+  noteKey: string;
+}
+
+/** Diyalogda gösterilen tam konu içeriği. */
+export interface HelpTopic {
+  titleKey: string;
+  /** Rozette gösterilen C# karşılığı — kavramsal konularda boştur. */
+  csharpType?: string;
+  summaryKey: string;
+  useCaseKeys: string[];
+  rules: HelpRule[];
+  samples: HelpSample[];
+  diagram?: DiagramId;
+  /** Doluysa "Dikkat" uyarı kutusu gösterilir. */
+  notesKey?: string;
+  /** Yalnızca `string` tipinde true — regex laboratuvarını açar. */
+  showRegexLab?: boolean;
+}
+
+/**
+ * Konu kimliği: bir veri tipi anahtarı ('string', 'int', ...), bir kavram
+ * ('subModels', 'relationships') veya 'rel:' önekli bir ilişki tipi.
+ */
+export type HelpTopicId = string;
+
+/** Sütun kural alanları için ortak anahtar üreticisi. */
+const rule = (name: string): HelpRule => ({
+  labelKey: `help.rule.${name}.label`,
+  descKey: `help.rule.${name}.desc`
+});
+
+/** İlişki popup'ı alanları için ortak anahtar üreticisi. */
+const relRule = (name: string): HelpRule => ({
+  labelKey: `help.relField.${name}.label`,
+  descKey: `help.relField.${name}.desc`
+});
+
+/** Bir konunun 1..3 numaralı örnek notu anahtarları. */
+const sample = (topic: string, index: number, value: string, ok: boolean): HelpSample => ({
+  value,
+  ok,
+  noteKey: `help.type.${topic}.sample${index}`
+});
+
+/**
+ * Değeri de çevrilen örnek satırı — örnek ham bir identifier değil, cümle ise
+ * kullanılır (ör. "İki kayıt aynı profile bağlanır").
+ */
+const sampleT = (topic: string, index: number, ok: boolean): HelpSample => ({
+  value: '',
+  valueKey: `help.type.${topic}.sample${index}Value`,
+  ok,
+  noteKey: `help.type.${topic}.sample${index}`
+});
+
+const STRING_RULES = [rule('minLength'), rule('maxLength'), rule('regex'), rule('regexMessage')];
+const NUMERIC_RULES = [rule('min'), rule('max')];
+
+/** Ondalıklı olmayan sayısal tipler aynı kural setini ve örnek yapısını paylaşır. */
+function integerTopic(id: string, csharpType: string, ok: string, fail: string): HelpTopic {
+  return {
+    titleKey: `help.type.${id}.title`,
+    csharpType,
+    summaryKey: `help.type.${id}.summary`,
+    useCaseKeys: [`help.type.${id}.useCase1`, `help.type.${id}.useCase2`],
+    rules: NUMERIC_RULES,
+    samples: [
+      sample(id, 1, ok, true),
+      sample(id, 2, fail, false),
+      sample(id, 3, '2,5', false)
+    ],
+    notesKey: `help.type.${id}.notes`
+  };
+}
+
+export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
+
+  // ══ Primitive tipler ══════════════════════════════════════════════════════
+
+  string: {
+    titleKey: 'help.type.string.title',
+    csharpType: 'string',
+    summaryKey: 'help.type.string.summary',
+    useCaseKeys: ['help.type.string.useCase1', 'help.type.string.useCase2', 'help.type.string.useCase3'],
+    rules: STRING_RULES,
+    samples: [
+      sample('string', 1, 'Kablosuz Kulaklık', true),
+      sample('string', 2, 'ali@ornek', false),
+      // Tırnaklar kasıtlı: yalnızca boşluktan oluşan değer tabloda görünsün.
+      sample('string', 3, '"   "', false)
+    ],
+    notesKey: 'help.type.string.notes',
+    showRegexLab: true
+  },
+
+  int: integerTopic('int', 'int', '1250', '3000000000'),
+  long: integerTopic('long', 'long', '9007199254740991', '1e30'),
+  short: integerTopic('short', 'short', '1200', '40000'),
+  byte: integerTopic('byte', 'byte', '200', '300'),
+
+  decimal: {
+    titleKey: 'help.type.decimal.title',
+    csharpType: 'decimal',
+    summaryKey: 'help.type.decimal.summary',
+    useCaseKeys: ['help.type.decimal.useCase1', 'help.type.decimal.useCase2', 'help.type.decimal.useCase3'],
+    rules: NUMERIC_RULES,
+    samples: [
+      sample('decimal', 1, '1499.90', true),
+      sample('decimal', 2, '0.1 + 0.2 = 0.3', true),
+      sample('decimal', 3, '1.499,90', false)
+    ],
+    notesKey: 'help.type.decimal.notes'
+  },
+
+  double: {
+    titleKey: 'help.type.double.title',
+    csharpType: 'double',
+    summaryKey: 'help.type.double.summary',
+    useCaseKeys: ['help.type.double.useCase1', 'help.type.double.useCase2'],
+    rules: NUMERIC_RULES,
+    samples: [
+      sample('double', 1, '36.6', true),
+      sample('double', 2, '0.1 + 0.2 = 0.30000000000000004', false),
+      sample('double', 3, '1499.90', false)
+    ],
+    notesKey: 'help.type.double.notes'
+  },
+
+  float: {
+    titleKey: 'help.type.float.title',
+    csharpType: 'float',
+    summaryKey: 'help.type.float.summary',
+    useCaseKeys: ['help.type.float.useCase1', 'help.type.float.useCase2'],
+    rules: NUMERIC_RULES,
+    samples: [
+      sample('float', 1, '1.5', true),
+      sample('float', 2, '16777217', false),
+      sample('float', 3, '1499.90', false)
+    ],
+    notesKey: 'help.type.float.notes'
+  },
+
+  boolean: {
+    titleKey: 'help.type.boolean.title',
+    csharpType: 'bool',
+    summaryKey: 'help.type.boolean.summary',
+    useCaseKeys: ['help.type.boolean.useCase1', 'help.type.boolean.useCase2', 'help.type.boolean.useCase3'],
+    rules: [],
+    samples: [
+      sample('boolean', 1, 'true / false', true),
+      sample('boolean', 2, 'NULL', false),
+      sample('boolean', 3, '0 / 1 / 2', false)
+    ],
+    notesKey: 'help.type.boolean.notes'
+  },
+
+  datetime: {
+    titleKey: 'help.type.datetime.title',
+    csharpType: 'DateTime',
+    summaryKey: 'help.type.datetime.summary',
+    useCaseKeys: ['help.type.datetime.useCase1', 'help.type.datetime.useCase2', 'help.type.datetime.useCase3'],
+    rules: [],
+    samples: [
+      sample('datetime', 1, '2026-08-01T14:30:00', true),
+      sample('datetime', 2, '01.08.2026', true),
+      sample('datetime', 3, '14:30', false)
+    ],
+    notesKey: 'help.type.datetime.notes'
+  },
+
+  dateonly: {
+    titleKey: 'help.type.dateonly.title',
+    csharpType: 'DateOnly',
+    summaryKey: 'help.type.dateonly.summary',
+    useCaseKeys: ['help.type.dateonly.useCase1', 'help.type.dateonly.useCase2', 'help.type.dateonly.useCase3'],
+    rules: [],
+    samples: [
+      sample('dateonly', 1, '2026-08-01', true),
+      sample('dateonly', 2, '2026-08-01T14:30:00', false),
+      sample('dateonly', 3, '31.02.2026', false)
+    ],
+    notesKey: 'help.type.dateonly.notes'
+  },
+
+  timeonly: {
+    titleKey: 'help.type.timeonly.title',
+    csharpType: 'TimeOnly',
+    summaryKey: 'help.type.timeonly.summary',
+    useCaseKeys: ['help.type.timeonly.useCase1', 'help.type.timeonly.useCase2'],
+    rules: [],
+    samples: [
+      sample('timeonly', 1, '09:00', true),
+      sample('timeonly', 2, '18:30:00', true),
+      sample('timeonly', 3, '25:00', false)
+    ],
+    notesKey: 'help.type.timeonly.notes'
+  },
+
+  guid: {
+    titleKey: 'help.type.guid.title',
+    csharpType: 'Guid',
+    summaryKey: 'help.type.guid.summary',
+    useCaseKeys: ['help.type.guid.useCase1', 'help.type.guid.useCase2', 'help.type.guid.useCase3'],
+    rules: [],
+    samples: [
+      sample('guid', 1, '3f2504e0-4f89-11d3-9a0c-0305e82c3301', true),
+      sample('guid', 2, '00000000-0000-0000-0000-000000000000', false),
+      sample('guid', 3, '3f2504e04f8911d3', false)
+    ],
+    notesKey: 'help.type.guid.notes'
+  },
+
+  // ══ Reference tipler ══════════════════════════════════════════════════════
+
+  lookup: {
+    titleKey: 'help.type.lookup.title',
+    csharpType: 'int (FK)',
+    summaryKey: 'help.type.lookup.summary',
+    useCaseKeys: ['help.type.lookup.useCase1', 'help.type.lookup.useCase2', 'help.type.lookup.useCase3'],
+    rules: [rule('lookupTarget'), rule('lookupDisplayColumn')],
+    samples: [
+      sample('lookup', 1, 'Kategori → Category.Name', true),
+      sample('lookup', 2, 'Kategori → Category.ID', false),
+      sample('lookup', 3, 'Kategori → (boş)', false)
+    ],
+    diagram: 'lookupFlow',
+    notesKey: 'help.type.lookup.notes'
+  },
+
+  enum: {
+    titleKey: 'help.type.enum.title',
+    csharpType: 'enum',
+    summaryKey: 'help.type.enum.summary',
+    useCaseKeys: ['help.type.enum.useCase1', 'help.type.enum.useCase2', 'help.type.enum.useCase3'],
+    rules: [rule('enumValues')],
+    samples: [
+      sample('enum', 1, 'Beklemede|Onaylandi|Iptal', true),
+      sample('enum', 2, 'Beklemede, Onaylandi, Iptal', false),
+      sample('enum', 3, 'Beklemede|Onaylandı', false)
+    ],
+    diagram: 'enumFlow',
+    notesKey: 'help.type.enum.notes'
+  },
+
+  image: {
+    titleKey: 'help.type.image.title',
+    csharpType: 'string (yol)',
+    summaryKey: 'help.type.image.summary',
+    useCaseKeys: ['help.type.image.useCase1', 'help.type.image.useCase2'],
+    rules: [],
+    samples: [
+      sample('image', 1, 'urun-4512.jpg', true),
+      sample('image', 2, 'urun-4512.pdf', false),
+      sample('image', 3, '(8 MB PNG)', false)
+    ],
+    notesKey: 'help.type.image.notes'
+  },
+
+  file: {
+    titleKey: 'help.type.file.title',
+    csharpType: 'string (yol)',
+    summaryKey: 'help.type.file.summary',
+    useCaseKeys: ['help.type.file.useCase1', 'help.type.file.useCase2'],
+    rules: [],
+    samples: [
+      sample('file', 1, 'sozlesme-2026.pdf', true),
+      sample('file', 2, 'kurulum.exe', false),
+      sample('file', 3, '(200 MB arşiv)', false)
+    ],
+    notesKey: 'help.type.file.notes'
+  },
+
+  // ══ Kavramlar ═════════════════════════════════════════════════════════════
+
+  subModels: {
+    titleKey: 'help.subModels.title',
+    summaryKey: 'help.subModels.summary',
+    useCaseKeys: ['help.subModels.useCase1', 'help.subModels.useCase2', 'help.subModels.useCase3'],
+    rules: [rule('subModelName'), rule('subModelDepth')],
+    samples: [
+      sample('subModels', 1, 'Order → OrderItem', true),
+      sample('subModels', 2, 'Order → OrderItem → ItemNote → Attachment', true),
+      sample('subModels', 3, '5. seviye', false)
+    ],
+    diagram: 'subModelTree',
+    notesKey: 'help.subModels.notes'
+  },
+
+  relationships: {
+    titleKey: 'help.relationships.title',
+    summaryKey: 'help.relationships.summary',
+    useCaseKeys: ['help.relationships.useCase1', 'help.relationships.useCase2', 'help.relationships.useCase3'],
+    rules: [rule('mechanismTree'), rule('mechanismLookup'), rule('mechanismRelationship')],
+    samples: [
+      sample('relationships', 1, 'Customer → Order (1-N)', true),
+      sample('relationships', 2, 'A → B → C → D', false),
+      sample('relationships', 3, 'A → B → A', false)
+    ],
+    diagram: 'fkMechanisms',
+    notesKey: 'help.relationships.notes'
+  },
+
+  // ══ İlişki tipleri ════════════════════════════════════════════════════════
+
+  'rel:OneToOne': {
+    titleKey: 'help.rel.oneToOne.title',
+    csharpType: '1 — 1',
+    summaryKey: 'help.rel.oneToOne.summary',
+    useCaseKeys: ['help.rel.oneToOne.useCase1', 'help.rel.oneToOne.useCase2'],
+    rules: [relRule('target'), relRule('property'), relRule('inverse'), relRule('foreignKey'), relRule('required'), relRule('cascade')],
+    samples: [
+      sample('relOneToOne', 1, 'User.Profile ↔ Profile.User', true),
+      sampleT('relOneToOne', 2, true),
+      sampleT('relOneToOne', 3, false)
+    ],
+    diagram: 'oneToOne',
+    notesKey: 'help.rel.oneToOne.notes'
+  },
+
+  'rel:OneToMany': {
+    titleKey: 'help.rel.oneToMany.title',
+    csharpType: '1 — N',
+    summaryKey: 'help.rel.oneToMany.summary',
+    useCaseKeys: ['help.rel.oneToMany.useCase1', 'help.rel.oneToMany.useCase2', 'help.rel.oneToMany.useCase3'],
+    rules: [relRule('target'), relRule('property'), relRule('inverse'), relRule('foreignKey'), relRule('required'), relRule('cascade')],
+    samples: [
+      sample('relOneToMany', 1, 'Customer.Orders ↔ Order.Customer', true),
+      sampleT('relOneToMany', 2, false),
+      sampleT('relOneToMany', 3, false)
+    ],
+    diagram: 'oneToMany',
+    notesKey: 'help.rel.oneToMany.notes'
+  },
+
+  'rel:ManyToOne': {
+    titleKey: 'help.rel.manyToOne.title',
+    csharpType: 'N — 1',
+    summaryKey: 'help.rel.manyToOne.summary',
+    useCaseKeys: ['help.rel.manyToOne.useCase1', 'help.rel.manyToOne.useCase2', 'help.rel.manyToOne.useCase3'],
+    rules: [relRule('target'), relRule('property'), relRule('inverse'), relRule('foreignKey'), relRule('required'), relRule('cascade')],
+    samples: [
+      sample('relManyToOne', 1, 'Order.Customer → Customer', true),
+      sampleT('relManyToOne', 2, true),
+      sampleT('relManyToOne', 3, false)
+    ],
+    diagram: 'manyToOne',
+    notesKey: 'help.rel.manyToOne.notes'
+  },
+
+  'rel:ManyToMany': {
+    titleKey: 'help.rel.manyToMany.title',
+    csharpType: 'N — N',
+    summaryKey: 'help.rel.manyToMany.summary',
+    useCaseKeys: ['help.rel.manyToMany.useCase1', 'help.rel.manyToMany.useCase2', 'help.rel.manyToMany.useCase3'],
+    rules: [relRule('target'), relRule('property'), relRule('inverse'), relRule('joinTable'), relRule('cascade')],
+    samples: [
+      sample('relManyToMany', 1, 'Product.Tags ↔ Tag.Products', true),
+      sampleT('relManyToMany', 2, true),
+      sampleT('relManyToMany', 3, false)
+    ],
+    diagram: 'manyToMany',
+    notesKey: 'help.rel.manyToMany.notes'
+  },
+
+  'rel:SelfReference': {
+    titleKey: 'help.rel.selfReference.title',
+    csharpType: 'N — 1 ⟲',
+    summaryKey: 'help.rel.selfReference.summary',
+    useCaseKeys: ['help.rel.selfReference.useCase1', 'help.rel.selfReference.useCase2', 'help.rel.selfReference.useCase3'],
+    rules: [relRule('property'), relRule('inverse'), relRule('foreignKey'), relRule('required'), relRule('cascade')],
+    samples: [
+      sample('relSelfReference', 1, 'Category.ParentCategory', true),
+      sampleT('relSelfReference', 2, true),
+      sampleT('relSelfReference', 3, false)
+    ],
+    diagram: 'selfReference',
+    notesKey: 'help.rel.selfReference.notes'
+  }
+};
+
+/**
+ * Bilinmeyen bir konu kimliği geldiğinde (örn. ileride eklenen bir tip için
+ * henüz içerik yazılmamışsa) diyalog boş kalmasın diye genel bir konu döner.
+ */
+export const FALLBACK_TOPIC: HelpTopic = {
+  titleKey: 'help.fallback.title',
+  summaryKey: 'help.fallback.summary',
+  useCaseKeys: [],
+  rules: [],
+  samples: []
+};
+
+export function resolveHelpTopic(id: HelpTopicId): HelpTopic {
+  return HELP_TOPICS[id] ?? FALLBACK_TOPIC;
+}

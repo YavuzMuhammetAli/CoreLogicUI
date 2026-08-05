@@ -1,9 +1,9 @@
 <div class="page-header">
   <div>
     <span class="eyebrow">{{ 'report.eyebrow' | t }}</span>
-    <h1 class="page-title">{{ report?.name ?? ('report.viewer.defaultTitle' | t) }}</h1>
-    @if (report) {
-      <p class="page-subtitle">{{ 'report.viewer.modelLabel' | t }} <span class="badge badge-meta">{{ report.modelName }}</span></p>
+    <h1 class="page-title">{{ report()?.name ?? ('report.viewer.defaultTitle' | t) }}</h1>
+    @if (report(); as rep) {
+      <p class="page-subtitle">{{ 'report.viewer.modelLabel' | t }} <span class="badge badge-meta">{{ rep.modelName }}</span></p>
     }
   </div>
   <div class="cluster">
@@ -12,7 +12,7 @@
   </div>
 </div>
 
-@if (loading) {
+@if (loading()) {
   <div class="panel">
     <div class="empty-state">
       <span class="spinner" [attr.aria-label]="'common.loading' | t"></span>
@@ -20,11 +20,11 @@
   </div>
 }
 
-@if (loadError) {
-  <div class="alert alert-danger" role="alert">{{ loadError }}</div>
+@if (loadError(); as err) {
+  <div class="alert alert-danger" role="alert">{{ err }}</div>
 }
 
-@if (!loading && !loadError && result) {
+@if (!loading() && !loadError() && result(); as res) {
   @if (kpiCards().length > 0) {
     <div class="kpi-strip">
       @for (card of kpiCards(); track card.label) {
@@ -36,47 +36,80 @@
     </div>
   }
 
+  @if (res.truncated) {
+    <div class="alert alert-warn" role="alert">
+      {{ 'report.viewer.truncatedWarning' | t:{ shown: res.rows.length, total: res.total ?? 0 } }}
+    </div>
+  }
+
   <div class="panel">
     <div class="panel-head">
       <h3>{{ 'report.viewer.export' | t }}</h3>
       <div class="panel-actions">
-        <button class="btn btn-secondary btn-sm" type="button" (click)="exportExcel()" [disabled]="exporting !== null">
-          @if (exporting === 'excel') { <span class="spinner" aria-hidden="true"></span> }
+        <button class="btn btn-secondary btn-sm" type="button" (click)="exportExcel()" [disabled]="exporting() !== null">
+          @if (exporting() === 'excel') { <span class="spinner" aria-hidden="true"></span> }
           {{ 'report.viewer.exportExcel' | t }}
         </button>
-        <button class="btn btn-secondary btn-sm" type="button" (click)="exportPdf()" [disabled]="exporting !== null">
-          @if (exporting === 'pdf') { <span class="spinner" aria-hidden="true"></span> }
+        <button class="btn btn-secondary btn-sm" type="button" (click)="exportPdf()" [disabled]="exporting() !== null">
+          @if (exporting() === 'pdf') { <span class="spinner" aria-hidden="true"></span> }
           {{ 'report.viewer.exportPdf' | t }}
         </button>
       </div>
     </div>
-    @if (exportError) {
+    @if (exportError(); as expErr) {
       <div class="panel-body">
-        <div class="alert alert-danger" role="alert">{{ exportError }}</div>
+        <div class="alert alert-danger" role="alert">{{ expErr }}</div>
       </div>
     }
   </div>
 
   <ng-template #dataTable>
-    @if (result.rows.length > 0) {
+    @if (res.rows.length > 0) {
       <table class="data-table">
         <thead>
           <tr>
-            @for (col of result.columns; track col.name) {
+            @for (col of res.columns; track col.name) {
               <th>{{ col.name }}</th>
             }
           </tr>
         </thead>
         <tbody>
-          @for (row of result.rows; track $index) {
+          @for (row of res.rows; track $index) {
             <tr>
-              @for (col of result.columns; track col.name) {
+              @for (col of res.columns; track col.name) {
                 <td>{{ row[col.name] }}</td>
               }
             </tr>
           }
         </tbody>
       </table>
+
+      <!-- Sayfalama: yalnız tablo görünümünde. Sunucu her yanıtta total döndürür. -->
+      @if (isTableView() && (res.total ?? 0) > res.rows.length) {
+        <div class="table-pager cluster">
+          <span class="pager-info">
+            {{ 'report.viewer.pagerInfo' | t:{ page: pageIndex(), pages: totalPages(), total: res.total ?? 0 } }}
+          </span>
+
+          <label class="pager-size">
+            {{ 'model.data.pageSizeLabel' | t }}
+            <select class="input" [value]="pageSize()" (change)="onPageSizeChange($any($event.target).value)">
+              @for (size of pageSizeOptions; track size) {
+                <option [value]="size">{{ size }}</option>
+              }
+            </select>
+          </label>
+
+          <button class="btn btn-secondary btn-sm" type="button"
+                  [disabled]="pageIndex() <= 1" (click)="goToPage(1)">«</button>
+          <button class="btn btn-secondary btn-sm" type="button"
+                  [disabled]="pageIndex() <= 1" (click)="goToPage(pageIndex() - 1)">‹</button>
+          <button class="btn btn-secondary btn-sm" type="button"
+                  [disabled]="pageIndex() >= totalPages()" (click)="goToPage(pageIndex() + 1)">›</button>
+          <button class="btn btn-secondary btn-sm" type="button"
+                  [disabled]="pageIndex() >= totalPages()" (click)="goToPage(totalPages())">»</button>
+        </div>
+      }
     } @else {
       <div class="empty-state">
         <h3>{{ 'report.viewer.noResultTitle' | t }}</h3>
@@ -85,43 +118,50 @@
     }
   </ng-template>
 
-  @if (report && report.chartType !== 'table') {
-    <div class="panel">
-      <div class="panel-head">
-        <h3>{{ 'report.viewer.result' | t }}</h3>
-        <div class="panel-actions">
-          <button
-            class="btn btn-sm"
-            [class.btn-primary]="viewMode() === 'chart'"
-            [class.btn-secondary]="viewMode() !== 'chart'"
-            type="button"
-            (click)="viewMode.set('chart')"
-          >
-            {{ 'report.viewer.chart' | t }}
-          </button>
-          <button
-            class="btn btn-sm"
-            [class.btn-primary]="viewMode() === 'table'"
-            [class.btn-secondary]="viewMode() !== 'table'"
-            type="button"
-            (click)="viewMode.set('table')"
-          >
-            {{ 'report.viewer.table' | t }}
-          </button>
+  @if (report(); as rep) {
+    @if (rep.chartType !== 'table') {
+      <div class="panel">
+        <div class="panel-head">
+          <h3>{{ 'report.viewer.result' | t }}</h3>
+          <div class="panel-actions">
+            <button
+              class="btn btn-sm"
+              [class.btn-primary]="viewMode() === 'chart'"
+              [class.btn-secondary]="viewMode() !== 'chart'"
+              type="button"
+              (click)="setViewMode('chart')"
+            >
+              {{ 'report.viewer.chart' | t }}
+            </button>
+            <button
+              class="btn btn-sm"
+              [class.btn-primary]="viewMode() === 'table'"
+              [class.btn-secondary]="viewMode() !== 'table'"
+              type="button"
+              (click)="setViewMode('table')"
+            >
+              {{ 'report.viewer.table' | t }}
+            </button>
+          </div>
+        </div>
+        <div class="panel-body">
+          @if (viewMode() === 'chart') {
+            <div class="view-panel">
+              <app-chart [chartType]="rep.chartType" [columns]="res.columns" [rows]="res.rows"></app-chart>
+            </div>
+          } @else {
+            <div class="view-panel">
+              <ng-container *ngTemplateOutlet="dataTable"></ng-container>
+            </div>
+          }
         </div>
       </div>
-      <div class="panel-body">
-        @if (viewMode() === 'chart') {
-          <div class="view-panel">
-            <app-chart [chartType]="report.chartType" [columns]="result.columns" [rows]="result.rows"></app-chart>
-          </div>
-        } @else {
-          <div class="view-panel">
-            <ng-container *ngTemplateOutlet="dataTable"></ng-container>
-          </div>
-        }
+    } @else {
+      <div class="panel">
+        <div class="panel-head"><h3>{{ 'report.viewer.data' | t }}</h3></div>
+        <ng-container *ngTemplateOutlet="dataTable"></ng-container>
       </div>
-    </div>
+    }
   } @else {
     <div class="panel">
       <div class="panel-head"><h3>{{ 'report.viewer.data' | t }}</h3></div>

@@ -1,0 +1,417 @@
+@if (open()) {
+  <div class="dialog-overlay help-overlay" (click)="onBackdrop($event)">
+    <div
+      class="dialog-panel dialog-panel--wide panel help-panel"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="'help.dialogAria' | t">
+
+      <div class="panel-head help-head">
+        <h2 class="panel-title">
+          {{ content().titleKey | t }}
+          @if (content().csharpType) {
+            <span class="badge badge-meta help-type-badge">{{ content().csharpType }}</span>
+          }
+        </h2>
+      </div>
+
+      <div class="panel-body help-body">
+
+        <!-- ── Ne işe yarar ──────────────────────────────────────────────── -->
+        <section class="help-section">
+          <h3 class="help-section-title">{{ 'help.sectionSummary' | t }}</h3>
+          <p class="help-text">{{ content().summaryKey | t }}</p>
+
+          @if (content().useCaseKeys.length > 0) {
+            <h4 class="help-subtitle">{{ 'help.sectionUseCases' | t }}</h4>
+            <ul class="help-list">
+              @for (useCase of content().useCaseKeys; track useCase) {
+                <li>{{ useCase | t }}</li>
+              }
+            </ul>
+          }
+        </section>
+
+        <!-- ── Şema (inline SVG — bağımlılık yok) ────────────────────────── -->
+        @if (content().diagram; as diagram) {
+          <section class="help-section">
+            <h3 class="help-section-title">{{ 'help.sectionDiagram' | t }}</h3>
+            <div class="help-diagram">
+              @switch (diagram) {
+
+                @case ('oneToOne') {
+                  <svg viewBox="0 0 420 110" role="img" aria-hidden="true">
+                    <rect class="d-box" x="20" y="26" width="130" height="42" rx="6"/>
+                    <text class="d-label" x="85" y="52" text-anchor="middle">User</text>
+                    <rect class="d-box d-box--accent" x="270" y="26" width="130" height="42" rx="6"/>
+                    <text class="d-label" x="335" y="52" text-anchor="middle">Profile</text>
+                    <line class="d-line" x1="150" y1="47" x2="270" y2="47"/>
+                    <text class="d-mark" x="162" y="40">1</text>
+                    <text class="d-mark" x="252" y="40">1</text>
+                    <text class="d-sub" x="85" y="88" text-anchor="middle">FK: ProfileId (unique)</text>
+                    <text class="d-sub" x="335" y="88" text-anchor="middle">FK yok</text>
+                  </svg>
+                }
+
+                @case ('oneToMany') {
+                  <svg viewBox="0 0 420 150" role="img" aria-hidden="true">
+                    <rect class="d-box" x="20" y="52" width="130" height="42" rx="6"/>
+                    <text class="d-label" x="85" y="78" text-anchor="middle">Customer</text>
+                    <rect class="d-box d-box--accent" x="280" y="14" width="120" height="34" rx="6"/>
+                    <rect class="d-box d-box--accent" x="280" y="56" width="120" height="34" rx="6"/>
+                    <rect class="d-box d-box--accent" x="280" y="98" width="120" height="34" rx="6"/>
+                    <text class="d-label" x="340" y="36" text-anchor="middle">Order</text>
+                    <text class="d-label" x="340" y="78" text-anchor="middle">Order</text>
+                    <text class="d-label" x="340" y="120" text-anchor="middle">Order</text>
+                    <path class="d-line" d="M150 73 H215 M215 73 L280 31 M215 73 H280 M215 73 L280 115"/>
+                    <text class="d-mark" x="160" y="66">1</text>
+                    <text class="d-mark" x="262" y="66">N</text>
+                    <text class="d-sub" x="85" y="112" text-anchor="middle">Orders (liste)</text>
+                    <text class="d-sub" x="340" y="146" text-anchor="middle">FK: CustomerId — bu tarafta</text>
+                  </svg>
+                }
+
+                @case ('manyToOne') {
+                  <svg viewBox="0 0 420 150" role="img" aria-hidden="true">
+                    <rect class="d-box d-box--accent" x="20" y="14" width="120" height="34" rx="6"/>
+                    <rect class="d-box d-box--accent" x="20" y="56" width="120" height="34" rx="6"/>
+                    <rect class="d-box d-box--accent" x="20" y="98" width="120" height="34" rx="6"/>
+                    <text class="d-label" x="80" y="36" text-anchor="middle">Order</text>
+                    <text class="d-label" x="80" y="78" text-anchor="middle">Order</text>
+                    <text class="d-label" x="80" y="120" text-anchor="middle">Order</text>
+                    <rect class="d-box" x="280" y="52" width="130" height="42" rx="6"/>
+                    <text class="d-label" x="345" y="78" text-anchor="middle">Customer</text>
+                    <path class="d-line" d="M140 31 L205 73 M140 73 H205 M140 115 L205 73 M205 73 H280"/>
+                    <text class="d-mark" x="158" y="66">N</text>
+                    <text class="d-mark" x="262" y="66">1</text>
+                    <text class="d-sub" x="80" y="146" text-anchor="middle">FK: CustomerId — bu tarafta</text>
+                  </svg>
+                }
+
+                @case ('manyToMany') {
+                  <svg viewBox="0 0 460 130" role="img" aria-hidden="true">
+                    <rect class="d-box" x="14" y="42" width="120" height="42" rx="6"/>
+                    <text class="d-label" x="74" y="68" text-anchor="middle">Product</text>
+                    <rect class="d-box d-box--dashed" x="170" y="42" width="120" height="42" rx="6"/>
+                    <text class="d-label" x="230" y="62" text-anchor="middle">ProductTag</text>
+                    <text class="d-sub" x="230" y="76" text-anchor="middle">join tablo</text>
+                    <rect class="d-box" x="326" y="42" width="120" height="42" rx="6"/>
+                    <text class="d-label" x="386" y="68" text-anchor="middle">Tag</text>
+                    <path class="d-line" d="M134 63 H170 M290 63 H326"/>
+                    <text class="d-mark" x="140" y="56">N</text>
+                    <text class="d-mark" x="158" y="56">1</text>
+                    <text class="d-mark" x="296" y="56">1</text>
+                    <text class="d-mark" x="314" y="56">N</text>
+                    <text class="d-sub" x="74" y="106" text-anchor="middle">Tags (liste)</text>
+                    <text class="d-sub" x="386" y="106" text-anchor="middle">Products (liste)</text>
+                    <text class="d-sub" x="230" y="106" text-anchor="middle">iki FK, kolonlarda FK yok</text>
+                  </svg>
+                }
+
+                @case ('selfReference') {
+                  <svg viewBox="0 0 420 130" role="img" aria-hidden="true">
+                    <defs>
+                      <marker id="help-arrow-self" viewBox="0 0 10 10" refX="9" refY="5"
+                              markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                        <path class="d-arrowhead" d="M0 0 L10 5 L0 10 z"/>
+                      </marker>
+                    </defs>
+                    <rect class="d-box" x="140" y="56" width="140" height="42" rx="6"/>
+                    <text class="d-label" x="210" y="82" text-anchor="middle">Category</text>
+                    <path class="d-line" marker-end="url(#help-arrow-self)"
+                          d="M280 68 C340 68 350 20 210 20 C70 20 80 68 140 68"/>
+                    <text class="d-mark" x="286" y="62">N</text>
+                    <text class="d-mark" x="126" y="62">1</text>
+                    <text class="d-sub" x="210" y="14" text-anchor="middle">ParentCategory</text>
+                    <text class="d-sub" x="210" y="118" text-anchor="middle">FK: ParentCategoryId — kökte NULL</text>
+                  </svg>
+                }
+
+                @case ('subModelTree') {
+                  <svg viewBox="0 0 420 190" role="img" aria-hidden="true">
+                    <rect class="d-box" x="140" y="10" width="140" height="34" rx="6"/>
+                    <text class="d-label" x="210" y="32" text-anchor="middle">Order</text>
+                    <text class="d-sub" x="292" y="32">seviye 1</text>
+
+                    <rect class="d-box d-box--accent" x="140" y="66" width="140" height="34" rx="6"/>
+                    <text class="d-label" x="210" y="88" text-anchor="middle">OrderItem</text>
+                    <text class="d-sub" x="292" y="88">seviye 2</text>
+
+                    <rect class="d-box d-box--accent" x="140" y="122" width="140" height="34" rx="6"/>
+                    <text class="d-label" x="210" y="144" text-anchor="middle">ItemNote</text>
+                    <text class="d-sub" x="292" y="144">seviye 3</text>
+
+                    <path class="d-line" d="M210 44 V66 M210 100 V122"/>
+                    <text class="d-sub" x="118" y="60" text-anchor="end">FK_OrderItem_Order</text>
+                    <text class="d-sub" x="118" y="116" text-anchor="end">FK_ItemNote_OrderItem</text>
+                    <text class="d-sub" x="210" y="180" text-anchor="middle">en fazla 4 seviye</text>
+                  </svg>
+                }
+
+                @case ('fkMechanisms') {
+                  <svg viewBox="0 0 460 200" role="img" aria-hidden="true">
+                    <defs>
+                      <marker id="help-arrow-fk" viewBox="0 0 10 10" refX="9" refY="5"
+                              markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                        <path class="d-arrowhead" d="M0 0 L10 5 L0 10 z"/>
+                      </marker>
+                    </defs>
+                    <!-- 1. Alt model ağacı -->
+                    <text class="d-title" x="76" y="16" text-anchor="middle">1 · Alt model</text>
+                    <rect class="d-box" x="16" y="26" width="120" height="30" rx="6"/>
+                    <text class="d-label" x="76" y="46" text-anchor="middle">Order</text>
+                    <rect class="d-box d-box--accent" x="16" y="86" width="120" height="30" rx="6"/>
+                    <text class="d-label" x="76" y="106" text-anchor="middle">OrderItem</text>
+                    <path class="d-line" d="M76 56 V86"/>
+                    <text class="d-sub" x="76" y="140" text-anchor="middle">{{ fkNames.tree }}</text>
+                    <text class="d-sub" x="76" y="156" text-anchor="middle">tek yönlü, sahiplik</text>
+
+                    <!-- 2. Lookup -->
+                    <text class="d-title" x="230" y="16" text-anchor="middle">2 · Lookup</text>
+                    <rect class="d-box" x="170" y="26" width="120" height="30" rx="6"/>
+                    <text class="d-label" x="230" y="46" text-anchor="middle">Product</text>
+                    <rect class="d-box d-box--accent" x="170" y="86" width="120" height="30" rx="6"/>
+                    <text class="d-label" x="230" y="106" text-anchor="middle">Category</text>
+                    <path class="d-line" marker-end="url(#help-arrow-fk)" d="M230 56 V86"/>
+                    <text class="d-sub" x="230" y="140" text-anchor="middle">{{ fkNames.lookup }}</text>
+                    <text class="d-sub" x="230" y="156" text-anchor="middle">tek yönlü, ters liste yok</text>
+
+                    <!-- 3. İlişki -->
+                    <text class="d-title" x="384" y="16" text-anchor="middle">3 · İlişki</text>
+                    <rect class="d-box" x="324" y="26" width="120" height="30" rx="6"/>
+                    <text class="d-label" x="384" y="46" text-anchor="middle">Customer</text>
+                    <rect class="d-box d-box--accent" x="324" y="86" width="120" height="30" rx="6"/>
+                    <text class="d-label" x="384" y="106" text-anchor="middle">Order</text>
+                    <path class="d-line" marker-start="url(#help-arrow-fk)"
+                          marker-end="url(#help-arrow-fk)" d="M384 56 V86"/>
+                    <text class="d-sub" x="384" y="140" text-anchor="middle">{{ fkNames.relationship }}</text>
+                    <text class="d-sub" x="384" y="156" text-anchor="middle">çift yönlü, N-N destekler</text>
+
+                    <text class="d-sub" x="230" y="188" text-anchor="middle">üç mekanizma bir arada çalışır — yenisi eskileri değiştirmez</text>
+                  </svg>
+                }
+
+                @case ('lookupFlow') {
+                  <svg viewBox="0 0 440 150" role="img" aria-hidden="true">
+                    <defs>
+                      <marker id="help-arrow-lookup" viewBox="0 0 10 10" refX="9" refY="5"
+                              markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                        <path class="d-arrowhead" d="M0 0 L10 5 L0 10 z"/>
+                      </marker>
+                    </defs>
+                    <rect class="d-box" x="14" y="40" width="150" height="46" rx="6"/>
+                    <text class="d-label" x="89" y="62" text-anchor="middle">Product.CategoryId</text>
+                    <text class="d-sub" x="89" y="78" text-anchor="middle">lookup kolonu</text>
+
+                    <path class="d-line" marker-end="url(#help-arrow-lookup)" d="M164 63 H236"/>
+                    <text class="d-sub" x="200" y="54" text-anchor="middle">FK</text>
+
+                    <rect class="d-box d-box--accent" x="236" y="18" width="180" height="90" rx="6"/>
+                    <text class="d-label" x="326" y="38" text-anchor="middle">Category</text>
+                    <line class="d-line d-line--soft" x1="248" y1="48" x2="404" y2="48"/>
+                    <text class="d-sub" x="252" y="66" text-anchor="start">ID — 1, 2, 3 …</text>
+                    <text class="d-sub d-sub--accent" x="252" y="84" text-anchor="start">Name — "Elektronik" ✓</text>
+                    <text class="d-sub" x="252" y="100" text-anchor="start">CreatedAt — …</text>
+
+                    <text class="d-sub" x="326" y="128" text-anchor="middle">"Gösterilecek Kolon" listede görünen kolondur</text>
+                  </svg>
+                }
+
+                @case ('enumFlow') {
+                  <svg viewBox="0 0 440 130" role="img" aria-hidden="true">
+                    <defs>
+                      <marker id="help-arrow-enum" viewBox="0 0 10 10" refX="9" refY="5"
+                              markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                        <path class="d-arrowhead" d="M0 0 L10 5 L0 10 z"/>
+                      </marker>
+                    </defs>
+                    <rect class="d-box d-box--dashed" x="14" y="44" width="190" height="38" rx="6"/>
+                    <text class="d-mono" x="109" y="68" text-anchor="middle">Beklemede|Onaylandi|Iptal</text>
+                    <text class="d-sub" x="109" y="102" text-anchor="middle">İzinli Değerler alanı</text>
+
+                    <path class="d-line" marker-end="url(#help-arrow-enum)" d="M204 63 H262"/>
+
+                    <rect class="d-box d-box--accent" x="262" y="18" width="164" height="90" rx="6"/>
+                    <text class="d-sub" x="274" y="38" text-anchor="start">○ Beklemede</text>
+                    <text class="d-sub" x="274" y="60" text-anchor="start">● Onaylandi</text>
+                    <text class="d-sub" x="274" y="82" text-anchor="start">○ Iptal</text>
+                    <text class="d-sub" x="344" y="102" text-anchor="middle">formda açılır liste</text>
+                  </svg>
+                }
+              }
+            </div>
+          </section>
+        }
+
+        <!-- ── Kural alanları ────────────────────────────────────────────── -->
+        <section class="help-section">
+          <h3 class="help-section-title">{{ 'help.sectionRules' | t }}</h3>
+          @if (content().rules.length === 0) {
+            <p class="help-text help-muted">{{ 'help.noRules' | t }}</p>
+          } @else {
+            <dl class="help-rules">
+              @for (r of content().rules; track r.labelKey) {
+                <div class="help-rule">
+                  <dt>{{ r.labelKey | t }}</dt>
+                  <dd>{{ r.descKey | t }}</dd>
+                </div>
+              }
+            </dl>
+          }
+        </section>
+
+        <!-- ── Örnekler ──────────────────────────────────────────────────── -->
+        @if (content().samples.length > 0) {
+          <section class="help-section">
+            <h3 class="help-section-title">{{ 'help.sectionSamples' | t }}</h3>
+            <div class="help-table-wrap">
+              <table class="data-table help-samples">
+                <thead>
+                  <tr>
+                    <th>{{ 'help.colValue' | t }}</th>
+                    <th>{{ 'help.colVerdict' | t }}</th>
+                    <th>{{ 'help.colNote' | t }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (s of content().samples; track s.noteKey) {
+                    <tr [class.help-row-ok]="s.ok" [class.help-row-fail]="!s.ok">
+                      <td><code class="help-mono">{{ s.valueKey ? (s.valueKey | t) : s.value }}</code></td>
+                      <td>
+                        <span class="badge" [class.badge-success]="s.ok" [class.badge-danger]="!s.ok">
+                          {{ (s.ok ? 'help.valid' : 'help.invalid') | t }}
+                        </span>
+                      </td>
+                      <td class="help-note">{{ s.noteKey | t }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+
+        <!-- ── Regex laboratuvarı (yalnızca String) ──────────────────────── -->
+        @if (content().showRegexLab) {
+          <section class="help-section">
+            <h3 class="help-section-title">{{ 'help.regex.title' | t }}</h3>
+            <p class="help-text">{{ 'help.regex.intro' | t }}</p>
+
+            <!-- Hazır desenler -->
+            <h4 class="help-subtitle">{{ 'help.regex.presets' | t }}</h4>
+            <div class="help-table-wrap">
+              <table class="data-table help-presets">
+                <thead>
+                  <tr>
+                    <th>{{ 'help.regex.colName' | t }}</th>
+                    <th>{{ 'help.regex.colPattern' | t }}</th>
+                    <th>{{ 'help.regex.colSamples' | t }}</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of presets; track p.key) {
+                    <tr>
+                      <td>{{ 'help.regex.preset.' + p.key | t }}</td>
+                      <td><code class="help-mono">{{ p.pattern }}</code></td>
+                      <td class="preset-samples">
+                        <code class="help-mono help-ok"
+                              [attr.aria-label]="'help.regex.colOk' | t">✓ {{ p.sampleOk }}</code>
+                        <code class="help-mono help-fail"
+                              [attr.aria-label]="'help.regex.colFail' | t">✗ {{ p.sampleFail }}</code>
+                      </td>
+                      <td class="td-actions">
+                        <button
+                          type="button"
+                          class="btn btn-secondary btn-sm"
+                          (click)="usePreset(p)"
+                          [attr.aria-label]="useAria(p)">
+                          {{ 'help.regex.use' | t }}
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Canlı test -->
+            <h4 class="help-subtitle">{{ 'help.regex.lab' | t }}</h4>
+            <div class="regex-lab">
+              <div class="field">
+                <label for="regex-lab-pattern">{{ 'help.regex.labPattern' | t }}</label>
+                <input
+                  id="regex-lab-pattern"
+                  type="text"
+                  class="input regex-lab-input"
+                  spellcheck="false"
+                  autocomplete="off"
+                  [attr.maxlength]="maxLabLength"
+                  [value]="testPattern()"
+                  (input)="onTestPatternInput($event)">
+              </div>
+              <div class="field">
+                <label for="regex-lab-value">{{ 'help.regex.labValue' | t }}</label>
+                <input
+                  id="regex-lab-value"
+                  type="text"
+                  class="input regex-lab-input"
+                  spellcheck="false"
+                  autocomplete="off"
+                  [attr.maxlength]="maxLabLength"
+                  [value]="testValue()"
+                  (input)="onTestValueInput($event)">
+              </div>
+              <div class="regex-lab-result" role="status" aria-live="polite">
+                @switch (testResult()) {
+                  @case ('match')   { <span class="badge badge-success">{{ 'help.regex.match' | t }}</span> }
+                  @case ('nomatch') { <span class="badge badge-danger">{{ 'help.regex.noMatch' | t }}</span> }
+                  @case ('invalid') { <span class="badge badge-warn">{{ 'help.regex.badPattern' | t }}</span> }
+                  @default          { <span class="badge badge-meta">{{ 'help.regex.idle' | t }}</span> }
+                }
+              </div>
+            </div>
+            <p class="field-help">{{ 'help.regex.labHint' | t }}</p>
+
+            <!-- Sözdizimi -->
+            <h4 class="help-subtitle">{{ 'help.regex.syntax' | t }}</h4>
+            <div class="help-table-wrap">
+              <table class="data-table help-syntax">
+                <thead>
+                  <tr>
+                    <th>{{ 'help.regex.colToken' | t }}</th>
+                    <th>{{ 'help.regex.colMeaning' | t }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of syntax; track row.key) {
+                    <tr>
+                      <td><code class="help-mono">{{ row.token }}</code></td>
+                      <td>{{ 'help.regex.syntax.' + row.key | t }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+
+        <!-- ── Dikkat ────────────────────────────────────────────────────── -->
+        @if (content().notesKey; as notesKey) {
+          <div class="alert alert-warn" role="note">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" style="flex-shrink:0">
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <path d="M12 9v4M12 17h.01"/>
+            </svg>
+            <span>{{ notesKey | t }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="panel-actions">
+        <button type="button" class="btn btn-primary" (click)="close()">{{ 'help.close' | t }}</button>
+      </div>
+    </div>
+  </div>
+}

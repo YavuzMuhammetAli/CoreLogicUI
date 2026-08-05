@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, computed, inject, input, model, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, HostListener, inject, input, model, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 
@@ -17,10 +17,24 @@ import { TranslatePipe } from '../../../pipes/translate.pipe';
   standalone: true,
   imports: [CommonModule, TranslatePipe],
   templateUrl: './model-autocomplete.component.html',
-  styleUrls: ['./model-autocomplete.component.scss']
+  styleUrls: ['./model-autocomplete.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ModelAutocompleteComponent {
   private readonly host = inject(ElementRef<HTMLElement>);
+
+  /**
+   * Örnek başına artan sayaç — DOM id'lerini benzersizleştirir.
+   *
+   * Sabit id kullanılamaz: aynı sayfada iki autocomplete olduğunda id'ler
+   * çakışır ve aria-controls / aria-activedescendant yanlış elemana işaret
+   * eder (ekran okuyucu başka bir listeyi okur).
+   */
+  private static instanceCount = 0;
+  private readonly uid = `model-ac-${++ModelAutocompleteComponent.instanceCount}`;
+
+  /** Açılır listenin DOM id'si (aria-controls tarafından kullanılır). */
+  readonly listboxId = `${this.uid}-listbox`;
 
   /** Seçilebilir model adları (yalnızca yayınlanmış modeller verilmelidir). */
   options = input<string[]>([]);
@@ -113,6 +127,12 @@ export class ModelAutocompleteComponent {
       case 'Escape':
         if (this.isOpen()) {
           event.preventDefault();
+          // Olay document'e ÇIKMAMALI: bu component ilişki popup'ının içinde
+          // kullanılıyor ve popup'ın @HostListener('document:keydown.escape')
+          // dinleyicisi tetiklenirse kullanıcı yalnız listeyi kapatmak isterken
+          // doldurduğu tüm formu kaybeder. (Aynı tuzağın document seviyesindeki
+          // karşılığı datatype-help'te stopImmediatePropagation ile çözülmüştü.)
+          event.stopPropagation();
           this.isOpen.set(false);
           this.activeIndex.set(-1);
         }
@@ -131,7 +151,7 @@ export class ModelAutocompleteComponent {
   }
 
   optionId(index: number): string {
-    return `model-ac-option-${index}`;
+    return `${this.uid}-option-${index}`;
   }
 
   get activeDescendantId(): string | null {

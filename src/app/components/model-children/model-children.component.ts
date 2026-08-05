@@ -1,10 +1,4 @@
-import {
-  Component,
-  Input,
-  OnInit,
-  forwardRef,
-  inject
-} from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, forwardRef, Input, inject, OnInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -29,16 +23,16 @@ import {
   rowVal,
   fieldValue,
   downloadFile,
-  parseEnumValues
+  parseEnumValues,
+  toInputValue,
+  stepFor
 } from '../model-data/model-data.util';
+import { markDirty } from '../../utils/change-detection';
+import { LookupPickerComponent } from '../shared/lookup-picker/lookup-picker.component';
+import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
+import { LookupLabelService } from '../../services/lookup-label.service';
 
 type DataRow = Record<string, unknown>;
-
-/** Lookup kolonu için bir seçenek: FK olarak kaydedilecek ID + kullanıcıya gösterilecek etiket. */
-interface LookupOption {
-  id: number;
-  label: string;
-}
 
 /** Tek bir child model için durum */
 interface ChildModelState {
@@ -72,14 +66,22 @@ const MAX_CHILD_DEPTH = 4;
     ReactiveFormsModule,
     DatePipe,
     TranslatePipe,
+    LookupPickerComponent,
+    ConfirmDialogComponent,
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     forwardRef(() => ModelChildrenComponent)
   ],
   templateUrl: './model-children.component.html',
-  styleUrls: ['./model-children.component.scss']
+  styleUrls: ['./model-children.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ModelChildrenComponent implements OnInit {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   private readonly languageService = inject(LanguageService);
+  /** Tablo hücrelerindeki lookup FK id'lerini toplu şekilde etikete çevirir. */
+  private readonly lookupLabels = inject(LookupLabelService);
 
   /** Parent model adı (örn. 'Order') */
   @Input({ required: true }) parentTypeName!: string;
@@ -110,6 +112,7 @@ export class ModelChildrenComponent implements OnInit {
   // ─── Util delegasyonları — template'te doğrudan erişim için ─────────────────
 
   inputTypeFor = inputTypeFor;
+  stepFor = stepFor;
   mimeFromBase64 = mimeFromBase64;
   isImage = isImage;
   imageSrc = imageSrc;
@@ -122,48 +125,40 @@ export class ModelChildrenComponent implements OnInit {
     downloadFile(b64, colName, state.fileNames);
   }
 
-  // ─── Lookup seçenekleri (hedef model kayıtları, FK dropdown'u için) ─────────
+  // ─── Lookup etiketleri (tablo hücreleri için) ───────────────────────────────
+  //
+  // Dropdown artık app-lookup-picker ile tembel yükleniyor; hedef tablonun tam listesi
+  // tutulmuyor. Hücre etiketleri için görünen satırlardaki benzersiz FK id'leri
+  // kolon başına TEK istekle çözülür (bkz. LookupLabelService).
 
-  /** lookupTargetTable → seçenekler (ID + LookupDisplayColumn değeri). Hedef başına bir kez yüklenir. */
-  lookupOptionsCache: Record<string, LookupOption[]> = {};
-  private lookupOptionsLoading = new Set<string>();
+  private resolveLookupLabels(columns: PublishedColumn[], rows: DataRow[]): void {
+    if (rows.length === 0) return;
 
-  private ensureLookupOptions(columns: PublishedColumn[]): void {
     for (const col of columns) {
       if (col.dataType !== 'lookup' || !col.lookupTargetTable) continue;
-      const target = col.lookupTargetTable;
-      if (this.lookupOptionsCache[target] || this.lookupOptionsLoading.has(target)) continue;
 
-      this.lookupOptionsLoading.add(target);
-      this.publishedModel.getAll(target).subscribe({
-        next: res => {
-          this.lookupOptionsLoading.delete(target);
-          const rows = (res.success ? (res.data ?? []) : []) as DataRow[];
-          const displayCol = col.lookupDisplayColumn;
-          this.lookupOptionsCache[target] = rows.map(r => ({
-            id: Number(fieldValue(r, 'ID') ?? 0),
-            label: displayCol ? String(fieldValue(r, displayCol) ?? '') : String(fieldValue(r, 'ID') ?? '')
-          }));
-        },
-        error: () => { this.lookupOptionsLoading.delete(target); }
-      });
+      const ids = rows
+        .map(r => Number(fieldValue(r, col.columnName)))
+        .filter(n => Number.isFinite(n) && n > 0);
+
+      if (ids.length === 0) continue;
+
+      this.lookupLabels
+        .ensure(col.lookupTargetTable, col.lookupDisplayColumn, ids)
+        .pipe(markDirty(this.cdr))
+        .subscribe();
     }
   }
 
-  /** Bir lookup kolonu için dropdown seçenekleri (yüklenene kadar boş). */
-  lookupOptionsForColumn(col: PublishedColumn): LookupOption[] {
-    return (col.lookupTargetTable && this.lookupOptionsCache[col.lookupTargetTable]) || [];
-  }
-
-  /** Tablo hücresi için görüntülenecek değer — lookup kolonları FK ID yerine display değerini gösterir. */
+  /** Tablo hücresi için görüntülenecek değer — lookup kolonları FK ID yerine etiketi gösterir. */
   cellDisplay(state: ChildModelState, row: DataRow, columnName: string): string {
     const col = state.columns.find(c => c.columnName === columnName);
     if (col?.dataType === 'lookup') {
       const value = fieldValue(row, columnName);
       if (value == null || value === '') return '—';
-      const options = this.lookupOptionsCache[col.lookupTargetTable!];
-      const found = options?.find(o => o.id === Number(value));
-      return found ? found.label : String(value);
+      if (!col.lookupTargetTable) return String(value);
+      return this.lookupLabels.label(col.lookupTargetTable, col.lookupDisplayColumn, Number(value))
+             ?? String(value);
     }
     return this.cellValue(row, columnName);
   }
@@ -175,7 +170,7 @@ export class ModelChildrenComponent implements OnInit {
     this.loadError = null;
 
     // 1) Alt model adlarını al
-    this.publishedModel.getChildModels(this.parentTypeName).subscribe({
+    this.publishedModel.getChildModels(this.parentTypeName).pipe(markDirty(this.cdr)).subscribe({
       next: childRes => {
         if (!childRes.success || !childRes.data?.length) {
           this.loading = false;
@@ -185,7 +180,7 @@ export class ModelChildrenComponent implements OnInit {
         const childTypeNames = childRes.data;
 
         // 2) Tüm model kolonlarını al (tek istek, tüm child'lar için)
-        this.publishedModel.getModels().subscribe({
+        this.publishedModel.getModels().pipe(markDirty(this.cdr)).subscribe({
           next: modelsRes => {
             this.loading = false;
             if (!modelsRes.success) {
@@ -220,7 +215,6 @@ export class ModelChildrenComponent implements OnInit {
               };
 
               // 3) Bu child'ın FK-filtreli kayıtlarını yükle
-              this.ensureLookupOptions(state.columns);
               this.loadChildRows(state);
               return state;
             });
@@ -244,11 +238,13 @@ export class ModelChildrenComponent implements OnInit {
     state.loading = true;
     state.error = null;
 
-    this.publishedModel.getAll(state.typeName, state.fkColumn, this.parentId).subscribe({
+    this.publishedModel.getAll(state.typeName, state.fkColumn, this.parentId).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         state.loading = false;
         if (res.success) {
           state.rows = (res.data ?? []) as DataRow[];
+          // Bu sayfadaki lookup FK etiketlerini kolon basina tek istekte coz.
+          this.resolveLookupLabels(state.columns, state.rows);
         } else {
           state.error = res.message ?? this.languageService.t('model.children.recordsFetchFailed');
         }
@@ -323,7 +319,9 @@ export class ModelChildrenComponent implements OnInit {
   private buildForm(state: ChildModelState, row: DataRow | null): FormGroup {
     const controls: Record<string, unknown> = {};
     for (const col of this.visibleColumns(state)) {
-      const existing = row ? (fieldValue(row, col.columnName) ?? '') : '';
+      // Ham ISO tarih değeri doğrudan bağlanırsa datetime-local kutusu onu sessizce
+      // atar ve alan BOŞ açılır; kullanıcı dokununca tarayıcı o anki zamanı yazar.
+      const existing = row ? (toInputValue(col.dataType, fieldValue(row, col.columnName)) ?? '') : '';
       const validators = col.isNullable ? [] : [Validators.required];
       controls[col.columnName] = [existing, validators];
     }
@@ -346,7 +344,7 @@ export class ModelChildrenComponent implements OnInit {
       jsonData['ID'] = fieldValue(state.editingRow, 'ID');
       jsonData[state.fkColumn] = this.parentId;
 
-      this.publishedModel.update(state.typeName, jsonData).subscribe({
+      this.publishedModel.update(state.typeName, jsonData).pipe(markDirty(this.cdr)).subscribe({
         next: res => this.handleFormResponse(state, res),
         error: err => this.handleFormError(state, err)
       });
@@ -354,7 +352,7 @@ export class ModelChildrenComponent implements OnInit {
       // Ekleme: FK otomatik set edilir
       jsonData[state.fkColumn] = this.parentId;
 
-      this.publishedModel.add(state.typeName, jsonData).subscribe({
+      this.publishedModel.add(state.typeName, jsonData).pipe(markDirty(this.cdr)).subscribe({
         next: res => this.handleFormResponse(state, res),
         error: err => this.handleFormError(state, err)
       });
@@ -367,7 +365,8 @@ export class ModelChildrenComponent implements OnInit {
     state.formMessage = res.message;
     if (res.success) {
       this.loadChildRows(state);
-      setTimeout(() => this.closeForm(state), 1200);
+      // OnPush: zamanlayici callback'i CD tetiklemez, elle kirli isaretlenir.
+      setTimeout(() => { this.closeForm(state); this.cdr.markForCheck(); }, 1200);
     }
   }
 
@@ -383,7 +382,7 @@ export class ModelChildrenComponent implements OnInit {
     const id = this.rowId(row);
     if (!id || !confirm(this.languageService.t('model.children.deleteConfirm', { id }))) return;
 
-    this.publishedModel.delete(state.typeName, id).subscribe({
+    this.publishedModel.delete(state.typeName, id).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (res.success) {
           this.loadChildRows(state);

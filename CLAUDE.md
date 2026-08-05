@@ -35,9 +35,9 @@ Users can:
 | **Test** | Karma + Jasmine (çok az sayıda `*.spec.ts` var, kapsam düşük) |
 | **Build** | Angular CLI 18 / `@angular-devkit/build-angular` |
 
-> **Bootstrap notu:** `bootstrap` paketi `package.json`'da production bağımlılığı değildir;
-> yalnızca `angular.json`'daki `test` target'ında kullanılır. Runtime build'de Bootstrap yoktur —
-> uygulama tamamen özel CSS token sistemi kullanır (bkz. [Tasarım Sistemi](#tasarım-sistemi)).
+> **Bootstrap notu:** Bootstrap projede **hiç kullanılmıyor** — ne `package.json`'da
+> ne de `angular.json`'da (test target'ından da kaldırıldı). Uygulama tamamen özel CSS
+> token sistemi kullanır (bkz. [Tasarım Sistemi](#tasarım-sistemi)).
 
 > **SSR notu:** Proje başlangıçta `@angular/ssr` + Express ile kuruldu, sonradan SSR
 > tamamen kaldırıldı. `server.ts`, `src/main.server.ts`, `src/app/app.config.server.ts`
@@ -93,9 +93,14 @@ CoreLogicUI-master/
         │   ├── chart/                       # ApexCharts tabanlı grafik component'i (rapor/dashboard tarafından kullanılır)
         │   └── shared/
         │       ├── column-visibility/      # Admin-managed model kolon görünürlüğü (liste/detay/alt-model sekmeleri)
-        │       ├── confirm-dialog/         # Onay diyaloğu (geri yükleme/kalıcı silme akışlarında kullanılır)
+        │       ├── confirm-dialog/         # Onay diyaloğu — native confirm() YERİNE her zaman bu kullanılır
+        │       ├── deleted-list/           # "Silinenler" ekranlarının ortak gövdesi (model/taslak/rapor/dashboard)
+        │       ├── datatype-help/          # Veri tipi + ilişki kılavuz diyaloğu (içerik: datatype-help.data.ts)
+        │       ├── help-hint/              # Alan yanındaki küçük yardım baloncuğu
+        │       ├── lookup-picker/          # Lookup kolonu için sayfalı/aranabilir kayıt seçici
+        │       ├── record-form-dialog/     # İç içe kayıt ekleme/düzenleme pop-up'ı (model-detail kullanır)
         │       ├── model-autocomplete/     # Model adı seçimi (combobox, klavye + ARIA) — ilişki hedefi seçiminde
-        │       └── entity-graph/           # Entity ilişki grafiği (elle yazılmış inline SVG, bağımlılıksız)
+        │       └── entity-graph/           # Entity ilişki grafiği (inline SVG; geometri entity-graph.layout.ts'te, saf + test edilebilir)
         ├── services/
         │   ├── auth.service.ts               # /Auth login/register, JWT → localStorage
         │   ├── published-table.service.ts    # /Published addTable, addMember + soft-delete/restore
@@ -114,8 +119,13 @@ CoreLogicUI-master/
         │   ├── relationship.service.ts           # /publish/models/{id}/... — model ilişkileri CRUD + validate-graph + preview
         │   ├── language.service.ts              # HTTP yok — TR/EN dil tercihi, localStorage, t() + TranslatePipe
         │   ├── model-usage.service.ts           # HTTP yok — model kullanım özeti (raporlar + dashboardlar)
+        │   ├── lookup-label.service.ts          # Lookup id → etiket çözümleme (önbellekli)
+        │   ├── record-metadata.service.ts       # Kayıt formu meta verisi (kolon kuralları/şema)
         │   ├── theme.service.ts                 # Açık/koyu tema tercihini yönetir (localStorage)
         │   └── notification.service.ts          # Global toast/uyarı bildirimleri (guard'lar dahil)
+        ├── utils/
+        │   ├── change-detection.ts              # markDirty(cdr) — OnPush'ta asenkron veri sonrası CD tetikler
+        │   └── locale-format.ts                 # Aktif dile göre sayı/tarih biçimlendirme (sabit 'tr-TR' KULLANMA)
         ├── guards/
         │   ├── auth.guard.ts                  # JWT varlığını kontrol eder
         │   ├── admin.guard.ts                  # Yalnızca admin — PermissionService.ensureLoaded() + isAdmin()
@@ -442,11 +452,16 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
 - **Reactive Forms** — `FormBuilder` + `FormGroup`/`FormArray`
 - **Yanıt tipleri** — `ResponseModel`, `ListResponseModel<T>` veya `DataResponseModel<T>`
 - **Component state** — `signal()`/`computed()`/`effect()`; `BehaviorSubject` kullanılmaz
-- **i18n** — hard-coded UI metni yerine `LanguageService.t('key')` (TS kodu) veya `'key' | t` pipe'ı (şablon) kullan; çeviri anahtarları `src/app/i18n/` altında alan dosyalarında tanımlanır
+- **i18n** — hard-coded UI metni yerine `LanguageService.t('key')` (TS kodu) veya `'key' | t` pipe'ı (şablon) kullan; çeviri anahtarları `src/app/i18n/` altında alan dosyalarında tanımlanır.
+  `src/app/i18n/translations.spec.ts` her anahtarın TR+EN karşılığını ve yer tutucu tutarlılığını doğrular — eksik anahtar testte patlar (aksi halde kullanıcı ekranda ham anahtar metnini görür).
+- **Onay diyaloğu** — native `confirm()` KULLANMA; `shared/confirm-dialog` component'ini bağla (tasarım sistemi + tema + i18n uyumlu, test edilebilir)
+- **Locale-duyarlı biçimlendirme** — sayı/tarih için `Intl.*Format`'ı sabit `'tr-TR'` ile kurma; `utils/locale-format.ts` üzerinden aktif dile göre al
 - **Türkçe kod yorumları** — backend ile tutarlı; UI metinleri çeviri sistemi üzerinden gelir
 
 ## Bilinen Eksikler ve TODO'lar
 
 1. **`environment.prod.ts` API URL'si** — hâlâ `http://localhost:5245` (gerçek prod URL değil), deployment'ta güncellenmeli
-2. **Unit test kapsamı düşük** — sadece 3 `*.spec.ts` dosyası var; servis/component'lerin büyük kısmı test edilmiyor
+2. **Unit test kapsamı düşük** — kapsam `i18n/translations.spec.ts` ve `shared/entity-graph/entity-graph.layout.spec.ts` ile genişletildi, ancak servis/component'lerin büyük kısmı hâlâ test edilmiyor
 3. **SSR bağımlılık kalıntısı** — `package.json`'da `@angular/ssr`/`express`/`@types/express` hâlâ duruyor; SSR fiilen kaldırıldığı için temizlenebilir ama `isPlatformBrowser` guard'ları kasıtlı korunuyor (bkz. `angular-standalone-component` skill)
+4. **Kalan native `confirm()` çağrıları** — `model-children`, `model-data`, `model-detail`, `role-detail`, `role-list` içinde 5 çağrı hâlâ native; `ConfirmDialogComponent`'e taşınmalı
+5. **Backend controller boilerplate** — `WebAPI.Infrastructure.ApiControllerBase.Respond()` eklendi ve `ProfileController` + `PublishedModelController` bunu kullanıyor; kalan controller'lar hâlâ `result.Success ? Ok(result) : BadRequest(result)` satırını elle tekrarlıyor

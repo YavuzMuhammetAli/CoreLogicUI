@@ -10,7 +10,7 @@
       [placeholder]="placeholder()"
       [attr.aria-label]="ariaLabel() || ('relationship.autocompleteAria' | t)"
       [attr.aria-expanded]="isOpen()"
-      [attr.aria-controls]="'model-ac-listbox'"
+      [attr.aria-controls]="listboxId"
       [attr.aria-activedescendant]="activeDescendantId"
       [attr.aria-invalid]="invalid() ? true : null"
       (focus)="onFocus()"
@@ -32,7 +32,7 @@
   </div>
 
   @if (isOpen()) {
-    <ul class="ac-list" role="listbox" id="model-ac-listbox">
+    <ul class="ac-list" role="listbox" [id]="listboxId">
       @for (option of filtered(); track option; let i = $index) {
         <li
           class="ac-option"

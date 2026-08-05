@@ -56,9 +56,18 @@ export const MODEL_I18N: Translations = {
   'model.data.colAction': { tr: 'İşlem', en: 'Action' },
   'model.data.archive': { tr: 'Arşiv', en: 'Archived' },
   'model.data.rollback': { tr: 'Geri Al', en: 'Rollback' },
+  'model.data.rollbackConfirmTitle': { tr: 'Sürümü geri al', en: 'Roll back version' },
   'model.data.rollbackConfirm': { tr: 'v{version} versiyonuna geri almak istediğinize emin misiniz?', en: 'Are you sure you want to roll back to version v{version}?' },
   'model.data.assemblyNotLoaded': { tr: 'Model backend\'de yüklü değil. "Tablo Oluştur"dan yeniden yayınlayın.', en: 'The model is not loaded on the backend. Re-publish it from "Create Table".' },
   'model.data.loadFailed': { tr: 'Veriler yüklenemedi.', en: 'Data could not be loaded.' },
+
+  // Satır seçimi + toplu silme (liste ekranı)
+  'model.data.selectAllAria': { tr: 'Tüm satırları seç', en: 'Select all rows' },
+  'model.data.selectRowAria': { tr: 'Satırı seç', en: 'Select row' },
+  'model.data.bulkDelete': { tr: 'Seçilenleri Sil ({count})', en: 'Delete Selected ({count})' },
+  'model.data.bulkDeleteTitle': { tr: 'Seçili kayıtları sil', en: 'Delete selected records' },
+  'model.data.bulkDeleteMessage': { tr: '{count} kayıt kalıcı olarak silinecek. Emin misiniz?', en: '{count} record(s) will be permanently deleted. Are you sure?' },
+  'model.data.bulkDeletePartial': { tr: '{total} kayıttan {failed} tanesi silinemedi:', en: '{failed} of {total} record(s) could not be deleted:' },
 
   // ── model-detail.component.html / .ts ────────────────────────────────────────
   'model.detail.breadcrumbModels': { tr: 'Modeller', en: 'Models' },
@@ -80,14 +89,37 @@ export const MODEL_I18N: Translations = {
   'model.detail.saveChangesAria': { tr: 'Değişiklikleri kaydet', en: 'Save changes' },
   'model.detail.fieldDescriptionAria': { tr: 'Alan açıklaması: {description}', en: 'Field description: {description}' },
   'model.detail.selectOption': { tr: 'Seçin...', en: 'Select...' },
+
+  // ── Lookup seçim kutusu (tembel yüklemeli combobox) ───────────────────────
+  'model.lookup.placeholder': { tr: 'Aramak için yazın...', en: 'Type to search...' },
+  'model.lookup.ariaLabel': { tr: 'Kayıt seçin', en: 'Select a record' },
+  'model.lookup.clear': { tr: 'Seçimi temizle', en: 'Clear selection' },
+  'model.lookup.noResult': { tr: 'Sonuç bulunamadı', en: 'No results found' },
+  'model.lookup.counter': { tr: '{total} kayıttan {shown} tanesi', en: '{shown} of {total} records' },
   'model.detail.preview': { tr: 'Önizleme', en: 'Preview' },
   'model.detail.fileExists': { tr: 'Dosya mevcut', en: 'File exists' },
   'model.detail.download': { tr: 'İndir', en: 'Download' },
   'model.detail.fieldRequired': { tr: '{label} zorunludur.', en: '{label} is required.' },
+
+  // Şema kurallarından türetilen istemci doğrulaması — hatalar sunucuya gitmeden görünür.
+  // 'pattern' hatasında önce kolonun kendi "Regex Mesajı" denenir, bu metin yedektir.
+  'model.detail.fieldPattern': { tr: '{label} geçerli biçimde değil.', en: '{label} is not in a valid format.' },
+  'model.detail.fieldMinLength': { tr: '{label} en az {min} karakter olmalıdır.', en: '{label} must be at least {min} characters.' },
+  'model.detail.fieldMaxLength': { tr: '{label} en fazla {max} karakter olabilir.', en: '{label} can be at most {max} characters.' },
+  'model.detail.fieldMin': { tr: '{label} en az {min} olmalıdır.', en: '{label} must be at least {min}.' },
+  'model.detail.fieldMax': { tr: '{label} en fazla {max} olabilir.', en: '{label} can be at most {max}.' },
   'model.detail.childrenLoading': { tr: 'İlişkili modeller yükleniyor...', en: 'Loading related models...' },
   'model.detail.newRecordInfoNote': { tr: 'Alt kayıtları şimdi ekleyebilirsiniz. <strong>Tümünü Kaydet</strong> butonuna bastığınızda ana kayıt ile birlikte kaydedilecek.', en: 'You can add sub-records now. When you press <strong>Save All</strong>, they will be saved together with the main record.' },
-  'model.detail.partialSaveErrorTitle': { tr: 'Bazı alt kayıtlar kaydedilemedi:', en: 'Some sub-records could not be saved:' },
-  'model.detail.partialSaveErrorHint': { tr: 'Bu kayıtları aşağıdan tekrar ekleyebilirsiniz.', en: 'You can re-add these records below.' },
+  // Kaydetme "hepsi ya da hiçbiri": ağacın tamamı tek transaction'da yazılır.
+  // Bir alan bile geçersizse HİÇBİR kayıt oluşmaz ve tüm hatalar birden döner.
+  'model.detail.partialSaveErrorTitle': {
+    tr: 'Hiçbir kayıt oluşturulmadı — düzeltilmesi gereken alanlar:',
+    en: 'No records were created — fields that need fixing:'
+  },
+  'model.detail.partialSaveErrorHint': {
+    tr: 'Girdiğiniz hiçbir veri kaybolmadı ve veritabanına hiçbir kayıt yazılmadı. Hataları düzeltip tekrar "Kaydet" deyin; ana kayıt ve tüm alt kayıtlar tek seferde kaydedilecek.',
+    en: 'Nothing you entered was lost and nothing was written to the database. Fix the errors and press "Save" again; the main record and all sub-records are saved in one go.'
+  },
   'model.detail.subModelsTablistAria': { tr: 'Alt modeller', en: 'Sub-models' },
   'model.detail.tabPanelAria': { tr: '{name} kayıtları', en: '{name} records' },
   'model.detail.searchInPlaceholder': { tr: '{name} içinde ara...', en: 'Search in {name}...' },
@@ -124,11 +156,67 @@ export const MODEL_I18N: Translations = {
   'model.detail.assemblyNotLoaded': { tr: 'Model backend\'de yüklü değil. "Tablo Oluştur"dan yeniden yayınlayın.', en: 'The model is not loaded on the backend. Re-publish it from "Create Table".' },
   'model.detail.createFailed': { tr: 'Kayıt oluşturulamadı.', en: 'Record could not be created.' },
   'model.detail.updateFailed': { tr: 'Güncelleme başarısız.', en: 'Update failed.' },
+  'model.detail.deleteConfirmTitle': { tr: 'Kaydı sil', en: 'Delete record' },
   'model.detail.deleteConfirm': { tr: 'ID:{id} kaydını silmek istediğinize emin misiniz?', en: 'Are you sure you want to delete record ID:{id}?' },
   'model.detail.recordsFetchFailed': { tr: 'Kayıtlar alınamadı.', en: 'Records could not be retrieved.' },
   'model.detail.recordsLoadFailed': { tr: 'Kayıtlar yüklenemedi.', en: 'Records could not be loaded.' },
   'model.detail.operationFailed': { tr: 'İşlem başarısız.', en: 'Operation failed.' },
   'model.detail.removeStagedRowConfirm': { tr: 'Bu biriktirilen satırı kaldırmak istediğinize emin misiniz?', en: 'Are you sure you want to remove this staged row?' },
+  'model.detail.stagedTitle': { tr: 'Kaydedilmeyi bekleyenler', en: 'Waiting to be saved' },
+  'model.detail.stagedSubCount': { tr: '+{count} alt kayıt', en: '+{count} sub-records' },
+
+  // Satır seçimi + toplu silme (alt model sekmesi)
+  'model.detail.selectAllAria': { tr: 'Tüm satırları seç', en: 'Select all rows' },
+  'model.detail.selectRowAria': { tr: 'Satırı seç', en: 'Select row' },
+  'model.detail.editRowAria': { tr: 'Kaydı düzenle', en: 'Edit record' },
+  'model.detail.bulkDelete': { tr: 'Seçilenleri Sil ({count})', en: 'Delete Selected ({count})' },
+  'model.detail.bulkDeleteTitle': { tr: 'Seçili kayıtları sil', en: 'Delete selected records' },
+  'model.detail.bulkDeleteMessage': { tr: '{count} kayıt kalıcı olarak silinecek. Emin misiniz?', en: '{count} record(s) will be permanently deleted. Are you sure?' },
+  'model.detail.bulkDeletePartial': { tr: '{total} kayıttan {failed} tanesi silinemedi:', en: '{failed} of {total} record(s) could not be deleted:' },
+  'model.detail.bulkRemoveStaged': { tr: 'Seçilenleri Kaldır ({count})', en: 'Remove Selected ({count})' },
+  'model.detail.bulkRemoveStagedTitle': { tr: 'Bekleyen satırları kaldır', en: 'Remove staged rows' },
+  'model.detail.bulkRemoveStagedMessage': { tr: '{count} bekleyen satır kaldırılacak. Emin misiniz?', en: '{count} staged row(s) will be removed. Are you sure?' },
+
+  // ── record-form-dialog.component (iç içe kayıt pop-up'ı) ────────────────────
+  // Kayıt ve tüm alt ağacı bellekte kurulur; hiçbir seviye "önce üstünü kaydet"
+  // zorunluluğu taşımaz — ağaç ancak ana modelde "Kaydet"e basılınca gönderilir.
+  'record.dialogNewTitle': { tr: 'Yeni {name}', en: 'New {name}' },
+  'record.dialogEditTitle': { tr: '{name} düzenle', en: 'Edit {name}' },
+  'record.dialogSubtitle': {
+    tr: 'Bu kayıt ve alt kayıtları, ana modelde "Kaydet" denene kadar yalnızca bu ekranda tutulur.',
+    en: 'This record and its sub-records are held on screen until you press "Save" on the main model.'
+  },
+  'record.loading': { tr: 'Model bilgileri yükleniyor…', en: 'Loading model metadata…' },
+  'record.close': { tr: 'Kapat', en: 'Close' },
+  'record.cancel': { tr: 'Vazgeç', en: 'Cancel' },
+  'record.apply': { tr: 'Tamam', en: 'Done' },
+  'record.edit': { tr: 'Düzenle', en: 'Edit' },
+  'record.remove': { tr: 'Kaldır', en: 'Remove' },
+  'record.childTablistAria': { tr: 'Alt modeller', en: 'Sub-models' },
+  'record.childHint': {
+    tr: 'Bu kaydın alt kayıtlarını şimdi ekleyebilirsiniz; hepsi birlikte kaydedilir.',
+    en: 'You can add this record\'s sub-records now; they are all saved together.'
+  },
+  'record.newChild': { tr: 'Yeni {name}', en: 'New {name}' },
+  'record.noChildRows': { tr: 'Henüz alt kayıt eklenmedi.', en: 'No sub-records added yet.' },
+  'record.colState': { tr: 'Durum', en: 'State' },
+
+  // Alt kayıt tablosu: satır seçimi + toplu silme (her derinlikte aynı)
+  'record.selectAllAria': { tr: 'Tüm satırları seç', en: 'Select all rows' },
+  'record.selectRowAria': { tr: 'Satırı seç', en: 'Select row' },
+  'record.editRowAria': { tr: 'Kaydı düzenle', en: 'Edit record' },
+  'record.bulkDelete': { tr: 'Seçilenleri Sil ({count})', en: 'Delete Selected ({count})' },
+  'record.bulkDeleteTitle': { tr: 'Seçili alt kayıtları sil', en: 'Delete selected sub-records' },
+  'record.bulkDeleteMessage': {
+    tr: '{count} alt kayıt silinecek. Kaydedilmiş olanlar sunucudan kalıcı olarak silinir. Emin misiniz?',
+    en: '{count} sub-record(s) will be deleted. Already saved ones are permanently removed from the server. Are you sure?'
+  },
+  'record.bulkDeletePartial': { tr: '{total} kayıttan {failed} tanesi silinemedi:', en: '{failed} of {total} record(s) could not be deleted:' },
+  'record.childRowsLoading': { tr: 'Alt kayıtlar yükleniyor…', en: 'Loading sub-records…' },
+  'record.childRowsLoadFailed': { tr: 'Alt kayıtlar yüklenemedi.', en: 'Sub-records could not be loaded.' },
+  'record.stateSaved': { tr: 'Kaydedildi', en: 'Saved' },
+  'record.stateFailed': { tr: 'Hata', en: 'Failed' },
+  'record.statePending': { tr: 'Bekliyor', en: 'Pending' },
 
   // ── model-children.component.html / .ts ──────────────────────────────────────
   'model.children.loading': { tr: 'Alt modeller yükleniyor...', en: 'Loading sub-models...' },
@@ -170,6 +258,7 @@ export const MODEL_I18N: Translations = {
   'model.children.recordsFetchFailed': { tr: 'Kayıtlar alınamadı.', en: 'Records could not be retrieved.' },
   'model.children.recordsLoadFailed': { tr: 'Kayıtlar yüklenemedi.', en: 'Records could not be loaded.' },
   'model.children.operationFailed': { tr: 'İşlem başarısız.', en: 'Operation failed.' },
+  'model.children.deleteConfirmTitle': { tr: 'Alt kaydı sil', en: 'Delete sub-record' },
   'model.children.deleteConfirm': { tr: 'ID:{id} kaydını silmek istediğinize emin misiniz?', en: 'Are you sure you want to delete record ID:{id}?' },
 
   // ── model-node.component.html / .ts ───────────────────────────────────────────
@@ -246,6 +335,31 @@ export const MODEL_I18N: Translations = {
   'table.detail.newColumn': { tr: 'Yeni Sütun', en: 'New Column' },
   'table.detail.noColumnsTitle': { tr: 'Henüz sütun eklenmedi', en: 'No column added yet' },
   'table.detail.noColumnsMessage': { tr: 'Tabloya en az bir sütun eklemelisiniz. Başlamak için "Yeni Sütun"a tıklayın.', en: 'You must add at least one column to the table. Click "New Column" to get started.' },
+
+  // ── Alt Modeller sekmesi ──────────────────────────────────────────────────
+  'table.detail.subModelsTab': { tr: 'Alt Modeller', en: 'Sub-models' },
+  'table.detail.subModelsPanelAria': { tr: 'Alt modeller', en: 'Sub-models' },
+  'table.detail.subModelsHint': {
+    tr: 'Alt model, bu modele ait çocuk modeldir; kaydettiğinizde otomatik olarak {Model}Id kolonuyla bağlanır. Var olan bir modele bağlanmak için "İlişkiler" sekmesini kullanın.',
+    en: 'A sub-model is a child of this model; on save it is linked automatically with a {Model}Id column. To link to an existing model, use the "Relationships" tab.'
+  },
+  'table.detail.newSubModel': { tr: 'Alt Model Ekle', en: 'Add Sub-model' },
+  'table.detail.noSubModelsTitle': { tr: 'Henüz alt model yok', en: 'No sub-models yet' },
+  'table.detail.noSubModelsMessage': {
+    tr: 'Bu modele bağlı, kendi alanları olan bir çocuk model ekleyebilirsiniz. Alt modelin kendi alt modelleri de olabilir.',
+    en: 'You can add a child model with its own fields, linked to this model. A sub-model can have its own sub-models too.'
+  },
+  'table.detail.subModelDepthLimit': {
+    tr: 'Derinlik sınırına ulaşıldı (en fazla {max} seviye)',
+    en: 'Depth limit reached (max {max} levels)'
+  },
+  'table.detail.unsavedSubModels': { tr: 'Kaydedilmemiş alt modeller', en: 'Unsaved sub-models' },
+  'table.detail.colSubModelName': { tr: 'Alt Model', en: 'Sub-model' },
+  'table.detail.colSubModelDepth': { tr: 'Seviye', en: 'Level' },
+  'table.detail.colSubModelDescription': { tr: 'Açıklama', en: 'Description' },
+  'table.detail.levelBadge': { tr: '{depth}. seviye', en: 'Level {depth}' },
+  'table.detail.openSubModel': { tr: 'Aç', en: 'Open' },
+  'table.detail.openSubModelAria': { tr: '{name} alt modelini aç', en: 'Open sub-model {name}' },
   'table.detail.colName': { tr: 'Ad', en: 'Name' },
   'table.detail.colType': { tr: 'Tip', en: 'Type' },
   'table.detail.colNullable': { tr: 'Nullable', en: 'Nullable' },

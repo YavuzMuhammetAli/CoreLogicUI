@@ -20,10 +20,12 @@ describe('AppComponent', () => {
     expect(app.title).toEqual('CoreLogicUI');
   });
 
-  it('should render title', () => {
+  // AppComponent yalnızca <router-outlet> render eder; CLI iskeletinden gelen
+  // "Hello, CoreLogicUI" başlığı bu projede hiç var olmadı.
+  it('router-outlet render eder', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, CoreLogicUI');
+    expect(compiled.querySelector('router-outlet')).toBeTruthy();
   });
 });

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -6,15 +6,20 @@ import { AuditLogService } from '../../services/audit-log.service';
 import { AuditLog } from '../../models/auditLog';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { markDirty } from '../../utils/change-detection';
 
 @Component({
   selector: 'app-audit-log',
   standalone: true,
   imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './audit-log.component.html',
-  styleUrl: './audit-log.component.scss'
+  styleUrl: './audit-log.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AuditLogComponent implements OnInit {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   private auditLogService = inject(AuditLogService);
   private readonly languageService = inject(LanguageService);
 
@@ -74,7 +79,7 @@ export class AuditLogComponent implements OnInit {
     const from = this.fromDateFilter ? new Date(this.fromDateFilter) : null;
     const to = this.toDateFilter ? new Date(this.toDateFilter) : null;
 
-    this.auditLogService.getFiltered(this.entityNameFilter.trim() || undefined, from, to).subscribe({
+    this.auditLogService.getFiltered(this.entityNameFilter.trim() || undefined, from, to).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (!res.success) {
           this.rows.set([]);

@@ -30,6 +30,8 @@ export const COMMON_I18N: Translations = {
   'common.refresh': { tr: 'Yenile', en: 'Refresh' },
   'common.active': { tr: 'Aktif', en: 'Active' },
   'common.inactive': { tr: 'Pasif', en: 'Inactive' },
+  // Sunucu hata mesajı boş geldiğinde kullanılan son çare metni.
+  'common.error': { tr: 'Bir hata oluştu.', en: 'An error occurred.' },
 
   // confirm-dialog.component.html — paylaşılan onay modalı statik metinleri
   'confirm.usageIntro': { tr: "'{name}' kullanılıyor:", en: "'{name}' is in use:" },

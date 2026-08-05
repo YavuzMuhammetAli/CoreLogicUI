@@ -1,0 +1,111 @@
+/* Lookup seçim kutusu — model-autocomplete ile aynı token seti ve görsel dil. */
+
+.lk-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.lk-input-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.lk-input {
+  width: 100%;
+  padding-right: calc(var(--space-6) + var(--space-1));   /* temizle butonuna yer */
+}
+
+.lk-clear {
+  position: absolute;
+  right: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-standard),
+              color var(--motion-fast) var(--ease-standard);
+
+  &:hover { background: var(--surface-warm); color: var(--fg); }
+  &:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+}
+
+/* position: fixed — absolute DEĞİL.
+ *
+ * Liste, kırpan iki atadan da kurtulmak zorunda:
+ *   1) .panel { overflow: hidden }        (styles.scss — kart köşe yuvarlaması için)
+ *   2) .dialog-panel { overflow-y: auto } (kayıt pop-up'ının kendi kaydırması)
+ * absolute konumlandırmada liste bu kutuların içinde kalıp kesiliyor ve yalnızca
+ * ilk satır görünüyordu. fixed ile viewport'a göre konumlanır; top/left/width/max-height
+ * değerleri açılışta input'un getBoundingClientRect()'inden hesaplanıp inline yazılır
+ * (bkz. positionList). Kaydırma/yeniden boyutlandırmada yeniden hesaplanır.
+ *
+ * Kayıt pop-up'ında .dialog-overlay'in backdrop-filter'ı fixed için içeren blok oluşturur;
+ * o katman da tam ekran (inset: 0) olduğu için sonuç değişmez.
+ */
+.lk-list {
+  position: fixed;
+  z-index: 1200;            /* .dialog-overlay'in üstünde kalmalı */
+  margin: 0;
+  padding: var(--space-1);
+  overflow-y: auto;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elev-high);
+}
+
+.lk-option {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--fg);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background var(--motion-fast) var(--ease-standard);
+
+  &:hover,
+  &--active { background: var(--surface-warm); }
+}
+
+.lk-empty,
+.lk-loading,
+.lk-footer {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.lk-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.lk-footer {
+  position: sticky;
+  bottom: 0;
+  border-top: 1px solid var(--border-soft, var(--border));
+  background: var(--surface);
+  font-size: var(--text-xs, var(--text-sm));
+  text-align: center;
+}
+
+/* Sonsuz kaydırma tetikleyicisi — görünmez ama düzende yer kaplar ki
+   IntersectionObserver dibe yaklaşıldığını algılayabilsin. */
+.lk-sentinel {
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

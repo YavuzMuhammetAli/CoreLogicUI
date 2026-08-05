@@ -110,6 +110,7 @@ export const ADMIN_I18N: Translations = {
   },
   'deleted.models.countSuffix': { tr: 'silinmiş (pasif) model var.', en: 'deleted (inactive) model(s).' },
   'deleted.models.loadFailed': { tr: 'Silinmiş modeller yüklenemedi.', en: 'Deleted models could not be loaded.' },
+  'deleted.models.restoreConfirmTitle': { tr: 'Modeli geri yükle', en: 'Restore model' },
   'deleted.models.restoreConfirm': {
     tr: "'{name}' modelini geri yüklemek istediğinize emin misiniz?",
     en: "Are you sure you want to restore the model '{name}'?"
@@ -130,6 +131,7 @@ export const ADMIN_I18N: Translations = {
   },
   'deleted.drafts.countSuffix': { tr: 'silinmiş (pasif) taslak var.', en: 'deleted (inactive) draft(s).' },
   'deleted.drafts.loadFailed': { tr: 'Silinen taslaklar yüklenemedi.', en: 'Deleted drafts could not be loaded.' },
+  'deleted.drafts.restoreConfirmTitle': { tr: 'Taslağı geri yükle', en: 'Restore draft' },
   'deleted.drafts.restoreConfirm': {
     tr: "'{name}' taslağını geri yüklemek istediğinize emin misiniz?",
     en: "Are you sure you want to restore the draft '{name}'?"
@@ -150,6 +152,7 @@ export const ADMIN_I18N: Translations = {
   },
   'deleted.reports.countSuffix': { tr: 'silinmiş (pasif) rapor var.', en: 'deleted (inactive) report(s).' },
   'deleted.reports.loadFailed': { tr: 'Silinmiş raporlar yüklenemedi.', en: 'Deleted reports could not be loaded.' },
+  'deleted.reports.restoreConfirmTitle': { tr: 'Raporu geri yükle', en: 'Restore report' },
   'deleted.reports.restoreConfirm': {
     tr: "'{name}' raporunu geri yüklemek istediğinize emin misiniz?",
     en: "Are you sure you want to restore the report '{name}'?"
@@ -170,6 +173,8 @@ export const ADMIN_I18N: Translations = {
   },
   'deleted.dashboards.countSuffix': { tr: "silinmiş (pasif) dashboard var.", en: 'deleted (inactive) dashboard(s).' },
   'deleted.dashboards.loadFailed': { tr: "Silinmiş dashboard'lar yüklenemedi.", en: 'Deleted dashboards could not be loaded.' },
+  'deleted.dashboards.widgetCount': { tr: '{count} widget', en: '{count} widget(s)' },
+  'deleted.dashboards.restoreConfirmTitle': { tr: "Dashboard'ı geri yükle", en: 'Restore dashboard' },
   'deleted.dashboards.restoreConfirm': {
     tr: "'{name}' dashboard'unu geri yüklemek istediğinize emin misiniz?",
     en: "Are you sure you want to restore the dashboard '{name}'?"

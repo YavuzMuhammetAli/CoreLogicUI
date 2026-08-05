@@ -1,6 +1,5 @@
 .page-wrap {
   padding: var(--space-6);
-  max-width: 760px;
 }
 
 .page-head {
@@ -27,10 +26,20 @@
   margin-bottom: var(--space-4);
 }
 
+/* Esnek ızgara — kart sayısı ekran genişliğine göre kendiliğinden artar
+   (model-list / form-build ile aynı desen). Kartlar alt modellerini içlerinde
+   taşıdığı için yükseklikleri eşit değil; align-items: start ile üstten hizalanır. */
 .draft-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .draft-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 .draft-card .panel-head {
@@ -38,6 +47,13 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+  /* Global .panel-head 20/24px padding veriyor — kart ızgarada daha derli toplu dursun */
+  padding: var(--space-3) var(--space-4);
+  flex-wrap: wrap;
+}
+
+.draft-card .panel-body {
+  padding: var(--space-3) var(--space-4);
 }
 
 .draft-meta-wrap {
@@ -65,12 +81,6 @@
   font-weight: 600;
   color: var(--fg);
   font-family: var(--font-mono);
-}
-
-.draft-desc {
-  font-size: var(--text-sm);
-  color: var(--fg-2);
-  margin: 0;
 }
 
 .muted-hint {

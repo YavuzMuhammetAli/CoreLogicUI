@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, PLATFORM_ID, ViewChild, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, inject, OnInit, PLATFORM_ID, signal, ViewChild } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -10,6 +10,7 @@ import { DashboardWidget } from '../../models/dashboard.model';
 import { CHART_TYPE_META } from '../chart/chart-types';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { markDirty } from '../../utils/change-detection';
 
 /** Canvas üzerinde düzenlenen widget — kaydedilirken `reportName` ayıklanır (DashboardWidget'ta yok). */
 interface EditableWidget extends DashboardWidget {
@@ -32,9 +33,13 @@ const ROW_PITCH_PX = 56;
   standalone: true,
   imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
   templateUrl: './dashboard-build.component.html',
-  styleUrls: ['./dashboard-build.component.scss']
+  styleUrls: ['./dashboard-build.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardBuildComponent implements OnInit {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   private readonly platformId = inject(PLATFORM_ID);
   private readonly fb = inject(FormBuilder);
   private readonly reportService = inject(ReportService);
@@ -66,7 +71,7 @@ export class DashboardBuildComponent implements OnInit {
 
   ngOnInit(): void {
     this.loading = true;
-    this.reportService.list().subscribe({
+    this.reportService.list().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.loading = false;
         if (res.success) {
@@ -223,7 +228,7 @@ export class DashboardBuildComponent implements OnInit {
       widgets,
       // Backend yalnızca admin için bu bayrağı uygular; normal kullanıcıdan gelse de sessizce yok sayılır.
       showInNav: this.permissionService.isAdmin() ? this.form.value.showInNav : false
-    }).subscribe({
+    }).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.saving = false;
         if (res.success) {

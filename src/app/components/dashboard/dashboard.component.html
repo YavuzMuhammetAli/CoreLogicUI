@@ -1,13 +1,13 @@
 <div class="page-header">
   <div>
     <span class="eyebrow">{{ 'dashboard.eyebrow' | t }}</span>
-    <h1 class="page-title">{{ dashboard?.name ?? ('dashboard.view.defaultTitle' | t) }}</h1>
+    <h1 class="page-title">{{ dashboard()?.name ?? ('dashboard.view.defaultTitle' | t) }}</h1>
     <p class="page-subtitle">{{ 'dashboard.view.subtitle' | t }}</p>
   </div>
   <a routerLink="/dashboard/new" class="btn btn-primary">{{ 'dashboard.view.newButton' | t }}</a>
 </div>
 
-@if (loading) {
+@if (loading()) {
   <div class="panel">
     <div class="empty-state">
       <span class="spinner" [attr.aria-label]="'dashboard.view.loadingAria' | t"></span>
@@ -15,14 +15,16 @@
   </div>
 }
 
-@if (loadError) {
-  <div class="alert alert-danger" role="alert">{{ loadError }}</div>
+@if (loadError(); as err) {
+  <div class="alert alert-danger" role="alert">{{ err }}</div>
 }
 
-@if (!loading && !loadError && dashboard) {
-  @if (widgetViews.length > 0) {
+@if (!loading() && !loadError() && dashboard()) {
+  @if (widgetViews().length > 0) {
     <div class="widget-grid">
-      @for (item of widgetViews; track item.result.widget.reportDefinitionId) {
+      <!-- track $index: aynı raporu gösteren iki widget aynı dashboard'da olabilir;
+           reportDefinitionId ile izlemek yinelenen anahtar hatası verirdi. -->
+      @for (item of widgetViews(); track $index) {
         <div
           class="panel widget"
           [style.grid-column]="(item.result.widget.x + 1) + ' / span ' + item.result.widget.w"

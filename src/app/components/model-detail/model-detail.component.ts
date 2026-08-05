@@ -1,16 +1,37 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { CommonModule, Location } from '@angular/common';
+import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { forkJoin, of, Subscription } from 'rxjs';
+import { forkJoin, of, Observable, Subscription } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { PublishedModelService, PublishedModel, PublishedColumn } from '../../services/published-model.service';
+import {
+  PublishedModelService, PublishedModel, PublishedColumn, TreeSaveResult
+} from '../../services/published-model.service';
 import { PublishModelService } from '../../services/publish-model.service';
 import { PermissionService } from '../../services/permission.service';
 import { ModelColumnSettingService, ModelColumnSettingDto } from '../../services/model-column-setting.service';
 import { ColumnVisibilityComponent, ColumnVisibilityItem } from '../shared/column-visibility/column-visibility.component';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { RecordMetadataService } from '../../services/record-metadata.service';
+import { PublishedColumnSchema } from '../../services/published-table.service';
+import { RecordFormDialogComponent } from '../shared/record-form-dialog/record-form-dialog.component';
+import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
+import { LookupPickerComponent } from '../shared/lookup-picker/lookup-picker.component';
+import { LookupLabelService } from '../../services/lookup-label.service';
+import {
+  StagedNode,
+  createStagedNode,
+  normalizeRow,
+  fkColumnFor,
+  validatorsFor,
+  toTreeDto,
+  flattenNodes,
+  dirtyNodes,
+  hasInserts,
+  hasErrors as treeHasErrors,
+  pendingCount as treePendingCount
+} from './staged-tree.util';
 import {
   inputTypeFor,
   isImage,
@@ -19,16 +40,30 @@ import {
   downloadFile,
   sanitizePayload,
   fieldValue,
-  parseEnumValues
+  parseEnumValues,
+  toInputValue,
+  stepFor
 } from '../model-data/model-data.util';
-
-/** Lookup kolonu için bir seçenek: FK olarak kaydedilecek ID + kullanıcıya gösterilecek etiket. */
-interface LookupOption {
-  id: number;
-  label: string;
-}
+import { markDirty } from '../../utils/change-detection';
 
 type DataRow = Record<string, unknown>;
+
+/**
+ * "Kaydet" akışındaki tek bir sunucu adımı.
+ *
+ * Bir kaydetme iki farklı istek türünden oluşabilir: yeni satırların TEK transaction'da
+ * yazıldığı `addTree` ve kaydedilmiş ama değiştirilmiş her satır için ayrı bir `update`.
+ * İkisi `forkJoin` ile birlikte yürütülür, sonuçlar bu ortak biçimde toplanır.
+ */
+interface TreeStep {
+  kind: 'tree' | 'update';
+  ok: boolean;
+  message: string;
+  /** `kind: 'tree'` için sunucunun ID/hata sözlüğü. */
+  data?: TreeSaveResult;
+  /** `kind: 'update'` için hedef düğüm. */
+  node?: StagedNode;
+}
 
 /** Bir alt model sekmesinin tüm durumu */
 interface TabState {
@@ -36,21 +71,45 @@ interface TabState {
   columns: PublishedColumn[];
   fkColumn: string;
 
+  /** Sunucudan gelen KAYITLI satırlar (yalnızca mevcut kayıt modunda dolar). */
   rows: DataRow[];
   loading: boolean;
   error: string | null;
+
+  /**
+   * Henüz kaydedilmemiş VEYA kaydedilirken hata almış satırlar — kendi alt ağaçlarıyla.
+   * Kaydetme hatasında bu liste ASLA temizlenmez; kullanıcı düzeltip tekrar dener.
+   */
+  staged: StagedNode[];
 
   searchTerm: string;
   sortCol: string;
   sortDir: 'asc' | 'desc';
 
-  formMode: 'none' | 'add' | 'edit';
-  editingRow: DataRow | null;
-  form: FormGroup | null;
-  formLoading: boolean;
-  formMsg: string | null;
-  formOk: boolean | null;
   fileNames: Record<string, string>;
+
+  /** Toplu silme için seçili KAYITLI satırların ID'leri. */
+  selectedIds: Set<number>;
+  /** Toplu kaldırma için seçili BEKLEYEN satırların geçici localId'leri. */
+  selectedStaged: Set<number>;
+  /** Toplu silmede silinemeyen satırların hata özeti (satırlar seçili kalır). */
+  bulkErrors: string[];
+  /** Son toplu silme denemesinde kaç kayıt gönderildi (özet metni için). */
+  bulkTotal: number;
+
+  /**
+   * getDisplayRows() sonucunun önbelleği. Şablon @for'u ve seçim yardımcıları bu metodu
+   * change detection turu başına birden çok kez çağırıyor; her çağrıda kopyala+filtrele+
+   * sırala yapmak ve YENİ dizi kimliği döndürmek @for'u her turda baştan diff'letiyordu.
+   * Girdiler (rows referansı, arama, sıralama) değişmedikçe aynı dizi örneği döner.
+   */
+  displayCache?: {
+    rows: DataRow[];
+    searchTerm: string;
+    sortCol: string;
+    sortDir: 'asc' | 'desc';
+    result: DataRow[];
+  };
 
   // Admin tarafından yönetilen tablo kolon görünürlüğü — null = ayar yok, tümü görünür.
   // Alt modelin kendi liste sayfasıyla ('list' viewType) AYNI ayarı paylaşır.
@@ -61,12 +120,24 @@ interface TabState {
 @Component({
   selector: 'app-model-detail',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, ColumnVisibilityComponent, TranslatePipe],
+  imports: [
+    CommonModule, ReactiveFormsModule, RouterLink, ColumnVisibilityComponent,
+    TranslatePipe, RecordFormDialogComponent, ConfirmDialogComponent, LookupPickerComponent
+  ],
   templateUrl: './model-detail.component.html',
-  styleUrls: ['./model-detail.component.scss']
+  styleUrls: ['./model-detail.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ModelDetailComponent implements OnInit, OnDestroy {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   private readonly languageService = inject(LanguageService);
+  private readonly metadata = inject(RecordMetadataService);
+  /** Tablo hücrelerindeki lookup FK id'lerini toplu şekilde etikete çevirir. */
+  private readonly lookupLabels = inject(LookupLabelService);
+  /** Adres çubuğunu sayfa yeniden yüklemeden güncellemek için (yeni → düzenleme geçişi). */
+  private readonly location = inject(Location);
 
   typeName = '';
   recordId = 0;
@@ -97,11 +168,22 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   tabStates = new Map<string, TabState>();
   loadingChildren = false;
 
-  /** Yeni kayıt akışında birden fazla child satırı biriktirmek için sayaç */
-  private localIdSeq = 0;
+  /** Üst modelin şema kuralları (regex/uzunluk/aralık) — istemci doğrulaması için. */
+  private parentRules = new Map<string, PublishedColumnSchema>();
 
-  /** Toplu kayıt sonrası kaydedilemeyenlerin listesi (edit instance'ta gösterilir) */
+  /** Toplu kayıt sonrası kaydedilemeyenlerin listesi (satırlar ekranda KALIR, bu yalnızca özet) */
   childSaveErrors: string[] = [];
+
+  // ─── Kayıt pop-up'ı (alt model ekle/düzenle) ────────────────────────────────
+
+  dialogOpen = false;
+  dialogNode: StagedNode | null = null;
+  dialogTabName = '';
+  dialogIsEdit = false;
+  /** Açık dialogdaki tipin FK kolonu — formda gizlenmesi gereken tek `...Id` alanı. */
+  dialogFkColumn: string | null = null;
+  /** Düzenlenen satır sunucuda kayıtlıysa ID'si; null ise bellekte bekleyen bir satır. */
+  private dialogSavedId: number | null = null;
 
   // Admin tarafından yönetilen üst form kolon görünürlüğü — null = ayar yok, tümü görünür
   visibleParentColumnNames: string[] | null = null;
@@ -122,7 +204,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Route data'dan modu bir kez belirle (snapshot; yeni ve düzenle route'ları farklı)
     this.isNew = this.route.snapshot.data['mode'] === 'new';
-    this.routeSub = this.route.paramMap.subscribe(params => {
+    this.routeSub = this.route.paramMap.pipe(markDirty(this.cdr)).subscribe(params => {
       this.typeName = params.get('typeName') ?? '';
       this.recordId = Number(params.get('id') ?? 0);
       this.reset();
@@ -142,48 +224,40 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   imageSrc       = imageSrc;
   isBase64Value  = isBase64Value;
   parseEnumValues = parseEnumValues;
+  stepFor        = stepFor;
 
-  // ─── Lookup seçenekleri (hedef model kayıtları, FK dropdown'u için) ─────────
+  // ─── Lookup etiketleri (tablo hücreleri için) ───────────────────────────────
+  //
+  // Dropdown artık tembel yükleniyor (app-lookup-picker), yani hedef tablonun tam
+  // listesi hiçbir yerde tutulmuyor. Hücrelerde etiket gösterebilmek için görünen
+  // satırlardaki benzersiz FK id'leri toplanıp kolon başına TEK istekle çözülür.
 
-  /** lookupTargetTable → seçenekler (ID + LookupDisplayColumn değeri). Hedef başına bir kez yüklenir. */
-  lookupOptionsCache: Record<string, LookupOption[]> = {};
-  private lookupOptionsLoading = new Set<string>();
+  /** Görünen satırlardaki lookup id'lerinin etiketlerini (eksik olanları) çözer. */
+  private resolveLookupLabels(columns: PublishedColumn[], rows: DataRow[]): void {
+    if (rows.length === 0) return;
 
-  /** Verilen kolon listesindeki her lookup kolonu için hedef tablonun kayıtlarını (gerekirse) yükler. */
-  private ensureLookupOptions(columns: PublishedColumn[]): void {
     for (const col of columns) {
       if (col.dataType !== 'lookup' || !col.lookupTargetTable) continue;
-      const target = col.lookupTargetTable;
-      if (this.lookupOptionsCache[target] || this.lookupOptionsLoading.has(target)) continue;
 
-      this.lookupOptionsLoading.add(target);
-      this.publishedModel.getAll(target).subscribe({
-        next: res => {
-          this.lookupOptionsLoading.delete(target);
-          const rows = (res.success ? (res.data ?? []) : []) as DataRow[];
-          const displayCol = col.lookupDisplayColumn;
-          this.lookupOptionsCache[target] = rows.map(r => ({
-            id: Number(fieldValue(r, 'ID') ?? 0),
-            label: displayCol ? String(fieldValue(r, displayCol) ?? '') : String(fieldValue(r, 'ID') ?? '')
-          }));
-        },
-        error: () => { this.lookupOptionsLoading.delete(target); }
-      });
+      const ids = rows
+        .map(r => Number(fieldValue(r, col.columnName)))
+        .filter(n => Number.isFinite(n) && n > 0);
+
+      if (ids.length === 0) continue;
+
+      this.lookupLabels
+        .ensure(col.lookupTargetTable, col.lookupDisplayColumn, ids)
+        .pipe(markDirty(this.cdr))
+        .subscribe();
     }
   }
 
-  /** Bir lookup kolonu için dropdown seçenekleri (yüklenene kadar boş). */
-  lookupOptionsForColumn(col: PublishedColumn): LookupOption[] {
-    return (col.lookupTargetTable && this.lookupOptionsCache[col.lookupTargetTable]) || [];
-  }
-
-  /** Tablo hücresinde lookup FK ID'sini display değerine çevirir (yüklenmemişse ham ID gösterilir). */
+  /** Tablo hücresinde lookup FK ID'sini etikete çevirir (çözülmemişse ham ID gösterilir). */
   lookupCellLabel(col: PublishedColumn, value: unknown): string {
     if (value == null || value === '') return '—';
     const target = col.lookupTargetTable;
-    const options = target ? this.lookupOptionsCache[target] : null;
-    const found = options?.find(o => o.id === Number(value));
-    return found ? found.label : String(value);
+    if (!target) return String(value);
+    return this.lookupLabels.label(target, col.lookupDisplayColumn, Number(value)) ?? String(value);
   }
 
   downloadParentFile(b64: string, colName: string): void {
@@ -213,7 +287,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.tabStates.clear();
     this.loadingChildren = false;
     this.childSaveErrors = [];
-    this.localIdSeq = 0;
+    this.parentRules = new Map();
+    this.closeRecordDialog();
     this.visibleParentColumnNames = null;
   }
 
@@ -224,7 +299,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
     if (this.isNew) {
       // Yeni kayıt modu: model şemasını yükle + alt sekmeleri hazırla
-      this.publishedModel.getModels().subscribe({
+      this.publishedModel.getModels().pipe(markDirty(this.cdr)).subscribe({
         next: res => {
           this.loadingRecord = false;
           if (res.success) {
@@ -252,7 +327,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     forkJoin({
       models: this.publishedModel.getModels(),
       record: this.publishedModel.get(this.typeName, this.recordId)
-    }).subscribe({
+    }).pipe(markDirty(this.cdr)).subscribe({
       next: ({ models, record }) => {
         this.loadingRecord = false;
 
@@ -274,12 +349,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
         }
 
         this.loadChildren();
-        // Toplu kayıt akışından gelen kısmi hata mesajlarını oku
-        const navState = this.router.lastSuccessfulNavigation?.extras?.state as Record<string, unknown> | null;
-        const errors = navState?.['childSaveErrors'];
-        if (Array.isArray(errors)) {
-          this.childSaveErrors = errors as string[];
-        }
+        // Not: kısmi kayıt hataları artık route state'i ile taşınmıyor — kaydedilemeyen
+        // satırlar sayfadan hiç ayrılmadan `state.staged` içinde yerinde kalıyor.
       },
       error: err => {
         this.loadingRecord = false;
@@ -290,7 +361,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   private retryWithAssembly(): void {
-    this.publishModel.loadAssembly().subscribe({
+    this.publishModel.loadAssembly().pipe(markDirty(this.cdr)).subscribe({
       next: () => this.loadAll(),
       error: () => {
         this.loadingRecord = false;
@@ -301,7 +372,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
   private loadChildren(): void {
     this.loadingChildren = true;
-    this.publishedModel.getChildModels(this.typeName).subscribe({
+    this.publishedModel.getChildModels(this.typeName).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.loadingChildren = false;
         if (res.success && res.data?.length) {
@@ -311,7 +382,6 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
             const meta = this.allModels.find(m => m.typeName === name);
             const state = this.buildTabState(name, meta?.columns ?? []);
             this.tabStates.set(name, state);
-            this.ensureLookupOptions(state.columns);
             this.loadTabRows(state);
             this.loadTabColumnVisibility(state);
           }
@@ -327,7 +397,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
    */
   private loadChildrenForNew(): void {
     this.loadingChildren = true;
-    this.publishedModel.getChildModels(this.typeName).subscribe({
+    this.publishedModel.getChildModels(this.typeName).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.loadingChildren = false;
         if (res.success && res.data?.length) {
@@ -338,7 +408,6 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
             const state = this.buildTabState(name, meta?.columns ?? []);
             // Yeni kayıt modunda server'dan veri çekilmez; rows boş kalır
             this.tabStates.set(name, state);
-            this.ensureLookupOptions(state.columns);
             this.loadTabColumnVisibility(state);
           }
         }
@@ -380,7 +449,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   /** Admin tarafından kayıtlı detay-görünümü kolon ayarını yükler */
   private loadColumnVisibility(): void {
     const typeName = this.typeName;
-    this.modelColumnSetting.get(typeName, 'detail').subscribe({
+    this.modelColumnSetting.get(typeName, 'detail').pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (typeName !== this.typeName) return; // bu sırada başka modele geçilmiş olabilir
         this.visibleParentColumnNames = (res.success && res.data?.visibleColumns?.length)
@@ -395,7 +464,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   onSaveColumnVisibility(names: string[]): void {
     this.savingColumnVisibility = true;
     const dto: ModelColumnSettingDto = { typeName: this.typeName, viewType: 'detail', visibleColumns: names };
-    this.modelColumnSetting.set(dto).subscribe({
+    this.modelColumnSetting.set(dto).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.savingColumnVisibility = false;
         if (res.success) this.visibleParentColumnNames = names;
@@ -417,17 +486,38 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
   // ─── Üst kayıt formu ────────────────────────────────────────────────────────
 
+  /**
+   * Üst modelin şema kurallarını (regex/uzunluk/aralık) yükler ve formu yeniden kurar.
+   * Kurallar backend `ValidateDynamicEntity` ile AYNI kaynaktan gelir — böylece
+   * kullanıcı hataları sunucuya gitmeden alanın altında görür.
+   */
+  private loadParentRules(rebuild: () => void): void {
+    this.metadata.rules$(this.typeName).pipe(markDirty(this.cdr)).subscribe(rules => {
+      this.parentRules = rules;
+      rebuild();
+    });
+  }
+
+  /** Bir üst-kayıt kolonunun doğrulayıcıları — şema kuralı varsa ona göre. */
+  private parentValidators(col: PublishedColumn) {
+    return validatorsFor(col, this.parentRules.get(col.columnName));
+  }
+
   /** Mevcut kayıt ile düzenleme formunu oluştur */
   openEditMode(): void {
     if (!this.model || !this.record) return;
-    this.ensureLookupOptions(this.parentColumns);
-    const controls: Record<string, unknown> = {};
-    for (const col of this.parentColumns) {
-      const v = this.recordRaw(col) ?? '';
-      const validators = col.isNullable ? [] : [Validators.required];
-      controls[col.columnName] = [v, validators];
-    }
-    this.editForm = this.fb.group(controls);
+    const build = () => {
+      const controls: Record<string, unknown> = {};
+      for (const col of this.parentColumns) {
+        // Ham ISO tarih değeri doğrudan bağlanırsa datetime-local kutusu onu sessizce
+        // atar ve alan BOŞ açılır; kullanıcı dokununca tarayıcı o anki zamanı yazar.
+        const v = toInputValue(col.dataType, this.recordRaw(col)) ?? '';
+        controls[col.columnName] = [v, this.parentValidators(col)];
+      }
+      this.editForm = this.fb.group(controls);
+    };
+    build();                          // kurallar gelene kadar form kullanılabilir kalsın
+    this.loadParentRules(build);      // kurallar gelince doğrulayıcılarla yeniden kurulur
     this.editMsg = null;
     this.editOk = null;
     this.editFileNames = {};
@@ -436,17 +526,41 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
   /** Yeni kayıt modu için boş form oluştur */
   private buildNewForm(): void {
-    this.ensureLookupOptions(this.parentColumns);
-    const controls: Record<string, unknown> = {};
-    for (const col of this.parentColumns) {
-      const validators = col.isNullable ? [] : [Validators.required];
-      controls[col.columnName] = ['', validators];
-    }
-    this.editForm = this.fb.group(controls);
+    const build = () => {
+      const previous = this.editForm?.value ?? {};
+      const controls: Record<string, unknown> = {};
+      for (const col of this.parentColumns) {
+        controls[col.columnName] = [previous[col.columnName] ?? '', this.parentValidators(col)];
+      }
+      this.editForm = this.fb.group(controls);
+    };
+    build();
+    this.loadParentRules(build);
     this.editMsg = null;
     this.editOk = null;
     this.editFileNames = {};
     this.showEditForm = true;
+  }
+
+  /**
+   * Bir üst-form alanının gösterilecek hata metni. `pattern` hatasında kolonun
+   * kendi "Regex Mesajı" tercih edilir — kullanıcıya en anlamlı açıklama odur.
+   */
+  parentFieldError(col: PublishedColumn): string | null {
+    const c = this.editForm?.get(col.columnName);
+    if (!c || !c.touched || !c.errors) return null;
+    const label = this.colLabel(col);
+    const rule = this.parentRules.get(col.columnName);
+
+    if (c.errors['required']) return this.languageService.t('model.detail.fieldRequired', { label });
+    if (c.errors['pattern']) {
+      return rule?.regexMessage?.trim() || this.languageService.t('model.detail.fieldPattern', { label });
+    }
+    if (c.errors['minlength']) return this.languageService.t('model.detail.fieldMinLength', { label, min: rule?.minLength ?? 0 });
+    if (c.errors['maxlength']) return this.languageService.t('model.detail.fieldMaxLength', { label, max: rule?.maxLength ?? 0 });
+    if (c.errors['min']) return this.languageService.t('model.detail.fieldMin', { label, min: rule?.min ?? 0 });
+    if (c.errors['max']) return this.languageService.t('model.detail.fieldMax', { label, max: rule?.max ?? 0 });
+    return null;
   }
 
   submitEdit(): void {
@@ -459,51 +573,26 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.editOk = null;
 
     if (this.isNew) {
-      // Yeni kayıt oluştur
-      const jsonData: DataRow = sanitizePayload(this.parentColumns, this.editForm.value);
-      this.publishedModel.add(this.typeName, jsonData).subscribe({
-        next: res => {
-          this.editLoading = false;
-          this.editOk = res.success;
-          this.editMsg = res.message;
-          if (res.success) {
-            // Oluşturulan kaydı bulmak için listeyi çek → en büyük ID heuristic
-            this.publishedModel.getAll(this.typeName).subscribe({
-              next: listRes => {
-                const rows = (listRes.success ? (listRes.data ?? []) : []) as DataRow[];
-                const maxId = rows.reduce((max, r) => {
-                  const id = Number(fieldValue(r, 'ID') ?? 0);
-                  return id > max ? id : max;
-                }, 0);
-                if (maxId > 0) {
-                  // Biriken alt kayıtları kaydet, ardından düzenleme sayfasına geç
-                  this.persistStagedChildren(maxId);
-                } else {
-                  this.router.navigate(['/models', this.typeName]);
-                }
-              },
-              error: () => this.router.navigate(['/models', this.typeName])
-            });
-          }
-        },
-        error: err => {
-          this.editLoading = false;
-          this.editOk = false;
-          const e = err as { error?: { message?: string }; message?: string };
-          this.editMsg = e?.error?.message ?? e?.message ?? this.languageService.t('model.detail.createFailed');
-        }
-      });
+      // Yeni kayıt: ana kayıt + tüm bekleyen alt ağaç TEK istekte, TEK transaction'da.
+      // Kök henüz yok → existingRootId null; sunucu ID'leri kendisi üretip döndürür.
+      this.saveTree(null);
     } else {
       // Mevcut kaydı güncelle — sayfada kal, başarı mesajı göster
       const jsonData: DataRow = { ...sanitizePayload(this.parentColumns, this.editForm.value), ID: this.recordId };
-      this.publishedModel.update(this.typeName, jsonData).subscribe({
+      this.publishedModel.update(this.typeName, jsonData).pipe(markDirty(this.cdr)).subscribe({
         next: res => {
-          this.editLoading = false;
           this.editOk = res.success;
           this.editMsg = res.message;
           if (res.success) {
             // Kaydı optimistik güncelle, sayfada kal
             this.record = { ...this.record, ...jsonData };
+          }
+          // Bekleyen alt kayıt varsa aynı "Kaydet" onları da gönderir. Kök zaten var:
+          // existingRootId ile geçilir, böylece ana kayıt İKİNCİ KEZ OLUŞTURULMAZ.
+          if (this.totalStagedCount > 0) {
+            this.saveTree(this.recordId);
+          } else {
+            this.editLoading = false;
           }
         },
         error: err => {
@@ -516,13 +605,39 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Üst kaydı sil — yalnızca mevcut kayıt modunda kullanılır */
-  deleteRecord(): void {
-    if (this.isNew || this.deleting) return;
-    if (!confirm(this.languageService.t('model.detail.deleteConfirm', { id: this.recordId }))) return;
+  /**
+   * Sayfayı yeniden yüklemeden "yeni kayıt" modundan "düzenleme" moduna geçirir.
+   *
+   * Route değiştirilirse component yeniden kurulur ve bellekteki staged ağaç yok olur —
+   * kullanıcının kaybettiği veri tam olarak buydu. Bu yüzden yalnızca adres çubuğu
+   * güncellenir (table-detail'deki oluşturma → düzenleme geçişiyle aynı desen).
+   */
+  private switchToEditMode(newId: number): void {
+    this.isNew = false;
+    this.recordId = newId;
+    this.record = { ...(this.editForm?.value ?? {}), ID: newId } as DataRow;
+    this.location.replaceState(`/models/${this.typeName}/${newId}`);
+  }
 
+  /** Onay bekleyen üst-kayıt silme; true ise diyalog açıktır. */
+  deleteRecordConfirmOpen = false;
+
+  /** Üst kaydı sil — yalnızca mevcut kayıt modunda kullanılır */
+  askDeleteRecord(): void {
+    if (this.isNew || this.deleting) return;
+    this.deleteRecordConfirmOpen = true;
+  }
+
+  cancelDeleteRecord(): void {
+    this.deleteRecordConfirmOpen = false;
+  }
+
+  confirmDeleteRecord(): void {
+    if (this.isNew || this.deleting) return;
+
+    this.deleteRecordConfirmOpen = false;
     this.deleting = true;
-    this.publishedModel.delete(this.typeName, this.recordId).subscribe({
+    this.publishedModel.delete(this.typeName, this.recordId).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.deleting = false;
         if (res.success) {
@@ -571,32 +686,44 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return {
       typeName,
       columns,
-      fkColumn: this.typeName + 'Id',
+      fkColumn: fkColumnFor(this.typeName),
       rows: [],
       loading: false,
       error: null,
+      staged: [],
       searchTerm: '',
       sortCol: 'ID',
       sortDir: 'asc',
-      formMode: 'none',
-      editingRow: null,
-      form: null,
-      formLoading: false,
-      formMsg: null,
-      formOk: null,
       fileNames: {},
+      selectedIds: new Set<number>(),
+      selectedStaged: new Set<number>(),
+      bulkErrors: [],
+      bulkTotal: 0,
       visibleColumnNames: null,
       savingColumnVisibility: false
     };
   }
 
+  /**
+   * Sunucudaki KAYITLI satırları tazeler.
+   *
+   * `state.staged` (bekleyen/hatalı satırlar) burada ASLA temizlenmez — eskiden
+   * sunucu yanıtı tüm satırları eziyor ve kaydedilemeyen kayıt ekrandan siliniyordu.
+   */
   loadTabRows(state: TabState): void {
+    if (this.isNew || !this.recordId) return;   // henüz üst kayıt yok, çekilecek satır da yok
     state.loading = true;
     state.error = null;
-    this.publishedModel.getAll(state.typeName, state.fkColumn, this.recordId).subscribe({
+    this.publishedModel.getAll(state.typeName, state.fkColumn, this.recordId).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         state.loading = false;
         state.rows = res.success ? (res.data ?? []) as DataRow[] : [];
+        // Satırlar geldi: bu sayfadaki lookup FK'lerinin etiketlerini kolon başına
+        // tek istekte çöz (dropdown artık tam listeyi tutmuyor).
+        this.resolveLookupLabels(state.columns, state.rows);
+        // Artık var olmayan satırların ID'leri seçili kalmasın.
+        const ids = new Set(state.rows.map(r => this.rowId(r)));
+        state.selectedIds = new Set([...state.selectedIds].filter(id => ids.has(id)));
         if (!res.success) state.error = res.message ?? this.languageService.t('model.detail.recordsFetchFailed');
       },
       error: err => {
@@ -650,7 +777,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
    * (kendi liste sayfası + üst kaydın bu sekmesi) aynı görünür.
    */
   private loadTabColumnVisibility(state: TabState): void {
-    this.modelColumnSetting.get(state.typeName, 'list').subscribe({
+    this.modelColumnSetting.get(state.typeName, 'list').pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         state.visibleColumnNames = (res.success && res.data?.visibleColumns?.length)
           ? res.data.visibleColumns
@@ -664,7 +791,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   onSaveTabColumnVisibility(state: TabState, names: string[]): void {
     state.savingColumnVisibility = true;
     const dto: ModelColumnSettingDto = { typeName: state.typeName, viewType: 'list', visibleColumns: names };
-    this.modelColumnSetting.set(dto).subscribe({
+    this.modelColumnSetting.set(dto).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         state.savingColumnVisibility = false;
         if (res.success) state.visibleColumnNames = names;
@@ -683,6 +810,29 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   getDisplayRows(state: TabState): DataRow[] {
+    // Önbellek: girdiler aynıysa AYNI dizi örneği döner. Kimlik sabit kaldığı için
+    // @for yeniden diff yapmaz ve pahalı localeCompare sıralaması tekrarlanmaz.
+    const cache = state.displayCache;
+    if (cache
+        && cache.rows === state.rows
+        && cache.searchTerm === state.searchTerm
+        && cache.sortCol === state.sortCol
+        && cache.sortDir === state.sortDir) {
+      return cache.result;
+    }
+
+    const result = this.computeDisplayRows(state);
+    state.displayCache = {
+      rows: state.rows,
+      searchTerm: state.searchTerm,
+      sortCol: state.sortCol,
+      sortDir: state.sortDir,
+      result
+    };
+    return result;
+  }
+
+  private computeDisplayRows(state: TabState): DataRow[] {
     let rows = [...state.rows];
 
     // Arama filtresi
@@ -704,9 +854,11 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
         const av = fieldValue(a, col) ?? '';
         const bv = fieldValue(b, col) ?? '';
         const an = Number(av), bn = Number(bv);
+        // Locale sabit 'tr' DEĞİL: uygulama TR/EN arasında geçiş yapıyor ve
+        // harf sıralaması dile göre değişir (ör. TR'de i/ı, ç, ş).
         let cmp = !isNaN(an) && !isNaN(bn)
           ? an - bn
-          : String(av).localeCompare(String(bv), 'tr', { numeric: true });
+          : String(av).localeCompare(String(bv), this.languageService.lang(), { numeric: true });
         return state.sortDir === 'asc' ? cmp : -cmp;
       });
     }
@@ -739,197 +891,484 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return typeof v === 'string' ? v : '';
   }
 
-  // ─── Sekme form yönetimi ─────────────────────────────────────────────────────
+  // ─── Satır seçimi (kayıtlı satırlar) ────────────────────────────────────────
+  // Seçim, arama filtresinden geçen GÖRÜNEN satırlar üzerinden yürür: kullanıcı
+  // "tümünü seç" derken ekranda gördüğünü kasteder, gizli satırları değil.
 
-  openTabAddForm(state: TabState): void {
-    state.editingRow = null;
-    state.form = this.buildTabForm(state, null);
-    state.formMode = 'add';
-    state.formMsg = null;
-    state.formOk = null;
-    state.fileNames = {};
+  isRowSelected(state: TabState, row: DataRow): boolean {
+    return state.selectedIds.has(this.rowId(row));
   }
 
-  openTabEditForm(state: TabState, row: DataRow): void {
-    state.editingRow = row;
-    state.form = this.buildTabForm(state, row);
-    state.formMode = 'edit';
-    state.formMsg = null;
-    state.formOk = null;
-    state.fileNames = {};
+  toggleRow(state: TabState, row: DataRow): void {
+    const id = this.rowId(row);
+    if (state.selectedIds.has(id)) state.selectedIds.delete(id);
+    else state.selectedIds.add(id);
   }
 
-  closeTabForm(state: TabState): void {
-    state.formMode = 'none';
-    state.editingRow = null;
-    state.form = null;
-    state.formMsg = null;
-    state.formOk = null;
+  selectedCount(state: TabState): number {
+    return state.selectedIds.size;
   }
 
-  private buildTabForm(state: TabState, row: DataRow | null): FormGroup {
-    const controls: Record<string, unknown> = {};
-    for (const col of this.visibleCols(state)) {
-      const v = row ? (fieldValue(row, col.columnName) ?? '') : '';
-      const validators = col.isNullable ? [] : [Validators.required];
-      controls[col.columnName] = [v, validators];
-    }
-    return this.fb.group(controls);
+  allRowsSelected(state: TabState): boolean {
+    const rows = this.getDisplayRows(state);
+    return rows.length > 0 && rows.every(r => state.selectedIds.has(this.rowId(r)));
   }
 
-  submitTabForm(state: TabState): void {
-    if (!state.form || state.form.invalid || state.formLoading) {
-      state.form?.markAllAsTouched();
-      return;
-    }
+  someRowsSelected(state: TabState): boolean {
+    return state.selectedIds.size > 0 && !this.allRowsSelected(state);
+  }
 
-    // Yeni kayıt modunda — bellekte biriktir, HTTP yapma
-    if (this.isNew) {
-      if (state.formMode === 'edit' && state.editingRow) {
-        // Staged satırı güncelle
-        const localId = state.editingRow['__localId'] as number;
-        const idx = state.rows.findIndex(r => r['__localId'] === localId);
-        if (idx >= 0) {
-          state.rows[idx] = { ...state.form.value, __localId: localId };
-        }
-      } else {
-        // Yeni staged satır ekle
-        state.rows = [...state.rows, { ...state.form.value, __localId: ++this.localIdSeq }];
-      }
-      this.closeTabForm(state);
-      return;
-    }
-
-    // Mevcut kayıt modu — backend'e gönder
-    state.formLoading = true;
-    state.formMsg = null;
-    state.formOk = null;
-
-    const jsonData: DataRow = { ...sanitizePayload(state.columns, state.form.value), [state.fkColumn]: this.recordId };
-
-    if (state.formMode === 'edit' && state.editingRow) {
-      jsonData['ID'] = fieldValue(state.editingRow, 'ID');
-      this.publishedModel.update(state.typeName, jsonData).subscribe({
-        next: res => this.handleTabFormRes(state, res),
-        error: err => this.handleTabFormErr(state, err)
-      });
+  toggleAllRows(state: TabState): void {
+    const rows = this.getDisplayRows(state);
+    if (this.allRowsSelected(state)) {
+      for (const r of rows) state.selectedIds.delete(this.rowId(r));
     } else {
-      this.publishedModel.add(state.typeName, jsonData).subscribe({
-        next: res => this.handleTabFormRes(state, res),
-        error: err => this.handleTabFormErr(state, err)
-      });
+      for (const r of rows) state.selectedIds.add(this.rowId(r));
     }
   }
 
-  private handleTabFormRes(state: TabState, res: { success: boolean; message: string }): void {
-    state.formLoading = false;
-    state.formOk = res.success;
-    state.formMsg = res.message;
-    if (res.success) {
-      this.loadTabRows(state);
-      setTimeout(() => this.closeTabForm(state), 1200);
-    }
+  // ─── Satır seçimi (bekleyen satırlar) ───────────────────────────────────────
+
+  isStagedSelected(state: TabState, node: StagedNode): boolean {
+    return state.selectedStaged.has(node.localId);
   }
 
-  private handleTabFormErr(state: TabState, err: unknown): void {
-    state.formLoading = false;
-    state.formOk = false;
-    const e = err as { error?: { message?: string }; message?: string };
-    state.formMsg = e?.error?.message ?? e?.message ?? this.languageService.t('model.detail.operationFailed');
+  toggleStaged(state: TabState, node: StagedNode): void {
+    if (state.selectedStaged.has(node.localId)) state.selectedStaged.delete(node.localId);
+    else state.selectedStaged.add(node.localId);
+  }
+
+  selectedStagedCount(state: TabState): number {
+    return state.selectedStaged.size;
+  }
+
+  allStagedSelected(state: TabState): boolean {
+    return state.staged.length > 0 && state.staged.every(n => state.selectedStaged.has(n.localId));
+  }
+
+  someStagedSelected(state: TabState): boolean {
+    return state.selectedStaged.size > 0 && !this.allStagedSelected(state);
+  }
+
+  toggleAllStaged(state: TabState): void {
+    if (this.allStagedSelected(state)) state.selectedStaged.clear();
+    else state.staged.forEach(n => state.selectedStaged.add(n.localId));
+  }
+
+  // ─── Toplu silme / kaldırma ─────────────────────────────────────────────────
+
+  /** Onay diyaloğunun hedefi; null ise diyalog kapalı. */
+  bulkState: TabState | null = null;
+  /** 'saved' = sunucudan sil, 'staged' = bellekten kaldır. */
+  bulkMode: 'saved' | 'staged' = 'saved';
+  bulkBusy = false;
+
+  openBulkDelete(state: TabState): void {
+    this.bulkState = state;
+    this.bulkMode = 'saved';
+  }
+
+  openBulkRemoveStaged(state: TabState): void {
+    this.bulkState = state;
+    this.bulkMode = 'staged';
+  }
+
+  cancelBulk(): void {
+    if (this.bulkBusy) return;
+    this.bulkState = null;
+  }
+
+  get bulkTitle(): string {
+    return this.languageService.t(
+      this.bulkMode === 'staged' ? 'model.detail.bulkRemoveStagedTitle' : 'model.detail.bulkDeleteTitle'
+    );
+  }
+
+  get bulkMessage(): string {
+    if (!this.bulkState) return '';
+    const count = this.bulkMode === 'staged'
+      ? this.selectedStagedCount(this.bulkState)
+      : this.selectedCount(this.bulkState);
+    return this.languageService.t(
+      this.bulkMode === 'staged' ? 'model.detail.bulkRemoveStagedMessage' : 'model.detail.bulkDeleteMessage',
+      { count }
+    );
   }
 
   /**
-   * Yeni kayıt kaydedildikten sonra, bellekte biriken alt kayıtları sırayla backend'e gönderir.
-   * Başarısız olanlar hata listesiyle edit sayfasına aktarılır.
+   * Onaylanan toplu işlemi uygular.
+   *
+   * Sunucuda toplu silme ucu YOKTUR; her kayıt tek tek silinir. Kısmi başarı kabul edilir:
+   * silinenler listeden düşer, silinemeyenler SEÇİLİ KALIR ve hataları özetlenir — böylece
+   * kullanıcı yalnızca sorunlu satırlarla ilgilenir.
    */
-  private persistStagedChildren(parentId: number): void {
-    // Tüm tab'lardan staged satırları topla
-    const tasks: Array<{ typeName: string; fkColumn: string; row: DataRow; label: string }> = [];
-    let taskIdx = 0;
-    for (const [, state] of this.tabStates) {
-      state.rows.forEach(row => {
-        taskIdx++;
-        // __localId'yi payload'dan çıkar, FK'yı ekle
-        const { __localId, ...fields } = row as DataRow & { __localId?: unknown };
-        const payload: DataRow = { ...sanitizePayload(state.columns, fields), [state.fkColumn]: parentId };
-        tasks.push({ typeName: state.typeName, fkColumn: state.fkColumn, row: payload, label: state.typeName + ' #' + taskIdx });
-      });
-    }
+  confirmBulk(): void {
+    const state = this.bulkState;
+    if (!state || this.bulkBusy) return;
 
-    if (tasks.length === 0) {
-      // Biriken satır yok — doğrudan düzenleme sayfasına git
-      this.router.navigate(['/models', this.typeName, parentId]);
+    if (this.bulkMode === 'staged') {
+      state.staged = state.staged.filter(n => !state.selectedStaged.has(n.localId));
+      state.selectedStaged.clear();
+      this.bulkState = null;
       return;
     }
 
-    // Her task için bir Observable oluştur; hata durumunda hata mesajıyla tamamlanır
-    const saveObs = tasks.map(task =>
-      this.publishedModel.add(task.typeName, task.row).pipe(
-        map(res => ({ label: task.label, success: res.success, message: res.message })),
-        catchError(err => {
-          const e = err as { error?: { message?: string }; message?: string };
-          const msg = e?.error?.message ?? e?.message ?? this.languageService.t('model.detail.operationFailed');
-          return of({ label: task.label, success: false, message: msg });
-        })
+    const ids = [...state.selectedIds];
+    if (ids.length === 0) { this.bulkState = null; return; }
+
+    this.bulkBusy = true;
+    state.bulkErrors = [];
+    state.bulkTotal = ids.length;
+
+    forkJoin(
+      ids.map(id =>
+        this.publishedModel.delete(state.typeName, id).pipe(
+          map(res => ({ id, ok: res.success, message: res.message })),
+          catchError(err => of({ id, ok: false, message: this.errMsg(err) }))
+        )
       )
-    );
+    ).pipe(markDirty(this.cdr)).subscribe(results => {
+      this.bulkBusy = false;
+      this.bulkState = null;
 
-    forkJoin(saveObs).subscribe(results => {
-      const errors = results
-        .filter(r => !r.success)
-        .map(r => `${r.label}: ${r.message}`);
+      const failed = results.filter(r => !r.ok);
+      state.selectedIds = new Set(failed.map(r => r.id));
+      state.bulkErrors = failed.map(r => `ID:${r.id} — ${r.message}`);
 
-      if (errors.length > 0) {
-        // Kısmi başarısızlık — edit sayfasına hata listesiyle git
-        this.router.navigate(['/models', this.typeName, parentId], {
-          state: { childSaveErrors: errors }
-        });
-      } else {
-        // Tümü başarılı
-        this.router.navigate(['/models', this.typeName, parentId]);
-      }
+      this.lookupLabels.invalidate(state.typeName);
+      this.loadTabRows(state);
     });
   }
 
-  /** Yeni kayıt modunda biriken alt kayıt sayısı (Kaydet butonu etiketi için) */
-  get stagedChildCount(): number {
+  // ─── Kayıt pop-up'ı (alt model ekle/düzenle) ───────────────────────────────
+  // Satır içi form kaldırıldı: ekleme/düzenleme artık app-record-form-dialog ile
+  // yapılır ve o dialog kendi alt modellerini de iç içe gösterir.
+
+  /** Alt modele yeni kayıt — bellekte bekleyen bir düğüm açar, HTTP yapılmaz. */
+  openChildAdd(state: TabState): void {
+    this.dialogTabName = state.typeName;
+    this.dialogNode = createStagedNode(state.typeName, {});
+    this.dialogIsEdit = false;
+    this.dialogSavedId = null;
+    this.dialogFkColumn = state.fkColumn;
+    this.dialogOpen = true;
+  }
+
+  /** Bekleyen (kaydedilmemiş veya hata almış) bir satırı düzenler. */
+  openStagedEdit(state: TabState, node: StagedNode): void {
+    this.dialogTabName = state.typeName;
+    this.dialogNode = node;
+    this.dialogIsEdit = true;
+    this.dialogSavedId = node.savedId;
+    this.dialogFkColumn = state.fkColumn;
+    this.dialogOpen = true;
+  }
+
+  /** Sunucuda KAYITLI bir satırı düzenler — pop-up kapanınca doğrudan update edilir. */
+  openSavedEdit(state: TabState, row: DataRow): void {
+    const id = this.rowId(row);
+    // Sunucu satırı camelCase gelir; şema adlarına indirgenmeden forma da payload'a da
+    // güvenle verilemez (bkz. normalizeRow doc'u).
+    const node = createStagedNode(state.typeName, normalizeRow(state.columns, row));
+    node.savedId = id;
+    this.dialogTabName = state.typeName;
+    this.dialogNode = node;
+    this.dialogIsEdit = true;
+    this.dialogSavedId = id;
+    this.dialogFkColumn = state.fkColumn;
+    this.dialogOpen = true;
+  }
+
+  /**
+   * Pop-up "Tamam" dedi. Kayıtlı bir satır düzenlendiyse hemen `update` edilir;
+   * bekleyen bir satırsa yalnızca belleğe yazılır — ağaç, üst modelde "Kaydet"e
+   * basılana kadar sunucuya gitmez.
+   */
+  onRecordDialogSaved(node: StagedNode): void {
+    const state = this.tabStates.get(this.dialogTabName);
+    if (!state) { this.closeRecordDialog(); return; }
+
+    if (this.dialogSavedId !== null) {
+      const payload: DataRow = {
+        ...sanitizePayload(state.columns, node.values),
+        [state.fkColumn]: this.recordId,
+        ID: this.dialogSavedId
+      };
+      const savedId = this.dialogSavedId;
+      this.publishedModel.update(state.typeName, payload).pipe(markDirty(this.cdr)).subscribe({
+        next: res => {
+          if (res.success) {
+            node.error = null;
+            node.dirty = false;
+            this.saveNewDescendants(state, node, savedId);
+          } else {
+            // Güncelleme reddedildi — satırı bekleyen listesine al ki değerler kaybolmasın.
+            node.error = res.message;
+            this.addStaged(state, node);
+          }
+        },
+        error: err => {
+          node.error = this.errMsg(err);
+          this.addStaged(state, node);
+        }
+      });
+      this.closeRecordDialog();
+      return;
+    }
+
+    this.addStaged(state, node);
+    this.closeRecordDialog();
+  }
+
+  /**
+   * Kayıtlı bir satır güncellendikten sonra, pop-up'ta ona EKLENEN yeni torun kayıtlarını
+   * yazar. `toTreeDto` `existingId` dolu olduğunda kökü yeniden EKLEMEZ, yalnızca
+   * çocukları mevcut kaydın altına bağlar. Torun yoksa istek gönderilmez.
+   */
+  private saveNewDescendants(state: TabState, node: StagedNode, savedId: number): void {
+    // Kökün kendisi az önce `update` edildi; burada yalnızca torunlar kalır.
+    node.dirty = false;
+    const hasNewChildren = [...node.children.values()].some(list => list.some(n => n.savedId === null));
+    const updates = dirtyNodes(node);
+
+    if (!hasNewChildren && updates.length === 0) {
+      this.loadTabRows(state);
+      return;
+    }
+
+    const requests: Observable<TreeStep>[] = [];
+    if (hasNewChildren) {
+      const dto = toTreeDto(node, t => this.columnsOf(t), savedId);
+      requests.push(
+        this.publishedModel.addTree(dto).pipe(
+          map(res => ({ kind: 'tree', ok: res.success, message: res.message, data: res.data } as TreeStep)),
+          catchError(err => of({ kind: 'tree', ok: false, message: this.errMsg(err) } as TreeStep))
+        )
+      );
+    }
+    requests.push(...this.updateRequests(updates));
+
+    forkJoin(requests).pipe(markDirty(this.cdr)).subscribe(steps => {
+      for (const step of steps) {
+        if (step.kind === 'update' && step.node && step.ok) {
+          step.node.error = null;
+          step.node.dirty = false;
+        }
+      }
+      const failed = steps.find(s => !s.ok);
+      if (failed) {
+        // Yazılamadı — satırı bekleyen listesine al ki girilenler kaybolmasın.
+        node.error = failed.message;
+        this.addStaged(state, node);
+      }
+      this.loadTabRows(state);
+    });
+  }
+
+  /** Düğümü sekmenin bekleyen listesine ekler veya günceller. */
+  private addStaged(state: TabState, node: StagedNode): void {
+    const idx = state.staged.findIndex(n => n.localId === node.localId);
+    if (idx >= 0) state.staged = state.staged.map(n => (n.localId === node.localId ? node : n));
+    else state.staged = [...state.staged, node];
+  }
+
+  closeRecordDialog(): void {
+    this.dialogOpen = false;
+    this.dialogNode = null;
+    this.dialogTabName = '';
+    this.dialogIsEdit = false;
+    this.dialogSavedId = null;
+    this.dialogFkColumn = null;
+  }
+
+  /**
+   * "Kaydet"e basılınca sunucuya YAZILACAK satır sayısı — buton etiketi ve
+   * `submitEdit`'in `saveTree` çağırıp çağırmayacağı bu değere bakar.
+   *
+   * Yalnızca eklenecekleri saymak yetmez: kaydedilmiş ama değiştirilmiş (dirty) bir satır
+   * da yazılacaktır. Eskiden sayılmadığı için, tek bekleyen satır o olduğunda "Kaydet"
+   * hiçbir istek göndermiyordu.
+   */
+  get totalStagedCount(): number {
     let total = 0;
     for (const [, state] of this.tabStates) {
-      total += state.rows.length;
+      for (const node of state.staged) {
+        for (const n of flattenNodes(node)) {
+          if (n.savedId === null || n.dirty) total++;
+        }
+      }
     }
     return total;
   }
 
-  deleteTabRow(state: TabState, row: DataRow): void {
-    // Yeni kayıt modunda — bellekten çıkar, HTTP yapma
-    if (this.isNew) {
-      if (!confirm(this.languageService.t('model.detail.removeStagedRowConfirm'))) return;
-      const localId = row['__localId'] as number;
-      state.rows = state.rows.filter(r => r['__localId'] !== localId);
+  /** Herhangi bir sekmede kaydetme hatası olan satır var mı. */
+  get hasStagedErrors(): boolean {
+    for (const [, state] of this.tabStates) {
+      for (const node of state.staged) {
+        if (node.error || treeHasErrors(node)) return true;
+      }
+    }
+    return false;
+  }
+
+  // ─── Bekleyen ağacın toplu kaydedilmesi ────────────────────────────────────
+
+  /**
+   * Ana kaydı ve bekleyen tüm alt ağacı TEK istekte gönderir.
+   *
+   * Sunucu hepsini TEK transaction içinde yazar ve her düğümün GERÇEK ID'sini
+   * (EF identity) döndürür — istemci hiçbir ID tahmin etmez. Eskiden kayıt
+   * eklendikten sonra liste çekilip `max(ID)` alınıyordu; eşzamanlı kullanıcılarda
+   * bu, alt kayıtların YABANCI bir üst kayda bağlanmasına yol açabiliyordu.
+   *
+   * Semantik "hepsi ya da hiçbiri": bir alan bile geçersizse hiçbir kayıt oluşmaz
+   * ve hataların tamamı birden döner; bekleyen satırlar ekranda kalır.
+   *
+   * @param existingRootId Doluysa kök yeniden EKLENMEZ (mevcut kayda alt kayıt ekleme).
+   */
+  private saveTree(existingRootId: number | null): void {
+    const rootNode = createStagedNode(this.typeName, this.editForm?.value ?? {});
+    for (const [childTypeName, state] of this.tabStates) {
+      if (state.staged.length > 0) rootNode.children.set(childTypeName, state.staged);
+    }
+
+    // Kök burada hiç `dirty` olmaz (yeni oluşturuldu) — üst form kendi `update`'ini
+    // `submitEdit` içinde zaten göndermiştir; buradaki update'ler yalnızca alt ağaç içindir.
+    const updates = dirtyNodes(rootNode);
+
+    // Ağaç isteği yalnızca gerçekten EKLENECEK bir şey varsa gönderilir; aksi halde
+    // sunucu tüm düğümleri `existingId` yüzünden atlayacağı için boşa istek olur.
+    const treeNeeded = existingRootId === null || hasInserts(rootNode);
+
+    const requests: Observable<TreeStep>[] = [];
+    if (treeNeeded) {
+      const dto = toTreeDto(rootNode, t => this.columnsOf(t), existingRootId);
+      requests.push(
+        this.publishedModel.addTree(dto).pipe(
+          map(res => ({ kind: 'tree', ok: res.success, message: res.message, data: res.data } as TreeStep)),
+          catchError(err => {
+            const body = (err as { error?: { data?: TreeSaveResult; message?: string } })?.error;
+            return of({ kind: 'tree', ok: false, message: this.errMsg(err), data: body?.data } as TreeStep);
+          })
+        )
+      );
+    }
+    requests.push(...this.updateRequests(updates));
+
+    if (requests.length === 0) {
+      this.editLoading = false;
       return;
     }
 
-    const id = this.rowId(row);
-    if (!id || !confirm(this.languageService.t('model.detail.deleteConfirm', { id }))) return;
-    this.publishedModel.delete(state.typeName, id).subscribe({
-      next: res => { if (res.success) this.loadTabRows(state); },
-      error: () => { /* sessizce geç */ }
+    forkJoin(requests).pipe(markDirty(this.cdr)).subscribe(steps => {
+      this.editLoading = false;
+
+      const tree = steps.find(s => s.kind === 'tree');
+      // `applyTreeResult` childSaveErrors'ı sıfırlar; ağaç adımı yoksa burada sıfırlanmalı.
+      if (tree) this.applyTreeResult(rootNode, tree.data ?? { savedIds: {}, errors: {} });
+      else this.childSaveErrors = [];
+
+      // Update sonuçlarını düğümlere yaz.
+      const errors: string[] = [];
+      for (const step of steps) {
+        if (step.kind !== 'update' || !step.node) continue;
+        if (step.ok) {
+          step.node.error = null;
+          step.node.dirty = false;
+        } else {
+          step.node.error = step.message;
+          errors.push(`${step.node.typeName}: ${step.message}`);
+        }
+      }
+      this.childSaveErrors = [...this.childSaveErrors, ...errors];
+
+      const allOk = steps.every(s => s.ok);
+      this.editOk = allOk;
+      // Ağaç adımı varsa onun mesajı; yoksa yalnızca hata durumunda yaz — aksi halde üst
+      // kaydın kendi "güncellendi" mesajı (submitEdit'te set edilir) ezilmemeli.
+      if (tree) this.editMsg = tree.message;
+      else if (!allOk) this.editMsg = errors[0] ?? this.editMsg;
+
+      // Kökün gerçek ID'si sunucudan geldi → yerinde düzenleme moduna geç.
+      if (tree?.ok) {
+        const rootId = existingRootId ?? tree.data?.savedIds?.[String(rootNode.localId)];
+        if (rootId && this.isNew) this.switchToEditMode(rootId);
+      }
+
+      // Yazılan satırlar bekleyen listesinden düşer; yazılamayanlar HATASIYLA KALIR —
+      // kullanıcı düzeltip tekrar deneyebilsin diye asla sessizce silinmezler.
+      for (const [, state] of this.tabStates) {
+        if (state.staged.length === 0) continue;
+        const remaining = state.staged.filter(n => n.savedId === null || n.error);
+        if (remaining.length === state.staged.length) continue;
+        state.staged = remaining;
+        this.lookupLabels.invalidate(state.typeName);
+        this.loadTabRows(state);
+      }
     });
   }
 
-  onTabFileSelected(event: Event, colName: string, state: TabState): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-    state.fileNames[colName] = file.name;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const b64 = (reader.result as string).split(',')[1] ?? reader.result as string;
-      state.form?.get(colName)?.setValue(b64);
-    };
-    reader.readAsDataURL(file);
+  /**
+   * Kaydedilmiş ve değiştirilmiş düğümler için `update()` istekleri üretir.
+   *
+   * `addTree` mevcut bir kaydı GÜNCELLEYEMEZ — `existingId` dolu düğümü atlar — bu yüzden
+   * kullanıcının kayıtlı bir satırda yaptığı düzeltme ancak buradan sunucuya ulaşır.
+   */
+  private updateRequests(nodes: StagedNode[]): Observable<TreeStep>[] {
+    return nodes.map(node => {
+      const payload: DataRow = {
+        ...sanitizePayload(this.columnsOf(node.typeName), node.values),
+        ID: node.savedId
+      };
+      return this.publishedModel.update(node.typeName, payload).pipe(
+        map(res => ({ kind: 'update', ok: res.success, message: res.message, node } as TreeStep)),
+        catchError(err => of({ kind: 'update', ok: false, message: this.errMsg(err), node } as TreeStep))
+      );
+    });
   }
 
-  getTabControl(state: TabState, col: string) {
-    return state.form!.get(col)!;
+  /**
+   * Sunucu yanıtındaki gerçek ID'leri ve satır bazlı hataları ağaca yazar.
+   * Eşleme istemcinin geçici `localId`'si (clientId) üzerinden yapılır.
+   */
+  private applyTreeResult(rootNode: StagedNode, data: TreeSaveResult): void {
+    const errors: string[] = [];
+    for (const node of flattenNodes(rootNode)) {
+      const key = String(node.localId);
+      const savedId = data.savedIds?.[key];
+      const error = data.errors?.[key];
+
+      if (savedId != null) { node.savedId = savedId; node.error = null; }
+      if (error) {
+        node.error = error;
+        errors.push(`${node.typeName}: ${error}`);
+      } else if (savedId != null) {
+        node.error = null;
+      }
+    }
+    this.childSaveErrors = errors;
+  }
+
+  /** Bir tipin kolonları (payload temizliği için). */
+  private columnsOf(typeName: string): PublishedColumn[] {
+    return this.allModels.find(m => m.typeName === typeName)?.columns ?? [];
+  }
+
+  private errMsg(err: unknown): string {
+    const e = err as { error?: { message?: string }; message?: string };
+    return e?.error?.message ?? e?.message ?? this.languageService.t('model.detail.operationFailed');
+  }
+
+  /** Bekleyen bir satırın tabloda gösterilecek hücre değeri. */
+  stagedCell(node: StagedNode, columnName: string): string {
+    const v = fieldValue(node.values, columnName);
+    if (v === null || v === undefined || v === '') return '—';
+    if (typeof v === 'boolean') return v ? '✓' : '✗';
+    return String(v);
+  }
+
+  /** Bekleyen bir satırın kendi alt ağacındaki toplam kayıt sayısı (rozet için). */
+  stagedChildTotal(node: StagedNode): number {
+    return treePendingCount(node);
   }
 }

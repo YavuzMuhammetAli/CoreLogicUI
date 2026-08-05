@@ -10,12 +10,6 @@ export class PublishModelService {
 
   constructor(private http: HttpClient) {}
 
-  /** C# entity kodunu backend'e gönderir ve derler */
-  publishModel(dotNetCode: string): Observable<ResponseModel> {
-    const params = new HttpParams().set('dotNetCode', dotNetCode);
-    return this.http.post<ResponseModel>(this.baseUrl, null, { params });
-  }
-
   /** Sunucu yeniden başladığında assembly'i yükle */
   loadAssembly(): Observable<ResponseModel> {
     return this.http.get<ResponseModel>(`${this.baseUrl}/loadAssembly`);

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -9,6 +9,7 @@ import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { AppUser } from '../../models/appUser';
+import { markDirty } from '../../utils/change-detection';
 
 interface RoleOption { id: number; name: string; }
 
@@ -25,9 +26,13 @@ interface RoleOption { id: number; name: string; }
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe, ConfirmDialogComponent],
   templateUrl: './user-detail.component.html',
-  styleUrls: ['./user-detail.component.scss']
+  styleUrls: ['./user-detail.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserDetailComponent {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   private readonly fb = inject(FormBuilder);
   private readonly userAdminService = inject(UserAdminService);
   private readonly roleAdminService = inject(RoleAdminService);
@@ -104,7 +109,7 @@ export class UserDetailComponent {
   // ── Yükleme ────────────────────────────────────────────────────────────────
 
   private loadRoles(): void {
-    this.roleAdminService.getRoles().subscribe({
+    this.roleAdminService.getRoles().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.roles.set(res.success ? (res.data ?? []).map(r => ({ id: r.id, name: r.name })) : []);
       },
@@ -119,7 +124,7 @@ export class UserDetailComponent {
   private loadUser(userId: number): void {
     this.loading.set(true);
 
-    this.userAdminService.getUsers().subscribe({
+    this.userAdminService.getUsers().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.loading.set(false);
         const found = (res.data ?? []).find(u => u.id === userId);
@@ -166,7 +171,7 @@ export class UserDetailComponent {
         password:  raw.password as string,
         isAdmin:   !!raw.isAdmin,
         roleId:    raw.roleId ? Number(raw.roleId) : null
-      }).subscribe({
+      }).pipe(markDirty(this.cdr)).subscribe({
         next: res => {
           this.saving.set(false);
           if (!res.success) {
@@ -186,7 +191,7 @@ export class UserDetailComponent {
       firstName: (raw.firstName as string).trim(),
       lastName:  (raw.lastName as string).trim(),
       email:     (raw.email as string).trim()
-    }).subscribe({
+    }).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.saving.set(false);
         if (!res.success) { this.showError(res.message); return; }
@@ -206,7 +211,7 @@ export class UserDetailComponent {
     const next = !(this.user()?.isAdmin ?? false);
     this.saving.set(true);
 
-    this.userAdminService.setAdmin(this.userId, next).subscribe({
+    this.userAdminService.setAdmin(this.userId, next).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.saving.set(false);
         if (!res.success) { this.showError(res.message); return; }
@@ -224,7 +229,7 @@ export class UserDetailComponent {
     const next = !(this.user()?.status ?? false);
     this.togglingActive.set(true);
 
-    this.userAdminService.setActive(this.userId, next).subscribe({
+    this.userAdminService.setActive(this.userId, next).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.togglingActive.set(false);
         if (!res.success) { this.showError(res.message); return; }
@@ -247,7 +252,7 @@ export class UserDetailComponent {
 
     const newPassword = this.resetForm.get('newPassword')!.value as string;
 
-    this.userAdminService.resetPassword(this.userId, newPassword).subscribe({
+    this.userAdminService.resetPassword(this.userId, newPassword).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.resetting.set(false);
         this.resetMessage.set(res.message);
@@ -272,7 +277,7 @@ export class UserDetailComponent {
 
     this.deleting.set(true);
 
-    this.userAdminService.delete(this.userId).subscribe({
+    this.userAdminService.delete(this.userId).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.deleting.set(false);
         this.confirmOpen.set(false);

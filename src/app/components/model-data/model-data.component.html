@@ -31,6 +31,14 @@
         <h2>{{ 'model.data.records' | t }}</h2>
       </div>
       <div class="panel-actions">
+        @if (selectedCount > 0 && permissionService.can(typeName, 'delete')) {
+          <button class="btn btn-danger btn-sm" type="button" (click)="openBulkDelete()">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            {{ 'model.data.bulkDelete' | t:{ count: selectedCount } }}
+          </button>
+        }
         @if (permissionService.isAdmin()) {
           <app-column-visibility
             [columns]="columnVisibilityItems"
@@ -66,6 +74,20 @@
       <div class="alert alert-danger" style="margin: var(--space-4) var(--space-5)" role="alert">{{ loadError }}</div>
     }
 
+    <!-- Toplu silmede silinemeyenlerin özeti — o satırlar seçili kalır -->
+    @if (bulkErrors.length > 0) {
+      <div class="alert alert-danger" style="margin: var(--space-4) var(--space-5)" role="alert">
+        <div class="bulk-error-list">
+          <strong>{{ 'model.data.bulkDeletePartial' | t:{ total: bulkTotal, failed: bulkErrors.length } }}</strong>
+          <ul>
+            @for (err of bulkErrors; track err) {
+              <li>{{ err }}</li>
+            }
+          </ul>
+        </div>
+      </div>
+    }
+
     <!-- Yükleniyor -->
     @if (loadingRows && rows.length === 0) {
       <div class="empty-state">
@@ -90,6 +112,16 @@
           <table class="data-table" [attr.aria-label]="'model.data.tableAriaLabel' | t:{ typeName }">
             <thead>
               <tr>
+                @if (permissionService.can(typeName, 'delete')) {
+                  <th scope="col" class="select-col">
+                    <input
+                      type="checkbox"
+                      [checked]="allRowsSelected"
+                      [indeterminate]="someRowsSelected"
+                      (change)="toggleAllRows()"
+                      [attr.aria-label]="'model.data.selectAllAria' | t">
+                  </th>
+                }
                 @for (header of tableHeaders; track header.key) {
                   <th scope="col">{{ header.label }}</th>
                 }
@@ -99,9 +131,20 @@
               @for (row of rows; track $index) {
                 <tr
                   class="clickable-row"
+                  [class.row-selected]="isRowSelected(row)"
                   [routerLink]="['/models', typeName, rowId(row)]"
                   role="link"
                   [attr.aria-label]="'model.data.rowAriaLabel' | t:{ typeName, id: rowId(row) }">
+                  @if (permissionService.can(typeName, 'delete')) {
+                    <!-- Satır routerLink taşıyor: seçim tıklaması detaya gitmemeli -->
+                    <td class="select-cell" (click)="$event.stopPropagation()">
+                      <input
+                        type="checkbox"
+                        [checked]="isRowSelected(row)"
+                        (change)="toggleRow(row)"
+                        [attr.aria-label]="'model.data.selectRowAria' | t">
+                    </td>
+                  }
                   @for (header of tableHeaders; track header.key) {
                     <td [attr.data-label]="header.label">
                       @if (isImage(rowVal(row, header.key))) {
@@ -231,7 +274,7 @@
                       <button
                         class="btn btn-ghost btn-sm"
                         type="button"
-                        (click)="doRollback(v.version)">
+                        (click)="askRollback(v.version)">
                         {{ 'model.data.rollback' | t }}
                       </button>
                     }
@@ -245,4 +288,22 @@
     </div>
   }
 
+  <!-- Toplu silme onayı -->
+  <app-confirm-dialog
+    [open]="confirmOpen()"
+    [title]="'model.data.bulkDeleteTitle' | t"
+    [message]="bulkDeleteMessage"
+    [busy]="bulkBusy()"
+    (confirmed)="confirmBulkDelete()"
+    (cancelled)="cancelBulkDelete()" />
+
 }
+
+<!-- Sürüm geri alma onayı — native confirm() yerine tasarım sistemine uygun diyalog -->
+<app-confirm-dialog
+  [open]="pendingRollbackVersion !== null"
+  [title]="'model.data.rollbackConfirmTitle' | t"
+  [message]="'model.data.rollbackConfirm' | t:{ version: pendingRollbackVersion ?? 0 }"
+  [busy]="isRollingBack"
+  (confirmed)="confirmRollback()"
+  (cancelled)="cancelRollback()" />

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
@@ -9,6 +9,8 @@ import { ModelPermission } from '../../services/permission.service';
 import { Role } from '../../models/role';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
+import { markDirty } from '../../utils/change-detection';
+import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 
 /** "İzinli model sayısı" sütununda gösterilen, üye sayısı zenginleştirilmiş rol satırı */
 interface RoleRow extends Role {
@@ -18,11 +20,15 @@ interface RoleRow extends Role {
 @Component({
   selector: 'app-role-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe],
+  imports: [RouterLink, TranslatePipe, ConfirmDialogComponent],
   templateUrl: './role-list.component.html',
-  styleUrls: ['./role-list.component.scss']
+  styleUrls: ['./role-list.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoleListComponent implements OnInit {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   private readonly languageService = inject(LanguageService);
 
   rows        = signal<RoleRow[]>([]);
@@ -40,7 +46,7 @@ export class RoleListComponent implements OnInit {
     this.loading.set(true);
     this.loadError.set('');
 
-    this.roleService.getRoles().subscribe({
+    this.roleService.getRoles().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (!res.success) {
           this.rows.set([]);
@@ -64,7 +70,7 @@ export class RoleListComponent implements OnInit {
               catchError(() => of(0))
             )
           )
-        ).subscribe(counts => {
+        ).pipe(markDirty(this.cdr)).subscribe(counts => {
           this.rows.set(roles.map((role, i) => ({ ...role, permittedModelCount: counts[i] })));
           this.loading.set(false);
         });
@@ -82,11 +88,24 @@ export class RoleListComponent implements OnInit {
     ).length;
   }
 
-  deleteRole(row: RoleRow): void {
-    if (!confirm(this.languageService.t('role.list.deleteConfirm', { name: row.name }))) return;
+  /** Onay bekleyen silme hedefi; null ise diyalog kapalıdır. */
+  readonly pendingDelete = signal<RoleRow | null>(null);
 
+  askDeleteRole(row: RoleRow): void {
+    this.pendingDelete.set(row);
+  }
+
+  cancelDeleteRole(): void {
+    this.pendingDelete.set(null);
+  }
+
+  confirmDeleteRole(): void {
+    const row = this.pendingDelete();
+    if (!row) return;
+
+    this.pendingDelete.set(null);
     this.deletingId.set(row.id);
-    this.roleService.deleteRole(row.id).subscribe({
+    this.roleService.deleteRole(row.id).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.deletingId.set(null);
         if (res.success) {

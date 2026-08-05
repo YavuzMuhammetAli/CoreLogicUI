@@ -1,6 +1,4 @@
-import {
-  Component, OnInit, inject, PLATFORM_ID, HostListener, ElementRef, ViewChild
-} from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, HostListener, inject, OnInit, PLATFORM_ID, ViewChild } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
@@ -15,15 +13,20 @@ import { LanguageService } from '../../services/language.service';
 import { DashboardService } from '../../services/dashboard.service';
 import { DashboardDefinition } from '../../models/dashboard.model';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { markDirty } from '../../utils/change-detection';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
   imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe],
   templateUrl: './layout.component.html',
-  styleUrls: ['./layout.component.scss']
+  styleUrls: ['./layout.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LayoutComponent implements OnInit {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   sidebarOpen = true;
 
   /** Giriş yapmış kullanıcının kısa profil bilgisi */
@@ -67,7 +70,7 @@ export class LayoutComponent implements OnInit {
     // Kabuk mount edilince DB'deki assembly'yi geri yükle; veri ekranındaki
     // /PublishedModel/* çağrıları çalışsın. Hata kullanıcıyı bloklamaz.
     // SSR/prerender'da tarayıcı olmadığından bu blok çalışmaz — gereksiz HTTP isteği engellenir.
-    this.publishModel.loadAssembly().subscribe({
+    this.publishModel.loadAssembly().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (!res.success) {
           console.warn('[CoreLogic] loadAssembly:', res.message);
@@ -80,7 +83,7 @@ export class LayoutComponent implements OnInit {
 
     // Profil fotoğrafını backend'den çek; başarısız olursa token verisi yeterli
     if (tokenUser) {
-      this.userProfile.getMe().subscribe({
+      this.userProfile.getMe().pipe(markDirty(this.cdr)).subscribe({
         next: res => {
           if (res.success && res.data) {
             this.currentUser = {
@@ -95,7 +98,7 @@ export class LayoutComponent implements OnInit {
 
     // İzinler APP_INITIALIZER tarafından zaten yüklendi; sadece model listesini al.
     // Normal kullanıcı sidebar nav'ı için okuma yetkili tabloları filtrele.
-    this.publishedModel.getModels().subscribe({
+    this.publishedModel.getModels().pipe(markDirty(this.cdr)).subscribe({
       next: modelsRes => {
         const allModels = modelsRes.success ? (modelsRes.data ?? []) : [];
         // Admin'de bu grup template'te zaten gizli; filtre yine de doğru çalışır.
@@ -109,7 +112,7 @@ export class LayoutComponent implements OnInit {
     });
 
     // Admin tarafından navigasyona yayınlanmış dashboard'ları yükle — tüm kullanıcılar görür.
-    this.dashboardService.list().subscribe({
+    this.dashboardService.list().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         const all = res.success ? (res.data ?? []) : [];
         this.navDashboards = all.filter(d => d.showInNav);

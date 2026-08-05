@@ -140,6 +140,19 @@
         type="button"
         class="tab-btn"
         role="tab"
+        [class.tab-btn--active]="activeTab() === 'subModels'"
+        [attr.aria-selected]="activeTab() === 'subModels'"
+        (click)="setTab('subModels')">
+        {{ 'table.detail.subModelsTab' | t }}
+        @if (subModelCount > 0) {
+          <span class="tab-badge">{{ subModelCount }}</span>
+        }
+      </button>
+
+      <button
+        type="button"
+        class="tab-btn"
+        role="tab"
         [class.tab-btn--active]="activeTab() === 'relationships'"
         [attr.aria-selected]="activeTab() === 'relationships'"
         (click)="setTab('relationships')">
@@ -219,6 +232,101 @@
     </div>
     }
 
+    <!-- ══ ALT MODELLER SEKMESİ ═══════════════════════════════════════════ -->
+    @if (activeTab() === 'subModels') {
+      <div class="tab-panel" role="tabpanel" [attr.aria-label]="'table.detail.subModelsPanelAria' | t">
+
+        <div class="tab-toolbar">
+          <p class="muted-hint tab-toolbar-hint">{{ 'table.detail.subModelsHint' | t }}</p>
+          <div class="tab-toolbar-actions">
+            @if (canAddSubModel) {
+              <button type="button" class="btn btn-primary btn-sm" (click)="addSubModel()">
+                <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+                {{ 'table.detail.newSubModel' | t }}
+              </button>
+            } @else {
+              <span class="badge badge-warn">{{ 'table.detail.subModelDepthLimit' | t:{ max: 4 } }}</span>
+            }
+
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm help-btn"
+              (click)="openHelp('subModels')"
+              [attr.aria-label]="'help.howItWorks' | t">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+              </svg>
+              {{ 'help.howItWorks' | t }}
+            </button>
+          </div>
+        </div>
+
+        @if (subModelRows.length === 0 && subModels.length === 0) {
+          <div class="empty-state">
+            <div class="empty-icon" aria-hidden="true">🗂️</div>
+            <h3>{{ 'table.detail.noSubModelsTitle' | t }}</h3>
+            <p>{{ 'table.detail.noSubModelsMessage' | t }}</p>
+            @if (canAddSubModel) {
+              <button type="button" class="btn btn-primary" (click)="addSubModel()">
+                {{ 'table.detail.newSubModel' | t }}
+              </button>
+            }
+          </div>
+        }
+
+        <!-- Kayıtlı alt modeller — her biri kendi ekranından düzenlenir -->
+        @if (subModelRows.length > 0) {
+          <div class="tab-table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ 'table.detail.colSubModelName' | t }}</th>
+                  <th>{{ 'table.detail.colSubModelDepth' | t }}</th>
+                  <th>{{ 'table.detail.colSubModelDescription' | t }}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (sub of subModelRows; track sub.id) {
+                  <tr
+                    class="row-clickable"
+                    (click)="openSubModel(sub.tableName)"
+                    [attr.aria-label]="'table.detail.openSubModelAria' | t:{ name: sub.tableName }">
+                    <td>{{ sub.tableName }}</td>
+                    <td><span class="badge badge-meta">{{ 'table.detail.levelBadge' | t:{ depth: sub.depth } }}</span></td>
+                    <td class="muted-hint">{{ sub.description }}</td>
+                    <td class="td-actions">
+                      <button type="button" class="btn btn-ghost btn-sm"
+                              (click)="openSubModel(sub.tableName); $event.stopPropagation()">
+                        {{ 'table.detail.openSubModel' | t }}
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        <!-- Bu oturumda eklenen, henüz kaydedilmemiş alt modeller -->
+        @if (subModels.length > 0) {
+          <div class="sub-model-drafts">
+            <h3 class="sub-model-drafts-title">{{ 'table.detail.unsavedSubModels' | t }}</h3>
+            @for (sub of subModels.controls; track $index) {
+              <app-model-node
+                [group]="getSubModelGroup($index)"
+                [depth]="ownTableDepth + 1"
+                [canRemove]="true"
+                [onRemoveSelf]="removeSubModelFn($index)"
+                [availableTables]="availableTables" />
+            }
+          </div>
+        }
+      </div>
+    }
+
     <!-- ══ İLİŞKİLER SEKMESİ ══════════════════════════════════════════════ -->
     @if (activeTab() === 'relationships') {
       <div class="tab-panel" role="tabpanel" [attr.aria-label]="'relationship.panelAria' | t">
@@ -243,6 +351,17 @@
               [disabled]="relationshipTableId === null"
               (click)="openPreview()">
               {{ 'relationship.preview' | t }}
+            </button>
+
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm help-btn"
+              (click)="openHelp('relationships')"
+              [attr.aria-label]="'help.howItWorks' | t">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+              </svg>
+              {{ 'help.howItWorks' | t }}
             </button>
           </div>
 
@@ -356,7 +475,7 @@
                       <button
                         type="button"
                         class="btn btn-ghost btn-sm"
-                        (click)="removeRelationship(rel); $event.stopPropagation()"
+                        (click)="askRemoveRelationship(rel); $event.stopPropagation()"
                         [attr.aria-label]="'relationship.deleteAria' | t:{ name: rel.propertyName }">
                         {{ 'table.detail.delete' | t }}
                       </button>
@@ -389,7 +508,10 @@
       <div class="panel-body" [formGroup]="columnDraft">
 
         <div class="field">
-          <label for="col-name">{{ 'table.detail.colName' | t }} <span class="req">*</span></label>
+          <label for="col-name">
+            {{ 'table.detail.colName' | t }} <span class="req">*</span>
+            <app-help-hint placement="below" [text]="'help.hint.columnName' | t" />
+          </label>
           <input
             id="col-name"
             type="text"
@@ -406,7 +528,10 @@
         </div>
 
         <div class="field">
-          <label for="col-label">{{ 'table.detail.labelLabel' | t }}</label>
+          <label for="col-label">
+            {{ 'table.detail.labelLabel' | t }}
+            <app-help-hint placement="below" [text]="'help.hint.label' | t" />
+          </label>
           <input
             id="col-label"
             type="text"
@@ -417,7 +542,10 @@
         </div>
 
         <div class="field">
-          <label for="col-description">{{ 'table.detail.descriptionLabel' | t }}</label>
+          <label for="col-description">
+            {{ 'table.detail.descriptionLabel' | t }}
+            <app-help-hint placement="below" [text]="'help.hint.description' | t" />
+          </label>
           <input
             id="col-description"
             type="text"
@@ -428,7 +556,19 @@
         </div>
 
         <div class="field">
-          <label for="col-type">{{ 'model.node.typeLabel' | t }}</label>
+          <div class="label-with-help">
+            <label for="col-type">{{ 'model.node.typeLabel' | t }}</label>
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm help-btn"
+              (click)="openTypeHelp()"
+              [attr.aria-label]="'help.openTypeHelp' | t">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+              </svg>
+              {{ 'help.openTypeHelp' | t }}
+            </button>
+          </div>
           <select id="col-type" class="input" formControlName="dataType">
             <optgroup [label]="'model.node.primitiveGroup' | t">
               @for (type of primitiveTypes; track type.value) {
@@ -446,25 +586,38 @@
         <label class="checkbox-label" for="col-nullable">
           <input id="col-nullable" type="checkbox" formControlName="isNullable">
           {{ 'table.detail.nullableCheckbox' | t }}
+          <app-help-hint placement="below" [text]="'help.hint.nullable' | t" />
         </label>
 
         <!-- String'e özel: MinLength, MaxLength, Regex -->
         @if (columnDraft.get('dataType')!.value === 'string') {
           <div class="col-rules-row">
             <div class="field col-rule-field">
-              <label for="col-minlen">{{ 'table.detail.minLength' | t }}</label>
+              <label for="col-minlen">
+                {{ 'table.detail.minLength' | t }}
+                <app-help-hint placement="below" [text]="'help.hint.minLength' | t" />
+              </label>
               <input id="col-minlen" type="number" class="input" formControlName="minLength" placeholder="0" min="0">
             </div>
             <div class="field col-rule-field">
-              <label for="col-maxlen">{{ 'table.detail.maxLength' | t }}</label>
+              <label for="col-maxlen">
+                {{ 'table.detail.maxLength' | t }}
+                <app-help-hint placement="below" [text]="'help.hint.maxLength' | t" />
+              </label>
               <input id="col-maxlen" type="number" class="input" formControlName="maxLength" placeholder="255" min="0">
             </div>
             <div class="field col-rule-field col-rule-field--wide">
-              <label for="col-regex">{{ 'table.detail.regexPattern' | t }}</label>
+              <label for="col-regex">
+                {{ 'table.detail.regexPattern' | t }}
+                <app-help-hint placement="below" [text]="'help.hint.regex' | t" />
+              </label>
               <input id="col-regex" type="text" class="input" formControlName="regex" [attr.placeholder]="'table.detail.regexPatternPlaceholder' | t">
             </div>
             <div class="field col-rule-field col-rule-field--wide">
-              <label for="col-regexmsg">{{ 'table.detail.regexMessage' | t }}</label>
+              <label for="col-regexmsg">
+                {{ 'table.detail.regexMessage' | t }}
+                <app-help-hint placement="below" [text]="'help.hint.regexMessage' | t" />
+              </label>
               <input id="col-regexmsg" type="text" class="input" formControlName="regexMessage" [attr.placeholder]="'table.detail.regexMessagePlaceholder' | t">
             </div>
           </div>
@@ -474,11 +627,17 @@
         @if (isNumericType(columnDraft.get('dataType')!.value)) {
           <div class="col-rules-row">
             <div class="field col-rule-field">
-              <label for="col-min">{{ 'table.detail.minValue' | t }}</label>
+              <label for="col-min">
+                {{ 'table.detail.minValue' | t }}
+                <app-help-hint placement="below" [text]="'help.hint.min' | t" />
+              </label>
               <input id="col-min" type="number" class="input" formControlName="min" [attr.placeholder]="'table.detail.minValuePlaceholder' | t">
             </div>
             <div class="field col-rule-field">
-              <label for="col-max">{{ 'table.detail.maxValue' | t }}</label>
+              <label for="col-max">
+                {{ 'table.detail.maxValue' | t }}
+                <app-help-hint placement="below" [text]="'help.hint.max' | t" />
+              </label>
               <input id="col-max" type="number" class="input" formControlName="max" [attr.placeholder]="'table.detail.maxValuePlaceholder' | t">
             </div>
           </div>
@@ -488,7 +647,10 @@
         @if (columnDraft.get('dataType')!.value === 'enum') {
           <div class="col-rules-row">
             <div class="field col-rule-field col-rule-field--wide">
-              <label for="col-enumvalues">{{ 'table.detail.allowedValues' | t }}</label>
+              <label for="col-enumvalues">
+                {{ 'table.detail.allowedValues' | t }}
+                <app-help-hint placement="below" [text]="'help.hint.enumValues' | t" />
+              </label>
               <input
                 id="col-enumvalues"
                 type="text"
@@ -504,7 +666,10 @@
         @if (columnDraft.get('dataType')!.value === 'lookup') {
           <div class="col-rules-row">
             <div class="field col-rule-field">
-              <label for="col-lookuptarget">{{ 'table.detail.lookupTarget' | t }}</label>
+              <label for="col-lookuptarget">
+                {{ 'table.detail.lookupTarget' | t }}
+                <app-help-hint placement="below" [text]="'help.hint.lookupTarget' | t" />
+              </label>
               <select
                 id="col-lookuptarget"
                 class="input"
@@ -517,7 +682,10 @@
               </select>
             </div>
             <div class="field col-rule-field">
-              <label for="col-lookupdisplay">{{ 'table.detail.lookupDisplayColumn' | t }}</label>
+              <label for="col-lookupdisplay">
+                {{ 'table.detail.lookupDisplayColumn' | t }}
+                <app-help-hint placement="below" [text]="'help.hint.lookupDisplayColumn' | t" />
+              </label>
               <select id="col-lookupdisplay" class="input" formControlName="lookupDisplayColumn">
                 <option value="">{{ 'table.detail.selectOption' | t }}</option>
                 @for (c of lookupColumnsByTable[columnDraft.get('lookupTargetTable')!.value] ?? []; track c) {
@@ -556,7 +724,22 @@
         }
 
         <div class="field">
-          <label for="rel-type">{{ 'relationship.fieldType' | t }}</label>
+          <div class="label-with-help">
+            <label for="rel-type">
+              {{ 'relationship.fieldType' | t }}
+              <app-help-hint placement="below" [text]="'help.hint.relType' | t" />
+            </label>
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm help-btn"
+              (click)="openRelationshipTypeHelp()"
+              [attr.aria-label]="'help.openRelHelp' | t">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+              </svg>
+              {{ 'help.openRelHelp' | t }}
+            </button>
+          </div>
           <select id="rel-type" class="input" formControlName="relationshipType"
                   (change)="onRelationshipTypeChange()">
             @for (option of relationshipTypeOptions; track option.value) {
@@ -566,7 +749,10 @@
         </div>
 
         <div class="field">
-          <label>{{ 'relationship.fieldTarget' | t }}</label>
+          <label>
+            {{ 'relationship.fieldTarget' | t }}
+            <app-help-hint placement="below" [text]="'help.hint.relTarget' | t" />
+          </label>
           <app-model-autocomplete
             [options]="publishedModelNames"
             [placeholder]="'relationship.fieldTargetPlaceholder' | t"
@@ -582,7 +768,10 @@
         </div>
 
         <div class="field">
-          <label for="rel-prop">{{ 'relationship.fieldProperty' | t }}</label>
+          <label for="rel-prop">
+            {{ 'relationship.fieldProperty' | t }}
+            <app-help-hint placement="below" [text]="'help.hint.relProperty' | t" />
+          </label>
           <input id="rel-prop" type="text" class="input" formControlName="propertyName"
                  [attr.aria-invalid]="relationshipDraft.get('propertyName')!.touched && relationshipDraft.get('propertyName')!.invalid ? true : null" />
           @if (relationshipDraft.get('propertyName')!.touched && relationshipDraft.get('propertyName')!.invalid) {
@@ -596,7 +785,10 @@
         </div>
 
         <div class="field">
-          <label for="rel-inv">{{ 'relationship.fieldInverse' | t }}</label>
+          <label for="rel-inv">
+            {{ 'relationship.fieldInverse' | t }}
+            <app-help-hint placement="below" [text]="'help.hint.relInverse' | t" />
+          </label>
           <input id="rel-inv" type="text" class="input" formControlName="inverseProperty"
                  [attr.aria-invalid]="relationshipDraft.get('inverseProperty')!.touched && relationshipDraft.get('inverseProperty')!.invalid ? true : null" />
           @if (relationshipDraft.get('inverseProperty')!.touched && relationshipDraft.get('inverseProperty')!.invalid) {
@@ -611,37 +803,51 @@
         <div class="col-rules-row">
           @if (!draftIsManyToMany) {
             <div class="field col-rule-field">
-              <label for="rel-fk">{{ 'relationship.fieldForeignKey' | t }}</label>
+              <label for="rel-fk">
+                {{ 'relationship.fieldForeignKey' | t }}
+                <app-help-hint placement="below" [text]="'help.hint.relForeignKey' | t" />
+              </label>
               <input id="rel-fk" type="text" class="input" formControlName="foreignKeyName" />
               <span class="field-help">{{ 'relationship.fieldForeignKeyHelp' | t }}</span>
             </div>
           } @else {
             <div class="field col-rule-field">
-              <label for="rel-join">{{ 'relationship.fieldJoinTable' | t }}</label>
+              <label for="rel-join">
+                {{ 'relationship.fieldJoinTable' | t }}
+                <app-help-hint placement="below" [text]="'help.hint.relJoinTable' | t" />
+              </label>
               <input id="rel-join" type="text" class="input" formControlName="joinTableName" />
               <span class="field-help">{{ 'relationship.fieldJoinTableHelp' | t }}</span>
             </div>
           }
 
           <div class="field col-rule-field">
-            <label for="rel-order">{{ 'relationship.fieldOrder' | t }}</label>
+            <label for="rel-order">
+              {{ 'relationship.fieldOrder' | t }}
+              <app-help-hint placement="below" [text]="'help.hint.relOrder' | t" />
+            </label>
             <input id="rel-order" type="number" class="input" formControlName="order" min="0" />
           </div>
         </div>
 
         <div class="field">
-          <label for="rel-display">{{ 'relationship.fieldDisplayName' | t }}</label>
+          <label for="rel-display">
+            {{ 'relationship.fieldDisplayName' | t }}
+            <app-help-hint placement="below" [text]="'help.hint.relDisplayName' | t" />
+          </label>
           <input id="rel-display" type="text" class="input" formControlName="displayName" />
         </div>
 
         <label class="checkbox-label">
           <input type="checkbox" formControlName="required" />
           {{ 'relationship.fieldRequired' | t }}
+          <app-help-hint placement="below" [text]="'help.hint.relRequired' | t" />
         </label>
 
         <label class="checkbox-label">
           <input type="checkbox" formControlName="cascadeDelete" />
           {{ 'relationship.fieldCascade' | t }}
+          <app-help-hint placement="below" [text]="'help.hint.relCascade' | t" />
         </label>
       </div>
 
@@ -751,3 +957,20 @@
     </div>
   </div>
 }
+
+<!-- ══ VERİ TİPİ / KURAL KILAVUZU ═════════════════════════════════════════════
+     Diğer popup'ların üstünde açılır; kendi ESC ve backdrop yönetimi vardır. -->
+<app-datatype-help
+  [open]="helpOpen()"
+  [topic]="helpTopic()"
+  (closed)="closeHelp()"
+  (patternPicked)="onHelpPattern($event)" />
+
+<!-- İlişki silme onayı — native confirm() yerine tasarım sistemine uygun diyalog -->
+<app-confirm-dialog
+  [open]="relationshipToRemove !== null"
+  [title]="'relationship.deleteConfirmTitle' | t"
+  [message]="'relationship.deleteConfirmMessage' | t:{ name: relationshipToRemove?.propertyName ?? '' }"
+  [busy]="isRelationshipDeleting"
+  (confirmed)="confirmRemoveRelationship()"
+  (cancelled)="cancelRemoveRelationship()" />

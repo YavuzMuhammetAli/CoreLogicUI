@@ -1,4 +1,4 @@
-import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -9,6 +9,7 @@ import { PermissionService } from '../../services/permission.service';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { PROVISION_STEP_ORDER, ProvisionStatus } from '../../models/provision.model';
+import { markDirty } from '../../utils/change-detection';
 
 /** Kurulum ekranındaki tek adım satırının görünüm durumu. */
 interface DisplayStep {
@@ -33,9 +34,13 @@ interface DisplayStep {
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe],
   templateUrl: './register-company.component.html',
-  styleUrls: ['./register-company.component.scss']
+  styleUrls: ['./register-company.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RegisterCompanyComponent implements OnDestroy {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
@@ -125,7 +130,7 @@ export class RegisterCompanyComponent implements OnDestroy {
       adminSurname: this.af.adminSurname.value!.trim(),
       email: this.af.email.value!.trim(),
       password: this.af.password.value!
-    }).subscribe({
+    }).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.isStarting.set(false);
         if (res.success && res.data) {
@@ -162,7 +167,7 @@ export class RegisterCompanyComponent implements OnDestroy {
       switchMap(() => this.auth.getProvisionStatus(this.provisionId!).pipe(
         catchError(() => of(null))
       ))
-    ).subscribe(res => {
+    ).pipe(markDirty(this.cdr)).subscribe(res => {
       if (!res?.success || !res.data) return;
 
       this.provisionStatus.set(res.data);
@@ -195,7 +200,7 @@ export class RegisterCompanyComponent implements OnDestroy {
     // LoginComponent.onLogin ile aynı akış: eski yetki sinyalini temizle,
     // yeni kullanıcının yetkilerini yükle, rolünün açılış sayfasına git.
     this.permissionService.clear();
-    this.permissionService.loadMyPermissions().subscribe({
+    this.permissionService.loadMyPermissions().pipe(markDirty(this.cdr)).subscribe({
       next: () => this.router.navigateByUrl(this.permissionService.getLandingPage()),
       error: () => this.router.navigate(['/models'])
     });

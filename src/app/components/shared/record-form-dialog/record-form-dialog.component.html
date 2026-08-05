@@ -1,0 +1,305 @@
+<div class="dialog-overlay" [style.z-index]="overlayZIndex" (click)="onBackdrop($event)">
+  <div
+    class="dialog-panel panel"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="(isEdit ? 'record.dialogEditTitle' : 'record.dialogNewTitle') | t:{ name: node.typeName }">
+
+    <div class="panel-head">
+      <div class="record-dialog-title-wrap">
+        <h2 class="panel-title">
+          {{ (isEdit ? 'record.dialogEditTitle' : 'record.dialogNewTitle') | t:{ name: node.typeName } }}
+        </h2>
+        <p class="panel-subtitle">
+          {{ fkHint ?? ('record.dialogSubtitle' | t) }}
+        </p>
+      </div>
+      <button
+        type="button"
+        class="btn btn-ghost btn-sm"
+        (click)="cancel()"
+        [attr.aria-label]="'record.close' | t">
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    @if (loading) {
+      <div class="panel-body record-dialog-loading">
+        <span class="spinner" aria-hidden="true"></span>
+        {{ 'record.loading' | t }}
+      </div>
+    } @else if (form && meta) {
+
+      <div class="panel-body">
+
+        <!-- Önceki kaydetme denemesinin sunucu hatası -->
+        @if (node.error) {
+          <div class="alert alert-danger" role="alert">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" style="flex-shrink:0">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/>
+            </svg>
+            <span>{{ node.error }}</span>
+          </div>
+        }
+
+        <!-- ── Kaydın kendi alanları ──────────────────────────────────────── -->
+        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <div class="record-fields">
+            @for (col of editableColumns(meta); track col.columnName) {
+              <div class="field">
+                <label [attr.for]="'rf-' + depth + '-' + col.columnName">
+                  {{ colLabel(col) }}
+                  @if (isRequired(col)) { <span class="req">*</span> }
+                  @if (col.description?.trim()) {
+                    <!-- `below`: dialog paneli overflow-y:auto — yukarı açılan balon kırpılır -->
+                    <app-help-hint [text]="col.description ?? ''" placement="below" />
+                  }
+                  <span class="col-type-tag">{{ col.dataType }}</span>
+                </label>
+
+                @if (col.dataType === 'lookup') {
+                  <!-- Tembel yüklemeli seçici: 50'şer kayıt, arama sunucuda. -->
+                  <app-lookup-picker
+                    [inputId]="'rf-' + depth + '-' + col.columnName"
+                    [typeName]="col.lookupTargetTable ?? ''"
+                    [displayColumn]="col.lookupDisplayColumn"
+                    [formControlName]="col.columnName">
+                  </app-lookup-picker>
+                } @else if (col.dataType === 'enum') {
+                  <select
+                    class="input"
+                    [id]="'rf-' + depth + '-' + col.columnName"
+                    [formControlName]="col.columnName">
+                    <option value="">{{ 'model.detail.selectOption' | t }}</option>
+                    @for (val of parseEnumValues(col.enumValues); track val) {
+                      <option [value]="val">{{ val }}</option>
+                    }
+                  </select>
+                } @else if (inputTypeFor(col.dataType) === 'checkbox') {
+                  <label class="checkbox-label" [attr.for]="'rf-' + depth + '-' + col.columnName">
+                    <input
+                      [id]="'rf-' + depth + '-' + col.columnName"
+                      type="checkbox"
+                      [formControlName]="col.columnName">
+                    {{ colLabel(col) }}
+                  </label>
+                } @else if (inputTypeFor(col.dataType) === 'file') {
+                  <input
+                    [id]="'rf-' + depth + '-' + col.columnName"
+                    type="file"
+                    (change)="onFileSelected($event, col.columnName)"
+                    class="record-file-input">
+                  @if (ctrl(col.columnName).value) {
+                    @if (isImage(ctrl(col.columnName).value)) {
+                      <img
+                        [src]="imageSrc(ctrl(col.columnName).value)"
+                        [attr.alt]="'model.detail.preview' | t"
+                        class="record-file-preview">
+                    } @else {
+                      <div class="record-file-row">
+                        <span class="eyebrow">{{ 'model.detail.fileExists' | t }}</span>
+                        <button type="button" class="btn btn-ghost btn-sm"
+                                (click)="download(ctrl(col.columnName).value, col.columnName)">
+                          {{ 'model.detail.download' | t }}
+                        </button>
+                      </div>
+                    }
+                  }
+                } @else {
+                  <input
+                    class="input"
+                    [id]="'rf-' + depth + '-' + col.columnName"
+                    [type]="inputTypeFor(col.dataType)"
+                    [formControlName]="col.columnName"
+                    [attr.step]="stepFor(col.dataType)"
+                    [attr.aria-invalid]="ctrl(col.columnName).touched && ctrl(col.columnName).invalid ? true : null"
+                    [attr.aria-describedby]="errorFor(col) ? 'rf-err-' + depth + '-' + col.columnName : null">
+                }
+
+                @if (errorFor(col); as err) {
+                  <span [id]="'rf-err-' + depth + '-' + col.columnName" class="field-error" role="alert">
+                    {{ err }}
+                  </span>
+                }
+              </div>
+            }
+          </div>
+        </form>
+
+        <!-- ── Bu kaydın kendi alt modelleri ──────────────────────────────── -->
+        @if (canShowChildren) {
+          <div class="record-children">
+            <div class="tab-bar" role="tablist" [attr.aria-label]="'record.childTablistAria' | t">
+              @for (tab of childTabs; track tab.typeName) {
+                <button
+                  type="button"
+                  class="tab-btn"
+                  role="tab"
+                  [class.tab-btn--active]="activeChildTab === tab.typeName"
+                  [attr.aria-selected]="activeChildTab === tab.typeName"
+                  (click)="setChildTab(tab.typeName)">
+                  {{ tab.typeName }}
+                  @if (childRows(tab.typeName).length > 0) {
+                    <span class="tab-badge">{{ childRows(tab.typeName).length }}</span>
+                  }
+                </button>
+              }
+            </div>
+
+            @for (tab of childTabs; track tab.typeName) {
+              @if (activeChildTab === tab.typeName) {
+                <div class="tab-panel" role="tabpanel">
+                  <div class="tab-toolbar">
+                    <p class="muted-hint tab-toolbar-hint">{{ 'record.childHint' | t }}</p>
+                    <div class="tab-toolbar-actions">
+                      @if (selectedCount(tab.typeName) > 0) {
+                        <button type="button" class="btn btn-danger btn-sm" (click)="openBulkDelete(tab.typeName)">
+                          <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                               stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                          </svg>
+                          {{ 'record.bulkDelete' | t:{ count: selectedCount(tab.typeName) } }}
+                        </button>
+                      }
+                      <button type="button" class="btn btn-primary btn-sm" (click)="openNestedAdd(tab.typeName)">
+                        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2.5">
+                          <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        {{ 'record.newChild' | t:{ name: tab.typeName } }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Kayıtlı alt satırlar tembel çekilir (yalnızca aktif sekme) -->
+                  @if (tabView(tab.typeName)?.loading) {
+                    <p class="muted-hint record-empty">
+                      <span class="spinner" aria-hidden="true"></span>
+                      {{ 'record.childRowsLoading' | t }}
+                    </p>
+                  }
+
+                  @if (tabView(tab.typeName)?.error; as tabErr) {
+                    <div class="alert alert-danger" role="alert">{{ tabErr }}</div>
+                  }
+
+                  <!-- Silinemeyen satırların özeti — o satırlar seçili kalır -->
+                  @if (errorsOf(tab.typeName).length > 0) {
+                    <div class="alert alert-danger" role="alert">
+                      <div class="bulk-error-list">
+                        <strong>{{ 'record.bulkDeletePartial' | t:{ total: totalOf(tab.typeName), failed: errorsOf(tab.typeName).length } }}</strong>
+                        <ul>
+                          @for (err of errorsOf(tab.typeName); track err) {
+                            <li>{{ err }}</li>
+                          }
+                        </ul>
+                      </div>
+                    </div>
+                  }
+
+                  @if (childRows(tab.typeName).length === 0) {
+                    @if (!tabView(tab.typeName)?.loading) {
+                      <p class="muted-hint record-empty">{{ 'record.noChildRows' | t }}</p>
+                    }
+                  } @else {
+                    <div class="record-child-table-wrap">
+                      <table class="data-table">
+                        <thead>
+                          <tr>
+                            <th class="select-col">
+                              <input
+                                type="checkbox"
+                                [checked]="allRowsSelected(tab.typeName)"
+                                [indeterminate]="someRowsSelected(tab.typeName)"
+                                (change)="toggleAllRows(tab.typeName)"
+                                [attr.aria-label]="'record.selectAllAria' | t">
+                            </th>
+                            @for (c of childColumns(tab.typeName); track c.columnName) {
+                              <th>{{ colLabel(c) }}</th>
+                            }
+                            <th>{{ 'record.colState' | t }}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (row of childRows(tab.typeName); track row.localId) {
+                            <tr
+                              class="clickable-row"
+                              [class.row-invalid]="!!row.error"
+                              [class.row-selected]="isRowSelected(tab.typeName, row)"
+                              tabindex="0"
+                              role="button"
+                              (click)="openNestedEdit(tab.typeName, row)"
+                              (keydown.enter)="openNestedEdit(tab.typeName, row)"
+                              [attr.aria-label]="'record.editRowAria' | t">
+                              <td class="select-cell" (click)="$event.stopPropagation()">
+                                <input
+                                  type="checkbox"
+                                  [checked]="isRowSelected(tab.typeName, row)"
+                                  (change)="toggleRow(tab.typeName, row)"
+                                  [attr.aria-label]="'record.selectRowAria' | t">
+                              </td>
+                              @for (c of childColumns(tab.typeName); track c.columnName) {
+                                <td>{{ childCell(row, c.columnName) }}</td>
+                              }
+                              <td>
+                                @if (row.error) {
+                                  <span class="badge badge-danger">{{ 'record.stateFailed' | t }}</span>
+                                } @else if (row.savedId !== null) {
+                                  <span class="badge badge-success">{{ 'record.stateSaved' | t }}</span>
+                                } @else {
+                                  <span class="badge badge-meta">{{ 'record.statePending' | t }}</span>
+                                }
+                              </td>
+                            </tr>
+                            @if (row.error) {
+                              <tr class="record-error-row">
+                                <td [attr.colspan]="childColumns(tab.typeName).length + 2">
+                                  <span class="field-error" role="alert">{{ row.error }}</span>
+                                </td>
+                              </tr>
+                            }
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                </div>
+              }
+            }
+          </div>
+        }
+      </div>
+
+      <div class="panel-actions">
+        <button type="button" class="btn btn-secondary" (click)="cancel()">{{ 'record.cancel' | t }}</button>
+        <button type="button" class="btn btn-primary" (click)="submit()">{{ 'record.apply' | t }}</button>
+      </div>
+    }
+  </div>
+</div>
+
+<!-- ── İç içe katman: alt model kaydı (aynı component, bir seviye derin) ────── -->
+@if (nestedOpen && nestedNode) {
+  <app-record-form-dialog
+    [node]="nestedNode"
+    [depth]="depth + 1"
+    [isEdit]="nestedIsEdit"
+    [fkColumn]="childFkColumn()"
+    (saved)="onNestedSaved($event)"
+    (cancelled)="closeNested()" />
+}
+
+<!-- ── Alt satırların toplu silinme onayı ─────────────────────────────────────
+     `zIndex`: bu dialogun overlay'i 1000 + depth*10 kullanıyor; onay kutusu
+     varsayılan 1000'de kalırsa pop-up'ın ALTINDA görünmez olurdu. -->
+<app-confirm-dialog
+  [open]="!!bulkTypeName"
+  [title]="'record.bulkDeleteTitle' | t"
+  [message]="bulkDeleteMessage"
+  [busy]="bulkBusy"
+  [zIndex]="confirmZIndex"
+  (confirmed)="confirmBulkDelete()"
+  (cancelled)="cancelBulkDelete()" />

@@ -26,6 +26,7 @@ export const PERMISSION_I18N: Translations = {
   'role.list.editAriaLabel': { tr: 'Rolü düzenle', en: 'Edit role' },
   'role.list.deleteAriaLabel': { tr: 'Rolü sil', en: 'Delete role' },
   'role.list.loadError': { tr: 'Rol listesi yüklenemedi.', en: 'Failed to load role list.' },
+  'role.list.deleteConfirmTitle': { tr: 'Rolü sil', en: 'Delete role' },
   'role.list.deleteConfirm': {
     tr: "'{name}' rolünü silmek istediğinize emin misiniz? Bu işlem rolün tüm üyelik ve izin kayıtlarını da kaldırır.",
     en: "Are you sure you want to delete the role '{name}'? This will also remove all membership and permission records of the role."
@@ -110,6 +111,7 @@ export const PERMISSION_I18N: Translations = {
   'role.detail.loadError': { tr: 'Rol yüklenemedi.', en: 'Failed to load role.' },
   'role.detail.renameError': { tr: 'Rol adı güncellenemedi.', en: 'Failed to update role name.' },
   'role.detail.landingPageError': { tr: 'Açılış sayfası güncellenemedi.', en: 'Failed to update landing page.' },
+  'role.detail.deleteConfirmTitle': { tr: 'Rolü sil', en: 'Delete role' },
   'role.detail.deleteConfirm': {
     tr: "'{name}' rolünü silmek istediğinize emin misiniz? Bu işlem rolün tüm üyelik ve izin kayıtlarını da kaldırır.",
     en: "Are you sure you want to delete the role '{name}'? This will also remove all membership and permission records of the role."

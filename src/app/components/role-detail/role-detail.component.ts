@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -14,6 +14,8 @@ import { DashboardDefinition } from '../../models/dashboard.model';
 import { ModelPermission } from '../../services/permission.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
+import { markDirty } from '../../utils/change-detection';
+import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 
 /** Açılış sayfası dropdown'unda gösterilen sabit hedefler key'i — etiketler LanguageService.t() ile çözülür */
 const FIXED_LANDING_PAGE_KEYS: { value: string; labelKey: string }[] = [
@@ -40,11 +42,15 @@ export interface RolePermissionRow {
 @Component({
   selector: 'app-role-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ConfirmDialogComponent],
   templateUrl: './role-detail.component.html',
-  styleUrls: ['./role-detail.component.scss']
+  styleUrls: ['./role-detail.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoleDetailComponent implements OnInit {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   private readonly route        = inject(ActivatedRoute);
   private readonly router       = inject(Router);
   private readonly roleService  = inject(RoleAdminService);
@@ -179,7 +185,7 @@ export class RoleDetailComponent implements OnInit {
 
   /** Açılış sayfası dropdown'unu sabit sayfalar + mevcut dashboard'larla doldurur. */
   private loadLandingPageOptions(): void {
-    this.dashboardService.list().subscribe({
+    this.dashboardService.list().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         const dashboards: DashboardDefinition[] = res.success ? (res.data ?? []) : [];
         const dashboardOptions = dashboards.map(d => ({ value: `/dashboard/${d.id}`, label: this.languageService.t('role.detail.landingDashboardOption', { name: d.name }) }));
@@ -202,7 +208,7 @@ export class RoleDetailComponent implements OnInit {
     this.creatingRole.set(true);
     this.createRoleMsg.set('');
 
-    this.roleService.createRole(name).subscribe({
+    this.roleService.createRole(name).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.creatingRole.set(false);
         if (!res.success) {
@@ -211,7 +217,7 @@ export class RoleDetailComponent implements OnInit {
           return;
         }
         // Backend yeni rolün id'sini döndürmüyor — listeyi çekip ada göre bul
-        this.roleService.getRoles().subscribe({
+        this.roleService.getRoles().pipe(markDirty(this.cdr)).subscribe({
           next: rolesRes => {
             const found = (rolesRes.data ?? []).find(r => r.name === name);
             if (found) {
@@ -237,7 +243,7 @@ export class RoleDetailComponent implements OnInit {
     this.roleLoading.set(true);
     this.roleError.set('');
 
-    this.roleService.getRoles().subscribe({
+    this.roleService.getRoles().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (!res.success) {
           this.roleError.set(res.message);
@@ -265,7 +271,7 @@ export class RoleDetailComponent implements OnInit {
   }
 
   private loadAllUsers(): void {
-    this.adminService.getUsers().subscribe({
+    this.adminService.getUsers().pipe(markDirty(this.cdr)).subscribe({
       next: res => this.allUsers.set(res.success ? (res.data ?? []) : []),
       error: () => {}
     });
@@ -291,7 +297,7 @@ export class RoleDetailComponent implements OnInit {
     this.renameSaving.set(true);
     this.renameMsg.set('');
 
-    this.roleService.renameRole(role.id, name).subscribe({
+    this.roleService.renameRole(role.id, name).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.renameMsg.set(res.message);
         this.renameMsgType.set(res.success ? 'success' : 'danger');
@@ -317,7 +323,7 @@ export class RoleDetailComponent implements OnInit {
     this.landingPageSaving.set(true);
     this.landingPageMsg.set('');
 
-    this.roleService.setLandingPage(role.id, this.landingPageEdit || null).subscribe({
+    this.roleService.setLandingPage(role.id, this.landingPageEdit || null).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.landingPageMsg.set(res.message);
         this.landingPageMsgType.set(res.success ? 'success' : 'danger');
@@ -336,15 +342,26 @@ export class RoleDetailComponent implements OnInit {
 
   /* ──────────────── Rol silme ──────────────── */
 
-  deleteRole(): void {
+  /** Onay diyaloğu açık mı — silme geri alınamaz, doğrudan DELETE atılmaz. */
+  readonly deleteConfirmOpen = signal(false);
+
+  askDeleteRole(): void {
+    if (this.role()) this.deleteConfirmOpen.set(true);
+  }
+
+  cancelDeleteRole(): void {
+    this.deleteConfirmOpen.set(false);
+  }
+
+  confirmDeleteRole(): void {
     const role = this.role();
     if (!role) return;
-    if (!confirm(this.languageService.t('role.detail.deleteConfirm', { name: role.name }))) return;
 
+    this.deleteConfirmOpen.set(false);
     this.deleteSaving.set(true);
     this.deleteMsg.set('');
 
-    this.roleService.deleteRole(role.id).subscribe({
+    this.roleService.deleteRole(role.id).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (res.success) {
           this.router.navigate(['/roles']);
@@ -372,7 +389,7 @@ export class RoleDetailComponent implements OnInit {
     forkJoin([
       this.modelService.getModels(),
       this.roleService.getRolePermissions(roleId)
-    ]).subscribe({
+    ]).pipe(markDirty(this.cdr)).subscribe({
       next: ([modelsRes, permsRes]) => {
         const allModels: PublishedModel[] = modelsRes.success ? (modelsRes.data ?? []) : [];
         const existing: ModelPermission[] = permsRes.success ? (permsRes.data ?? []) : [];
@@ -448,7 +465,7 @@ export class RoleDetailComponent implements OnInit {
     this.permRowSaving.set(true);
     this.permMsg.set('');
 
-    this.roleService.setRolePermission(role.id, row.modelName, toActionInt(row)).subscribe({
+    this.roleService.setRolePermission(role.id, row.modelName, toActionInt(row)).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (res.success) {
           row.dirty = false;
@@ -473,7 +490,7 @@ export class RoleDetailComponent implements OnInit {
   private loadRoleMembers(roleId: number): void {
     this.membersLoading.set(true);
     this.membersError.set('');
-    this.roleService.getRoleMembers(roleId).subscribe({
+    this.roleService.getRoleMembers(roleId).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.members.set(res.success ? (res.data ?? []) : []);
         if (!res.success) this.membersError.set(res.message);
@@ -493,7 +510,7 @@ export class RoleDetailComponent implements OnInit {
     this.addMemberSaving.set(true);
     this.addMemberMsg.set('');
 
-    this.roleService.addUserToRole(role.id, this.userIdToAdd).subscribe({
+    this.roleService.addUserToRole(role.id, this.userIdToAdd).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (res.success) {
           this.userIdToAdd = null;
@@ -517,7 +534,7 @@ export class RoleDetailComponent implements OnInit {
 
     this.removingUserId.set(user.id);
 
-    this.roleService.removeUserFromRole(role.id, user.id).subscribe({
+    this.roleService.removeUserFromRole(role.id, user.id).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (res.success) {
           this.members.set(this.members().filter(m => m.id !== user.id));

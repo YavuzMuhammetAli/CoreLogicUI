@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription, forkJoin } from 'rxjs';
 import { DashboardService } from '../../services/dashboard.service';
@@ -19,7 +19,8 @@ export interface DashboardWidgetView {
   standalone: true,
   imports: [RouterLink, AppChartComponent, TranslatePipe],
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.scss']
+  styleUrls: ['./dashboard.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
@@ -27,11 +28,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly reportService = inject(ReportService);
   private readonly languageService = inject(LanguageService);
 
-  dashboard: DashboardRunResult | null = null;
-  widgetViews: DashboardWidgetView[] = [];
+  readonly dashboard = signal<DashboardRunResult | null>(null);
+  readonly widgetViews = signal<DashboardWidgetView[]>([]);
 
-  loading = false;
-  loadError: string | null = null;
+  readonly loading = signal(false);
+  readonly loadError = signal<string | null>(null);
 
   private routeSub?: Subscription;
 
@@ -58,36 +59,40 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private load(id: number): void {
-    this.loading = true;
-    this.loadError = null;
-    this.dashboard = null;
-    this.widgetViews = [];
+    this.loading.set(true);
+    this.loadError.set(null);
+    this.dashboard.set(null);
+    this.widgetViews.set([]);
 
-    forkJoin([this.dashboardService.get(id), this.reportService.list()]).subscribe({
+    // listCached(): rapor tanımları yalnızca widget başlığındaki ADI çözmek için
+    // gerekiyor. Eskiden her dashboard geçişinde tüm liste yeniden çekiliyordu;
+    // artık shareReplay ile önbellekli.
+    forkJoin([this.dashboardService.get(id), this.reportService.listCached()]).subscribe({
       next: ([dashRes, listRes]) => {
-        this.loading = false;
+        this.loading.set(false);
 
         if (!dashRes.success) {
-          this.loadError = dashRes.message ?? this.languageService.t('dashboard.view.loadError');
+          this.loadError.set(dashRes.message ?? this.languageService.t('dashboard.view.loadError'));
           return;
         }
 
-        this.dashboard = dashRes.data;
+        const dash = dashRes.data;
+        this.dashboard.set(dash);
 
         const reportNames = new Map<number, string>();
         if (listRes.success) {
           for (const r of listRes.data ?? []) reportNames.set(r.id, r.name);
         }
 
-        this.widgetViews = this.dashboard.widgets.map(item => ({
+        this.widgetViews.set(dash.widgets.map(item => ({
           result: item,
           reportName: reportNames.get(item.widget.reportDefinitionId)
             ?? this.languageService.t('dashboard.view.reportFallbackName', { id: item.widget.reportDefinitionId })
-        }));
+        })));
       },
       error: (err: { error?: { message?: string } }) => {
-        this.loading = false;
-        this.loadError = err?.error?.message ?? this.languageService.t('dashboard.view.serverError');
+        this.loading.set(false);
+        this.loadError.set(err?.error?.message ?? this.languageService.t('dashboard.view.serverError'));
       }
     });
   }

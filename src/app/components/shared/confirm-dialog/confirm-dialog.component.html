@@ -1,5 +1,5 @@
 @if (open()) {
-  <div class="dialog-overlay" (click)="onBackdropClick()">
+  <div class="dialog-overlay" [style.z-index]="zIndex()" (click)="onBackdropClick()">
     <div
       class="dialog-panel panel"
       role="dialog"

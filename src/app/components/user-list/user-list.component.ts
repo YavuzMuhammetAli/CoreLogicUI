@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { UserAdminService } from '../../services/user-admin.service';
@@ -6,6 +6,7 @@ import { AuthService } from '../../services/auth.service';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { AppUser } from '../../models/appUser';
+import { markDirty } from '../../utils/change-detection';
 
 /**
  * Şirket içi kullanıcı listesi (/users) — yalnızca admin (adminGuard).
@@ -18,9 +19,13 @@ import { AppUser } from '../../models/appUser';
   standalone: true,
   imports: [CommonModule, RouterLink, TranslatePipe],
   templateUrl: './user-list.component.html',
-  styleUrls: ['./user-list.component.scss']
+  styleUrls: ['./user-list.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserListComponent {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   private readonly userAdminService = inject(UserAdminService);
   private readonly authService = inject(AuthService);
   private readonly languageService = inject(LanguageService);
@@ -46,7 +51,7 @@ export class UserListComponent {
     this.loading.set(true);
     this.loadError.set('');
 
-    this.userAdminService.getUsers().subscribe({
+    this.userAdminService.getUsers().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.loading.set(false);
         this.users.set(res.success ? (res.data ?? []) : []);
@@ -71,7 +76,7 @@ export class UserListComponent {
     this.busyId.set(user.id);
     this.actionError.set('');
 
-    this.userAdminService.setActive(user.id, !user.status).subscribe({
+    this.userAdminService.setActive(user.id, !user.status).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.busyId.set(null);
         if (res.success) {

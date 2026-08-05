@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
@@ -9,6 +9,7 @@ import { ModelPermission } from '../../services/permission.service';
 import { AppUser } from '../../models/appUser';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
+import { markDirty } from '../../utils/change-detection';
 
 /** "İzinli model sayısı" sütununda gösterilen, izin sayısı zenginleştirilmiş kullanıcı satırı */
 interface UserRow extends AppUser {
@@ -20,9 +21,13 @@ interface UserRow extends AppUser {
   standalone: true,
   imports: [CommonModule, RouterLink, TranslatePipe],
   templateUrl: './user-permission-list.component.html',
-  styleUrls: ['./user-permission-list.component.scss']
+  styleUrls: ['./user-permission-list.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserPermissionListComponent implements OnInit {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   private readonly languageService = inject(LanguageService);
 
   rows      = signal<UserRow[]>([]);
@@ -39,7 +44,7 @@ export class UserPermissionListComponent implements OnInit {
     this.loading.set(true);
     this.loadError.set('');
 
-    this.adminService.getUsers().subscribe({
+    this.adminService.getUsers().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (!res.success) {
           this.rows.set([]);
@@ -63,7 +68,7 @@ export class UserPermissionListComponent implements OnInit {
               catchError(() => of(0))
             )
           )
-        ).subscribe(counts => {
+        ).pipe(markDirty(this.cdr)).subscribe(counts => {
           this.rows.set(users.map((user, i) => ({ ...user, permittedModelCount: counts[i] })));
           this.loading.set(false);
         });

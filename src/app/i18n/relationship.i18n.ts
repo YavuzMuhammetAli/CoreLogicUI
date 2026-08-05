@@ -14,8 +14,8 @@ export const RELATIONSHIP_I18N: Translations = {
 
   'relationship.emptyTitle': { tr: 'Henüz ilişki yok', en: 'No relationships yet' },
   'relationship.emptyMessage': {
-    tr: 'Bu modeli daha önce yayınlanmış başka modellerle ilişkilendirin. Oluşan assembly içinde navigation property\'ler otomatik üretilir.',
-    en: 'Relate this model to other published models. Navigation properties are generated automatically in the resulting assembly.'
+    tr: 'İlişki, bu modeli VAR OLAN başka bir modele bağlar; navigation property\'ler otomatik üretilir. Kendi alanlarıyla yeni bir çocuk model istiyorsanız "Alt Modeller" sekmesini kullanın.',
+    en: 'A relationship links this model to an EXISTING model; navigation properties are generated automatically. If you want a new child model with its own fields, use the "Sub-models" tab.'
   },
   'relationship.saveModelFirst': {
     tr: 'İlişki ekleyebilmek için önce modeli kaydedin.',
@@ -44,15 +44,15 @@ export const RELATIONSHIP_I18N: Translations = {
   'relationship.dialogNewTitle': { tr: 'Yeni İlişki', en: 'New Relationship' },
   'relationship.dialogEditTitle': { tr: 'İlişkiyi Düzenle', en: 'Edit Relationship' },
   'relationship.dialogSubtitle': {
-    tr: 'Yalnızca yayınlanmış modellerle ilişki kurulabilir.',
-    en: 'Relationships can only target published models.'
+    tr: 'İlişki, var olan bir modele bağlanır — yeni model oluşturmaz.',
+    en: 'A relationship targets an existing model — it does not create one.'
   },
 
   'relationship.fieldTarget': { tr: 'Hedef Model', en: 'Target Model' },
   'relationship.fieldTargetPlaceholder': { tr: 'Model ara…', en: 'Search model…' },
   'relationship.fieldTargetHelp': {
-    tr: 'Yalnızca yayınlanmış modeller listelenir.',
-    en: 'Only published models are listed.'
+    tr: 'Listede yayınlanmış modeller çıkar. Bu modele ait yeni bir çocuk model için "Alt Modeller" sekmesini kullanın.',
+    en: 'The list shows published models. For a new child model of this model, use the "Sub-models" tab.'
   },
   'relationship.fieldType': { tr: 'İlişki Tipi', en: 'Relationship Type' },
   'relationship.fieldProperty': { tr: 'Property Adı', en: 'Property Name' },
@@ -96,13 +96,7 @@ export const RELATIONSHIP_I18N: Translations = {
   },
 
   // ── Doğrulama / durum ─────────────────────────────────────────────────────
-  'relationship.validating': { tr: 'Doğrulanıyor…', en: 'Validating…' },
-  'relationship.valid': { tr: 'İlişki grafiği geçerli.', en: 'The relationship graph is valid.' },
   'relationship.depthBadge': { tr: 'Derinlik {depth}/{max}', en: 'Depth {depth}/{max}' },
-  'relationship.depthExceeded': {
-    tr: 'Derinlik sınırı aşıldı ({depth}/{max}).',
-    en: 'Depth limit exceeded ({depth}/{max}).'
-  },
   'relationship.errorsTitle': { tr: 'Hatalar', en: 'Errors' },
   'relationship.warningsTitle': { tr: 'Uyarılar', en: 'Warnings' },
   'relationship.blocksPublish': {
@@ -116,6 +110,10 @@ export const RELATIONSHIP_I18N: Translations = {
   'relationship.deleteConfirmMessage': {
     tr: '"{name}" ilişkisi silinecek. SQL tarafındaki foreign key bir sonraki yayınlamada kaldırılır.',
     en: 'Relationship "{name}" will be deleted. The SQL foreign key is removed on the next publish.'
+  },
+  'relationship.flushTableNotFound': {
+    tr: 'Model kaydedildi ancak tablosu bulunamadı — bekleyen ilişkiler gönderilemedi. Sayfayı yenileyip tekrar deneyin.',
+    en: 'The model was saved but its table was not found — pending relationships could not be submitted. Refresh and try again.'
   },
 
   // ── Önizleme diyaloğu ─────────────────────────────────────────────────────

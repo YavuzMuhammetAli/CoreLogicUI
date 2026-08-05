@@ -200,6 +200,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
 }
@@ -207,6 +208,12 @@
 .tab-toolbar-actions {
   display: flex;
   gap: var(--space-2);
+}
+
+/* Araç çubuğunda solda duran açıklama metni (Alt Modeller sekmesi) */
+.tab-toolbar-hint {
+  margin: 0 auto 0 0;
+  max-width: 68ch;
 }
 
 .tab-table-wrapper {
@@ -248,6 +255,31 @@
   margin: var(--space-3) 0;
 }
 
+/* ── Etiket + kılavuz düğmesi satırı ──────────────────────────────────────────
+   Alan etiketini solda, "i" kılavuz düğmesini sağda tutar. Küçük ipucu
+   baloncukları (app-help-hint) doğrudan <label> içinde yer alır. */
+
+.label-with-help {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+
+  label {
+    margin: 0;
+  }
+}
+
+.help-btn {
+  flex-shrink: 0;
+  gap: var(--space-1);
+  color: var(--muted);
+
+  &:hover {
+    color: var(--accent);
+  }
+}
+
 /* ── Sütun popup'ı (modal) ─────────────────────────────────────────────────── */
 
 .dialog-overlay {
@@ -271,11 +303,31 @@
   box-shadow: var(--elev-high);
 }
 
+/* Kaydedilmemiş alt model taslakları — mevcut alt model tablosundan ayrılır */
+.sub-model-drafts {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px dashed var(--border);
+  display: grid;
+  gap: var(--space-4);
+}
+
+.sub-model-drafts-title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg-2);
+}
+
+/* Global `.panel-actions` yalnızca `.panel-head` içinde tanımlı; burada `.panel-body`'nin
+   kardeşi olduğu için padding'i component vermeli — aksi halde butonlar panel kenarına
+   yapışır. Yatay değer `.panel-head`/`.panel-body` ile hizalı. */
 .dialog-panel .panel-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
-  padding-top: var(--space-4);
+  padding: var(--space-4) var(--space-6) var(--space-5);
+  border-top: 1px solid var(--border-soft);
 }
 
 /* ── Yükleniyor ────────────────────────────────────────────────────────────── */

@@ -1,0 +1,79 @@
+<div class="lk-wrapper">
+  <div class="lk-input-row">
+    <input
+      #lkInput
+      type="text"
+      class="input lk-input"
+      role="combobox"
+      autocomplete="off"
+      [id]="inputId() || null"
+      [value]="displayText()"
+      [disabled]="disabled()"
+      [placeholder]="placeholder() || ('model.lookup.placeholder' | t)"
+      [attr.aria-label]="ariaLabel() || ('model.lookup.ariaLabel' | t)"
+      [attr.aria-expanded]="isOpen()"
+      [attr.aria-controls]="listboxId"
+      [attr.aria-activedescendant]="activeDescendantId"
+      [attr.aria-invalid]="invalid() ? true : null"
+      [attr.aria-busy]="loading() ? true : null"
+      (focus)="open()"
+      (click)="open()"
+      (input)="onInput($event)"
+      (keydown)="onKeydown($event)" />
+
+    @if (selectedLabel() !== null && !disabled()) {
+      <button type="button" class="lk-clear" (click)="clear()"
+              [attr.aria-label]="'model.lookup.clear' | t">
+        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
+      </button>
+    }
+  </div>
+
+  @if (isOpen()) {
+    <!-- Konum JS'ten gelir: liste position:fixed olduğu için (kırpan .panel /
+         .dialog-panel atalarından kurtulmak zorunda) koordinatlar input'un
+         getBoundingClientRect()'inden hesaplanır. -->
+    <ul class="lk-list" role="listbox" [id]="listboxId"
+        [style.top]="listPos().top"
+        [style.left]="listPos().left"
+        [style.width]="listPos().width"
+        [style.max-height]="listPos().maxHeight">
+      @for (option of options(); track option.id; let i = $index) {
+        <li class="lk-option"
+            role="option"
+            [id]="optionId(i)"
+            [class.lk-option--active]="activeIndex() === i"
+            [attr.aria-selected]="selectedLabel() === option.label"
+            (mousedown)="select(option); $event.preventDefault()">
+          {{ option.label }}
+        </li>
+      } @empty {
+        @if (!loading()) {
+          <li class="lk-empty" role="option" aria-disabled="true" [attr.aria-selected]="false">
+            {{ 'model.lookup.noResult' | t }}
+          </li>
+        }
+      }
+
+      <!-- Sonsuz kaydırma tetikleyicisi: görünür alana girince sonraki 50 kayıt istenir.
+           Liste sonuna gelindiyse hiç render edilmez, böylece gözlemci de tetiklenmez. -->
+      @if (hasMore()) {
+        <li #sentinel class="lk-sentinel" aria-hidden="true"></li>
+      }
+
+      @if (loading()) {
+        <li class="lk-loading" aria-hidden="true">
+          <span class="spinner"></span>
+          {{ 'common.loading' | t }}
+        </li>
+      }
+
+      @if (total() > 0) {
+        <li class="lk-footer" aria-hidden="true">
+          {{ 'model.lookup.counter' | t:{ shown: options().length, total: total() } }}
+        </li>
+      }
+    </ul>
+  }
+</div>

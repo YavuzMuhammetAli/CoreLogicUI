@@ -127,6 +127,14 @@ export const REPORT_I18N: Translations = {
   'report.viewer.chart': { tr: 'Grafik', en: 'Chart' },
   'report.viewer.table': { tr: 'Tablo', en: 'Table' },
   'report.viewer.data': { tr: 'Veri', en: 'Data' },
+  'report.viewer.pagerInfo': {
+    tr: 'Sayfa {page} / {pages} · toplam {total} kayıt',
+    en: 'Page {page} of {pages} · {total} records total'
+  },
+  'report.viewer.truncatedWarning': {
+    tr: 'Sonuç çok büyük olduğu için ilk {shown} satır gösteriliyor (toplam {total}). Tam veri için dışa aktarın.',
+    en: 'Result is too large; showing the first {shown} rows of {total}. Export for the full data.'
+  },
   'report.viewer.runFailed': { tr: 'Rapor çalıştırılamadı.', en: 'Report could not be executed.' },
   'report.viewer.serverError': { tr: 'Sunucu bağlantı hatası.', en: 'Server connection error.' },
   'report.viewer.excelExportFailed': { tr: 'Excel export başarısız oldu.', en: 'Excel export failed.' },

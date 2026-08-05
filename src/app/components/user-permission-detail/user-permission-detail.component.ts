@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -10,6 +10,7 @@ import { AppUser } from '../../models/appUser';
 import { ModelPermission } from '../../services/permission.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
+import { markDirty } from '../../utils/change-detection';
 
 /** Düzenleme için kullanılan geçici izin satırı (role-detail ile aynı yapı) */
 export interface PermissionRow {
@@ -31,9 +32,13 @@ export interface PermissionRow {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
   templateUrl: './user-permission-detail.component.html',
-  styleUrls: ['./user-permission-detail.component.scss']
+  styleUrls: ['./user-permission-detail.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserPermissionDetailComponent implements OnInit {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   private readonly route        = inject(ActivatedRoute);
   private readonly adminService = inject(PermissionAdminService);
   private readonly modelService = inject(PublishedModelService);
@@ -114,7 +119,7 @@ export class UserPermissionDetailComponent implements OnInit {
     this.userLoading.set(true);
     this.userError.set('');
 
-    this.adminService.getUsers().subscribe({
+    this.adminService.getUsers().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (!res.success) {
           this.userError.set(res.message);
@@ -147,7 +152,7 @@ export class UserPermissionDetailComponent implements OnInit {
     this.adminSaving.set(true);
     this.adminMsg.set('');
 
-    this.adminService.setAdmin(user.id, makeAdmin).subscribe({
+    this.adminService.setAdmin(user.id, makeAdmin).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.adminMsg.set(res.message);
         this.adminMsgType.set(res.success ? 'success' : 'danger');
@@ -177,7 +182,7 @@ export class UserPermissionDetailComponent implements OnInit {
     forkJoin([
       this.modelService.getModels(),
       this.adminService.getUserPermissions(userId)
-    ]).subscribe({
+    ]).pipe(markDirty(this.cdr)).subscribe({
       next: ([modelsRes, permsRes]) => {
         const allModels: PublishedModel[] = modelsRes.success ? (modelsRes.data ?? []) : [];
         const existing: ModelPermission[] = permsRes.success ? (permsRes.data ?? []) : [];
@@ -253,7 +258,7 @@ export class UserPermissionDetailComponent implements OnInit {
     this.permRowSaving.set(true);
     this.permMsg.set('');
 
-    this.adminService.setPermission(user.id, row.modelName, toActionInt(row)).subscribe({
+    this.adminService.setPermission(user.id, row.modelName, toActionInt(row)).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (res.success) {
           row.dirty = false;

@@ -79,7 +79,7 @@
                 </a>
                 <button
                   class="btn btn-danger btn-sm"
-                  (click)="deleteRole(row)"
+                  (click)="askDeleteRole(row)"
                   type="button"
                   [disabled]="deletingId() === row.id"
                   [attr.aria-label]="'role.list.deleteAriaLabel' | t">
@@ -97,3 +97,12 @@
     </div>
   }
 </div>
+
+<!-- Rol silme onayı — native confirm() yerine tasarım sistemine uygun diyalog -->
+<app-confirm-dialog
+  [open]="pendingDelete() !== null"
+  [title]="'role.list.deleteConfirmTitle' | t"
+  [message]="'role.list.deleteConfirm' | t:{ name: pendingDelete()?.name ?? '' }"
+  [busy]="deletingId() !== null"
+  (confirmed)="confirmDeleteRole()"
+  (cancelled)="cancelDeleteRole()" />

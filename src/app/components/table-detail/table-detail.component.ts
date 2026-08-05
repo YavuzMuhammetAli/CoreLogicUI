@@ -1,5 +1,5 @@
-import { Component, HostListener, OnDestroy, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, inject, OnDestroy, signal } from '@angular/core';
+import { CommonModule, Location } from '@angular/common';
 import { ReactiveFormsModule, AbstractControl, FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
@@ -7,11 +7,16 @@ import { from, concatMap, switchMap, throwError, of, catchError } from 'rxjs';
 import { PublishedTableService, PublishedColumnSchema, PublishedTableSchema } from '../../services/published-table.service';
 import { PublishedModelService } from '../../services/published-model.service';
 import { RelationshipService } from '../../services/relationship.service';
-import { ModelNodeComponent } from '../model-node/model-node.component';
+import { ModelNodeComponent, MAX_DEPTH } from '../model-node/model-node.component';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { ModelAutocompleteComponent } from '../shared/model-autocomplete/model-autocomplete.component';
 import { EntityGraphComponent } from '../shared/entity-graph/entity-graph.component';
+import { HelpHintComponent } from '../shared/help-hint/help-hint.component';
+import { DatatypeHelpComponent } from '../shared/datatype-help/datatype-help.component';
+import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
+import { HelpTopicId } from '../shared/datatype-help/datatype-help.data';
+import { RegexPreset } from '../shared/datatype-help/regex-presets';
 import {
   RelationshipDefinition,
   RelationshipType,
@@ -21,6 +26,20 @@ import {
   RELATIONSHIP_TYPE_OPTIONS,
   requiresInverse
 } from '../../models/relationship.model';
+import { markDirty } from '../../utils/change-detection';
+
+/** Ekrandaki sekmeler. */
+type TabId = 'columns' | 'subModels' | 'relationships';
+
+/** /Published/getAll satırı — model ağacını (parent/derinlik) kurmak için. */
+interface TableRow {
+  id: number;
+  tableName: string;
+  description: string;
+  version: number;
+  parentTableId: number | null;
+  depth: number;
+}
 
 /** Kaydetme akışında kullanılan düzleştirilmiş düğüm verisi */
 interface TreeNode {
@@ -62,12 +81,17 @@ interface TreeNode {
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe,
-    ModelAutocompleteComponent, EntityGraphComponent
+    ModelAutocompleteComponent, EntityGraphComponent, ModelNodeComponent,
+    HelpHintComponent, DatatypeHelpComponent, ConfirmDialogComponent
   ],
   templateUrl: './table-detail.component.html',
-  styleUrls: ['./table-detail.component.scss']
+  styleUrls: ['./table-detail.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TableDetailComponent implements OnDestroy {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   /** Kök model FormGroup — entityName + columns + subModels */
   rootGroup: FormGroup;
 
@@ -96,10 +120,25 @@ export class TableDetailComponent implements OnDestroy {
   /** Düzenleme modunda diff için: yüklenen şemadaki kolon adları */
   private originalColumnNames = new Set<string>();
 
+  /** Adres çubuğunu sayfa yeniden yüklemeden güncellemek için (oluşturma → düzenleme geçişi). */
+  private readonly location = inject(Location);
+
   private formChangeSub?: Subscription;
+  private paramSub?: Subscription;
 
   /** Lookup kolon tipi için hedef model seçenekleri (kayıtlı tüm tablolar — taslak + yayınlanmış). */
   availableTables: string[] = [];
+
+  // ─── Alt Modeller sekmesi ───────────────────────────────────────────────────
+
+  /** /Published/getAll ham satırları — alt model ağacı, tablo ID'si ve derinlik buradan türetilir. */
+  private allTables: TableRow[] = [];
+
+  /** Bu modelin KAYITLI alt modelleri. Her biri kendi /build/:typeName ekranından düzenlenir. */
+  subModelRows: TableRow[] = [];
+
+  /** Bu modelin ağaçtaki derinliği (kök = 1). Kayıtlı değilse kök varsayılır. */
+  ownTableDepth = 1;
   /** lookupTargetTable → hedef tablonun kolon adları (display kolonu seçimi için, lazy yüklenir). */
   lookupColumnsByTable: Partial<Record<string, string[]>> = {};
   private lookupColumnsLoading = new Set<string>();
@@ -138,13 +177,23 @@ export class TableDetailComponent implements OnDestroy {
   /** Sayısal kural alanlarının (Min/Max) gösterileceği tipler. */
   private readonly numericTypes = new Set(['int', 'long', 'short', 'byte', 'decimal', 'double', 'float']);
 
+  // ─── Veri tipi / kural kılavuzu ─────────────────────────────────────────────
+
+  /**
+   * Kılavuz diyaloğu — sütun popup'ındaki "Veri Tipi", ilişki popup'ındaki
+   * "İlişki Tipi" ve sekme araç çubuklarındaki "i" düğmeleriyle açılır.
+   * Diğer popup'ların ÜSTÜNDE açılır; kendi ESC/backdrop yönetimi vardır.
+   */
+  helpOpen = signal(false);
+  helpTopic = signal<HelpTopicId>('string');
+
   // ─── G1: İlişkiler sekmesi ──────────────────────────────────────────────────
 
   private readonly relationshipService = inject(RelationshipService);
   private readonly publishedModelService = inject(PublishedModelService);
 
-  /** Aktif sekme — "Sütunlar" veya "İlişkiler". */
-  activeTab = signal<'columns' | 'relationships'>('columns');
+  /** Aktif sekme — "Sütunlar", "Alt Modeller" veya "İlişkiler". */
+  activeTab = signal<TabId>('columns');
 
   /**
    * Kaynak modelin PublishedTable.ID değeri. İlişki endpoint'lerinin route
@@ -159,7 +208,24 @@ export class TableDetailComponent implements OnDestroy {
    * Yeni model modunda henüz kaydedilmemiş ilişkiler. Model ilk kez kaydedilip
    * tablo ID'si oluştuğunda toplu olarak POST edilir.
    */
-  private pendingRelationships: RelationshipUpsert[] = [];
+  /**
+   * Geçici kimlik → bekleyen ilişki. Dizi + paralel index yerine Map kullanılır:
+   * `relationships` ile `pendingRelationships` arasındaki index eşleşmesine
+   * dayanmak, araya kaydedilmiş bir ilişki girdiğinde sessizce yanlış kaydı
+   * günceller. Kimlik üzerinden erişim bu kuplajı tamamen kaldırır.
+   *
+   * Ekleme sırası korunur (Map insertion order) — flush sırası publish için önemlidir.
+   */
+  private pendingRelationships = new Map<string, RelationshipUpsert>();
+
+  /**
+   * Bekleyen ilişkilere geçici kimlik üreten MONOTON sayaç.
+   *
+   * Map boyutu kullanılamaz: bir ilişki silinip yenisi eklendiğinde aynı kimlik
+   * ikinci kez üretilir; mevcut giriş üzerine yazılır ve @for ... track duplicate
+   * anahtarla bozulur.
+   */
+  private pendingIdSeq = 0;
 
   /** Autocomplete kaynağı — yalnızca YAYINLANMIŞ modeller (taslaklar hariç). */
   publishedModelNames: string[] = [];
@@ -175,9 +241,12 @@ export class TableDetailComponent implements OnDestroy {
   isRelationshipSaving = false;
   relationshipError: string | null = null;
 
+  /** Onay bekleyen silme hedefi; null ise onay diyaloğu kapalıdır. */
+  relationshipToRemove: RelationshipDefinition | null = null;
+  isRelationshipDeleting = false;
+
   /** Canlı doğrulama sonucu — kullanıcı kaydetmeden önce döngü/derinlik uyarısı görür. */
   validation: RelationshipValidationResult | null = null;
-  isValidating = false;
 
   // Önizleme diyaloğu
   previewOpen = false;
@@ -219,30 +288,117 @@ export class TableDetailComponent implements OnDestroy {
       }
     }
 
-    this.loadAvailableTables();
+    // Tek istek: lookup hedefleri + alt model ağacı + ilişki tablo ID'si.
+    this.loadTables();
     this.loadPublishedModelNames();
 
-    // Düzenleme modunda tablo ID'si ve mevcut ilişkiler hemen yüklenir.
-    if (!this.isNew && this.editTypeName) {
-      this.resolveTableIdAndLoadRelationships(this.editTypeName);
-    }
+    // /build/:typeName → /build/:typeName geçişinde (alt model satırına tıklama)
+    // Angular component'i yeniden oluşturmaz; parametre akışı dinlenir.
+    this.paramSub = this.route.paramMap.pipe(markDirty(this.cdr)).subscribe(params => {
+      const typeName = params.get('typeName');
+      if (!typeName || typeName === this.editTypeName) return;
+      this.reinitForEdit(typeName);
+    });
   }
 
   ngOnDestroy(): void {
     this.formChangeSub?.unsubscribe();
+    this.paramSub?.unsubscribe();
   }
 
   // ─── G1: Sekme yönetimi ─────────────────────────────────────────────────────
 
-  setTab(tab: 'columns' | 'relationships'): void {
+  setTab(tab: TabId): void {
     this.activeTab.set(tab);
+  }
+
+  // ─── Alt Modeller sekmesi ───────────────────────────────────────────────────
+
+  /** Bu oturumda eklenen (henüz kaydedilmemiş) alt model FormGroup'ları. */
+  get subModels(): FormArray {
+    return this.rootGroup.get('subModels') as FormArray;
+  }
+
+  getSubModelGroup(index: number): FormGroup {
+    return this.subModels.at(index) as FormGroup;
+  }
+
+  /**
+   * Yeni bir alt model taslağı ekler. Kaydetme, kök modelle birlikte "Kaydet"
+   * butonundan yapılır (flattenTree → saveNode$ → addTable(parentTableName)).
+   */
+  addSubModel(): void {
+    if (!this.canAddSubModel) return;
+    this.subModels.push(ModelNodeComponent.buildModelGroupStatic(this.fb, 'AltModel'));
+  }
+
+  removeSubModel(index: number): void {
+    this.subModels.removeAt(index);
+  }
+
+  /** Şablonda [onRemoveSelf]="removeSubModelFn($index)" olarak bağlanır. */
+  removeSubModelFn(index: number): () => void {
+    return () => this.removeSubModel(index);
+  }
+
+  /**
+   * Alt model eklenebilir mi: model ağacı en fazla MAX_DEPTH seviyedir
+   * (backend PublishedTableManager.Add, Depth > 4 kaydını reddeder).
+   */
+  get canAddSubModel(): boolean {
+    return this.ownTableDepth < MAX_DEPTH;
+  }
+
+  /** Sekme rozeti: kayıtlı + kaydedilmemiş alt model sayısı. */
+  get subModelCount(): number {
+    return this.subModelRows.length + this.subModels.length;
+  }
+
+  /** Kayıtlı bir alt modeli kendi düzenleme ekranında açar. */
+  openSubModel(typeName: string): void {
+    this.router.navigate(['/build', typeName]);
+  }
+
+  /**
+   * Aynı route'ta yalnızca parametre değiştiğinde (alt modelden alt modele geçiş)
+   * Angular component'i YENİDEN OLUŞTURMAZ — route'u yeniden kullanır. Ekran
+   * kurulumu constructor'da snapshot ile yapıldığı için burada elle yenilenir.
+   */
+  private reinitForEdit(typeName: string): void {
+    this.isNew        = false;
+    this.editTypeName = typeName;
+
+    // Kaydetme/yayınlama durumunu sıfırla — yeni modelin kendi durumu geçerlidir.
+    this.isSaved             = false;
+    this.savedRootName       = null;
+    this.submitMessage       = null;
+    this.submitSuccess       = null;
+    this.loadError           = null;
+    this.relationships       = [];
+    this.relationshipTableId = null;
+    this.pendingRelationships.clear();
+    this.pendingIdSeq        = 0;
+    this.validation          = null;
+    this.subModelRows        = [];
+    this.originalColumnNames = new Set<string>();
+    this.activeTab.set('columns');
+
+    this.rootGroup = this.fb.group({
+      entityName: [typeName, [Validators.required, Validators.pattern(/^[A-Z][A-Za-z0-9]*$/)]],
+      columns:    this.fb.array([]),
+      subModels:  this.fb.array([])
+    });
+    this.trackFormChanges();
+
+    this.loadForEdit(typeName);
+    this.loadTables();
   }
 
   // ─── G1: İlişki verisi yükleme ──────────────────────────────────────────────
 
   /** Autocomplete için yalnızca yayınlanmış model adlarını yükler. */
   private loadPublishedModelNames(): void {
-    this.publishedModelService.getModels().subscribe({
+    this.publishedModelService.getModels().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.publishedModelNames = res.success ? (res.data ?? []).map(m => m.typeName) : [];
       },
@@ -251,27 +407,66 @@ export class TableDetailComponent implements OnDestroy {
   }
 
   /**
-   * Model adından PublishedTable.ID'sini çözer ve ilişkileri yükler.
-   * İlişki endpoint'leri tablo ID'si ile çalışır; getAllTables bu ID'yi döner.
+   * Kayıtlı tüm tabloları TEK istekte okur ve üç şeyi birden besler:
+   *   1. availableTables  → lookup kolonlarının hedef listesi
+   *   2. subModelRows / ownTableDepth → "Alt Modeller" sekmesi
+   *   3. relationshipTableId → ilişki endpoint'lerinin route parametresi
+   *
+   * Model henüz kaydedilmemişse (oluşturma modu) 2 ve 3 boş kalır; ilk kayıttan
+   * sonra yeniden çağrılır.
    */
-  private resolveTableIdAndLoadRelationships(typeName: string): void {
-    this.publishedTableService.getAllTables().subscribe({
+  private loadTables(): void {
+    this.publishedTableService.getAllTables().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
-        const match = (res.data ?? []).find(
-          t => t.tableName.toLowerCase() === typeName.toLowerCase());
-        if (!match) return;
-
-        this.relationshipTableId = match.id;
-        this.loadRelationships();
+        this.allTables = res.success ? (res.data ?? []) : [];
+        this.availableTables = this.allTables.map(t => t.tableName);
+        this.refreshOwnTableContext();
       },
-      error: () => { /* tablo listesi okunamadıysa ilişki sekmesi boş kalır */ }
+      error: () => {
+        this.allTables = [];
+        this.availableTables = [];
+        this.subModelRows = [];
+      }
     });
+  }
+
+  /**
+   * Yüklenen tablo listesinden bu modelin satırını bulur; alt modellerini,
+   * derinliğini ve ilişki tablo ID'sini türetir.
+   */
+  private refreshOwnTableContext(): void {
+    const typeName = this.editTypeName;
+    if (!typeName) {
+      this.subModelRows = [];
+      this.ownTableDepth = 1;
+      return;
+    }
+
+    const own = this.allTables.find(
+      t => t.tableName.toLowerCase() === typeName.toLowerCase());
+
+    if (!own) {
+      this.subModelRows = [];
+      this.ownTableDepth = 1;
+      return;
+    }
+
+    this.ownTableDepth = own.depth || 1;
+    this.subModelRows = this.allTables
+      .filter(t => t.parentTableId === own.id)
+      .sort((a, b) => a.tableName.localeCompare(b.tableName, 'tr'));
+
+    // İlişki tablo ID'si yalnızca ilk kez çözülür; ilişkiler bir kez yüklenir.
+    if (this.relationshipTableId !== own.id) {
+      this.relationshipTableId = own.id;
+      this.loadRelationships();
+    }
   }
 
   private loadRelationships(): void {
     if (this.relationshipTableId === null) return;
 
-    this.relationshipService.list(this.relationshipTableId).subscribe({
+    this.relationshipService.list(this.relationshipTableId).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.relationships = res.success ? (res.data ?? []) : [];
         this.runValidation();
@@ -287,14 +482,11 @@ export class TableDetailComponent implements OnDestroy {
       return;
     }
 
-    this.isValidating = true;
-    this.relationshipService.validateGraph(this.relationshipTableId).subscribe({
+    this.relationshipService.validateGraph(this.relationshipTableId).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
-        this.isValidating = false;
         this.validation = res.data ?? null;
       },
       error: (err: { error?: { data?: RelationshipValidationResult } }) => {
-        this.isValidating = false;
         // Doğrulama hatası 400 ile de dönebilir; gövdedeki sonuç yine kullanılır.
         this.validation = err?.error?.data ?? null;
       }
@@ -455,7 +647,7 @@ export class TableDetailComponent implements OnDestroy {
       ? this.relationshipService.update(this.relationshipTableId, this.editingRelationshipId, body)
       : this.relationshipService.add(this.relationshipTableId, body);
 
-    request$.subscribe({
+    request$.pipe(markDirty(this.cdr)).subscribe({
       next: () => {
         this.isRelationshipSaving = false;
         this.closeRelationshipModal();
@@ -473,14 +665,13 @@ export class TableDetailComponent implements OnDestroy {
   /** Yeni model modunda ilişkiyi bellekte tutar ve listede gösterir. */
   private stagePendingRelationship(body: RelationshipUpsert): void {
     if (this.editingRelationshipId) {
-      const index = this.relationships.findIndex(r => r.relationshipId === this.editingRelationshipId);
-      if (index >= 0) {
-        this.pendingRelationships[index] = body;
-        this.relationships[index] = this.toStagedDefinition(body, this.editingRelationshipId);
-      }
+      const stagedId = this.editingRelationshipId;
+      this.pendingRelationships.set(stagedId, body);
+      this.relationships = this.relationships.map(r =>
+        r.relationshipId === stagedId ? this.toStagedDefinition(body, stagedId) : r);
     } else {
-      const stagedId = `pending-${this.pendingRelationships.length + 1}`;
-      this.pendingRelationships.push(body);
+      const stagedId = `pending-${++this.pendingIdSeq}`;
+      this.pendingRelationships.set(stagedId, body);
       this.relationships = [...this.relationships, this.toStagedDefinition(body, stagedId)];
     }
 
@@ -509,23 +700,43 @@ export class TableDetailComponent implements OnDestroy {
     };
   }
 
-  removeRelationship(relationship: RelationshipDefinition): void {
+  /**
+   * Silme onayını açar. Silme geri alınamaz (kalıcılaşmış ilişkinin SQL FK'sı bir
+   * sonraki yayınlamada düşer), bu yüzden doğrudan DELETE atılmaz.
+   */
+  askRemoveRelationship(relationship: RelationshipDefinition): void {
+    this.relationshipToRemove = relationship;
+  }
+
+  cancelRemoveRelationship(): void {
+    this.relationshipToRemove = null;
+  }
+
+  confirmRemoveRelationship(): void {
+    const relationship = this.relationshipToRemove;
+    if (!relationship) return;
+
     // Bellekte bekleyen (henüz kaydedilmemiş) ilişki
     if (this.relationshipTableId === null) {
-      const index = this.relationships.findIndex(r => r.relationshipId === relationship.relationshipId);
-      if (index >= 0) {
-        this.relationships = this.relationships.filter((_, i) => i !== index);
-        this.pendingRelationships.splice(index, 1);
-      }
+      this.pendingRelationships.delete(relationship.relationshipId);
+      this.relationships = this.relationships
+        .filter(r => r.relationshipId !== relationship.relationshipId);
+      this.relationshipToRemove = null;
       return;
     }
 
-    this.relationshipService.delete(this.relationshipTableId, relationship.relationshipId).subscribe({
+    this.isRelationshipDeleting = true;
+
+    this.relationshipService.delete(this.relationshipTableId, relationship.relationshipId).pipe(markDirty(this.cdr)).subscribe({
       next: () => {
+        this.isRelationshipDeleting = false;
+        this.relationshipToRemove = null;
         this.loadRelationships();
         this.markRelationshipsPersisted();
       },
       error: (err: { error?: { message?: string } }) => {
+        this.isRelationshipDeleting = false;
+        this.relationshipToRemove = null;
         this.relationshipError = err?.error?.message ?? this.languageService.t('common.error');
       }
     });
@@ -548,30 +759,43 @@ export class TableDetailComponent implements OnDestroy {
    * onSave() tamamlandığında çağrılır.
    */
   private flushPendingRelationships(rootName: string): void {
-    if (this.pendingRelationships.length === 0) {
-      this.resolveTableIdAndLoadRelationships(rootName);
+    if (this.pendingRelationships.size === 0) {
+      // Tablo ID'si ve alt model listesi loadTables() içinde çözülür.
+      this.loadTables();
       return;
     }
 
-    this.publishedTableService.getAllTables().subscribe({
+    this.publishedTableService.getAllTables().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         const match = (res.data ?? []).find(
           t => t.tableName.toLowerCase() === rootName.toLowerCase());
-        if (!match) return;
+
+        // Model kaydedildi ama tablosu listede bulunamadı — bekleyen ilişkiler
+        // gönderilemez. Sessizce dönmek yerine kullanıcıyı bilgilendir; aksi halde
+        // ilişkiler kaybolmuş gibi görünür ve neden olduğu anlaşılmaz.
+        if (!match) {
+          this.relationshipError = this.languageService.t('relationship.flushTableNotFound');
+          return;
+        }
 
         this.relationshipTableId = match.id;
-        const pending = [...this.pendingRelationships];
-        this.pendingRelationships = [];
+        const pending = [...this.pendingRelationships.values()];
+        this.pendingRelationships.clear();
 
         from(pending).pipe(
           concatMap(body => this.relationshipService.add(match.id, body))
-        ).subscribe({
+        ).pipe(markDirty(this.cdr)).subscribe({
           complete: () => this.loadRelationships(),
           error: (err: { error?: { message?: string } }) => {
             this.relationshipError = err?.error?.message ?? this.languageService.t('common.error');
             this.loadRelationships();
           }
         });
+      },
+      // Dıştaki abonelikte hata yolu yoktu — tablo listesi alınamazsa kullanıcı
+      // hiçbir geri bildirim almıyordu.
+      error: (err: { error?: { message?: string } }) => {
+        this.relationshipError = err?.error?.message ?? this.languageService.t('common.error');
       }
     });
   }
@@ -587,7 +811,7 @@ export class TableDetailComponent implements OnDestroy {
     this.preview = null;
     this.previewError = null;
 
-    this.relationshipService.preview(this.relationshipTableId).subscribe({
+    this.relationshipService.preview(this.relationshipTableId).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.isPreviewLoading = false;
         this.preview = res.data ?? null;
@@ -617,14 +841,6 @@ export class TableDetailComponent implements OnDestroy {
   /** İlişki tipinin çeviri anahtarını döner. */
   relationshipTypeLabel(type: RelationshipType): string {
     return this.relationshipTypeOptions.find(o => o.value === type)?.labelKey ?? '';
-  }
-
-  /** Bu ilişkiye ait doğrulama bulguları (UI'da satırı vurgulamak için). */
-  issuesFor(relationshipId: string): { message: string; severity: string }[] {
-    if (!this.validation) return [];
-    return [...this.validation.errors, ...this.validation.warnings]
-      .filter(i => i.relationshipId === relationshipId)
-      .map(i => ({ message: i.message, severity: i.severity }));
   }
 
   hasErrorFor(relationshipId: string): boolean {
@@ -674,16 +890,6 @@ export class TableDetailComponent implements OnDestroy {
     return parts.join(', ') || this.languageService.t('table.detail.ruleNone');
   }
 
-  /** Lookup hedef seçimi için kayıtlı tüm tabloların adlarını yükler. */
-  private loadAvailableTables(): void {
-    this.publishedTableService.getAllTables().subscribe({
-      next: res => {
-        this.availableTables = res.success ? (res.data ?? []).map(t => t.tableName) : [];
-      },
-      error: () => { this.availableTables = []; }
-    });
-  }
-
   /**
    * Kullanıcı popup'ta bir lookup hedef tablosu seçtiğinde, "display kolonu" dropdown'unu
    * doldurmak için hedef tablonun şemasını okur (her hedef için bir kez, cache'lenir).
@@ -693,7 +899,7 @@ export class TableDetailComponent implements OnDestroy {
       return;
     }
     this.lookupColumnsLoading.add(targetTable);
-    this.publishedTableService.getSchema(targetTable).subscribe({
+    this.publishedTableService.getSchema(targetTable).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.lookupColumnsLoading.delete(targetTable);
         if (res.success && res.data) {
@@ -707,7 +913,7 @@ export class TableDetailComponent implements OnDestroy {
   /** Herhangi bir form değişikliği kayıt durumunu geçersiz kılar — rootGroup her değiştiğinde yeniden çağrılır. */
   private trackFormChanges(): void {
     this.formChangeSub?.unsubscribe();
-    this.formChangeSub = this.rootGroup.valueChanges.subscribe(() => {
+    this.formChangeSub = this.rootGroup.valueChanges.pipe(markDirty(this.cdr)).subscribe(() => {
       if (this.isSaved) {
         this.isSaved = false;
         this.savedRootName = null;
@@ -727,7 +933,7 @@ export class TableDetailComponent implements OnDestroy {
     this.isLoadingSchema = true;
     this.loadError = null;
 
-    this.publishedTableService.getSchema(typeName).subscribe({
+    this.publishedTableService.getSchema(typeName).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.isLoadingSchema = false;
         if (!res.success || !res.data) {
@@ -827,8 +1033,57 @@ export class TableDetailComponent implements OnDestroy {
     this.closeColumnModal();
   }
 
+  // ─── Kılavuz diyaloğu ───────────────────────────────────────────────────────
+
+  /** Sütun popup'ındaki "Veri Tipi" yanındaki "i" — seçili tipin kılavuzunu açar. */
+  openTypeHelp(): void {
+    this.openHelp(this.columnDraft.get('dataType')!.value || 'string');
+  }
+
+  /**
+   * İlişki popup'ındaki "İlişki Tipi" yanındaki "i" — seçili ilişki tipinin
+   * kılavuzunu açar.
+   *
+   * RelationshipType SAYISAL bir enum'dur ve `<select>` değeri string olarak
+   * ('1'..'5') gelir; konu anahtarı ise tip ADIYLA kurulur ('rel:OneToOne').
+   * Bu yüzden enum'un ters eşlemesi üzerinden ada çevrilir.
+   */
+  openRelationshipTypeHelp(): void {
+    const raw = Number(this.relationshipDraft.get('relationshipType')!.value);
+    const name = RelationshipType[raw];
+    this.openHelp(name ? `rel:${name}` : 'relationships');
+  }
+
+  /** Sekme araç çubuklarındaki "Nasıl çalışır?" — kavram kılavuzunu açar. */
+  openHelp(topic: HelpTopicId): void {
+    this.helpTopic.set(topic);
+    this.helpOpen.set(true);
+  }
+
+  closeHelp(): void {
+    this.helpOpen.set(false);
+  }
+
+  /**
+   * Kılavuzdaki hazır regex deseninde "Kullan"a basıldığında deseni sütun
+   * taslağına yazar. Hata mesajı yalnızca boşsa doldurulur — kullanıcının
+   * kendi yazdığı mesaj ezilmez.
+   */
+  onHelpPattern(preset: RegexPreset): void {
+    this.columnDraft.get('regex')!.setValue(preset.pattern);
+    const messageCtrl = this.columnDraft.get('regexMessage')!;
+    if (!messageCtrl.value?.trim()) {
+      messageCtrl.setValue(this.languageService.t(`help.regex.presetMsg.${preset.key}`));
+    }
+    this.closeHelp();
+  }
+
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    // Kılavuz diyaloğu kendi ESC işleyicisinde stopPropagation yapar; yine de
+    // savunmacı olarak burada da alttaki popup'ların kapanmasını engelliyoruz.
+    if (this.helpOpen()) return;
+
     // En üstteki diyalogdan başlayarak kapat.
     if (this.previewOpen) {
       this.closePreview();
@@ -967,7 +1222,7 @@ export class TableDetailComponent implements OnDestroy {
     // Her düğüm için sırayla: dup kontrol → addTable → addMember'lar
     from(nodes).pipe(
       concatMap(node => this.saveNode$(node))
-    ).subscribe({
+    ).pipe(markDirty(this.cdr)).subscribe({
       next: () => {},
       error: (err: Error) => {
         this.isSaving = false;
@@ -989,8 +1244,43 @@ export class TableDetailComponent implements OnDestroy {
         this.submitMessage = nodeCount > 1
           ? this.languageService.t('table.detail.modelsSavedMulti', { count: nodeCount, names: nodes.map(n => n.entityName).join(', ') })
           : this.languageService.t('table.detail.modelSaved');
+
+        // Model artık veritabanında var — ekran düzenleme moduna geçer.
+        this.enterEditModeAfterCreate(rootName, nodes[0]);
       }
     });
+  }
+
+  /**
+   * Oluşturma modunda ilk başarılı kayıttan sonra ekranı düzenleme moduna çevirir.
+   *
+   * Bu geçiş olmadan ikinci "Kaydet" yine oluşturma akışını çalıştırır ve
+   * saveNode$'ın dup kontrolü "bu adda bir model zaten mevcut" hatası verir —
+   * oysa kullanıcı aynı modelin içindedir ve güncelleme yapmak istemektedir.
+   *
+   * Sayfa yeniden yüklenmez: form durumu, ilişki sekmesi ve isSaved bayrağı korunur
+   * (bayrak korunmalı ki "Yayınla" butonu aktif kalsın — bu yüzden tüm form
+   * mutasyonları emitEvent:false ile yapılır, aksi halde trackFormChanges sıfırlar).
+   */
+  private enterEditModeAfterCreate(rootName: string, savedRoot: TreeNode): void {
+    this.isNew = false;
+    this.editTypeName = rootName;
+
+    // Düzenleme modu kuralı: kök model adı değiştirilemez (loadForEdit ile aynı).
+    this.rootGroup.get('entityName')?.disable({ emitEvent: false });
+
+    // Diff temeli: bu kayıtla birlikte sunucuda oluşan kolonlar.
+    this.originalColumnNames = new Set(savedRoot.columns.map(c => c.columnName));
+
+    // Kaydedilen alt modeller artık taslak değildir; formdan düşürülür ve
+    // "Alt Modeller" sekmesindeki kayıtlı listeye geçerler (loadTables).
+    this.subModels.clear({ emitEvent: false });
+
+    // Adres çubuğu gerçek duruma uyar: sayfa yenilenirse düzenleme ekranı açılır.
+    this.location.replaceState(`/build/${rootName}`);
+
+    // Kayıtlı alt model listesi, tablo ID'si ve lookup hedefleri tazelenir.
+    this.loadTables();
   }
 
   // ─── ADIM 1: KAYDET (düzenleme modu) ──────────────────────────────────────
@@ -1067,7 +1357,7 @@ export class TableDetailComponent implements OnDestroy {
 
     from(ops).pipe(
       concatMap(op => op())
-    ).subscribe({
+    ).pipe(markDirty(this.cdr)).subscribe({
       next: () => {},
       error: (err: Error) => {
         this.isSaving = false;
@@ -1082,6 +1372,16 @@ export class TableDetailComponent implements OnDestroy {
         this.savedRootName = rootName;
         this.submitSuccess = true;
         this.submitMessage = this.languageService.t('table.detail.changesSaved');
+
+        // Diff temelini tazele: bu kayıttan sonra eklenen kolonlar artık "mevcut"tur
+        // ve bu oturumda oluşturulan alt modeller artık "yeni" değildir. Tazelenmezse
+        // ikinci "Kaydet" aynı kolonları/alt modelleri yeniden eklemeye çalışır.
+        this.originalColumnNames = new Set(rootNode.columns.map(c => c.columnName));
+        this.subModels.clear({ emitEvent: false });
+
+        // Yeni alt modeller kayıtlı listeye geçsin (ve lookup hedefi olabilsin).
+        if (newChildNodes.length > 0)
+          this.loadTables();
       }
     });
   }
@@ -1105,7 +1405,7 @@ export class TableDetailComponent implements OnDestroy {
     this.submitMessage = null;
     this.submitSuccess = null;
 
-    this.publishedTableService.publish(this.savedRootName).subscribe({
+    this.publishedTableService.publish(this.savedRootName).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.isPublishing = false;
         if (res.success) {

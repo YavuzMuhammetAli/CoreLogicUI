@@ -11,17 +11,6 @@ export interface LoginDto {
   password: string;
 }
 
-export interface RegisterDto {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  tc: string;
-  birthDay: string;
-  createdBy: number;
-  lastModifiedBy: number;
-}
-
 export interface AccessTokenResponse {
   success: boolean;
   message: string;
@@ -52,9 +41,9 @@ export class AuthService {
     );
   }
 
-  register(dto: RegisterDto): Observable<any> {
-    return this.http.post(`${this.baseUrl}/register`, dto);
-  }
+  // NOT: `register()` kaldırıldı. Şirkete kullanıcı ekleme /users ekranından
+  // UserAdminService üzerinden yapılır (bkz. CLAUDE.md "Şirket İçi Kullanıcı
+  // Yönetimi"); dışarıdan mevcut bir şirkete kayıt akışı YOKTUR.
 
   /**
    * Yeni şirket kaydı — kurulum backend'de arka planda ilerler; data alanı

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
@@ -12,6 +12,7 @@ import { NotificationService } from '../../services/notification.service';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
+import { markDirty } from '../../utils/change-detection';
 
 /**
  * FormBuildComponent — yayınlanmış model listesi + silme.
@@ -23,9 +24,13 @@ import { LanguageService } from '../../services/language.service';
   standalone: true,
   imports: [CommonModule, RouterLink, ConfirmDialogComponent, TranslatePipe],
   templateUrl: './form-build.component.html',
-  styleUrls: ['./form-build.component.scss']
+  styleUrls: ['./form-build.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FormBuildComponent {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   models: PublishedModel[] = [];
   loadingModels = false;
   listError: string | null = null;
@@ -59,7 +64,7 @@ export class FormBuildComponent {
     this.loadingModels = true;
     this.listError = null;
 
-    this.publishedModel.getModels().subscribe({
+    this.publishedModel.getModels().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.loadingModels = false;
         if (!res.success) {
@@ -87,7 +92,7 @@ export class FormBuildComponent {
     this.confirmUsageLoading = true;
     this.confirmOpen = true;
 
-    this.modelUsageService.getUsage(typeName).subscribe({
+    this.modelUsageService.getUsage(typeName).pipe(markDirty(this.cdr)).subscribe({
       next: usage => {
         // Modal açıkken kullanıcı vazgeçmiş olabilir; o durumda sonucu yoksay.
         if (this.pendingTypeName === typeName) {
@@ -136,14 +141,14 @@ export class FormBuildComponent {
       cascadeCalls.push(of(null));
     }
 
-    forkJoin(cascadeCalls).subscribe({
+    forkJoin(cascadeCalls).pipe(markDirty(this.cdr)).subscribe({
       next: () => this.deleteModelAndClose(typeName),
       error: () => this.deleteModelAndClose(typeName)
     });
   }
 
   private deleteModelAndClose(typeName: string): void {
-    this.publishedTableService.deleteModel(typeName).subscribe({
+    this.publishedTableService.deleteModel(typeName).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.confirmBusy = false;
         this.isDeleting[typeName] = false;

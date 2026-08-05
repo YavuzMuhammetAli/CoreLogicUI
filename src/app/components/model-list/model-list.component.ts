@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -6,15 +6,20 @@ import { PublishedModelService, PublishedModel } from '../../services/published-
 import { PermissionService } from '../../services/permission.service';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { markDirty } from '../../utils/change-detection';
 
 @Component({
   selector: 'app-model-list',
   standalone: true,
   imports: [CommonModule, RouterLink, TranslatePipe],
   templateUrl: './model-list.component.html',
-  styleUrls: ['./model-list.component.scss']
+  styleUrls: ['./model-list.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ModelListComponent implements OnInit {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   private readonly languageService = inject(LanguageService);
 
   models: PublishedModel[] = [];
@@ -47,7 +52,7 @@ export class ModelListComponent implements OnInit {
     forkJoin([
       this.permissionService.loadMyPermissions(),
       this.publishedModel.getModels()
-    ]).subscribe({
+    ]).pipe(markDirty(this.cdr)).subscribe({
       next: ([, modelsRes]) => {
         this.loading = false;
         if (!modelsRes.success) {

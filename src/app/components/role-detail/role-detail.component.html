@@ -109,7 +109,7 @@
               {{ 'common.save' | t }}
             </button>
             <button class="btn btn-danger btn-sm" type="button"
-                    (click)="deleteRole()" [disabled]="deleteSaving()">
+                    (click)="askDeleteRole()" [disabled]="deleteSaving()">
               {{ 'role.detail.deleteRole' | t }}
             </button>
           </div>
@@ -418,3 +418,12 @@
     </div>
   }
 }
+
+<!-- Rol silme onayı — native confirm() yerine tasarım sistemine uygun diyalog -->
+<app-confirm-dialog
+  [open]="deleteConfirmOpen()"
+  [title]="'role.detail.deleteConfirmTitle' | t"
+  [message]="'role.detail.deleteConfirm' | t:{ name: role()?.name ?? '' }"
+  [busy]="deleteSaving()"
+  (confirmed)="confirmDeleteRole()"
+  (cancelled)="cancelDeleteRole()" />

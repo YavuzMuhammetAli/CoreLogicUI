@@ -1,0 +1,24 @@
+<!-- Baloncuk çoğu yerde bir <label> içinde durur; tıklama etiketin kontrolünü
+     etkinleştirmesin (onay kutusunu ters çevirmesin) diye olay durdurulur. -->
+<span
+  #bubble
+  class="info-bubble"
+  tabindex="0"
+  [attr.aria-label]="text()"
+  (mouseenter)="show()"
+  (mouseleave)="hide()"
+  (focus)="show()"
+  (blur)="hide()"
+  (click)="$event.preventDefault(); $event.stopPropagation()">
+  i
+  <!-- `position: fixed` — kırpan kapsayıcılardan kaçar; konum TS'te hesaplanıp
+       viewport'a kelepçelenir (bkz. HelpHintComponent doküman yorumu). -->
+  <span
+    #tip
+    class="info-bubble__tip"
+    [class.info-bubble__tip--open]="open()"
+    [class.info-bubble__tip--below]="resolved() === 'below'"
+    [style.top.px]="top()"
+    [style.left.px]="left()"
+    role="tooltip">{{ text() }}</span>
+</span>

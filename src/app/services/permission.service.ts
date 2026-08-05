@@ -124,21 +124,6 @@ export class PermissionService {
   }
 
   /**
-   * Kullanıcının bu modelde yalnızca kendi kayıtlarıyla sınırlı olup olmadığını döndürür.
-   * Admin için her zaman false (admin tüm kayıtları görür, kısıt uygulanmaz).
-   * Gerçek veri filtrelemesi backend'dedir; bu metot yalnızca UI bilgilendirme etiketi için.
-   */
-  isOwnRecordsOnly(modelName: string): boolean {
-    const data = this._data();
-    if (!data) return false;
-    if (data.isAdmin) return false; // admin kısıtsız
-    const perm = data.permissions.find(
-      p => p.modelName.toLowerCase() === modelName.toLowerCase()
-    );
-    return perm?.canOwnOnly ?? false;
-  }
-
-  /**
    * Verilen modelin navigasyonda görünüp görünmeyeceğini senkron kontrol eder.
    * Yönetici ise her zaman true döner (admin sidebar'ı farklı branch'te render edilir,
    * bu metot admin görünürlüğünü etkilemez; yalnızca normal kullanıcı nav filtresi için).
@@ -162,25 +147,10 @@ export class PermissionService {
     return this._data()?.landingPage ?? '/models';
   }
 
-  /** Yetki verisini yeniden yükler (örn. kullanıcı değişikliğinden sonra). */
-  refresh(): Observable<MyPermissionsResponse> {
-    return this.loadMyPermissions();
-  }
-
   /** Yetki verisini temizler (çıkış işleminde çağrılır). */
   clear(): void {
     this._data.set(null);
     this._loadingRef = null; // ensureLoaded uçuş referansını da sıfırla
   }
 
-  /**
-   * Uygulama kabuğu yüklendiğinde çağrılır.
-   * SSR ortamında tarayıcı yoksa işlem yapılmaz.
-   */
-  init(): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-    this.loadMyPermissions().subscribe({
-      error: err => console.warn('[CoreLogic] Yetki yüklenemedi:', err?.message)
-    });
-  }
 }

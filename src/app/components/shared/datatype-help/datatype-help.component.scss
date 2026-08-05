@@ -1,0 +1,312 @@
+/* ── Kılavuz diyaloğu ─────────────────────────────────────────────────────────
+   Bu diyalog her zaman başka bir popup'ın (sütun/ilişki) ÜSTÜNDE açılır;
+   z-index diğer .dialog-overlay'lerden (1000) yüksek olmalıdır. */
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  z-index: 1100;
+}
+
+.dialog-panel {
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--elev-high);
+
+  /* Regex hazır desen tablosu (ad + desen + örnek + düğme) yatayda kaymadan
+     sığsın diye önizleme diyaloğundan biraz geniştir. */
+  &.dialog-panel--wide {
+    max-width: 920px;
+    width: 96vw;
+  }
+}
+
+/* Global `.panel-actions` yalnızca `.panel-head` içinde tanımlı; burada `.panel-body`'nin
+   kardeşi olduğu için padding'i component vermeli — aksi halde butonlar panel kenarına
+   yapışır. Yatay değer `.panel-head`/`.panel-body` ile hizalı. */
+.dialog-panel .panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6) var(--space-5);
+  border-top: 1px solid var(--border-soft);
+}
+
+.help-head .panel-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.help-type-badge {
+  font-family: var(--font-mono);
+}
+
+.help-body {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* ── Bölümler ─────────────────────────────────────────────────────────────── */
+
+.help-section {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.help-section-title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.help-subtitle {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.help-text {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--fg-2);
+}
+
+.help-muted {
+  color: var(--muted);
+}
+
+.help-list {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  color: var(--fg-2);
+}
+
+/* ── Kural listesi ────────────────────────────────────────────────────────── */
+
+.help-rules {
+  margin: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.help-rule {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--surface-warm);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+
+  dt {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--fg);
+  }
+
+  dd {
+    margin: 0;
+    font-size: var(--text-xs);
+    line-height: 1.55;
+    color: var(--fg-2);
+  }
+}
+
+/* ── Tablolar ─────────────────────────────────────────────────────────────── */
+
+.help-table-wrap {
+  overflow-x: auto;
+}
+
+.help-mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  word-break: break-all;
+}
+
+.help-ok    { color: var(--success); }
+.help-fail  { color: var(--danger); }
+.help-note  { font-size: var(--text-xs); color: var(--fg-2); }
+
+.help-samples tr.help-row-ok   td:first-child { box-shadow: inset 3px 0 0 var(--success); }
+.help-samples tr.help-row-fail td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
+
+.help-presets td,
+.help-syntax td {
+  font-size: var(--text-xs);
+  vertical-align: middle;
+}
+
+/* Global `.data-table td` hücreyi 260px'te kesip "..." koyar; kılavuzdaki
+   desenler ve notlar kırpılmak yerine sarmalıdır. */
+.help-presets td,
+.help-syntax td,
+.help-samples td {
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+/* Uyan/uymayan örnek tek hücrede alt alta — tablo yatayda taşmasın. */
+.preset-samples {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.4;
+}
+
+/* Global `.data-table .td-actions` hücreyi flex yapar; bu da hücreyi tablo
+   yerleşiminden çıkarıp "Kullan" düğmesini satırın altına düşürür. Bu tabloda
+   hücre yeniden tablo hücresi olmalı. */
+.help-presets td.td-actions {
+  display: table-cell;
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+  vertical-align: middle;
+}
+
+.help-syntax {
+  max-width: 480px;
+}
+
+/* ── Regex laboratuvarı ───────────────────────────────────────────────────── */
+
+.regex-lab {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-warm);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+}
+
+.regex-lab-input {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.regex-lab-result {
+  padding-bottom: var(--space-2);
+  white-space: nowrap;
+}
+
+/* ── SVG şemalar ──────────────────────────────────────────────────────────── */
+
+.help-diagram {
+  padding: var(--space-4);
+  background: var(--surface-warm);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+
+  svg {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* Şema öğeleri — tema token'ları kullanıldığı için koyu temada da doğru görünür. */
+
+.d-box {
+  fill: var(--surface);
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+
+.d-box--accent {
+  stroke: var(--accent);
+}
+
+.d-box--dashed {
+  stroke-dasharray: 4 3;
+}
+
+.d-line {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+}
+
+.d-line--soft {
+  stroke: var(--border-soft);
+  stroke-width: 1;
+}
+
+.d-arrowhead {
+  fill: var(--muted);
+  stroke: none;
+}
+
+.d-label {
+  fill: var(--fg);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.d-title {
+  fill: var(--fg);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.d-sub {
+  fill: var(--muted);
+  font-size: 9.5px;
+}
+
+.d-sub--accent {
+  fill: var(--accent);
+  font-weight: 600;
+}
+
+.d-mark {
+  fill: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.d-mono {
+  fill: var(--fg);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .regex-lab {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .regex-lab-result {
+    padding-bottom: 0;
+  }
+}

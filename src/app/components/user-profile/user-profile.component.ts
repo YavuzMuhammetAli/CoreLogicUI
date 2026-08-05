@@ -1,6 +1,4 @@
-import {
-  Component, OnInit, signal, inject, PLATFORM_ID, ElementRef, ViewChild
-} from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, inject, OnInit, PLATFORM_ID, signal, ViewChild } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl } from '@angular/forms';
 import { NotificationService } from '../../services/notification.service';
@@ -9,6 +7,7 @@ import { LanguageService } from '../../services/language.service';
 import { UserProfile } from '../../models/userProfile';
 import { environment } from '../../../environments/environment';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { markDirty } from '../../utils/change-detection';
 
 /** Şifre tekrar eşleşme validasyonu */
 function passwordsMatch(control: AbstractControl) {
@@ -23,9 +22,13 @@ function passwordsMatch(control: AbstractControl) {
   standalone: true,
   imports: [ReactiveFormsModule, TranslatePipe],
   templateUrl: './user-profile.component.html',
-  styleUrls: ['./user-profile.component.scss']
+  styleUrls: ['./user-profile.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserProfileComponent implements OnInit {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   @ViewChild('photoInput') photoInputRef!: ElementRef<HTMLInputElement>;
 
   private readonly fb            = inject(FormBuilder);
@@ -77,7 +80,7 @@ export class UserProfileComponent implements OnInit {
     this.loading.set(true);
     this.loadError.set('');
 
-    this.profileSvc.getMe().subscribe({
+    this.profileSvc.getMe().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (res.success && res.data) {
           this.profile.set(res.data);
@@ -125,7 +128,7 @@ export class UserProfileComponent implements OnInit {
 
     // Yükle
     this.photoUploading.set(true);
-    this.profileSvc.uploadPhoto(file).subscribe({
+    this.profileSvc.uploadPhoto(file).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.photoUploading.set(false);
         if (res.success && res.data) {
@@ -156,7 +159,7 @@ export class UserProfileComponent implements OnInit {
   removePhoto(): void {
     if (!this.profile()?.photoUrl) return;
     this.photoUploading.set(true);
-    this.profileSvc.deletePhoto().subscribe({
+    this.profileSvc.deletePhoto().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.photoUploading.set(false);
         if (res.success) {
@@ -189,7 +192,7 @@ export class UserProfileComponent implements OnInit {
       email:     email     ?? '',
       tc:        tc        ?? '',
       birthDay:  birthDay  ? new Date(birthDay).toISOString() : ''
-    }).subscribe({
+    }).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.infoSaving.set(false);
         if (res.success) {
@@ -229,7 +232,7 @@ export class UserProfileComponent implements OnInit {
     this.profileSvc.changePassword({
       currentPassword: currentPassword ?? '',
       newPassword:     newPassword     ?? ''
-    }).subscribe({
+    }).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.pwSaving.set(false);
         if (res.success) {

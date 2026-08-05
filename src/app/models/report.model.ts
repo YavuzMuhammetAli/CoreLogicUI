@@ -62,8 +62,26 @@ export interface ReportColumnInfo {
   type: string;
 }
 
-/** ReportRunResultDto ile eşleşir — /Report/run yanıtı. */
+/**
+ * ReportRunResultDto ile eşleşir — /Report/run yanıtı.
+ *
+ * Sayfalama alanları OPSİYONELDİR: sunucu bunları her zaman gönderir, ancak aynı yapı
+ * rapor oluşturucudaki sentetik önizleme ve grafik bileşeni için de kullanılır — oralarda
+ * sunucu metadata'sı yoktur ve olması da gerekmez.
+ */
 export interface ReportRunResult {
   columns: ReportColumnInfo[];
   rows: Record<string, unknown>[];
+
+  /** Filtre/gruplama sonrası TOPLAM satır sayısı (sayfalamadan bağımsız). */
+  total?: number;
+  /** 1-tabanlı sayfa no. */
+  page?: number;
+  /** Bu yanıttaki satır üst sınırı; sayfalama istenmediyse uygulanan güvenlik tavanı. */
+  pageSize?: number;
+  /**
+   * Sayfalama istenmediği hâlde sonuç sunucu tavanına (5000) takılıp kırpıldıysa true.
+   * Kullanıcıya "tam veri için dışa aktarın" uyarısı gösterilir.
+   */
+  truncated?: boolean;
 }

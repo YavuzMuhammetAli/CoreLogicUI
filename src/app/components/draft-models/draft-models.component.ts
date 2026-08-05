@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -6,6 +6,7 @@ import { PublishedTableService } from '../../services/published-table.service';
 import { PublishedModelService } from '../../services/published-model.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
+import { markDirty } from '../../utils/change-detection';
 
 interface DraftEntry {
   id: number;
@@ -46,9 +47,13 @@ interface TableRef {
   standalone: true,
   imports: [CommonModule, RouterLink, TranslatePipe],
   templateUrl: './draft-models.component.html',
-  styleUrls: ['./draft-models.component.scss']
+  styleUrls: ['./draft-models.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DraftModelsComponent implements OnInit {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   /** Düz liste — publish/delete sonrası ağacı yeniden kurmak için saklanır. */
   private drafts: DraftEntry[] = [];
   /** Ana (kök) modeller; her birinin alt modelleri children dizisinde iç içe durur. */
@@ -77,7 +82,7 @@ export class DraftModelsComponent implements OnInit {
     forkJoin({
       tables: this.publishedTable.getAllTables(),
       published: this.publishedModel.getModels()
-    }).subscribe({
+    }).pipe(markDirty(this.cdr)).subscribe({
       next: ({ tables, published }) => {
         this.loading = false;
 
@@ -195,7 +200,7 @@ export class DraftModelsComponent implements OnInit {
     draft.publishMessage = null;
     draft.publishSuccess = null;
 
-    this.publishedTable.publish(draft.tableName).subscribe({
+    this.publishedTable.publish(draft.tableName).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         draft.publishing = false;
         draft.publishSuccess = res.success;
@@ -207,6 +212,7 @@ export class DraftModelsComponent implements OnInit {
         if (res.success) {
           setTimeout(() => {
             this.removeFromTree(draft.id);
+            this.cdr.markForCheck();   // OnPush: zamanlayici callback'i CD tetiklemez
           }, 1500);
         }
       },
@@ -239,7 +245,7 @@ export class DraftModelsComponent implements OnInit {
     draft.deleteMessage = null;
     draft.deleteSuccess = null;
 
-    this.publishedTable.deleteModel(draft.tableName).subscribe({
+    this.publishedTable.deleteModel(draft.tableName).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         draft.deleting = false;
         if (res.success) {

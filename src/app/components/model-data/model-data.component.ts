@@ -1,12 +1,15 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { PublishedModelService, PublishedModel, PublishedColumn, PagedData } from '../../services/published-model.service';
 import { PublishModelService } from '../../services/publish-model.service';
 import { PermissionService } from '../../services/permission.service';
 import { PublishedTableService, ModelVersion } from '../../services/published-table.service';
 import { ModelColumnSettingService, ModelColumnSettingDto } from '../../services/model-column-setting.service';
 import { ColumnVisibilityComponent, ColumnVisibilityItem } from '../shared/column-visibility/column-visibility.component';
+import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import {
@@ -17,17 +20,25 @@ import {
   rowVal,
   downloadFile
 } from './model-data.util';
+import { markDirty } from '../../utils/change-detection';
 
 type DataRow = Record<string, unknown>;
 
 @Component({
   selector: 'app-model-data',
   standalone: true,
-  imports: [CommonModule, RouterLink, DatePipe, ColumnVisibilityComponent, TranslatePipe],
+  imports: [
+    CommonModule, RouterLink, DatePipe, ColumnVisibilityComponent,
+    ConfirmDialogComponent, TranslatePipe
+  ],
   templateUrl: './model-data.component.html',
-  styleUrls: ['./model-data.component.scss']
+  styleUrls: ['./model-data.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ModelDataComponent implements OnInit {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   private readonly languageService = inject(LanguageService);
 
   typeName = '';
@@ -55,6 +66,19 @@ export class ModelDataComponent implements OnInit {
   visibleColumnNames: string[] | null = null;
   savingColumnVisibility = false;
 
+  // Toplu silme durumu
+  /**
+   * Seçili satırların ID'leri. Sayfalama SUNUCU taraflı olduğu için seçim sayfalar
+   * arasında TAŞINMAZ — görünmeyen satırların silinmesi kullanıcı için sürpriz olur.
+   */
+  selectedIds = new Set<number>();
+  /** Silinemeyen satırların hata özeti (satırlar seçili kalır). */
+  bulkErrors: string[] = [];
+  /** Son denemede kaç kayıt gönderildi (özet metni için). */
+  bulkTotal = 0;
+  readonly confirmOpen = signal(false);
+  readonly bulkBusy = signal(false);
+
   constructor(
     private route: ActivatedRoute,
     private publishedModel: PublishedModelService,
@@ -68,7 +92,7 @@ export class ModelDataComponent implements OnInit {
     // snapshot yerine paramMap observable'ına abone ol;
     // aynı component örneği farklı modeller için yeniden kullanıldığında
     // (Angular route-reuse) her parametre değişiminde tetiklenir.
-    this.route.paramMap.subscribe(params => {
+    this.route.paramMap.pipe(markDirty(this.cdr)).subscribe(params => {
       this.typeName = params.get('typeName') ?? '';
       this.resetState();
       this.loadModelMeta();
@@ -88,6 +112,14 @@ export class ModelDataComponent implements OnInit {
     this.pageIndex = 1;
     this.total     = 0;
     this.visibleColumnNames = null;
+    this.clearSelection();
+  }
+
+  /** Seçimi ve önceki toplu silme özetini sıfırlar. */
+  private clearSelection(): void {
+    this.selectedIds = new Set<number>();
+    this.bulkErrors = [];
+    this.bulkTotal = 0;
   }
 
   get columns(): PublishedColumn[] {
@@ -114,7 +146,7 @@ export class ModelDataComponent implements OnInit {
   /** Admin tarafından kayıtlı liste-görünümü kolon ayarını yükler */
   private loadColumnVisibility(): void {
     const typeName = this.typeName;
-    this.modelColumnSetting.get(typeName, 'list').subscribe({
+    this.modelColumnSetting.get(typeName, 'list').pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (typeName !== this.typeName) return; // bu sırada başka modele geçilmiş olabilir
         this.visibleColumnNames = (res.success && res.data?.visibleColumns?.length)
@@ -129,7 +161,7 @@ export class ModelDataComponent implements OnInit {
   onSaveColumnVisibility(names: string[]): void {
     this.savingColumnVisibility = true;
     const dto: ModelColumnSettingDto = { typeName: this.typeName, viewType: 'list', visibleColumns: names };
-    this.modelColumnSetting.set(dto).subscribe({
+    this.modelColumnSetting.set(dto).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.savingColumnVisibility = false;
         if (res.success) this.visibleColumnNames = names;
@@ -140,7 +172,7 @@ export class ModelDataComponent implements OnInit {
 
   /** Model meta verisini backend'den çek, ardından satırları yükle */
   private loadModelMeta(): void {
-    this.publishedModel.getModels().subscribe({
+    this.publishedModel.getModels().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (res.success) {
           this.model = (res.data ?? []).find(m => m.typeName === this.typeName);
@@ -156,7 +188,7 @@ export class ModelDataComponent implements OnInit {
     this.loadingRows = true;
     this.loadError = null;
 
-    this.publishedModel.getAllPaged(this.typeName, this.pageIndex, this.pageSize).subscribe({
+    this.publishedModel.getAllPaged(this.typeName, this.pageIndex, this.pageSize).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (res.success) {
           this.loadingRows = false;
@@ -167,10 +199,10 @@ export class ModelDataComponent implements OnInit {
         } else if (!this.rowsRetried && res.message?.includes('Assembly')) {
           // Backend yeniden başlatıldıysa assembly null olur; bir kez yükleyip tekrar dene.
           this.rowsRetried = true;
-          this.publishModel.loadAssembly().subscribe({
+          this.publishModel.loadAssembly().pipe(markDirty(this.cdr)).subscribe({
             next: () => {
               // Assembly yeniden yüklendi; model meta'sını da taze çek
-              this.publishedModel.getModels().subscribe({
+              this.publishedModel.getModels().pipe(markDirty(this.cdr)).subscribe({
                 next: metaRes => {
                   if (metaRes.success)
                     this.model = (metaRes.data ?? []).find(m => m.typeName === this.typeName);
@@ -253,6 +285,7 @@ export class ModelDataComponent implements OnInit {
   goToPage(p: number): void {
     if (p < 1 || p > this.totalPages || p === this.pageIndex) return;
     this.pageIndex = p;
+    this.clearSelection();     // seçim sayfalar arasında taşınmaz
     this.loadRows();
   }
 
@@ -262,7 +295,91 @@ export class ModelDataComponent implements OnInit {
   changePageSize(size: number): void {
     this.pageSize  = size;
     this.pageIndex = 1;
+    this.clearSelection();
     this.loadRows();
+  }
+
+  // ─── Satır seçimi ve toplu silme ───────────────────────────────────────────
+
+  isRowSelected(row: DataRow): boolean {
+    return this.selectedIds.has(this.rowId(row));
+  }
+
+  toggleRow(row: DataRow): void {
+    const id = this.rowId(row);
+    if (this.selectedIds.has(id)) this.selectedIds.delete(id);
+    else this.selectedIds.add(id);
+  }
+
+  get selectedCount(): number {
+    return this.selectedIds.size;
+  }
+
+  get allRowsSelected(): boolean {
+    return this.rows.length > 0 && this.rows.every(r => this.selectedIds.has(this.rowId(r)));
+  }
+
+  get someRowsSelected(): boolean {
+    return this.selectedIds.size > 0 && !this.allRowsSelected;
+  }
+
+  toggleAllRows(): void {
+    if (this.allRowsSelected) this.selectedIds.clear();
+    else this.rows.forEach(r => this.selectedIds.add(this.rowId(r)));
+  }
+
+  get bulkDeleteMessage(): string {
+    return this.languageService.t('model.data.bulkDeleteMessage', { count: this.selectedCount });
+  }
+
+  openBulkDelete(): void {
+    if (this.selectedCount === 0) return;
+    this.confirmOpen.set(true);
+  }
+
+  cancelBulkDelete(): void {
+    if (this.bulkBusy()) return;
+    this.confirmOpen.set(false);
+  }
+
+  /**
+   * Seçili kayıtları siler. Sunucuda toplu silme ucu YOKTUR; her kayıt tek tek silinir.
+   * Kısmi başarı kabul edilir: silinenler listeden düşer, silinemeyenler SEÇİLİ KALIR ve
+   * hataları özetlenir — kullanıcı yalnızca sorunlu satırlarla ilgilenir.
+   */
+  confirmBulkDelete(): void {
+    const ids = [...this.selectedIds];
+    if (ids.length === 0) { this.confirmOpen.set(false); return; }
+
+    this.bulkBusy.set(true);
+    this.bulkErrors = [];
+    this.bulkTotal = ids.length;
+
+    forkJoin(
+      ids.map(id =>
+        this.publishedModel.delete(this.typeName, id).pipe(
+          map(res => ({ id, ok: res.success, message: res.message })),
+          catchError(err => of({
+            id,
+            ok: false,
+            message: (err?.error?.message ?? this.languageService.t('model.data.loadFailed')) as string
+          }))
+        )
+      )
+    ).pipe(markDirty(this.cdr)).subscribe(results => {
+      this.bulkBusy.set(false);
+      this.confirmOpen.set(false);
+
+      const failed = results.filter(r => !r.ok);
+      this.selectedIds = new Set(failed.map(r => r.id));
+      this.bulkErrors = failed.map(r => `ID:${r.id} — ${r.message}`);
+
+      // Son sayfadaki tüm kayıtlar silindiyse bir önceki sayfaya çekil.
+      if (failed.length < ids.length && this.pageIndex > 1 && ids.length >= this.rows.length) {
+        this.pageIndex = Math.max(1, this.pageIndex - 1);
+      }
+      this.loadRows();
+    });
   }
 
   // ─── Util delegasyonları — template'te doğrudan çağrılabilmesi için ────────────
@@ -284,7 +401,7 @@ export class ModelDataComponent implements OnInit {
 
   /** Sürüm geçmişini backend'den yükler */
   loadVersions(): void {
-    this.publishedTableService.getVersions(this.typeName).subscribe({
+    this.publishedTableService.getVersions(this.typeName).pipe(markDirty(this.cdr)).subscribe({
       next: r => {
         if (r.success) {
           this.versions.set(r.data ?? []);
@@ -302,18 +419,35 @@ export class ModelDataComponent implements OnInit {
     }
   }
 
-  /** Onay alındıktan sonra rollback isteği gönderir; başarıda veri + sürümleri yeniler */
-  doRollback(version: number): void {
-    if (!confirm(this.languageService.t('model.data.rollbackConfirm', { version }))) return;
+  /** Onay bekleyen sürüm; null ise diyalog kapalıdır. */
+  pendingRollbackVersion: number | null = null;
+  isRollingBack = false;
 
-    this.publishedTableService.rollback(this.typeName, version).subscribe({
+  askRollback(version: number): void {
+    this.pendingRollbackVersion = version;
+  }
+
+  cancelRollback(): void {
+    this.pendingRollbackVersion = null;
+  }
+
+  /** Onay alındıktan sonra rollback isteği gönderir; başarıda veri + sürümleri yeniler */
+  confirmRollback(): void {
+    const version = this.pendingRollbackVersion;
+    if (version === null) return;
+
+    this.pendingRollbackVersion = null;
+    this.isRollingBack = true;
+
+    this.publishedTableService.rollback(this.typeName, version).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
+        this.isRollingBack = false;
         if (res.success) {
           this.loadRows();
           this.loadVersions();
         }
       },
-      error: () => { /* sessizce geç */ }
+      error: () => { this.isRollingBack = false; }
     });
   }
 }

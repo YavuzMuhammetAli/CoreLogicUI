@@ -1,17 +1,22 @@
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DatabaseService } from '../../services/database.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
+import { markDirty } from '../../utils/change-detection';
 
 @Component({
   selector: 'app-database-proccess',
   standalone: true,
   imports: [CommonModule, TranslatePipe],
   templateUrl: './database-proccess.component.html',
-  styleUrl: './database-proccess.component.scss'
+  styleUrl: './database-proccess.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DatabaseProccessComponent {
+  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  private readonly cdr = inject(ChangeDetectorRef);
+
   /** İstek devam ediyor mu? */
   loading = signal(false);
 
@@ -31,7 +36,7 @@ export class DatabaseProccessComponent {
     this.loading.set(true);
     this.message.set({ text: '', type: 'idle' });
 
-    this.databaseService.createDatabase().subscribe({
+    this.databaseService.createDatabase().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.message.set({
           text: res.message ?? (res.success
@@ -56,7 +61,7 @@ export class DatabaseProccessComponent {
     this.loading.set(true);
     this.message.set({ text: '', type: 'idle' });
 
-    this.databaseService.createTable().subscribe({
+    this.databaseService.createTable().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.message.set({
           text: res.message ?? (res.success
@@ -81,7 +86,7 @@ export class DatabaseProccessComponent {
     this.loading.set(true);
     this.message.set({ text: '', type: 'idle' });
 
-    this.databaseService.checkDatabase().subscribe({
+    this.databaseService.checkDatabase().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.message.set({
           text: res.message ?? (res.success
