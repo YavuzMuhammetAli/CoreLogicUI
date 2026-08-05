@@ -1,103 +1,50 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { map } from 'rxjs';
 import { DashboardService } from '../../services/dashboard.service';
-import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
-
-interface DeletedDashboardEntry {
-  id: number;
-  name: string;
-  widgetCount: number;
-  restoring: boolean;
-  restoreMessage: string | null;
-  restoreSuccess: boolean | null;
-}
+import { DeletedListComponent } from '../shared/deleted-list/deleted-list.component';
+import { DeletedItem, DeletedListSource } from '../shared/deleted-list/deleted-list.model';
 
 /**
  * Pasiflenmiş (silinmiş) dashboard tanımlarını listeler. Bir dashboard doğrudan silindiğinde
  * veya bağlı olduğu model /models sayfasından silinince (cascade) burada görünür ve
  * Geri Yükle ile tekrar aktif hale getirilebilir.
+ *
+ * Listeleme/hata/geri yükleme akışı DeletedListComponent'tedir; burada yalnızca
+ * bu ekrana özel veri kaynağı tanımlanır.
  */
 @Component({
   selector: 'app-deleted-dashboards',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe],
-  templateUrl: './deleted-dashboards.component.html',
-  styleUrls: ['./deleted-dashboards.component.scss']
+  imports: [DeletedListComponent],
+  template: '<app-deleted-list [source]="source" />',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DeletedDashboardsComponent implements OnInit {
-  dashboards: DeletedDashboardEntry[] = [];
-  loading = false;
-  loadError: string | null = null;
-
+export class DeletedDashboardsComponent {
+  private readonly dashboardService = inject(DashboardService);
   private readonly languageService = inject(LanguageService);
 
-  constructor(private dashboardService: DashboardService) {}
+  readonly source: DeletedListSource = {
+    i18nPrefix: 'deleted.dashboards',
+    backLink: '/dashboard',
 
-  ngOnInit(): void {
-    this.load();
-  }
-
-  load(): void {
-    this.loading = true;
-    this.loadError = null;
-    this.dashboards = [];
-
-    this.dashboardService.listDeleted().subscribe({
-      next: res => {
-        this.loading = false;
-        if (!res.success) {
-          this.loadError = res.message ?? this.languageService.t('deleted.dashboards.loadFailed');
-          return;
-        }
-
-        this.dashboards = (res.data ?? []).map(d => ({
+    load: () => this.dashboardService.listDeleted().pipe(
+      map(res => ({
+        success: res.success,
+        message: res.message,
+        items: (res.data ?? []).map<DeletedItem>(d => ({
           id: d.id,
-          name: d.name,
-          widgetCount: d.widgets?.length ?? 0,
-          restoring: false,
-          restoreMessage: null,
-          restoreSuccess: null
-        }));
-      },
-      error: err => {
-        this.loading = false;
-        this.loadError = err?.error?.message ?? this.languageService.t('deleted.serverConnectionError');
-      }
-    });
-  }
+          title: d.name,
+          badges: [
+            this.languageService.t('deleted.dashboards.widgetCount', {
+              count: d.widgets?.length ?? 0
+            })
+          ],
+          restoreKey: d.id
+        }))
+      }))
+    ),
 
-  /** Pasiflenmiş dashboard'u yeniden aktif yapar (Active=true). */
-  restore(dashboard: DeletedDashboardEntry): void {
-    if (dashboard.restoring) return;
-
-    const confirmed = confirm(this.languageService.t('deleted.dashboards.restoreConfirm', { name: dashboard.name }));
-    if (!confirmed) return;
-
-    dashboard.restoring = true;
-    dashboard.restoreMessage = null;
-    dashboard.restoreSuccess = null;
-
-    this.dashboardService.restore(dashboard.id).subscribe({
-      next: res => {
-        dashboard.restoring = false;
-        dashboard.restoreSuccess = res.success;
-        dashboard.restoreMessage = res.message ?? (res.success
-          ? this.languageService.t('deleted.dashboards.restoreSuccess')
-          : this.languageService.t('deleted.restoreFailed'));
-
-        if (res.success) {
-          setTimeout(() => {
-            this.dashboards = this.dashboards.filter(d => d.id !== dashboard.id);
-          }, 1500);
-        }
-      },
-      error: err => {
-        dashboard.restoring = false;
-        dashboard.restoreSuccess = false;
-        dashboard.restoreMessage = err?.error?.message ?? this.languageService.t('deleted.restoreServerError');
-      }
-    });
-  }
+    restore: item => this.dashboardService.restore(Number(item.restoreKey))
+  };
 }

@@ -1,19 +1,8 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { map } from 'rxjs';
 import { PublishedTableService } from '../../services/published-table.service';
-import { TranslatePipe } from '../../pipes/translate.pipe';
-import { LanguageService } from '../../services/language.service';
-
-interface DeletedModelEntry {
-  id: number;
-  tableName: string;
-  description: string;
-  version: number;
-  restoring: boolean;
-  restoreMessage: string | null;
-  restoreSuccess: boolean | null;
-}
+import { DeletedListComponent } from '../shared/deleted-list/deleted-list.component';
+import { DeletedItem, DeletedListSource } from '../shared/deleted-list/deleted-list.model';
 
 /**
  * Daha önce en az bir kez yayınlanmış olup pasiflenmiş (silinmiş) modelleri listeler.
@@ -21,87 +10,37 @@ interface DeletedModelEntry {
  * Geri Yükle ile tekrar aktif hale getirilebilir (tablo ağacı + ModelDefinition sürümleri
  * aktif edilir, derlenmiş tip yeniden derlenir). Hiç yayınlanmamış taslaklar bu listeye
  * girmez — onlar için /drafts/deleted kullanılır.
+ *
+ * Listeleme/hata/geri yükleme akışı DeletedListComponent'tedir; burada yalnızca
+ * bu ekrana özel veri kaynağı tanımlanır.
  */
 @Component({
   selector: 'app-deleted-models',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe],
-  templateUrl: './deleted-models.component.html',
-  styleUrls: ['./deleted-models.component.scss']
+  imports: [DeletedListComponent],
+  template: '<app-deleted-list [source]="source" />',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DeletedModelsComponent implements OnInit {
-  models: DeletedModelEntry[] = [];
-  loading = false;
-  loadError: string | null = null;
+export class DeletedModelsComponent {
+  private readonly publishedTable = inject(PublishedTableService);
 
-  private readonly languageService = inject(LanguageService);
+  readonly source: DeletedListSource = {
+    i18nPrefix: 'deleted.models',
+    backLink: '/models',
 
-  constructor(private publishedTable: PublishedTableService) {}
-
-  ngOnInit(): void {
-    this.load();
-  }
-
-  load(): void {
-    this.loading = true;
-    this.loadError = null;
-    this.models = [];
-
-    this.publishedTable.getDeletedModels().subscribe({
-      next: res => {
-        this.loading = false;
-        if (!res.success) {
-          this.loadError = res.message ?? this.languageService.t('deleted.models.loadFailed');
-          return;
-        }
-
-        this.models = (res.data ?? []).map(t => ({
+    load: () => this.publishedTable.getDeletedModels().pipe(
+      map(res => ({
+        success: res.success,
+        message: res.message,
+        items: (res.data ?? []).map<DeletedItem>(t => ({
           id: t.id,
-          tableName: t.tableName,
+          title: t.tableName,
           description: t.description,
-          version: t.version,
-          restoring: false,
-          restoreMessage: null,
-          restoreSuccess: null
-        }));
-      },
-      error: err => {
-        this.loading = false;
-        this.loadError = err?.error?.message ?? this.languageService.t('deleted.serverConnectionError');
-      }
-    });
-  }
+          restoreKey: t.tableName
+        }))
+      }))
+    ),
 
-  /** Pasiflenmiş modeli yeniden aktif yapar (tablo ağacı + ModelDefinition + derlenmiş tip). */
-  restore(model: DeletedModelEntry): void {
-    if (model.restoring) return;
-
-    const confirmed = confirm(this.languageService.t('deleted.models.restoreConfirm', { name: model.tableName }));
-    if (!confirmed) return;
-
-    model.restoring = true;
-    model.restoreMessage = null;
-    model.restoreSuccess = null;
-
-    this.publishedTable.restoreModel(model.tableName).subscribe({
-      next: res => {
-        model.restoring = false;
-        model.restoreSuccess = res.success;
-        model.restoreMessage = res.message ?? (res.success
-          ? this.languageService.t('deleted.models.restoreSuccess')
-          : this.languageService.t('deleted.restoreFailed'));
-
-        if (res.success) {
-          setTimeout(() => {
-            this.models = this.models.filter(m => m.id !== model.id);
-          }, 1500);
-        }
-      },
-      error: err => {
-        model.restoring = false;
-        model.restoreSuccess = false;
-        model.restoreMessage = err?.error?.message ?? this.languageService.t('deleted.restoreServerError');
-      }
-    });
-  }
+    restore: item => this.publishedTable.restoreModel(String(item.restoreKey))
+  };
 }
