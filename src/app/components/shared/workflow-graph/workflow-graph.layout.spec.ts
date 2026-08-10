@@ -144,6 +144,72 @@ describe('layoutWorkflow', () => {
     expect(b.y - a.y).toBe(NODE_HEIGHT + ROW_GAP);
   });
 
+  it('paralel adımın dalları TEK kutuda listelenir', () => {
+    // Dallar ayrı düğüm DEĞİL: aynı anda açılıp aynı adımda birleştikleri için
+    // tek kutu içinde göstermek şemayı yatayda yaymıyor.
+    const parallel: WorkflowStep = {
+      key: 'onaylar',
+      type: 'parallel',
+      name: 'Paralel Onay',
+      mode: 'all',
+      branches: [
+        { key: 'finans', name: 'Finans' },
+        { key: 'hukuk', name: 'Hukuk' }
+      ],
+      onComplete: 'final'
+    };
+
+    const layout = layoutWorkflow(graph([step('a', 'onaylar'), parallel, step('final')], 'a'));
+    const node = layout.nodes.find(n => n.key === 'onaylar')!;
+
+    expect(node.isParallel).toBeTrue();
+    expect(node.branchLabels).toEqual(['Finans', 'Hukuk']);
+    expect(layout.nodes.filter(n => n.key === 'finans').length).toBe(0);
+  });
+
+  it('paralel kutu dal sayısına göre yükselir', () => {
+    const one: WorkflowStep = {
+      key: 'p', type: 'parallel', name: 'P', mode: 'all',
+      branches: [{ key: 'a1', name: 'A' }, { key: 'b1', name: 'B' }]
+    };
+    const three: WorkflowStep = {
+      key: 'p', type: 'parallel', name: 'P', mode: 'all',
+      branches: [{ key: 'a1', name: 'A' }, { key: 'b1', name: 'B' }, { key: 'c1', name: 'C' }]
+    };
+
+    const h2 = layoutWorkflow(graph([one], 'p')).nodes.find(n => n.key === 'p')!.height;
+    const h3 = layoutWorkflow(graph([three], 'p')).nodes.find(n => n.key === 'p')!.height;
+
+    expect(h3).toBeGreaterThan(h2);
+  });
+
+  it('paralel adım onComplete/onAnyReject alanlarını kullanır', () => {
+    // Tekil adım onApprove/onReject, paralel adım onComplete/onAnyReject okur;
+    // karıştırılırsa kenarlar hiç çizilmezdi.
+    const parallel: WorkflowStep = {
+      key: 'onaylar', type: 'parallel', name: 'P', mode: 'all',
+      branches: [{ key: 'a1', name: 'A' }, { key: 'b1', name: 'B' }],
+      onComplete: 'final',
+      onAnyReject: 'duzeltme'
+    };
+
+    const layout = layoutWorkflow(
+      graph([parallel, step('final'), step('duzeltme')], 'onaylar'));
+
+    expect(layout.edges.some(e => e.key.startsWith('onaylar->final'))).toBeTrue();
+    expect(layout.edges.some(e => e.key.startsWith('onaylar->duzeltme'))).toBeTrue();
+  });
+
+  it('join kuralı rozeti gösterilir', () => {
+    const any: WorkflowStep = {
+      key: 'p', type: 'parallel', name: 'P', mode: 'any',
+      branches: [{ key: 'a1', name: 'A' }, { key: 'b1', name: 'B' }]
+    };
+
+    expect(layoutWorkflow(graph([any], 'p')).nodes.find(n => n.key === 'p')!.joinLabel)
+      .toBe('herhangi biri');
+  });
+
   it('adım anahtarı büyük/küçük harf duyarsız eşleşir', () => {
     const layout = layoutWorkflow(graph([step('Yonetici', 'FINANS'), step('finans')], 'yonetici'));
 

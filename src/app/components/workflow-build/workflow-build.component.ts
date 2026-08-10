@@ -13,6 +13,10 @@ import {
   WORKFLOW_OPERATORS,
   WORKFLOW_TERMINAL_COMPLETED,
   WORKFLOW_TERMINAL_REJECTED,
+  JOIN_MODE_OPTIONS,
+  WorkflowAssignment,
+  WorkflowBranch,
+  WorkflowSla,
   WorkflowCondition,
   WorkflowDefinition,
   WorkflowGraph,
@@ -29,6 +33,36 @@ import { markDirty } from '../../utils/change-detection';
 import { WorkflowGraphComponent } from '../shared/workflow-graph/workflow-graph.component';
 
 type TabId = 'steps' | 'trigger' | 'preview';
+
+/**
+ * Atama nesnesini form değerlerinden kurar. Adım ve dal aynı alan adlarını
+ * kullandığı için ikisi de aynı fonksiyondan geçer.
+ */
+function buildAssignment(source: Record<string, unknown>): WorkflowAssignment {
+  const mode = source['assignMode'] as 'role' | 'user' | 'creator';
+  return {
+    mode,
+    roleId: mode === 'role' ? Number(source['roleId']) || null : null,
+    userId: mode === 'user' ? Number(source['userId']) || null : null
+  };
+}
+
+/**
+ * SLA yalnızca gerçekten girildiyse üretilir; boş bir nesne doğrulayıcıda
+ * "sıfırdan büyük olmalı" hatasına düşerdi.
+ */
+function buildSla(source: Record<string, unknown>): WorkflowSla | null {
+  const dueHours = source['dueHours'] as number | null;
+  const escalateAfterHours = source['escalateAfterHours'] as number | null;
+
+  if (!dueHours && !escalateAfterHours) return null;
+
+  return {
+    dueHours: dueHours || null,
+    escalateAfterHours: escalateAfterHours || null,
+    onTimeout: (source['onTimeout'] as 'escalate' | 'autoApprove' | 'autoReject') ?? 'escalate'
+  };
+}
 
 /** Form alanı tipi seçenekleri — model kolon tipleriyle aynı sözlükten dar bir alt küme. */
 const FORM_FIELD_TYPES = ['string', 'int', 'decimal', 'boolean', 'datetime', 'dateonly', 'enum'] as const;
@@ -65,6 +99,7 @@ export class WorkflowBuildComponent implements OnInit {
   readonly assignmentModeOptions = ASSIGNMENT_MODE_OPTIONS;
   readonly timeoutPolicyOptions = TIMEOUT_POLICY_OPTIONS;
   readonly operators = WORKFLOW_OPERATORS;
+  readonly joinModeOptions = JOIN_MODE_OPTIONS;
   readonly fieldTypes = FORM_FIELD_TYPES;
   readonly terminalCompleted = WORKFLOW_TERMINAL_COMPLETED;
   readonly terminalRejected = WORKFLOW_TERMINAL_REJECTED;
@@ -166,16 +201,22 @@ export class WorkflowBuildComponent implements OnInit {
     const group = this.fb.group({
       key: [step?.key ?? this.suggestKey(), [Validators.required, Validators.pattern(/^[A-Za-z][A-Za-z0-9_]*$/)]],
       name: [step?.name ?? '', Validators.required],
+      type: [step?.type ?? 'approval'],
+      // Paralel adımda ilerleme kuralı; tekil adımda göz ardı edilir.
+      mode: [step?.mode ?? 'all'],
       assignMode: [step?.assignment?.mode ?? 'role'],
       roleId: [step?.assignment?.roleId ?? null],
       userId: [step?.assignment?.userId ?? null],
       dueHours: [step?.sla?.dueHours ?? null],
       escalateAfterHours: [step?.sla?.escalateAfterHours ?? null],
       onTimeout: [step?.sla?.onTimeout ?? 'escalate'],
-      onApprove: [step?.onApprove ?? ''],
-      onReject: [step?.onReject ?? ''],
+      // Tekil adımda onApprove/onReject, paralel adımda onComplete/onAnyReject
+      // olarak yazılır; formda tek çift kontrol tutulup buildGraph'ta ayrılıyor.
+      onApprove: [step?.onApprove ?? step?.onComplete ?? ''],
+      onReject: [step?.onReject ?? step?.onAnyReject ?? ''],
       statusLabel: [''],
-      fields: this.fb.array([])
+      fields: this.fb.array([]),
+      branches: this.fb.array([])
     });
 
     const fields = group.get('fields') as FormArray;
@@ -183,7 +224,53 @@ export class WorkflowBuildComponent implements OnInit {
       fields.push(this.newFieldGroup(field));
     }
 
+    const branches = group.get('branches') as FormArray;
+    for (const branch of step?.branches ?? []) {
+      branches.push(this.newBranchGroup(branch));
+    }
+
     return group;
+  }
+
+  private newBranchGroup(branch?: WorkflowBranch): FormGroup {
+    return this.fb.group({
+      key: [branch?.key ?? '', [Validators.required, Validators.pattern(/^[A-Za-z][A-Za-z0-9_]*$/)]],
+      name: [branch?.name ?? '', Validators.required],
+      assignMode: [branch?.assignment?.mode ?? 'role'],
+      roleId: [branch?.assignment?.roleId ?? null],
+      userId: [branch?.assignment?.userId ?? null],
+      // SLA dal başına: "finans 24 saat, hukuk 72 saat" gerçek bir ihtiyaç.
+      dueHours: [branch?.sla?.dueHours ?? null],
+      escalateAfterHours: [branch?.sla?.escalateAfterHours ?? null],
+      onTimeout: [branch?.sla?.onTimeout ?? 'escalate']
+    });
+  }
+
+  stepBranches(index: number): FormArray {
+    return this.stepsArray.at(index).get('branches') as FormArray;
+  }
+
+  addBranch(stepIndex: number): void {
+    const branches = this.stepBranches(stepIndex);
+    branches.push(this.newBranchGroup({
+      key: `dal${branches.length + 1}`,
+      name: ''
+    } as WorkflowBranch));
+  }
+
+  removeBranch(stepIndex: number, branchIndex: number): void {
+    this.stepBranches(stepIndex).removeAt(branchIndex);
+  }
+
+  /** Adım tipi değişince paralel adıma iki boş dal hazırlanır (en az iki dal şart). */
+  onStepTypeChange(index: number): void {
+    const control = this.stepsArray.at(index);
+    if (control.value.type !== 'parallel') return;
+
+    const branches = this.stepBranches(index);
+    while (branches.length < 2) {
+      this.addBranch(index);
+    }
   }
 
   /** Yeni adıma çakışmayan bir anahtar önerir (adim1, adim2, …). */
@@ -336,27 +423,41 @@ export class WorkflowBuildComponent implements OnInit {
       const statusLabel = String(step['statusLabel'] ?? '').trim();
       if (statusLabel) entityStatusMap[key] = statusLabel;
 
-      const mode = step['assignMode'] as 'role' | 'user' | 'creator';
-      const dueHours = step['dueHours'] as number | null;
-      const escalateAfterHours = step['escalateAfterHours'] as number | null;
+      const isParallel = step['type'] === 'parallel';
       const fields = (step['fields'] ?? []) as Array<Record<string, unknown>>;
+      const approveTarget = String(step['onApprove'] ?? '') || null;
+      const rejectTarget = String(step['onReject'] ?? '') || null;
+
+      if (isParallel) {
+        const branches = (step['branches'] ?? []) as Array<Record<string, unknown>>;
+
+        return {
+          key,
+          type: 'parallel' as const,
+          name: String(step['name'] ?? ''),
+          mode: (step['mode'] as 'all' | 'any') ?? 'all',
+          branches: branches.map(branch => ({
+            key: String(branch['key'] ?? ''),
+            name: String(branch['name'] ?? ''),
+            assignment: buildAssignment(branch),
+            sla: buildSla(branch)
+          })),
+          // Paralel adımın KENDİ ataması/formu gönderilmez — doğrulayıcı bunu
+          // reddediyor; görevler dallardan doğar.
+          assignment: null,
+          sla: null,
+          form: null,
+          onComplete: approveTarget,
+          onAnyReject: rejectTarget
+        };
+      }
 
       return {
         key,
         type: 'approval' as const,
         name: String(step['name'] ?? ''),
-        assignment: {
-          mode,
-          roleId: mode === 'role' ? Number(step['roleId']) || null : null,
-          userId: mode === 'user' ? Number(step['userId']) || null : null
-        },
-        // SLA yalnızca gerçekten girildiyse gönderilir; boş nesne doğrulayıcıda
-        // "sıfırdan büyük olmalı" hatasına düşerdi.
-        sla: dueHours || escalateAfterHours ? {
-          dueHours: dueHours || null,
-          escalateAfterHours: escalateAfterHours || null,
-          onTimeout: (step['onTimeout'] as 'escalate' | 'autoApprove' | 'autoReject') ?? 'escalate'
-        } : null,
+        assignment: buildAssignment(step),
+        sla: buildSla(step),
         form: fields.length > 0 ? {
           fields: fields.map(field => ({
             name: String(field['name'] ?? ''),
@@ -366,8 +467,8 @@ export class WorkflowBuildComponent implements OnInit {
             enumValues: String(field['enumValues'] ?? '') || null
           }))
         } : null,
-        onApprove: String(step['onApprove'] ?? '') || null,
-        onReject: String(step['onReject'] ?? '') || null
+        onApprove: approveTarget,
+        onReject: rejectTarget
       };
     });
 

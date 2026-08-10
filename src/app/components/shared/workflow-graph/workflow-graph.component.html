@@ -32,7 +32,8 @@
         <g class="graph-node"
            [class.graph-node--start]="node.isStart"
            [class.graph-node--terminal]="node.isTerminal"
-           [class.graph-node--reject]="node.isRejection">
+           [class.graph-node--reject]="node.isRejection"
+           [class.graph-node--parallel]="node.isParallel">
           <rect [attr.x]="node.x" [attr.y]="node.y"
                 [attr.width]="node.width" [attr.height]="node.height"
                 [attr.rx]="node.isTerminal ? node.height / 2 : 8" />
@@ -44,6 +45,23 @@
                   [attr.x]="node.x + node.width / 2"
                   [attr.y]="node.y + 38"
                   text-anchor="middle">{{ node.key }}</text>
+          }
+          <!--
+            Paralel dallar AYRI düğüm olarak çizilmiyor: aynı anda açılıp aynı
+            adımda birleştikleri için tek kutu içinde listelemek akışı daha okunur
+            kılıyor ve şemayı yatayda yaymıyor.
+          -->
+          @if (node.isParallel) {
+            <text class="node-join"
+                  [attr.x]="node.x + node.width - 8"
+                  [attr.y]="node.y + 14"
+                  text-anchor="end">{{ node.joinLabel }}</text>
+            @for (branch of node.branchLabels; track branch; let i = $index) {
+              <text class="node-branch"
+                    [attr.x]="node.x + 12"
+                    [attr.y]="node.y + 54 + i * 15"
+                    text-anchor="start">▸ {{ branch }}</text>
+            }
           }
         </g>
       }

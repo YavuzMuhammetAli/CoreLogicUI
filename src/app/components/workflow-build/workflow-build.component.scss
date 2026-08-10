@@ -125,3 +125,23 @@
   .step-head { flex-wrap: wrap; }
   .step-name, .step-key { flex-basis: 100%; }
 }
+
+// Paralel dal satırı — form alanı satırıyla aynı akış, ama dal anahtarı monospace.
+.branch-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+
+  .input { flex: 1 1 140px; }
+}
+
+.branch-key {
+  flex: 0 1 120px;
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+}
+
+.branch-hours {
+  flex: 0 1 100px;
+}

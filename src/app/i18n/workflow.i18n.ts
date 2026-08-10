@@ -66,6 +66,22 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.build.removeStep': { tr: 'Adımı kaldır', en: 'Remove step' },
   'workflow.build.stepKey': { tr: 'Anahtar', en: 'Key' },
   'workflow.build.stepName': { tr: 'Adım adı', en: 'Step name' },
+  'workflow.build.stepType': { tr: 'Adım tipi', en: 'Step type' },
+  'workflow.build.typeApproval': { tr: 'Tekil onay', en: 'Single approval' },
+  'workflow.build.typeParallel': { tr: 'Paralel onay', en: 'Parallel approval' },
+  'workflow.build.joinMode': { tr: 'İlerleme kuralı', en: 'Join rule' },
+  'workflow.build.joinModeHelp': {
+    tr: 'Reddetme her zaman önceliklidir: bir dal reddederse kalanlar iptal edilir.',
+    en: 'Rejection always wins: if one branch rejects, the rest are cancelled.'
+  },
+  'workflow.build.branches': { tr: 'Dallar', en: 'Branches' },
+  'workflow.build.addBranch': { tr: 'Dal Ekle', en: 'Add Branch' },
+  'workflow.build.branchesHelp': {
+    tr: 'Dalların hepsi aynı anda açılır. Her dalın kendi ataması ve süresi olabilir (en az iki dal gerekir).',
+    en: 'All branches open at the same time. Each branch can have its own assignee and deadline (at least two are required).'
+  },
+  'workflow.build.branchKey': { tr: 'Dal anahtarı', en: 'Branch key' },
+  'workflow.build.branchName': { tr: 'Dal adı', en: 'Branch name' },
   'workflow.build.assignMode': { tr: 'Atama', en: 'Assignment' },
   'workflow.build.assignRole': { tr: 'Rol', en: 'Role' },
   'workflow.build.assignUser': { tr: 'Kullanıcı', en: 'User' },
@@ -188,6 +204,9 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.assign.role': { tr: 'Role', en: 'To a role' },
   'workflow.assign.user': { tr: 'Kullanıcıya', en: 'To a user' },
   'workflow.assign.creator': { tr: 'Kaydı oluşturana', en: 'To the record creator' },
+
+  'workflow.join.all': { tr: 'Tüm dallar onaylamalı', en: 'All branches must approve' },
+  'workflow.join.any': { tr: 'Herhangi bir dal yeter', en: 'Any single branch suffices' },
 
   'workflow.timeout.escalate': { tr: 'Üst amire bildir', en: 'Notify the supervisor' },
   'workflow.timeout.autoApprove': { tr: 'Otomatik onayla', en: 'Auto-approve' },

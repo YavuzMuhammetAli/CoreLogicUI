@@ -1,4 +1,4 @@
-import { WorkflowGraph, WORKFLOW_TERMINAL_COMPLETED, WORKFLOW_TERMINAL_REJECTED } from '../../../models/workflow.model';
+import { WorkflowGraph, WorkflowStep, outgoingTargets, WORKFLOW_TERMINAL_COMPLETED, WORKFLOW_TERMINAL_REJECTED } from '../../../models/workflow.model';
 
 /**
  * Akış şeması geometrisi — SAF fonksiyon, Angular import'u YOK.
@@ -18,6 +18,8 @@ export const ROW_GAP = 56;
 export const PADDING = 24;
 export const TERMINAL_HEIGHT = 34;
 export const LABEL_OFFSET = 6;
+/** Paralel kutuda her dal satırının yüksekliği. */
+export const BRANCH_LINE_HEIGHT = 15;
 
 export const EMPTY_VIEW_BOX = '0 0 100 60';
 
@@ -34,6 +36,16 @@ export interface LayoutNode {
   isTerminal: boolean;
   /** Reddedilme terminali kırmızı tonda. */
   isRejection: boolean;
+  /** Paralel adım — kutu içinde dal adları listelenir. */
+  isParallel: boolean;
+  /**
+   * Paralel adımın dal etiketleri (ör. ["finans", "satinalma"]).
+   * Ayrı düğüm olarak çizilmezler: dallar aynı anda açılıp aynı adımda birleştiği
+   * için tek kutu içinde göstermek akışı daha okunur kılıyor ve şemayı yaymıyor.
+   */
+  branchLabels: string[];
+  /** Join kuralı rozeti: "tümü" | "herhangi biri". Tekil adımda boş. */
+  joinLabel: string;
 }
 
 export interface LayoutEdge {
@@ -96,7 +108,8 @@ function computeLayers(graph: WorkflowGraph): Map<string, number> {
     const step = graph.steps.find(s => eq(s.key, current.key));
     if (!step) continue;
 
-    for (const target of [step.onApprove, step.onReject]) {
+    const { approve, reject } = outgoingTargets(step);
+    for (const target of [approve, reject]) {
       if (!target || isTerminal(target)) continue;
 
       const targetKey = target.toLowerCase();
@@ -140,6 +153,11 @@ function placeNodes(graph: WorkflowGraph, layers: Map<string, number>): LayoutNo
     const column = byLayer.get(layer) ?? [];
     const columnIndex = column.indexOf(step.key);
 
+    const isParallel = step.type === 'parallel';
+    const branchLabels = isParallel
+      ? (step.branches ?? []).map(b => b.name || b.key)
+      : [];
+
     nodes.push({
       key: step.key,
       label: step.name || step.key,
@@ -147,10 +165,16 @@ function placeNodes(graph: WorkflowGraph, layers: Map<string, number>): LayoutNo
       x: PADDING + columnIndex * (NODE_WIDTH + COLUMN_GAP),
       y: PADDING + layer * (NODE_HEIGHT + ROW_GAP),
       width: NODE_WIDTH,
-      height: NODE_HEIGHT,
+      // Paralel kutu dalları da listeliyor; her dal için bir satır yüksekliği ekler.
+      height: isParallel
+        ? NODE_HEIGHT + branchLabels.length * BRANCH_LINE_HEIGHT
+        : NODE_HEIGHT,
       isStart: eq(step.key, graph.startStep),
       isTerminal: false,
-      isRejection: false
+      isRejection: false,
+      isParallel,
+      branchLabels,
+      joinLabel: isParallel ? (step.mode === 'any' ? 'herhangi biri' : 'tümü') : ''
     });
   }
 
@@ -171,7 +195,10 @@ function placeNodes(graph: WorkflowGraph, layers: Map<string, number>): LayoutNo
       height: TERMINAL_HEIGHT,
       isStart: false,
       isTerminal: true,
-      isRejection: terminal === WORKFLOW_TERMINAL_REJECTED
+      isRejection: terminal === WORKFLOW_TERMINAL_REJECTED,
+      isParallel: false,
+      branchLabels: [],
+      joinLabel: ""
     });
     terminalIndex++;
   }
@@ -187,11 +214,12 @@ function collectUsedTerminals(graph: WorkflowGraph): string[] {
   const used = new Set<string>();
 
   for (const step of graph.steps) {
-    if (!step.onApprove || isTerminal(step.onApprove)) {
-      used.add(step.onApprove || WORKFLOW_TERMINAL_COMPLETED);
+    const { approve, reject } = outgoingTargets(step);
+    if (!approve || isTerminal(approve)) {
+      used.add(approve || WORKFLOW_TERMINAL_COMPLETED);
     }
-    if (!step.onReject || isTerminal(step.onReject)) {
-      used.add(step.onReject || WORKFLOW_TERMINAL_REJECTED);
+    if (!reject || isTerminal(reject)) {
+      used.add(reject || WORKFLOW_TERMINAL_REJECTED);
     }
   }
 
@@ -206,8 +234,9 @@ function buildEdges(graph: WorkflowGraph, byKey: Map<string, LayoutNode>): Layou
     const source = byKey.get(step.key.toLowerCase());
     if (!source) continue;
 
-    const approveTarget = step.onApprove || WORKFLOW_TERMINAL_COMPLETED;
-    const rejectTarget = step.onReject || WORKFLOW_TERMINAL_REJECTED;
+    const { approve, reject } = outgoingTargets(step);
+    const approveTarget = approve || WORKFLOW_TERMINAL_COMPLETED;
+    const rejectTarget = reject || WORKFLOW_TERMINAL_REJECTED;
 
     pushEdge(edges, byKey, source, approveTarget, 'onay', false);
     pushEdge(edges, byKey, source, rejectTarget, 'red', true);

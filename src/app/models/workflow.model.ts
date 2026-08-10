@@ -187,15 +187,47 @@ export interface WorkflowForm {
   fields: WorkflowFormField[];
 }
 
+export type WorkflowStepType = 'approval' | 'parallel';
+
+/** Paralel adımda ilerleme kuralı — backend WorkflowJoinModes ile aynı. */
+export type WorkflowJoinMode = 'all' | 'any';
+
+export const JOIN_MODE_OPTIONS: ReadonlyArray<{ value: WorkflowJoinMode; labelKey: string }> = [
+  { value: 'all', labelKey: 'workflow.join.all' },
+  { value: 'any', labelKey: 'workflow.join.any' }
+];
+
+/** Paralel adımın tek bir dalı; kendi ataması, süresi ve formu vardır. */
+export interface WorkflowBranch {
+  key: string;
+  name: string;
+  assignment?: WorkflowAssignment | null;
+  sla?: WorkflowSla | null;
+  form?: WorkflowForm | null;
+}
+
 export interface WorkflowStep {
   key: string;
-  type: 'approval';
+  type: WorkflowStepType;
   name: string;
   assignment?: WorkflowAssignment | null;
   sla?: WorkflowSla | null;
   form?: WorkflowForm | null;
   onApprove?: string | null;
   onReject?: string | null;
+
+  // ── Yalnızca type = parallel ──────────────────────────────────────────────
+  branches?: WorkflowBranch[];
+  mode?: WorkflowJoinMode | null;
+  onComplete?: string | null;
+  onAnyReject?: string | null;
+}
+
+/** Bir adımdan çıkan geçişler — tekil ve paralel adımda farklı alanlar kullanılır. */
+export function outgoingTargets(step: WorkflowStep): { approve?: string | null; reject?: string | null } {
+  return step.type === 'parallel'
+    ? { approve: step.onComplete, reject: step.onAnyReject }
+    : { approve: step.onApprove, reject: step.onReject };
 }
 
 export interface WorkflowGraph {

@@ -38,6 +38,27 @@
   stroke-width: 2.5;
 }
 
+// Paralel adım: kesikli çerçeve ve içeride dal listesi.
+.graph-node--parallel {
+  rect {
+    stroke-dasharray: 6 3;
+    fill: var(--surface-warm);
+  }
+
+  .node-branch {
+    fill: var(--fg-2);
+    font-size: 11px;
+    font-weight: 400;
+  }
+
+  .node-join {
+    fill: var(--accent);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+}
+
 .graph-node--terminal {
   rect {
     fill: var(--success-bg);
