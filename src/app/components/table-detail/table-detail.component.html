@@ -19,19 +19,9 @@
   <!-- ══ ÜST PANEL: Model Tanımı ═══════════════════════════════════════════ -->
   <div class="panel record-panel">
     <div class="panel-head record-panel-head">
-      <div>
-        <span class="eyebrow">{{ 'table.detail.platformEyebrow' | t }}</span>
-        <h1 class="record-title">
-          @if (isNew) { {{ 'table.detail.newTableTitle' | t }} } @else { {{ editTypeName }} }
-        </h1>
-        <p class="panel-subtitle">
-          @if (isNew) {
-            {{ 'table.detail.newTableSubtitle' | t }}
-          } @else {
-            {{ 'table.detail.editTableSubtitle' | t }}
-          }
-        </p>
-      </div>
+      <span class="eyebrow">
+        @if (isNew) { {{ 'table.detail.newTableTitle' | t }} } @else { {{ editTypeName }} }
+      </span>
 
       <!-- Sağ üst aksiyonlar: Listeye Dön + Kaydet + Yayınla -->
       <div class="panel-actions">

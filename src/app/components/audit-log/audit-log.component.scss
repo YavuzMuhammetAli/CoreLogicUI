@@ -3,12 +3,8 @@
   padding: var(--space-6);
 }
 
-/* Global .page-header flex'ini ezerek dikey düzeni koru */
-.page-header {
-  display: block;
-  margin-bottom: var(--space-6);
-}
-
+/* Ardışık paneller arasına dikey boşluk (.panel'in kendi margin'i yok).
+   Yeni ekranlarda konteyneri .flow ile sarmalamak tercih edilir. */
 .panel + .panel {
   margin-top: var(--space-6);
 }

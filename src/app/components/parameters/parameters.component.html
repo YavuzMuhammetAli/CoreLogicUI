@@ -1,0 +1,43 @@
+<div class="page-header">
+  <span class="eyebrow">{{ 'parameter.title' | t }}</span>
+</div>
+
+<div class="panel tabs-panel">
+  <div class="tab-bar" role="tablist" [attr.aria-label]="'parameter.tablistAria' | t">
+    <button
+      type="button"
+      class="tab-btn"
+      role="tab"
+      [class.tab-btn--active]="activeTab() === 'backup'"
+      [attr.aria-selected]="activeTab() === 'backup'"
+      (click)="setTab('backup')">
+      {{ 'parameter.backupTab' | t }}
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      role="tab"
+      [class.tab-btn--active]="activeTab() === 'mail'"
+      [attr.aria-selected]="activeTab() === 'mail'"
+      (click)="setTab('mail')">
+      {{ 'parameter.mailTab' | t }}
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      role="tab"
+      [class.tab-btn--active]="activeTab() === 'subscription'"
+      [attr.aria-selected]="activeTab() === 'subscription'"
+      (click)="setTab('subscription')">
+      {{ 'parameter.subscriptionTab' | t }}
+    </button>
+  </div>
+
+  @if (activeTab() === 'backup') {
+    <app-backup-settings-tab />
+  } @else if (activeTab() === 'mail') {
+    <app-mail-settings-tab />
+  } @else {
+    <app-subscription-tab />
+  }
+</div>

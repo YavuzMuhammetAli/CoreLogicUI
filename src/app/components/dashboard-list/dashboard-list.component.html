@@ -1,9 +1,5 @@
 <div class="page-header">
-  <div>
-    <span class="eyebrow">{{ 'dashboard.eyebrow' | t }}</span>
-    <h1 class="page-title">{{ 'dashboard.list.title' | t }}</h1>
-    <p class="page-subtitle">{{ 'dashboard.list.subtitle' | t }}</p>
-  </div>
+  <span class="eyebrow">{{ 'dashboard.list.title' | t }}</span>
   <div class="cluster">
     @if (isAdmin) {
       <a routerLink="/dashboard/deleted" class="btn btn-secondary btn-sm">

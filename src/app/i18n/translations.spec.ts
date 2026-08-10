@@ -76,7 +76,7 @@ describe('TRANSLATIONS', () => {
     // {prefix}.{suffix} olarak çözer. Biri eksikse o ekranda ham anahtar görünür.
     const prefixes = ['deleted.models', 'deleted.drafts', 'deleted.reports', 'deleted.dashboards'];
     const suffixes = [
-      'backLink', 'eyebrow', 'title', 'refresh', 'loadingAria', 'loading',
+      'backLink', 'title', 'refresh', 'loadingAria', 'loading',
       'empty', 'emptyHint', 'countSuffix', 'loadFailed',
       'restoreConfirm', 'restoreConfirmTitle', 'restoreSuccess'
     ];

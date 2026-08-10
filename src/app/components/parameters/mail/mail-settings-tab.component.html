@@ -1,0 +1,178 @@
+<div class="tab-panel flow" role="tabpanel" [attr.aria-label]="'parameter.mailPanelAria' | t">
+
+  @if (loadError()) {
+    <div class="alert alert-danger" role="alert">{{ loadError() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="empty-state">
+      <span class="spinner" style="width: 32px; height: 32px;" [attr.aria-label]="'common.loading' | t"></span>
+    </div>
+  } @else {
+
+    <!-- ── SMTP ayarları ───────────────────────────────────────────────── -->
+    <div class="panel">
+      <div class="panel-head">
+        <h2>{{ 'parameter.mail.title' | t }}</h2>
+      </div>
+      <div class="panel-body">
+        <p class="muted-hint">{{ 'parameter.mail.intro' | t }}</p>
+
+        <form [formGroup]="form" (ngSubmit)="save()">
+
+          <label class="checkbox-label" style="margin-top: var(--space-4)">
+            <input type="checkbox" formControlName="enabled">
+            {{ 'parameter.mail.enabled' | t }}
+          </label>
+
+          <div class="settings-grid" style="margin-top: var(--space-5)">
+
+            <div class="field">
+              <label for="mailFrom">
+                {{ 'parameter.mail.from' | t }}
+                @if (enabled()) { <span class="req">*</span> }
+              </label>
+              <input
+                id="mailFrom"
+                class="input"
+                type="email"
+                autocomplete="off"
+                formControlName="from"
+                [attr.aria-invalid]="fromMissing() || (f['from'].invalid && f['from'].touched)">
+              @if (fromMissing()) {
+                <span class="field-error" role="alert">{{ 'parameter.mail.fromRequired' | t }}</span>
+              } @else if (f['from'].invalid && f['from'].touched) {
+                <span class="field-error" role="alert">{{ 'parameter.mail.fromInvalid' | t }}</span>
+              }
+            </div>
+
+            <div class="field">
+              <label for="mailFromName">{{ 'parameter.mail.fromName' | t }}</label>
+              <input id="mailFromName" class="input" type="text" formControlName="fromName"
+                     aria-describedby="fromNameHelp">
+              <span id="fromNameHelp" class="field-help">{{ 'parameter.mail.fromNameHelp' | t }}</span>
+            </div>
+
+            <div class="field">
+              <label for="mailHost">
+                {{ 'parameter.mail.host' | t }}
+                @if (enabled()) { <span class="req">*</span> }
+              </label>
+              <input
+                id="mailHost"
+                class="input"
+                type="text"
+                spellcheck="false"
+                formControlName="host"
+                [attr.aria-invalid]="hostMissing()">
+              @if (hostMissing()) {
+                <span class="field-error" role="alert">{{ 'parameter.mail.hostRequired' | t }}</span>
+              }
+            </div>
+
+            <div class="field">
+              <label for="mailPort">{{ 'parameter.mail.port' | t }}</label>
+              <input
+                id="mailPort"
+                class="input"
+                type="number"
+                min="1"
+                max="65535"
+                formControlName="port"
+                [attr.aria-invalid]="f['port'].invalid && f['port'].touched">
+              @if (f['port'].invalid && f['port'].touched) {
+                <span class="field-error" role="alert">{{ 'parameter.mail.portInvalid' | t }}</span>
+              }
+            </div>
+
+            <div class="field">
+              <label for="mailUser">{{ 'parameter.mail.user' | t }}</label>
+              <input id="mailUser" class="input" type="text" autocomplete="off"
+                     formControlName="user" aria-describedby="mailUserHelp">
+              <span id="mailUserHelp" class="field-help">{{ 'parameter.mail.userHelp' | t }}</span>
+            </div>
+
+            <div class="field">
+              <label for="mailPassword">{{ 'parameter.mail.password' | t }}</label>
+              <input
+                id="mailPassword"
+                class="input"
+                type="password"
+                autocomplete="new-password"
+                formControlName="password"
+                (focus)="onPasswordFocus()"
+                aria-describedby="mailPasswordHelp">
+              <span id="mailPasswordHelp" class="field-help">{{ 'parameter.mail.passwordHelp' | t }}</span>
+            </div>
+          </div>
+
+          <label class="checkbox-label" style="margin-top: var(--space-4)">
+            <input type="checkbox" formControlName="useSsl">
+            {{ 'parameter.mail.useSsl' | t }}
+          </label>
+          <span class="field-help">{{ 'parameter.mail.useSslHelp' | t }}</span>
+
+          @if (formError()) {
+            <div class="alert alert-danger" role="alert" style="margin-top: var(--space-4)">{{ formError() }}</div>
+          }
+          @if (formSuccess()) {
+            <div class="alert alert-success" role="alert" style="margin-top: var(--space-4)">{{ formSuccess() }}</div>
+          }
+
+          <div class="form-actions">
+            <button class="btn btn-primary" type="submit" [disabled]="saving()">
+              @if (saving()) {
+                <span class="spinner" aria-hidden="true"></span>
+              }
+              {{ 'parameter.mail.save' | t }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── Test maili ──────────────────────────────────────────────────── -->
+    <div class="panel">
+      <div class="panel-head">
+        <h2>{{ 'parameter.mail.testTitle' | t }}</h2>
+      </div>
+      <div class="panel-body">
+        <p class="muted-hint">{{ 'parameter.mail.testIntro' | t }}</p>
+
+        <form [formGroup]="testForm" (ngSubmit)="sendTest()">
+          <div class="cluster" style="margin-top: var(--space-4); align-items: flex-start">
+            <div class="field" style="min-width: 260px">
+              <label for="testTo">{{ 'parameter.mail.testTo' | t }} <span class="req">*</span></label>
+              <input
+                id="testTo"
+                class="input"
+                type="email"
+                formControlName="to"
+                [attr.aria-invalid]="tf['to'].invalid && tf['to'].touched">
+              @if (tf['to'].invalid && tf['to'].touched) {
+                <span class="field-error" role="alert">{{ 'parameter.mail.testToRequired' | t }}</span>
+              }
+            </div>
+
+            <div class="field">
+              <label>&nbsp;</label>
+              <button class="btn btn-secondary" type="submit" [disabled]="testing()">
+                @if (testing()) {
+                  <span class="spinner" aria-hidden="true"></span>
+                }
+                {{ 'parameter.mail.sendTest' | t }}
+              </button>
+            </div>
+          </div>
+        </form>
+
+        @if (testError()) {
+          <div class="alert alert-danger" role="alert" style="margin-top: var(--space-4)">{{ testError() }}</div>
+        }
+        @if (testSuccess()) {
+          <div class="alert alert-success" role="alert" style="margin-top: var(--space-4)">{{ testSuccess() }}</div>
+        }
+      </div>
+    </div>
+  }
+</div>

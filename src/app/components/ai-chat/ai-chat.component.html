@@ -1,0 +1,203 @@
+<div class="page-header">
+  <span class="eyebrow">{{ 'ai.title' | t }}</span>
+  <div class="cluster">
+    @if (quotaLabel(); as quota) {
+      <span
+        class="badge"
+        [class.badge-meta]="!quotaExhausted()"
+        [class.badge-danger]="quotaExhausted()"
+        [attr.aria-label]="'ai.quotaAria' | t">
+        {{ 'ai.quota' | t }}: {{ quota }}
+      </span>
+    }
+    <button
+      type="button"
+      class="btn btn-secondary btn-sm"
+      [disabled]="isStreaming() || busy()"
+      (click)="startNew()">
+      {{ 'ai.newChat' | t }}
+    </button>
+  </div>
+</div>
+
+@if (notEntitled()) {
+  <div class="alert alert-warn" role="alert">{{ 'ai.notEntitled' | t }}</div>
+}
+@if (loadError()) {
+  <div class="alert alert-danger" role="alert">{{ loadError() }}</div>
+}
+
+<div class="ai-layout">
+  <!-- ── Sohbet listesi ──────────────────────────────────────────────────── -->
+  <aside class="panel ai-side" [attr.aria-label]="'ai.conversationsAria' | t">
+    <div class="panel-head">
+      <h3>{{ 'ai.conversations' | t }}</h3>
+    </div>
+    <div class="panel-body ai-side-body">
+      @if (conversations().length === 0) {
+        <p class="ai-hint">{{ 'ai.noConversations' | t }}</p>
+      } @else {
+        <ul class="ai-conversation-list">
+          @for (conversation of conversations(); track conversation.id) {
+            <li>
+              <button
+                type="button"
+                class="ai-conversation"
+                [class.is-active]="conversation.id === activeId()"
+                [disabled]="isStreaming()"
+                (click)="select(conversation.id)">
+                <span class="ai-conversation-title">{{ conversation.title }}</span>
+              </button>
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                [attr.aria-label]="'ai.deleteChat' | t"
+                [disabled]="isStreaming() || busy()"
+                (click)="requestDelete(conversation.id)">
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
+                </svg>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </aside>
+
+  <!-- ── Mesaj akışı ─────────────────────────────────────────────────────── -->
+  <section class="panel ai-main" [attr.aria-label]="'ai.chatAria' | t">
+    <div class="panel-body ai-messages" role="log" aria-live="polite">
+      @if (messages().length === 0 && !isStreaming()) {
+        <div class="empty-state">
+          <div class="empty-icon">🤖</div>
+          <h3>{{ 'ai.emptyTitle' | t }}</h3>
+          <p>{{ 'ai.emptyBody' | t }}</p>
+        </div>
+      }
+
+      @for (message of messages(); track message.id) {
+        <article class="ai-message" [class.is-user]="message.role === 'user'">
+          <span class="ai-message-role">
+            {{ (message.role === 'user' ? 'ai.you' : 'ai.assistant') | t }}
+          </span>
+          @if (message.thinkingSummary) {
+            <details class="ai-thinking">
+              <summary>{{ 'ai.thinking' | t }}</summary>
+              <p>{{ message.thinkingSummary }}</p>
+            </details>
+          }
+          <p class="ai-message-text">{{ message.content }}</p>
+        </article>
+      }
+
+      @if (isStreaming()) {
+        <article class="ai-message">
+          <span class="ai-message-role">{{ 'ai.assistant' | t }}</span>
+          @if (streamingThinking()) {
+            <details class="ai-thinking" open>
+              <summary>{{ 'ai.thinking' | t }}</summary>
+              <p>{{ streamingThinking() }}</p>
+            </details>
+          }
+          @if (streamingText()) {
+            <p class="ai-message-text">{{ streamingText() }}</p>
+          } @else {
+            <p class="ai-message-text ai-waiting">
+              <span class="spinner" aria-hidden="true"></span>
+              <span class="sr-only">{{ 'ai.working' | t }}</span>
+            </p>
+          }
+        </article>
+      }
+    </div>
+
+    <div class="ai-composer">
+      @if (actionError()) {
+        <div class="alert alert-danger" role="alert">{{ actionError() }}</div>
+      }
+      <div class="field">
+        <label class="sr-only" for="ai-draft">{{ 'ai.inputLabel' | t }}</label>
+        <textarea
+          id="ai-draft"
+          class="input ai-textarea"
+          rows="3"
+          [placeholder]="'ai.placeholder' | t"
+          [disabled]="isStreaming() || busy() || notEntitled()"
+          [ngModel]="draft()"
+          (ngModelChange)="draft.set($event)"></textarea>
+      </div>
+      <div class="cluster ai-composer-actions">
+        <button type="button" class="btn btn-primary" [disabled]="!canSend()" (click)="send()">
+          {{ 'ai.send' | t }}
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Öneriler ────────────────────────────────────────────────────────── -->
+  <aside class="panel ai-side" [attr.aria-label]="'ai.proposalsAria' | t">
+    <div class="panel-head">
+      <h3>{{ 'ai.proposals' | t }}</h3>
+    </div>
+    <div class="panel-body ai-side-body">
+      @if (cards().length === 0) {
+        <p class="ai-hint">{{ 'ai.noProposals' | t }}</p>
+      } @else {
+        <ul class="ai-card-list">
+          @for (card of cards(); track card.id) {
+            <li class="ai-card" [class.is-failed]="card.status === 'failed'">
+              <div class="ai-card-head">
+                <span class="ai-card-name">{{ card.name }}</span>
+                <span [class]="badgeClass(card)">{{ statusLabel(card) }}</span>
+              </div>
+              <span class="ai-card-kind">{{ ('ai.kind.' + card.kind) | t }}</span>
+              @if (card.summary) {
+                <p class="ai-card-summary">{{ card.summary }}</p>
+              }
+              @if (card.status === 'failed' && card.errorMessage) {
+                <p class="ai-card-error" role="alert">{{ card.errorMessage }}</p>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </div>
+    <div class="panel-actions ai-card-actions">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        [disabled]="busy() || isStreaming() || importableCount() === 0"
+        (click)="runImport()">
+        {{ 'ai.import' | t }} ({{ importableCount() }})
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        [disabled]="busy() || isStreaming() || publishableCount() === 0"
+        (click)="requestPublish()">
+        {{ 'ai.publishAll' | t }} ({{ publishableCount() }})
+      </button>
+      @if (busy()) {
+        <span class="spinner" aria-hidden="true"></span>
+        <span class="sr-only">{{ 'ai.working' | t }}</span>
+      }
+    </div>
+  </aside>
+</div>
+
+<app-confirm-dialog
+  [open]="publishConfirmOpen()"
+  [title]="'ai.publishConfirmTitle' | t"
+  [message]="'ai.publishConfirmMessage' | t"
+  [busy]="busy()"
+  (confirmed)="confirmPublish()"
+  (cancelled)="cancelPublish()" />
+
+<app-confirm-dialog
+  [open]="deleteConfirmId() !== null"
+  [title]="'ai.deleteConfirmTitle' | t"
+  [message]="'ai.deleteConfirmMessage' | t"
+  (confirmed)="confirmDelete()"
+  (cancelled)="cancelDelete()" />

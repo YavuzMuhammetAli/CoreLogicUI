@@ -6,12 +6,8 @@ import { Translations } from './translations.model';
  * tanımlanmaz, doğrudan kullanılır.
  */
 export const DASHBOARD_I18N: Translations = {
-  // Paylaşılan eyebrow (dashboard-list, dashboard-build, dashboard)
-  'dashboard.eyebrow': { tr: 'Raporlama', en: 'Reporting' },
-
   // dashboard-list.component.html
   'dashboard.list.title': { tr: "Dashboard'lar", en: 'Dashboards' },
-  'dashboard.list.subtitle': { tr: "Birden çok raporu widget olarak bir araya getiren dashboard'lar.", en: 'Dashboards that bring multiple reports together as widgets.' },
   'dashboard.list.deletedLink': { tr: "Silinmiş Dashboard'lar", en: 'Deleted Dashboards' },
   'dashboard.list.newButton': { tr: 'Yeni Dashboard', en: 'New Dashboard' },
   'dashboard.list.loadingAria': { tr: 'Yükleniyor', en: 'Loading' },
@@ -26,7 +22,6 @@ export const DASHBOARD_I18N: Translations = {
 
   // dashboard-build.component.html
   'dashboard.build.title': { tr: 'Yeni Dashboard', en: 'New Dashboard' },
-  'dashboard.build.subtitle': { tr: "Rapor ekleyin, canvas'ta sürükleyip yeniden boyutlandırın.", en: 'Add reports, drag and resize them on the canvas.' },
   'dashboard.build.emptyReportsTitle': { tr: 'Henüz rapor yok', en: 'No reports yet' },
   'dashboard.build.emptyReportsText': { tr: 'Dashboard oluşturmak için önce en az bir rapor tanımlamalısınız.', en: 'You must define at least one report before creating a dashboard.' },
   'dashboard.build.createReport': { tr: 'Rapor Oluştur', en: 'Create Report' },
@@ -48,7 +43,6 @@ export const DASHBOARD_I18N: Translations = {
 
   // dashboard.component.html (viewer)
   'dashboard.view.defaultTitle': { tr: 'Dashboard', en: 'Dashboard' },
-  'dashboard.view.subtitle': { tr: 'Birden çok rapor, tek ekranda.', en: 'Multiple reports, one screen.' },
   'dashboard.view.newButton': { tr: 'Yeni Dashboard', en: 'New Dashboard' },
   'dashboard.view.loadingAria': { tr: 'Yükleniyor', en: 'Loading' },
   'dashboard.view.noAccess': { tr: 'Bu rapora erişim yetkiniz yok veya rapor silinmiş.', en: 'You do not have access to this report or it has been deleted.' },

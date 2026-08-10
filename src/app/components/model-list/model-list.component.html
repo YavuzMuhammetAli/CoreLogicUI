@@ -1,9 +1,5 @@
 <div class="page-header">
-  <div>
-    <span class="eyebrow">{{ 'model.list.eyebrow' | t }}</span>
-    <h1 class="page-title">{{ 'model.list.title' | t }}</h1>
-    <p class="page-subtitle">{{ 'model.list.subtitle' | t }}</p>
-  </div>
+  <span class="eyebrow">{{ 'model.list.title' | t }}</span>
   <!-- Sadece admin yeni model oluşturabilir / silinmiş modelleri görebilir -->
   @if (!noPermission) {
     <div class="cluster">

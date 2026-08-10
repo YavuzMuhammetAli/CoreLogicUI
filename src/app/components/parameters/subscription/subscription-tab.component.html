@@ -1,0 +1,147 @@
+<div class="tab-panel flow" role="tabpanel" [attr.aria-label]="'parameter.subscriptionPanelAria' | t">
+
+  @if (loadError()) {
+    <div class="alert alert-danger" role="alert">{{ loadError() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="empty-state">
+      <span class="spinner" style="width: 32px; height: 32px;" [attr.aria-label]="'common.loading' | t"></span>
+    </div>
+  } @else {
+
+    <!-- ── Mevcut abonelik ─────────────────────────────────────────────── -->
+    <div class="panel">
+      <div class="panel-head">
+        <h2>{{ 'parameter.subscription.currentTitle' | t }}</h2>
+      </div>
+
+      @if (subscription(); as sub) {
+        <div class="panel-body">
+          <div class="status-grid">
+            <div class="status-item">
+              <span class="status-label">{{ 'parameter.subscription.plan' | t }}</span>
+              <span class="status-value">{{ sub.planName || sub.planCode }}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">{{ 'parameter.subscription.status' | t }}</span>
+              <span>
+                <span class="badge" [ngClass]="statusBadgeClass(sub.status)">
+                  {{ statusLabel(sub.status) }}
+                </span>
+              </span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">{{ 'parameter.subscription.seats' | t }}</span>
+              <span class="status-value">{{ sub.seats }}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">{{ 'parameter.subscription.startsAt' | t }}</span>
+              <span class="status-value">{{ formatInstant(sub.startsAt) }}</span>
+            </div>
+            @if (sub.trialEndsAt) {
+              <div class="status-item">
+                <span class="status-label">{{ 'parameter.subscription.trialEndsAt' | t }}</span>
+                <span class="status-value">{{ formatInstant(sub.trialEndsAt) }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      } @else {
+        <div class="empty-state">
+          <div class="empty-icon" aria-hidden="true">🧾</div>
+          <h3>{{ 'parameter.subscription.none' | t }}</h3>
+          <p>{{ 'parameter.subscription.noneHint' | t }}</p>
+        </div>
+      }
+    </div>
+
+    <!-- ── Planlar ─────────────────────────────────────────────────────── -->
+    <div class="panel">
+      <div class="panel-head">
+        <h2>{{ 'parameter.subscription.plansTitle' | t }}</h2>
+      </div>
+      <div class="panel-body">
+
+        <!-- Ücret alınmadığı açıkça söylenmeli; aksi halde kullanıcı ödeme yaptığını sanır. -->
+        <div class="alert alert-info" role="status">
+          {{ 'parameter.subscription.paymentNotice' | t }}
+        </div>
+
+        @if (actionError()) {
+          <div class="alert alert-danger" role="alert" style="margin-top: var(--space-4)">{{ actionError() }}</div>
+        }
+        @if (actionSuccess()) {
+          <div class="alert alert-success" role="alert" style="margin-top: var(--space-4)">{{ actionSuccess() }}</div>
+        }
+
+        @if (plans().length === 0) {
+          <div class="empty-state">
+            <div class="empty-icon" aria-hidden="true">📦</div>
+            <h3>{{ 'parameter.subscription.plansEmpty' | t }}</h3>
+            <p>{{ 'parameter.subscription.plansEmptyHint' | t }}</p>
+          </div>
+        } @else {
+          <div class="field" style="max-width: 200px; margin: var(--space-4) 0">
+            <label for="seats">{{ 'parameter.subscription.seatsLabel' | t }}</label>
+            <input
+              id="seats"
+              class="input"
+              type="number"
+              min="1"
+              [ngModel]="seats()"
+              (ngModelChange)="seats.set(+$event || 1)">
+          </div>
+
+          <div class="plan-grid">
+            @for (plan of plans(); track plan.id) {
+              <div class="plan-card" [class.is-current]="plan.isCurrent">
+                <div class="plan-head">
+                  <h3 class="plan-name">{{ plan.name }}</h3>
+                  @if (plan.isCurrent) {
+                    <span class="badge badge-success">{{ 'parameter.subscription.currentBadge' | t }}</span>
+                  } @else if (plan.trialDays > 0) {
+                    <span class="badge badge-meta">
+                      {{ 'parameter.subscription.trialDays' | t:{ n: plan.trialDays } }}
+                    </span>
+                  }
+                </div>
+
+                @if (plan.description) {
+                  <p class="plan-description">{{ plan.description }}</p>
+                }
+
+                <ul class="plan-features">
+                  @for (feature of orderedFeatures(plan); track feature.featureKey) {
+                    <li class="plan-feature">
+                      <span>{{ featureLabel(feature.featureKey) }}</span>
+                      <span class="plan-feature-value">{{ featureValue(feature) }}</span>
+                    </li>
+                  }
+                </ul>
+
+                <div class="plan-actions">
+                  <button
+                    class="btn btn-primary"
+                    type="button"
+                    [disabled]="plan.isCurrent || purchasing()"
+                    (click)="requestPurchase(plan)">
+                    {{ 'parameter.subscription.select' | t }}
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>
+
+<app-confirm-dialog
+  [open]="!!pendingPlan()"
+  [title]="'parameter.subscription.confirmTitle' | t"
+  [message]="confirmMessage()"
+  [busy]="purchasing()"
+  (confirmed)="confirmPurchase()"
+  (cancelled)="cancelPurchase()" />

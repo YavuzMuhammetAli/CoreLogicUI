@@ -19,6 +19,8 @@ Users can:
 - Kendi profilini görüntülemek/güncellemek, açık/koyu tema seçmek
 - Silinen modelleri/taslakları/raporları/dashboardları geri yüklemek veya kalıcı silmek (admin)
 - Denetim kayıtlarını (audit log) görüntülemek — kim, ne zaman, hangi kayıtta değişiklik yaptı (admin)
+- Veritabanı yedekleme zamanlaması, sistem e-postası (SMTP) ve abonelik planını yönetmek (admin, `/parameters`)
+- Yapay zekaya işini anlatıp model/rapor/dashboard önerileri almak, beğendiklerini içeri aktarıp yayınlamak (admin, `/ai`)
 - Uygulama arayüz dilini değiştirmek (TR/EN topbar toggle)
 
 ## Tech Stack
@@ -78,6 +80,11 @@ CoreLogicUI-master/
         │   ├── deleted-reports/            # Soft-delete edilmiş raporlar (admin)
         │   ├── deleted-dashboards/         # Soft-delete edilmiş dashboardlar (admin)
         │   ├── audit-log/                  # Denetim kayıtları — kim/ne zaman/ne değişti, filtre + sayfalama (admin)
+        │   ├── parameters/                 # Parametreler (admin) — 3 sekme: yedekleme zamanlaması, SMTP, abonelik
+        │   │   ├── backup/                 #   Cron kurucu + "sonraki 5 çalışma" önizlemesi + yedek geçmişi
+        │   │   ├── mail/                   #   SMTP ayarları + test maili (parola maskeli taşınır)
+        │   │   └── subscription/           #   Plan kartları + mevcut abonelik + satın alma (ödeme şimdilik stub)
+        │   ├── ai-chat/                    # Yapay Zeka asistanı (admin) — sohbet + öneri kartları + içeri aktar/yayınla
         │   ├── database-proccess/          # /Database endpoint'lerini saran ekran (admin)
         │   ├── user-permission-list/       # Kullanıcı bazlı izin listesi (admin)
         │   ├── user-permission-detail/     # Kullanıcı bazlı izin detay/düzenleme (admin)
@@ -117,6 +124,9 @@ CoreLogicUI-master/
         │   ├── audit-log.service.ts             # /AuditLog — filtrelenmiş denetim kayıtları (admin-only)
         │   ├── user-admin.service.ts             # /User — şirket içi kullanıcı CRUD + pasifle/parola/admin (admin-only)
         │   ├── relationship.service.ts           # /publish/models/{id}/... — model ilişkileri CRUD + validate-graph + preview
+        │   ├── parameter.service.ts               # /Parameter — yedekleme zamanlaması, SMTP ayarları, abonelik (admin-only)
+        │   ├── ai.service.ts                       # /Ai — sohbet CRUD + kota + SSE akışı (fetch tabanlı, admin-only)
+        │   ├── ai-import.service.ts                # HTTP yok kendi başına — AI önerilerini MEVCUT servislerle sisteme aktarır
         │   ├── language.service.ts              # HTTP yok — TR/EN dil tercihi, localStorage, t() + TranslatePipe
         │   ├── model-usage.service.ts           # HTTP yok — model kullanım özeti (raporlar + dashboardlar)
         │   ├── lookup-label.service.ts          # Lookup id → etiket çözümleme (önbellekli)
@@ -125,6 +135,8 @@ CoreLogicUI-master/
         │   └── notification.service.ts          # Global toast/uyarı bildirimleri (guard'lar dahil)
         ├── utils/
         │   ├── change-detection.ts              # markDirty(cdr) — OnPush'ta asenkron veri sonrası CD tetikler
+        │   ├── cron-builder.ts                  # Saf: sıklık seçimi ↔ cron ifadesi + sonraki koşu önizlemesi (spec'li)
+        │   ├── ai-import.mapper.ts              # Saf: AI önerisi → servis payload'ı (düzleştirme/doğrulama/ad→ID, spec'li)
         │   └── locale-format.ts                 # Aktif dile göre sayı/tarih biçimlendirme (sabit 'tr-TR' KULLANMA)
         ├── guards/
         │   ├── auth.guard.ts                  # JWT varlığını kontrol eder
@@ -147,6 +159,8 @@ CoreLogicUI-master/
         │   ├── permission.i18n.ts             # İzin/rol ekranları
         │   ├── profile.i18n.ts                # Profil ekranı
         │   ├── relationship.i18n.ts           # Model ilişkileri sekmesi, ilişki popup'ı, önizleme
+        │   ├── parameter.i18n.ts              # Parametreler ekranı (yedekleme · e-posta · abonelik)
+        │   ├── ai.i18n.ts                     # Yapay Zeka asistanı (sohbet, öneri kartları, durumlar)
         │   └── shared.i18n.ts                 # Paylaşılan diyalog metinleri
         ├── pipes/
         │   └── translate.pipe.ts              # TranslatePipe — şablonlarda `{{ 'key' | t }}` şeklinde kullanılır
@@ -163,7 +177,8 @@ CoreLogicUI-master/
             ├── userProfile.ts                   # Profil modelleri
             ├── report.model.ts                  # ReportDefinition, ReportFilter/Aggregate/Sort, ChartType vb.
             ├── dashboard.model.ts                # DashboardDefinition, DashboardWidget, DashboardRunResult vb.
-            └── relationship.model.ts             # RelationshipType/Definition, ValidationIssue, EntityGraph, PublishPreview
+            ├── relationship.model.ts             # RelationshipType/Definition, ValidationIssue, EntityGraph, PublishPreview
+            └── ai.model.ts                       # Sohbet/mesaj/öneri tipleri, öneri payload şekilleri, SSE olay union'ı
 ```
 
 ## Routing
@@ -192,6 +207,8 @@ CoreLogicUI-master/
   /roles/new                → RoleDetailComponent              (adminGuard, data.mode='new')
   /roles/:id                → RoleDetailComponent              (adminGuard)
   /audit-logs               → AuditLogComponent               (adminGuard)
+  /parameters               → ParametersComponent             (adminGuard — yedekleme/e-posta/abonelik)
+  /ai                       → AiChatComponent                 (adminGuard — yapay zeka asistanı)
   /profile                  → UserProfileComponent             (authGuard yeterli)
   /reports                  → ReportListComponent               (authGuard yeterli)
   /reports/new              → ReportBuildComponent
@@ -250,6 +267,9 @@ Tüm servisler `@Injectable({ providedIn: 'root' })`, `inject(HttpClient)` (veya
 | `AuditLogService` | `/AuditLog` — filtrelenmiş denetim kayıtları (admin-only) |
 | `UserAdminService` | `/User` — getall/create/update/setActive/resetPassword/setAdmin/delete (admin-only) |
 | `RelationshipService` | `/publish/models/{id}/relationships` (GET/POST/PUT/DELETE), `/validate-graph`, `/preview` |
+| `ParameterService` | `/Parameter` — `backup/schedule`, `backup/history`, `backup/run`, `mail`, `mail/test`, `subscription/*` (admin-only) |
+| `AiService` | `/Ai` — `conversations`, `chat` (SSE), `proposals/{id}/status`, `usage` (admin-only) |
+| `AiImportService` | Kendi ucu YOK — AI önerilerini `PublishedTableService`/`RelationshipService`/`ReportService`/`DashboardService` üzerinden aktarır |
 | `LanguageService` | HTTP yok — TR/EN dil tercihi, `localStorage`, `t()` metodu + `TranslatePipe` |
 | `ModelUsageService` | HTTP yok — model kullanım özeti: hangi raporlar/dashboardlar bu modeli kullanıyor |
 | `ThemeService` | HTTP yok — açık/koyu tema tercihi, `localStorage` |
@@ -395,6 +415,168 @@ yazmadan gösterir.
 > İlişkinin karşı tarafı da yeniden derlenir (Customer'a `Orders` eklenince Order tipi
 > `CustomerId` + `Customer` navigation'ını kazanır).
 
+## Parametreler Ekranı (G3)
+
+`/parameters` (adminGuard) üç bağımsız sekme taşır. Tümü `/Parameter` controller'ına gider,
+tenant **istemciden alınmaz** — her uç çağıran admin'in ambient tenant'ında çalışır.
+
+### Yedekleme
+
+Tenant kendi veritabanı yedeğinin zamanlamasını kurar. Kullanıcı cron yazmaz; sıklık seçer
+(saatte bir / N saatte bir / her gün / N günde bir / haftada bir / ayda bir / özel) ve
+`utils/cron-builder.ts` bunu 5 alanlı cron'a çevirir. Ekran kaydetmeden **sonraki 5 çalışmayı**
+gösterir; kayıtlı cron `parseCron` ile forma geri döner, çözülemezse "Özel"e düşer (bilgi kaybı yok).
+
+Zamanlama master DB'deki `ScheduledTask` satırında durur (migrasyon `master/023`); yedek alma
+master bağlantısı + SQL Server servis hesabı gerektirdiği için tenant DB'sinde tutulmaz.
+
+**Çalışma zinciri:** `SchedulerTick` (dakikada bir, `PeriodicWorker`) → vadesi geleni
+`PlatformJob` kuyruğuna atar (`TenantId` + `ScheduledTaskId` ile) → `JobWorker` → `BackupJobHandler`
+→ `IBackupService.RequestBackup(Type=Scheduled)` + saklama süresi dolmuş yedekleri temizler.
+`SchedulerTick` **iş yapmaz**, yalnız tetikler: hata/yeniden deneme/park semantiği JobWorker'da tek yerde kalır.
+
+> `ScheduledTask` tablosu 2023'ten beri boştu — DAL'ı ve worker'ı yoktu, bu yüzden
+> `BackupType.Scheduled` hiç üretilmiyordu. Bu iş o boşluğu kapattı.
+> Cron çözümleme `Core/Utilities/Scheduling/CronSchedule.cs` (dış paket yok); saat dilimi
+> duyarlıdır ve DST boşluğuna denk gelen yerel saatleri atlar.
+
+### E-posta
+
+Tenant kendi SMTP'sini tanımlar; sistem mail göndereceğinde bunu kullanır. Ayarlar tenant
+DB'sindeki `AppSetting` anahtar/değer tablosunda durur (migrasyon `015`) — master'daki
+`PlatformConfig`'in tenant ikizi. Parola `ISecretProtector` ile şifrelenir, okurken `••••••`
+maskelenir; **maskeli değer geri POST edilirse mevcut parola korunur** (yanlışlıkla silinmesin).
+
+`ITenantEmailSender`/`TenantSmtpEmailSender` platformdaki `IEmailSender`'dan ayrıdır: o master
+`PlatformConfig`'ten okur ve konsol davetleri atar. Tenant göndericisi yapılandırma eksikse
+**sessiz no-op değil, açık hata** döner — "Test gönder"de yalancı başarı yanıltıcı olurdu.
+
+### Abonelik
+
+Planlar master'daki `Plan`/`PlanFeature`'dan okunur (yalnız `IsPublic` + `Active`), mevcut
+abonelik `isCurrent` ile işaretlenir. Satın alma önce `IPaymentGateway.Charge`, sonra
+`ISubscriptionService.ChangePlan` çağırır — tahsilat başarısızsa abonelik **hiç değişmez**.
+
+`StubPaymentGateway` şimdilik her tahsilata başarı döner; Stripe entegrasyonu tek bir Autofac
+kaydını değiştirmekten ibaret olacak (`Plan`'da henüz parasal alan yok, o yüzden UI fiyat göstermez).
+`ChangePlan` iki yolu ayırır: aynı planda Trial/PastDue → satır yerinde `Active`'e çekilir
+(deneme dönüşümü), farklı plan → eskisi `Cancelled`, yenisi `Active` (aktif tek abonelik kuralı).
+
+## Yapay Zeka Modülü (G4)
+
+`/ai` (adminGuard) — kullanıcı işini düz metinle anlatır, Claude karşılığında **model
+şeması, rapor ve dashboard önerileri** üretir. Kullanıcı beğendiklerini **"İçeri Aktar"**
+ile taslak olarak yazdırır, **"Hepsini Yayınla"** ile derletir.
+
+### Güvenlik sözleşmesi — modelin yazma yetkisi YOKTUR
+
+Claude'un tool çağrıları hiçbir yan etki üretmez; yalnızca tenant DB'sinde bir
+`AiProposal` satırı oluşur. Şema/rapor/dashboard'ın gerçekten yazılması, kullanıcının
+onayıyla ve **mevcut, izin denetimli uçlar** üzerinden `AiImportService` tarafından
+yapılır. Yani AI'a ayrıcalıklı bir kanal açılmaz: aktarım, admin'in elle de
+yapabileceği sıradan bir işlemdir. Prompt injection ya da halüsinasyon en kötü ihtimalle
+reddedilecek bir öneri kartı üretir.
+
+### Model ve API kuralları
+
+`claude-sonnet-5` (tarih soneki yok). `AnthropicChatClient` çözümde Anthropic SDK'sına
+bağımlı **tek dosyadır** — `TenantSmtpEmailSender`'ın MailKit'i sarmalamasıyla aynı desen.
+
+- `Temperature`/`TopP`/`TopK` **kullanılmaz** — Sonnet 5'te varsayılan dışı değer 400 döner.
+- `budget_tokens` **kaldırıldı**; derinlik `OutputConfig.Effort` ile (`ai.effort`, varsayılan `medium`).
+- Adaptive thinking varsayılan olarak AÇIK ve `MaxTokens` düşünme + yanıtı **birlikte** sınırlar.
+- `thinking.display` varsayılanı `omitted`; akışlı arayüzde uzun sessizlik gibi göründüğü
+  için açıkça `Summarized` isteniyor.
+- Son mesaj `Role.Assistant` olamaz (prefill kaldırıldı).
+- `StopReason == "refusal"` **içerik okunmadan önce** kontrol edilir.
+
+**Prompt cache:** render sırası `tools` → `system` → `messages`. Statik prompt (tüm
+tenant'larda ortak) ve tenant bağlam bloğu ayrı breakpoint alır. `CoreLogicToolCatalog.All`
+**sırası sabittir** — değişirse tüm cache düşer, yeni tool sona eklenir.
+
+### Yapılandırma
+
+Tek platform anahtarı; tenant kendi anahtarını giremez, plan kotasından harcar.
+İki kaynak var, **PlatformConfig kazanır**:
+
+```
+master PlatformConfig (doluysa)          ← Platform Console → Yapılandırma
+  └── boşsa → IConfiguration             ← User Secrets (dev) / ortam değişkeni (prod)
+```
+
+| PlatformConfig anahtarı | Yapılandırma yolu | Not |
+|---|---|---|
+| `ai.apiKey` | `Ai:ApiKey` | `IsSecret` — şifreli saklanır, okumada `••••••` |
+| `ai.model` | `Ai:Model` | Varsayılan `claude-sonnet-5` |
+| `ai.effort` | `Ai:Effort` | `low` / `medium` / `high` |
+
+Geliştirmede en hızlısı (CreateDLL dizininde):
+```bash
+dotnet user-secrets set "Ai:ApiKey" "sk-ant-..."
+```
+
+Öncelik sırası bilinçli: konsoldan girilen değer ortam değişkenini **ezer**. Tersi
+olsaydı operatör konsolda kaydeder, hiçbir şey değişmez ve sebebi görünmezdi.
+
+> **Tenant migration'ı şart.** `AiConversation`/`AiMessage`/`AiProposal` tabloları
+> `migrations/016_ai-sohbet.sql` ile gelir ve tenant migrasyonları **uygulama
+> açılışında koşmaz** (master koşar, tenant koşmaz — asimetri kasıtlı). Platform
+> Console → `operations/migrations` üzerinden uygulanır: ya **Koşu Başlat** ile
+> elle, ya da aynı sayfadaki **otomatik yükseltme** cron zamanlamasıyla
+> (varsayılan kapalı). Koşu artık HTTP isteğinde değil `PlatformJob` kuyruğunda
+> yürür — istek hemen döner, koşu `Queued` → `Running` → `Completed` ilerler ve
+> sayfa kendini yeniler. Yükseltilmemiş bir tenant'ta `/ai` ham SqlException
+> yerine "modül bu şirkette kurulmamış" mesajı döner
+> (`AiConversationManager.Guarded`, SQL hata 208).
+
+### Kota
+
+`EntitlementService`'in projedeki **ilk gerçek tüketicisi**: `Limit()`/`Can()` bugüne dek
+tanımlıydı ama hiçbir yerden çağrılmıyordu.
+
+```
+Ön kontrol : Limit(tenant, ai_tokens_per_month)   → null ise deny-by-default
+             kalan < 20.000 (Reserve)             → yeni istek başlatılmaz
+Tüketim    : IUsageDal.TenantTotals (SQL SUM)     — IUsageMeter.Query DEĞİL (200 satır tavanı var)
+Yazma      : IUsageMeter.Record(..., source:"ai") — MetricKey = PlanFeature anahtarıyla AYNI
+```
+
+`Reserve` payı tek bir isteğin kotayı aşmasını sınırlar; akış ortasında sert kesme yoktur.
+Plan limitleri `migrations/master/024`'te seed edilir (free 100K, pro 1M, enterprise 5M —
+008'den) ve Platform Console → Plan Detay'dan migration'sız değiştirilebilir.
+
+### Akış (SSE)
+
+`POST /Ai/chat` `text/event-stream` döner. Angular tarafında `HttpClient` yerine `fetch`
+kullanılır (`EventSource` POST yapamaz, header ekleyemez) — bu yol **interceptor'ları
+baypas eder**, bu yüzden `ai.service.ts` `Authorization` ve `Accept-Language` başlıklarını
+kendisi ekler. Kota hatası akıştan ÖNCE kontrol edilir ki düzgün bir 400 dönebilsin.
+
+### İçeri aktarma sırası — bağlayıcı
+
+1. **İçeri Aktar** → yalnız modeller: dup kontrol → `addTable` → N× `addMember`
+   (`concatMap`, sıralı) → ilişkiler (`getAllTables` ile `tableId` çözülür). Sonuç: `/drafts`.
+   Düğümler **parent-first** sırada gider; `isNullable` → `isRequired` **ters çevrilir**.
+2. **Hepsini Yayınla** → kök modelleri `publish` (alt ağaç birlikte) → raporlar `define`
+   (dönen ID saklanır) → dashboard'lar (widget'lardaki rapor **adı** → ID).
+
+Rapor tanımı backend'de model adına ve kolonlarına karşı doğrulandığı için model
+yayınlanmadan rapor tanımlanamaz — bu yüzden iki ayrı buton var.
+
+> `ReportService.define()` artık `DataResponseModel<number>` dönüyor (eskiden `ResponseModel`).
+> Dashboard widget'ının ihtiyacı olan `reportDefinitionId` başka türlü elde edilemiyordu;
+> ada göre sonradan eşleştirmek aynı adlı iki raporda yanlış hedefi seçerdi.
+> `DashboardService.define()` zaten ID dönüyordu — ikisi simetrik hale geldi.
+
+### Sistem promptu
+
+`CreateDLL/Prompts/corelogic-system.md` — kod değil metin olarak durur, build'de çıktıya
+kopyalanır (`WebAPI.csproj`), `AiPromptProvider` singleton olarak bir kez okur. Tip beyaz
+listesi, ad kalıpları, derinlik sınırları, üç FK mekanizması, rapor/dashboard sözleşmesi
+ve "yapamadıkların" bölümünü içerir. Her istekte ikinci bir sistem bloğu eklenir: tenant'ın
+yayınlanmış modelleri, mevcut raporları ve **bu sohbette şimdiye dek önerilenler** — tool
+blokları geçmişe geri yazılmadığı için modelin hafızası bu listedir.
+
 ## Backend Entegrasyonu
 
 | Alan | Değer |
@@ -456,12 +638,23 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
   `src/app/i18n/translations.spec.ts` her anahtarın TR+EN karşılığını ve yer tutucu tutarlılığını doğrular — eksik anahtar testte patlar (aksi halde kullanıcı ekranda ham anahtar metnini görür).
 - **Onay diyaloğu** — native `confirm()` KULLANMA; `shared/confirm-dialog` component'ini bağla (tasarım sistemi + tema + i18n uyumlu, test edilebilir)
 - **Locale-duyarlı biçimlendirme** — sayı/tarih için `Intl.*Format`'ı sabit `'tr-TR'` ile kurma; `utils/locale-format.ts` üzerinden aktif dile göre al
+- **Ardışık paneller** — `.panel`'in kendi `margin`'i YOK; birden çok panel render eden konteyneri `.flow` ile sarmala, yoksa kartlar yapışık görünür. Panelleri `grid/flex` + `gap` ile dizen konteynerlerde (`.widget-grid`, `.kpi-strip`, `.model-grid`, `.plan-grid`) kullanma
+- **Sayfa başlığı** — her ekranın üstünde tek satır: `.page-header` içinde `<span class="eyebrow">` + sayfanın/modelin adı, sağda aksiyonlar. Büyük `h1` başlık ve açıklama paragrafı KULLANILMAZ (`.page-title`/`.page-subtitle` kaldırıldı)
 - **Türkçe kod yorumları** — backend ile tutarlı; UI metinleri çeviri sistemi üzerinden gelir
 
 ## Bilinen Eksikler ve TODO'lar
 
 1. **`environment.prod.ts` API URL'si** — hâlâ `http://localhost:5245` (gerçek prod URL değil), deployment'ta güncellenmeli
-2. **Unit test kapsamı düşük** — kapsam `i18n/translations.spec.ts` ve `shared/entity-graph/entity-graph.layout.spec.ts` ile genişletildi, ancak servis/component'lerin büyük kısmı hâlâ test edilmiyor
+2. **Unit test kapsamı düşük** — kapsam `i18n/translations.spec.ts`, `shared/entity-graph/entity-graph.layout.spec.ts`, `utils/cron-builder.spec.ts` ve `utils/ai-import.mapper.spec.ts` ile genişletildi, ancak servis/component'lerin büyük kısmı hâlâ test edilmiyor
 3. **SSR bağımlılık kalıntısı** — `package.json`'da `@angular/ssr`/`express`/`@types/express` hâlâ duruyor; SSR fiilen kaldırıldığı için temizlenebilir ama `isPlatformBrowser` guard'ları kasıtlı korunuyor (bkz. `angular-standalone-component` skill)
 4. **Kalan native `confirm()` çağrıları** — `model-children`, `model-data`, `model-detail`, `role-detail`, `role-list` içinde 5 çağrı hâlâ native; `ConfirmDialogComponent`'e taşınmalı
-5. **Backend controller boilerplate** — `WebAPI.Infrastructure.ApiControllerBase.Respond()` eklendi ve `ProfileController` + `PublishedModelController` bunu kullanıyor; kalan controller'lar hâlâ `result.Success ? Ok(result) : BadRequest(result)` satırını elle tekrarlıyor
+5. **Backend controller boilerplate** — `WebAPI.Infrastructure.ApiControllerBase.Respond()` eklendi ve `ProfileController` + `PublishedModelController` + `ParameterController` bunu kullanıyor; kalan controller'lar hâlâ `result.Success ? Ok(result) : BadRequest(result)` satırını elle tekrarlıyor
+6. **Ödeme sağlayıcısı stub** — `StubPaymentGateway` her tahsilata başarı dönüyor ve `Plan`'da fiyat/para birimi kolonu yok. Stripe için: `Plan`'a parasal alanlar + `IPaymentGateway`'in gerçek implementasyonu (abonelik akışı değişmez)
+7. **Yedek geri yükleme yok** — yedek alma ve `RESTORE VERIFYONLY` doğrulaması var, ancak yedekten geri dönme ve yedek indirme ucu yok (platform tarafında da yoktu)
+8. **Yedekleme senkron** — `BackupManager` yedeği HTTP isteği içinde alıyor; "Şimdi Yedek Al" büyük veritabanlarında isteği uzun süre bloklar (zamanlanmış yol kuyruktan geçtiği için etkilenmez)
+9. **AI kotası tek istekte aşılabilir** — ön kontrol istek başında çalışır, akış ortasında sert kesme yok. `AiQuotaManager.Reserve` (20.000 token) aşımı sınırlar ama sıfırlamaz
+10. **AI maliyet hesabı girdi/çıktı ayırmıyor** — `CostAnalyticsManager.cs` `ai_tokens_per_month` için tek birim fiyat (`0.000002`) kullanıyor; Sonnet 5 çıktısı girdisinden 5 kat pahalı olduğu için maliyet eksik hesaplanıyor
+11. **AI mevcut kolonu değiştiremez** — platformda `updateMember` yolu yok (`onSaveEdit` diff'i yalnız kolon ADI üzerinden çalışır). Sistem promptu bunu açıkça yasaklıyor; kolon tipi değişimi için yeni kolon + veri taşıma gerekiyor
+12. **`ai_tokens_per_month` anahtarı üç yerde tekrarlanıyor** — backend `FeatureKeys`, UI `FEATURE_KEY_ORDER`, konsol `FEATURE_KEYS`. Yeni bir plan özelliği eklenirse üçü birden güncellenmeli
+13. **PlatformConfig sürümleme yok** — `PUT /api/platform/v1/config/{key}` eklendi (beyaz liste + sunucu tarafı `IsSecret` + maske koruması + audit), ancak değer geçmişi/geri alma tutulmuyor; audit yalnızca "kim ne zaman hangi anahtarı değiştirdi" diyor, eski değeri saklamıyor (bilinçli — sır sızdırmamak için)
+14. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez. Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir

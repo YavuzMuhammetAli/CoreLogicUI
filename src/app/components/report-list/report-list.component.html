@@ -1,9 +1,5 @@
 <div class="page-header">
-  <div>
-    <span class="eyebrow">{{ 'report.eyebrow' | t }}</span>
-    <h1 class="page-title">{{ 'report.list.title' | t }}</h1>
-    <p class="page-subtitle">{{ 'report.list.subtitle' | t }}</p>
-  </div>
+  <span class="eyebrow">{{ 'report.list.title' | t }}</span>
   <div class="cluster">
     @if (isAdmin) {
       <a routerLink="/reports/deleted" class="btn btn-secondary btn-sm">

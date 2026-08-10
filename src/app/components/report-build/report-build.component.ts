@@ -2,8 +2,10 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, 
 import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Observable } from 'rxjs';
 import { PublishedModelService, PublishedModel, PublishedColumn } from '../../services/published-model.service';
 import { ReportService } from '../../services/report.service';
+import { ResponseModel } from '../../models/responseModel';
 import {
   AggregateFunction,
   ChartType,
@@ -449,7 +451,10 @@ export class ReportBuildComponent implements OnInit {
     }
 
     this.saving = true;
-    const request = this.editingId
+    // define() DataResponseModel<number>, update() ResponseModel döner; bu ekran
+    // ID'yi kullanmadığı için ortak taban tipe daraltılır (aksi halde birleşim
+    // tipi .pipe() çözümlemesini bozar).
+    const request: Observable<ResponseModel> = this.editingId
       ? this.reportService.update(payload as ReportDefinition)
       : this.reportService.define(payload);
 

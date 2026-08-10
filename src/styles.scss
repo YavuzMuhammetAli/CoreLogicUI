@@ -525,40 +525,31 @@ input[type="checkbox"] {
   }
 }
 
-/* ---- Sayfa başlığı (global — component SCSS'lerinden tekrar etme) ---- */
+/* ---- Sayfa başlığı (global — component SCSS'lerinden tekrar etme) ----
+   Başlık satırı tek bir .eyebrow etiketi (sayfanın/modelin adı) + sağda aksiyonlardan
+   oluşur; büyük h1 ve açıklama paragrafı kaldırıldı. Bu yüzden dikey ortalı. */
 .page-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
   margin-bottom: var(--space-6);
 
   @media (max-width: 640px) {
     flex-direction: column;
+    align-items: flex-start;
   }
 }
 
-.page-title {
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  color: var(--fg);
-  margin: var(--space-2) 0 var(--space-1);
-}
-
-.page-subtitle {
-  font-size: var(--text-sm);
-  color: var(--muted);
-}
-
 /* Sayfa kabuğu — beş component SCSS'inde birebir kopyalanmıştı, buraya alındı.
-   .page-header'dan farkı: alt hizalı (align-items: flex-end) başlık satırı. */
+   .page-header'dan farkı: solda ayrıca .back-link taşıyan sarmalayıcı bulunabilir. */
 .page-wrap {
   padding: var(--space-6);
 }
 
 .page-head {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
   margin-bottom: var(--space-6);
@@ -591,6 +582,14 @@ input[type="checkbox"] {
 
 /* ---- Yardımcı ---- */
 .stack > * + * { margin-block-start: var(--space-4); }
+
+/* .flow — ardışık PANEL dizilerinin standart sarmalayıcısı.
+   .panel'in kendi margin'i YOKTUR (bkz. yukarıdaki "Panel / Kart" bloğu); boşluk
+   konteynerin işidir. Bir sayfa/sekme birden çok panel render ediyorsa konteynerine
+   .flow ekle, yoksa kartlar birbirine yapışır — bu hata üç kez tekrarlandı
+   (audit-log, report-viewer, parameters).
+   İSTİSNA: panelleri display:grid/flex + gap ile dizen konteynerlerde (.widget-grid,
+   .kpi-strip, .model-grid, .plan-grid, .profile-side) KULLANMA — çift boşluk oluşur. */
 .flow > * + * { margin-block-start: var(--space-6); }
 .cluster {
   display: flex;

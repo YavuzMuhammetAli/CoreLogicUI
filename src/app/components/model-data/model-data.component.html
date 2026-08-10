@@ -1,9 +1,6 @@
 <!-- Sayfa başlığı -->
 <div class="page-header">
-  <h1 class="page-title">{{ typeName }}</h1>
-  @if (model) {
-    <p class="page-subtitle">{{ 'model.data.columnCountSuffix' | t:{ count: model.columns.length } }}</p>
-  }
+  <span class="eyebrow">{{ typeName }}</span>
 </div>
 
 @if (!model && loadingRows) {

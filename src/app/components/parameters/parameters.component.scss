@@ -1,0 +1,62 @@
+:host {
+  display: block;
+  padding: var(--space-6);
+}
+
+/* Sekme çubuğu panelin üst kenarına oturur; taşan köşeler kırpılır. */
+.tabs-panel {
+  overflow: hidden;
+}
+
+/*
+ * `.tab-*` sınıfları styles.scss'te GLOBAL DEĞİL — projede her sekmeli ekran
+ * kendi kopyasını taşıyor (table-detail, role-detail, model-detail,
+ * record-form-dialog). Bu blok table-detail.component.scss'ten alındı.
+ */
+
+.tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border-soft);
+  background: var(--surface-warm);
+  padding: 0 var(--space-4);
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--motion-fast) var(--ease-standard),
+              border-color var(--motion-fast) var(--ease-standard);
+
+  &:hover {
+    color: var(--fg);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+
+  &--active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+}
+
+@media (max-width: 768px) {
+  .tab-bar {
+    overflow-x: auto;
+    padding: 0 var(--space-2);
+  }
+}

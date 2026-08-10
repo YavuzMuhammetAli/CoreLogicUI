@@ -6,12 +6,7 @@ import { Translations } from './translations.model';
  */
 export const ADMIN_I18N: Translations = {
   // ── form-build.component.html / .ts — yayınlanmış model listesi + pasifleştirme ──
-  'formBuild.eyebrow': { tr: 'Platform', en: 'Platform' },
   'formBuild.title': { tr: 'Tablo Oluştur', en: 'Create Table' },
-  'formBuild.subtitle': {
-    tr: 'Yayınlanmış modelleri buradan düzenleyin/silin veya yeni bir tablo tanımlayın.',
-    en: 'Edit or delete published models here, or define a new table.'
-  },
   'formBuild.createNewTable': { tr: 'Yeni Tablo Oluştur', en: 'Create New Table' },
   'formBuild.loadingAria': { tr: 'Yükleniyor', en: 'Loading' },
   'formBuild.publishedModels': { tr: 'Yayınlanmış Modeller', en: 'Published Models' },
@@ -36,7 +31,6 @@ export const ADMIN_I18N: Translations = {
   'formBuild.modelDeactivateFailed': { tr: "'{name}' pasif yapılamadı.", en: "Model '{name}' could not be deactivated." },
 
   // ── draft-models.component.html / .ts — taslak modeller (yayınlanmamış) ──
-  'draft.eyebrow': { tr: 'Platform', en: 'Platform' },
   'draft.title': { tr: 'Yayınlanmamış Modeller', en: 'Unpublished Models' },
   'draft.deletedDrafts': { tr: 'Silinen Taslaklar', en: 'Deleted Drafts' },
   'draft.refresh': { tr: 'Yenile', en: 'Refresh' },
@@ -98,7 +92,6 @@ export const ADMIN_I18N: Translations = {
 
   // ── deleted-models.component.html / .ts ──
   'deleted.models.backLink': { tr: 'Modeller', en: 'Models' },
-  'deleted.models.eyebrow': { tr: 'CoreLogic Platform', en: 'CoreLogic Platform' },
   'deleted.models.title': { tr: 'Silinmiş Modeller', en: 'Deleted Models' },
   'deleted.models.refresh': { tr: 'Yenile', en: 'Refresh' },
   'deleted.models.loadingAria': { tr: 'Yükleniyor', en: 'Loading' },
@@ -119,7 +112,6 @@ export const ADMIN_I18N: Translations = {
 
   // ── deleted-drafts.component.html / .ts ──
   'deleted.drafts.backLink': { tr: 'Taslaklar', en: 'Drafts' },
-  'deleted.drafts.eyebrow': { tr: 'Platform', en: 'Platform' },
   'deleted.drafts.title': { tr: 'Silinen Taslaklar', en: 'Deleted Drafts' },
   'deleted.drafts.refresh': { tr: 'Yenile', en: 'Refresh' },
   'deleted.drafts.loadingAria': { tr: 'Yükleniyor', en: 'Loading' },
@@ -140,7 +132,6 @@ export const ADMIN_I18N: Translations = {
 
   // ── deleted-reports.component.html / .ts ──
   'deleted.reports.backLink': { tr: 'Raporlar', en: 'Reports' },
-  'deleted.reports.eyebrow': { tr: 'Raporlama', en: 'Reporting' },
   'deleted.reports.title': { tr: 'Silinmiş Raporlar', en: 'Deleted Reports' },
   'deleted.reports.refresh': { tr: 'Yenile', en: 'Refresh' },
   'deleted.reports.loadingAria': { tr: 'Yükleniyor', en: 'Loading' },
@@ -161,7 +152,6 @@ export const ADMIN_I18N: Translations = {
 
   // ── deleted-dashboards.component.html / .ts ──
   'deleted.dashboards.backLink': { tr: "Dashboard'lar", en: 'Dashboards' },
-  'deleted.dashboards.eyebrow': { tr: 'Raporlama', en: 'Reporting' },
   'deleted.dashboards.title': { tr: "Silinmiş Dashboard'lar", en: 'Deleted Dashboards' },
   'deleted.dashboards.refresh': { tr: 'Yenile', en: 'Refresh' },
   'deleted.dashboards.loadingAria': { tr: 'Yükleniyor', en: 'Loading' },

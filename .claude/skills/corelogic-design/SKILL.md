@@ -159,6 +159,33 @@ Component SCSS'inde yeniden tanımlama — doğrudan HTML'de kullan.
 </div>
 ```
 
+#### ⚠️ Ardışık paneller — `.panel`'in kendi `margin`'i YOKTUR
+
+Boşluk **konteynerin** işidir. Bir sayfa veya sekme birden çok panel render ediyorsa
+konteyneri `.flow` ile sarmala (24px = `--space-6`). Unutulursa kartlar birbirine
+yapışır — bu hata projede **üç kez** tekrarlandı (audit-log, report-viewer, parameters),
+her seferinde ayrı bir component SCSS'ine ad-hoc `.panel + .panel` yazılarak çözüldü.
+Standart artık `.flow`:
+
+```html
+<!-- ❌ Paneller yapışık görünür -->
+<div class="tab-panel">
+  <div class="panel">…</div>
+  <div class="panel">…</div>
+</div>
+
+<!-- ✅ -->
+<div class="tab-panel flow">
+  <div class="panel">…</div>
+  <div class="panel">…</div>
+</div>
+```
+
+**İstisna:** panelleri `display: grid/flex` + `gap` ile dizen konteynerlerde `.flow`
+**KULLANMA** — çift boşluk oluşur. Mevcut örnekler: `.widget-grid` (dashboard),
+`.kpi-strip` (report-viewer), `.model-grid` (model-list, form-build),
+`.plan-grid` (parameters/subscription), `.profile-side` (user-profile).
+
 ### Form Alanları
 
 ```html
@@ -263,7 +290,8 @@ Component SCSS'inde yeniden tanımlama — doğrudan HTML'de kullan.
   <div>...</div>
 </div>
 
-<!-- Dikey boşluk (space-6 aralıkla) -->
+<!-- Dikey boşluk (space-6 aralıkla) — ardışık .panel dizilerinin STANDART
+     sarmalayıcısı, bkz. "Ardışık paneller" notu (Panel / Kart bölümü) -->
 <div class="flow">
   <section>...</section>
   <section>...</section>

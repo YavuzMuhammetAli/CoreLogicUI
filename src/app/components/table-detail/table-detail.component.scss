@@ -28,24 +28,13 @@
   margin-bottom: var(--space-6);
 }
 
+/* Başlık satırı: solda tek .eyebrow etiketi (tablo adı), sağda aksiyonlar */
 .record-panel-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
   flex-wrap: wrap;
-}
-
-.record-title {
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  margin: var(--space-1) 0 0;
-}
-
-.panel-subtitle {
-  font-size: var(--text-sm);
-  color: var(--muted);
-  margin-top: var(--space-1);
 }
 
 /* ── Alt panel: Sütunlar (alt model gibi) ─────────────────────────────────── */

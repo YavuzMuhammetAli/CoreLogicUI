@@ -7,12 +7,7 @@ import { Translations } from './translations.model';
  */
 export const PROFILE_I18N: Translations = {
   // ── user-profile: sayfa başlığı ──
-  'profile.eyebrow': { tr: 'Hesabım', en: 'My Account' },
   'profile.title': { tr: 'Profil Ayarları', en: 'Profile Settings' },
-  'profile.subtitle': {
-    tr: 'Kişisel bilgilerinizi, fotoğrafınızı ve şifrenizi buradan yönetebilirsiniz.',
-    en: 'Manage your personal information, photo and password here.'
-  },
   'profile.loading': { tr: 'Profil yükleniyor…', en: 'Loading profile…' },
 
   // ── user-profile: fotoğraf paneli ──
@@ -80,12 +75,7 @@ export const PROFILE_I18N: Translations = {
   'profile.passwordChangeFailedRetry': { tr: 'Şifre değiştirilemedi. Lütfen tekrar deneyin.', en: 'Failed to change password. Please try again.' },
 
   // ── audit-log: sayfa başlığı ──
-  'audit.eyebrow': { tr: 'Yönetim', en: 'Administration' },
   'audit.title': { tr: 'Denetim Kayıtları', en: 'Audit Logs' },
-  'audit.subtitle': {
-    tr: 'Tüm kayıtlardaki ekleme, güncelleme ve silme işlemlerinin değişmez geçmişi.',
-    en: 'An immutable history of all create, update and delete operations across records.'
-  },
 
   // ── audit-log: filtreler ──
   'audit.filterTitle': { tr: 'Filtrele', en: 'Filter' },

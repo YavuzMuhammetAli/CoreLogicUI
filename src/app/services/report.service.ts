@@ -13,9 +13,17 @@ export class ReportService {
 
   constructor(private http: HttpClient) {}
 
-  /** Yeni rapor tanımı kaydeder. */
-  define(report: Partial<ReportDefinition>): Observable<ResponseModel> {
-    return this.http.post<ResponseModel>(`${this.baseUrl}/define`, report)
+  /**
+   * Yeni rapor tanımı kaydeder ve oluşan raporun ID'sini döner.
+   *
+   * ID dönmesi G4 için gerekli: Yapay Zeka önerilerinden bir dashboard
+   * aktarılırken widget'lar raporlara ADIYLA referans verir; ad→ID eşlemesi
+   * raporun tanımlandığı anda yapılmalıdır. Sonradan `list()` çekip ada göre
+   * eşleştirmek aynı adlı iki raporda yanlış hedefi seçerdi.
+   * (`dashboard.service.ts` `define()` zaten ID dönüyordu — simetrik oldu.)
+   */
+  define(report: Partial<ReportDefinition>): Observable<DataResponseModel<number>> {
+    return this.http.post<DataResponseModel<number>>(`${this.baseUrl}/define`, report)
       .pipe(tap(() => this.invalidateListCache()));
   }
 

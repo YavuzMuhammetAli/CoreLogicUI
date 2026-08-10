@@ -1,0 +1,267 @@
+:host {
+  display: block;
+  padding: var(--space-6);
+}
+
+/**
+ * Üç sütun: sohbetler · mesajlar · öneriler.
+ * Panelleri grid + gap ile dizdiği için .flow KULLANILMAZ (çift boşluk olurdu).
+ */
+.ai-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr 320px;
+  gap: var(--space-6);
+  // Topbar + sayfa başlığı çıkarıldıktan sonra kalan yükseklik: sütunlar
+  // kendi içinde kayar, sayfanın tamamı kaymaz.
+  height: calc(100vh - var(--topbar-h) - 140px);
+  min-height: 480px;
+}
+
+.ai-side,
+.ai-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0; // grid çocuğunun taşmadan kısalabilmesi için
+  overflow: hidden;
+}
+
+.ai-side-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.ai-hint {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+// ── Sohbet listesi ─────────────────────────────────────────────────────────
+
+.ai-conversation-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+}
+
+.ai-conversation {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  color: var(--fg-2);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-standard);
+
+  &:hover:not(:disabled) {
+    background: var(--surface-warm);
+  }
+
+  &.is-active {
+    background: var(--surface-warm);
+    border-color: var(--border);
+    color: var(--fg);
+    font-weight: 600;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+.ai-conversation-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// ── Mesaj akışı ────────────────────────────────────────────────────────────
+
+.ai-messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ai-message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface-warm);
+
+  &.is-user {
+    background: color-mix(in oklab, var(--accent), transparent 92%);
+  }
+}
+
+.ai-message-role {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.ai-message-text {
+  margin: 0;
+  color: var(--fg-2);
+  line-height: var(--leading-body);
+  // Model yanıtı satır sonlarını taşır; düz metin olarak korunur.
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ai-waiting {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ai-thinking {
+  font-size: var(--text-sm);
+  color: var(--muted);
+
+  summary {
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+  }
+
+  p {
+    margin: var(--space-2) 0 0;
+    white-space: pre-wrap;
+  }
+}
+
+// ── Yazma alanı ────────────────────────────────────────────────────────────
+
+.ai-composer {
+  border-top: 1px solid var(--border);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ai-textarea {
+  resize: vertical;
+  min-height: 72px;
+  font-family: var(--font-body);
+}
+
+.ai-composer-actions {
+  justify-content: flex-end;
+}
+
+// ── Öneri kartları ─────────────────────────────────────────────────────────
+
+.ai-card-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ai-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+
+  &.is-failed {
+    border-color: var(--danger);
+  }
+}
+
+.ai-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.ai-card-name {
+  font-weight: 600;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-card-kind {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--meta);
+}
+
+.ai-card-summary {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.ai-card-error {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--danger);
+  overflow-wrap: anywhere;
+}
+
+.ai-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  border-top: 1px solid var(--border);
+  padding: var(--space-4);
+}
+
+// ── Duyarlılık ─────────────────────────────────────────────────────────────
+
+@media (max-width: 1100px) {
+  .ai-layout {
+    grid-template-columns: 220px 1fr;
+    grid-template-rows: 1fr auto;
+
+    // Öneriler dar ekranda alta iner ve iki sütunu birden kaplar.
+    .ai-side:last-of-type {
+      grid-column: 1 / -1;
+      max-height: 320px;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .ai-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+
+    .ai-side {
+      max-height: 280px;
+    }
+  }
+}

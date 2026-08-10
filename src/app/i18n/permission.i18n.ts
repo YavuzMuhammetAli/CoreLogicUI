@@ -8,12 +8,7 @@ import { Translations } from './translations.model';
  */
 export const PERMISSION_I18N: Translations = {
   // ── role-list.component ──
-  'role.list.eyebrow': { tr: 'Yönetim', en: 'Administration' },
   'role.list.title': { tr: 'Roller', en: 'Roles' },
-  'role.list.subtitle': {
-    tr: 'İsimli roller oluşturun, model izinleri tanımlayın ve kullanıcıları role üye yapın.',
-    en: 'Create named roles, define model permissions, and assign users as role members.'
-  },
   'role.list.panelTitle': { tr: 'Roller', en: 'Roles' },
   'role.list.loading': { tr: 'Roller yükleniyor...', en: 'Loading roles...' },
   'role.list.emptyTitle': { tr: 'Henüz isimli rol oluşturulmadı', en: 'No named role has been created yet' },
@@ -125,12 +120,7 @@ export const PERMISSION_I18N: Translations = {
   'role.detail.permissionsLoadError': { tr: 'Rol izinleri yüklenemedi.', en: 'Failed to load role permissions.' },
 
   // ── user-permission-list.component ──
-  'permission.list.eyebrow': { tr: 'Yönetim', en: 'Administration' },
   'permission.list.title': { tr: 'Kullanıcı Yetkileri', en: 'User Permissions' },
-  'permission.list.subtitle': {
-    tr: 'Kullanıcıları seçin, model bazında okuma/yazma izni atayın ve admin rolünü yönetin.',
-    en: 'Select users, assign read/write permissions per model, and manage the admin role.'
-  },
   'permission.list.panelTitle': { tr: 'Kullanıcılar', en: 'Users' },
   'permission.list.loading': { tr: 'Kullanıcılar yükleniyor...', en: 'Loading users...' },
   'permission.list.emptyTitle': { tr: 'Kayıtlı kullanıcı bulunamadı', en: 'No registered users found' },

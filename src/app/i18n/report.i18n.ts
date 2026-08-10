@@ -8,9 +8,7 @@ import { Translations } from './translations.model';
  */
 export const REPORT_I18N: Translations = {
   // ── report-list ──────────────────────────────────────────────────────────
-  'report.eyebrow': { tr: 'Raporlama', en: 'Reporting' },
   'report.list.title': { tr: 'Raporlar', en: 'Reports' },
-  'report.list.subtitle': { tr: 'Modeller üzerinde tanımladığınız metadata-driven raporlar.', en: 'Metadata-driven reports you defined on your models.' },
   'report.list.deletedReports': { tr: 'Silinmiş Raporlar', en: 'Deleted Reports' },
   'report.list.newReport': { tr: 'Yeni Rapor', en: 'New Report' },
   'report.list.colName': { tr: 'Ad', en: 'Name' },
@@ -27,7 +25,6 @@ export const REPORT_I18N: Translations = {
   // ── report-build: genel ─────────────────────────────────────────────────
   'report.build.titleEdit': { tr: 'Raporu Düzenle', en: 'Edit Report' },
   'report.build.titleNew': { tr: 'Yeni Rapor', en: 'New Report' },
-  'report.build.subtitle': { tr: 'Model, kolon, filtre, gruplama, aggregate ve grafik tipini tanımlayın.', en: 'Define the model, columns, filters, grouping, aggregates and chart type.' },
   'report.build.cancel': { tr: 'Vazgeç', en: 'Cancel' },
   'report.build.basicInfo': { tr: 'Temel Bilgiler', en: 'Basic Information' },
   'report.build.reportName': { tr: 'Rapor Adı', en: 'Report Name' },
@@ -115,7 +112,6 @@ export const REPORT_I18N: Translations = {
 
   // ── report-viewer ────────────────────────────────────────────────────────
   'report.viewer.defaultTitle': { tr: 'Rapor', en: 'Report' },
-  'report.viewer.modelLabel': { tr: 'Model:', en: 'Model:' },
   'report.viewer.edit': { tr: 'Düzenle', en: 'Edit' },
   'report.viewer.backToList': { tr: 'Listeye Dön', en: 'Back to List' },
   'report.viewer.export': { tr: 'Export', en: 'Export' },

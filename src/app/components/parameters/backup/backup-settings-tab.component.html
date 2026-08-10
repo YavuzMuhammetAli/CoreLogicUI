@@ -1,0 +1,312 @@
+<div class="tab-panel flow" role="tabpanel" [attr.aria-label]="'parameter.backupPanelAria' | t">
+
+  @if (loadError()) {
+    <div class="alert alert-danger" role="alert">{{ loadError() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="empty-state">
+      <span class="spinner" style="width: 32px; height: 32px;" [attr.aria-label]="'common.loading' | t"></span>
+    </div>
+  } @else {
+
+    <!-- ── Zamanlama kurucusu ──────────────────────────────────────────── -->
+    <div class="panel">
+      <div class="panel-head">
+        <h2>{{ 'parameter.backup.scheduleTitle' | t }}</h2>
+      </div>
+      <div class="panel-body">
+
+        <label class="checkbox-label">
+          <input type="checkbox" [ngModel]="enabled()" (ngModelChange)="enabled.set($event)">
+          {{ 'parameter.backup.enabled' | t }}
+        </label>
+        <span class="field-help">{{ 'parameter.backup.enabledHelp' | t }}</span>
+
+        <div class="settings-grid" style="margin-top: var(--space-5)">
+
+          <div class="field">
+            <label for="frequency">{{ 'parameter.backup.frequency' | t }}</label>
+            <select
+              id="frequency"
+              [ngModel]="spec().frequency"
+              (ngModelChange)="onFrequencyChange($event)">
+              @for (freq of frequencies; track freq) {
+                <option [value]="freq">{{ 'parameter.backup.freq.' + freq | t }}</option>
+              }
+            </select>
+          </div>
+
+          @if (fields().hourInterval) {
+            <div class="field">
+              <label for="hourInterval">{{ 'parameter.backup.hourInterval' | t }}</label>
+              <select
+                id="hourInterval"
+                [ngModel]="spec().hourInterval"
+                (ngModelChange)="patchSpec({ hourInterval: +$event })">
+                @for (n of hourIntervals; track n) {
+                  <option [value]="n">{{ 'parameter.backup.hourIntervalOption' | t:{ n: n } }}</option>
+                }
+              </select>
+            </div>
+          }
+
+          @if (fields().dayInterval) {
+            <div class="field">
+              <label for="dayInterval">{{ 'parameter.backup.dayInterval' | t }}</label>
+              <input
+                id="dayInterval"
+                class="input"
+                type="number"
+                min="1"
+                max="31"
+                [ngModel]="spec().dayInterval"
+                (ngModelChange)="patchSpec({ dayInterval: +$event })">
+            </div>
+          }
+
+          @if (fields().dayOfWeek) {
+            <div class="field">
+              <label for="dayOfWeek">{{ 'parameter.backup.dayOfWeek' | t }}</label>
+              <select
+                id="dayOfWeek"
+                [ngModel]="spec().dayOfWeek"
+                (ngModelChange)="patchSpec({ dayOfWeek: +$event })">
+                @for (day of weekDays; track day) {
+                  <option [value]="day">{{ weekDayLabel(day) }}</option>
+                }
+              </select>
+            </div>
+          }
+
+          @if (fields().dayOfMonth) {
+            <div class="field">
+              <label for="dayOfMonth">{{ 'parameter.backup.dayOfMonth' | t }}</label>
+              <select
+                id="dayOfMonth"
+                [ngModel]="spec().dayOfMonth"
+                (ngModelChange)="patchSpec({ dayOfMonth: +$event })">
+                @for (day of monthDays; track day) {
+                  <option [value]="day">{{ day }}</option>
+                }
+              </select>
+            </div>
+          }
+
+          <!-- Saatte bir / N saatte bir: yalnız dakika seçilir, saat serbesttir. -->
+          @if (fields().minute && !fields().time) {
+            <div class="field">
+              <label for="minute">{{ 'parameter.backup.minute' | t }}</label>
+              <input
+                id="minute"
+                class="input"
+                type="number"
+                min="0"
+                max="59"
+                [ngModel]="spec().minute"
+                (ngModelChange)="patchSpec({ minute: +$event })">
+            </div>
+          }
+
+          @if (fields().time) {
+            <div class="field">
+              <label for="time">{{ 'parameter.backup.time' | t }}</label>
+              <input
+                id="time"
+                class="input"
+                type="time"
+                [ngModel]="timeValue"
+                (ngModelChange)="onTimeChange($event)">
+            </div>
+          }
+
+          @if (fields().raw) {
+            <div class="field" style="grid-column: 1 / -1">
+              <label for="rawCron">{{ 'parameter.backup.rawCron' | t }}</label>
+              <input
+                id="rawCron"
+                class="input"
+                type="text"
+                spellcheck="false"
+                [ngModel]="spec().raw"
+                (ngModelChange)="patchSpec({ raw: $event })"
+                [attr.aria-invalid]="!cronValid()"
+                [attr.aria-describedby]="cronValid() ? 'rawCronHelp' : 'rawCronError'">
+              @if (!cronValid()) {
+                <span id="rawCronError" class="field-error" role="alert">
+                  {{ 'parameter.backup.rawCronInvalid' | t }}
+                </span>
+              } @else {
+                <span id="rawCronHelp" class="field-help">{{ 'parameter.backup.rawCronHelp' | t }}</span>
+              }
+            </div>
+          }
+
+          <div class="field">
+            <label for="retentionDays">{{ 'parameter.backup.retention' | t }}</label>
+            <input
+              id="retentionDays"
+              class="input"
+              type="number"
+              min="0"
+              max="3650"
+              [ngModel]="retentionDays()"
+              (ngModelChange)="retentionDays.set(+$event)"
+              [attr.aria-invalid]="!retentionValid()"
+              aria-describedby="retentionHelp">
+            @if (!retentionValid()) {
+              <span class="field-error" role="alert">{{ 'parameter.backup.retentionInvalid' | t }}</span>
+            } @else {
+              <span id="retentionHelp" class="field-help">{{ 'parameter.backup.retentionHelp' | t }}</span>
+            }
+          </div>
+
+          @if (timeZoneId()) {
+            <div class="field">
+              <label for="timeZone">{{ 'parameter.backup.timeZone' | t }}</label>
+              <input id="timeZone" class="input" type="text" [value]="timeZoneId()" readonly
+                     aria-describedby="timeZoneHelp">
+              <span id="timeZoneHelp" class="field-help">{{ 'parameter.backup.timeZoneHelp' | t }}</span>
+            </div>
+          }
+        </div>
+
+        @if (shortMonthWarning()) {
+          <div class="alert alert-warn" role="alert" style="margin-top: var(--space-4)">
+            {{ 'parameter.backup.shortMonthWarning' | t }}
+          </div>
+        }
+
+        <!-- Kullanıcı kaydetmeden ne yaptığını görsün. -->
+        <div class="schedule-preview" style="margin-top: var(--space-4)">
+          <span class="status-label">{{ 'parameter.backup.summary' | t }}</span>
+          <div class="schedule-cron">{{ cronExpression() }}</div>
+
+          <span class="status-label" style="display: block; margin-top: var(--space-3)">
+            {{ 'parameter.backup.nextRuns' | t }}
+          </span>
+          @if (nextRuns().length === 0) {
+            <p class="muted-hint">{{ 'parameter.backup.nextRunsEmpty' | t }}</p>
+          } @else {
+            <ul class="next-run-list">
+              @for (run of nextRuns(); track run) {
+                <li class="next-run-item">{{ run }}</li>
+              }
+            </ul>
+          }
+        </div>
+
+        @if (formError()) {
+          <div class="alert alert-danger" role="alert" style="margin-top: var(--space-4)">{{ formError() }}</div>
+        }
+        @if (formSuccess()) {
+          <div class="alert alert-success" role="alert" style="margin-top: var(--space-4)">{{ formSuccess() }}</div>
+        }
+
+        <div class="form-actions">
+          <button
+            class="btn btn-primary"
+            type="button"
+            [disabled]="saving() || !cronValid() || !retentionValid()"
+            (click)="save()">
+            @if (saving()) {
+              <span class="spinner" aria-hidden="true"></span>
+            }
+            {{ 'parameter.backup.saveSchedule' | t }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Durum ───────────────────────────────────────────────────────── -->
+    @if (status(); as s) {
+      <div class="panel">
+        <div class="panel-head">
+          <h2>{{ 'parameter.backup.statusTitle' | t }}</h2>
+        </div>
+        <div class="panel-body">
+          <div class="status-grid">
+            <div class="status-item">
+              <span class="status-label">{{ 'parameter.backup.nextDueAt' | t }}</span>
+              <span class="status-value">
+                {{ s.nextDueAt ? formatInstant(s.nextDueAt) : ('parameter.backup.notScheduled' | t) }}
+              </span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">{{ 'parameter.backup.lastRunAt' | t }}</span>
+              <span class="status-value">
+                {{ s.lastRunAt ? formatInstant(s.lastRunAt) : ('parameter.backup.neverRun' | t) }}
+              </span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">{{ 'parameter.backup.lastOutcome' | t }}</span>
+              <span class="status-value">{{ s.lastOutcome || '—' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ── Yedek geçmişi ───────────────────────────────────────────────── -->
+    <div class="panel">
+      <div class="panel-head">
+        <h2>{{ 'parameter.backup.historyTitle' | t }}</h2>
+        <div class="panel-actions">
+          <button class="btn btn-secondary btn-sm" type="button" [disabled]="running()" (click)="requestRunNow()">
+            @if (running()) {
+              <span class="spinner" aria-hidden="true"></span>
+            }
+            {{ 'parameter.backup.runNow' | t }}
+          </button>
+        </div>
+      </div>
+
+      @if (history().length === 0) {
+        <div class="empty-state">
+          <div class="empty-icon" aria-hidden="true">💾</div>
+          <h3>{{ 'parameter.backup.historyEmpty' | t }}</h3>
+          <p>{{ 'parameter.backup.historyEmptyHint' | t }}</p>
+        </div>
+      } @else {
+        <div class="table-wrapper">
+          <table class="data-table" [attr.aria-label]="'parameter.backup.historyAria' | t">
+            <thead>
+              <tr>
+                <th scope="col">{{ 'parameter.backup.colType' | t }}</th>
+                <th scope="col">{{ 'parameter.backup.colStatus' | t }}</th>
+                <th scope="col">{{ 'parameter.backup.colStarted' | t }}</th>
+                <th scope="col">{{ 'parameter.backup.colCompleted' | t }}</th>
+                <th scope="col">{{ 'parameter.backup.colSize' | t }}</th>
+                <th scope="col">{{ 'parameter.backup.colVerified' | t }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of history(); track item.id) {
+                <tr [title]="item.error || ''">
+                  <td>{{ typeLabel(item.type) }}</td>
+                  <td>
+                    <span class="badge" [ngClass]="statusBadgeClass(item.status)">
+                      {{ statusLabel(item.status) }}
+                    </span>
+                  </td>
+                  <td>{{ formatInstant(item.startedAt) }}</td>
+                  <td>{{ formatInstant(item.completedAt) }}</td>
+                  <td>{{ formatSize(item.sizeBytes) }}</td>
+                  <td>{{ formatInstant(item.verifiedAt) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<app-confirm-dialog
+  [open]="runConfirmOpen()"
+  [title]="'parameter.backup.runNowConfirmTitle' | t"
+  [message]="'parameter.backup.runNowConfirmMessage' | t"
+  [busy]="running()"
+  (confirmed)="confirmRunNow()"
+  (cancelled)="cancelRunNow()" />

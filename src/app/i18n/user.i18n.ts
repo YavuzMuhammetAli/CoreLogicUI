@@ -8,12 +8,7 @@ import { Translations } from './translations.model';
  */
 export const USER_I18N: Translations = {
   // ── Liste ─────────────────────────────────────────────────────────────────
-  'user.list.eyebrow': { tr: 'Şirket Yönetimi', en: 'Company Management' },
   'user.list.title': { tr: 'Kullanıcılar', en: 'Users' },
-  'user.list.subtitle': {
-    tr: 'Şirketinize kullanıcı ekleyin ve erişimlerini yönetin. Kullanıcılar yalnızca buradan eklenebilir — dışarıdan şirketinize katılım yapılamaz.',
-    en: 'Add users to your company and manage their access. Users can only be added here — nobody can join your company from outside.'
-  },
   'user.list.panelTitle': { tr: 'Kullanıcılar', en: 'Users' },
   'user.list.loading': { tr: 'Kullanıcılar yükleniyor…', en: 'Loading users…' },
   'user.list.loadError': { tr: 'Kullanıcılar yüklenemedi.', en: 'Users could not be loaded.' },

@@ -7,9 +7,7 @@ import { Translations } from './translations.model';
  */
 export const MODEL_I18N: Translations = {
   // ── model-list.component.html / .ts ─────────────────────────────────────────
-  'model.list.eyebrow': { tr: 'CoreLogic Platform', en: 'CoreLogic Platform' },
   'model.list.title': { tr: 'Yayınlanmış Modeller', en: 'Published Models' },
-  'model.list.subtitle': { tr: 'Çalışma zamanında yayınlanan dinamik veri modelleriniz.', en: 'Your dynamic data models published at runtime.' },
   'model.list.deletedModels': { tr: 'Silinmiş Modeller', en: 'Deleted Models' },
   'model.list.newModel': { tr: 'Yeni Model', en: 'New Model' },
   'model.list.loadingAria': { tr: 'Yükleniyor', en: 'Loading' },
@@ -24,7 +22,6 @@ export const MODEL_I18N: Translations = {
   'model.list.serverError': { tr: 'Sunucu bağlantı hatası.', en: 'Server connection error.' },
 
   // ── model-data.component.html / .ts ──────────────────────────────────────────
-  'model.data.columnCountSuffix': { tr: '{count} sütun · Backend\'den canlı veri', en: '{count} columns · Live data from backend' },
   'model.data.loadingAria': { tr: 'Yükleniyor', en: 'Loading' },
   'model.data.notFoundTitle': { tr: 'Model bulunamadı', en: 'Model not found' },
   'model.data.notFoundMessage': { tr: '"{typeName}" modeli yerel kayıt defterinde yok. Tablo oluşturucudan yeniden yayınlayın.', en: 'The model "{typeName}" does not exist in the local registry. Re-publish it from the table builder.' },
@@ -314,10 +311,7 @@ export const MODEL_I18N: Translations = {
   'table.detail.breadcrumbCreateTable': { tr: 'Tablo Oluştur', en: 'Create Table' },
   'table.detail.breadcrumbNew': { tr: 'Yeni', en: 'New' },
   'table.detail.schemaLoading': { tr: 'Şema yükleniyor...', en: 'Loading schema...' },
-  'table.detail.platformEyebrow': { tr: 'Platform', en: 'Platform' },
   'table.detail.newTableTitle': { tr: 'Yeni Tablo', en: 'New Table' },
-  'table.detail.newTableSubtitle': { tr: 'Model adını ve sütunlarını tanımlayın. "Kaydet" metadata\'yı kaydeder, ardından "Yayınla" SQL tablosunu oluşturur.', en: 'Define the model name and its columns. "Save" stores the metadata, then "Publish" creates the SQL table.' },
-  'table.detail.editTableSubtitle': { tr: 'Model adı düzenleme modunda değiştirilemez. Kaldırılan sütunlar veritabanından silinmez, yalnızca pasif yapılır — mevcut veriler korunur.', en: 'The model name cannot be changed in edit mode. Removed columns are not deleted from the database, only deactivated — existing data is preserved.' },
   'table.detail.backToList': { tr: 'Listeye Dön', en: 'Back to List' },
   'table.detail.saving': { tr: 'Kaydediliyor...', en: 'Saving...' },
   'table.detail.save': { tr: 'Kaydet', en: 'Save' },

@@ -1,9 +1,5 @@
 <div class="page-header">
-  <div>
-    <span class="eyebrow">{{ 'report.eyebrow' | t }}</span>
-    <h1 class="page-title">{{ (editingId ? 'report.build.titleEdit' : 'report.build.titleNew') | t }}</h1>
-    <p class="page-subtitle">{{ 'report.build.subtitle' | t }}</p>
-  </div>
+  <span class="eyebrow">{{ (editingId ? 'report.build.titleEdit' : 'report.build.titleNew') | t }}</span>
   <a routerLink="/reports" class="btn btn-secondary">{{ 'report.build.cancel' | t }}</a>
 </div>
 

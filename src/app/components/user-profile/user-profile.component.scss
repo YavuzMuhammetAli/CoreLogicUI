@@ -3,29 +3,10 @@
    Token-tabanlı tasarım; Bootstrap kullanılmaz.
    ────────────────────────────────────────────────────────────────────────── */
 
+/* Genişlik kısıtı YOK — içerik .page-content'in tamamını kaplar.
+   Yatay/üst padding de .page-content'ten gelir; burada yalnızca alt nefes payı var. */
 .profile-page {
-  padding: var(--space-6) var(--space-6) var(--space-12);
-  max-width: 980px;
-}
-
-/* Sayfa başlığı — global flex'i ez, başlık grubu dikey kalmalı */
-.page-header {
-  display: block;
-  margin-bottom: var(--space-6);
-
-  .page-title {
-    font-size: var(--text-2xl);
-    font-weight: 700;
-    color: var(--fg);
-    margin: var(--space-1) 0 var(--space-1);
-    line-height: 1.2;
-  }
-
-  .page-subtitle {
-    color: var(--muted);
-    font-size: var(--text-sm);
-    margin: 0;
-  }
+  padding-bottom: var(--space-6);
 }
 
 /* Yükleme */
@@ -41,7 +22,8 @@
 /* ── İki-sütun düzen ── */
 .profile-layout {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  /* minmax(0, 1fr): tam genişlikte uzun içerik grid'i taşırmasın */
+  grid-template-columns: 260px minmax(0, 1fr);
   gap: var(--space-6);
   align-items: start;
 

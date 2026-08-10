@@ -321,11 +321,12 @@ export class TableDetailComponent implements OnDestroy {
     this.submitMessage       = null;
     this.submitSuccess       = null;
     this.loadError           = null;
-    this.relationships       = [];
+    // İlişki durumu sekmenin kendisindedir; ID'yi null'layıp sekmeyi boşaltmak
+    // yeterlidir — yeni tablo ID'si çözüldüğünde sekme listeyi kendi yükler.
     this.relationshipTableId = null;
-    this.pendingRelationships.clear();
-    this.pendingIdSeq        = 0;
-    this.validation          = null;
+    this.relationshipCount   = 0;
+    this.relationshipsValid  = true;
+    this.relationshipsTab?.reset();
     this.subModelRows        = [];
     this.originalColumnNames = new Set<string>();
     this.activeTab.set('columns');
@@ -663,15 +664,10 @@ export class TableDetailComponent implements OnDestroy {
     // savunmacı olarak burada da alttaki popup'ların kapanmasını engelliyoruz.
     if (this.helpOpen()) return;
 
-    // En üstteki diyalogdan başlayarak kapat.
-    if (this.previewOpen) {
-      this.closePreview();
-      return;
-    }
-    if (this.relationshipModalOpen) {
-      this.closeRelationshipModal();
-      return;
-    }
+    // En üstteki diyalogdan başlayarak kapat. İlişki diyalogları sekmenin
+    // içindedir; kapatacak bir şey varsa sekme true döner.
+    if (this.relationshipsTab?.handleEscape()) return;
+
     if (this.columnModalOpen) {
       this.closeColumnModal();
     }

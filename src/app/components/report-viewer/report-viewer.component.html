@@ -1,11 +1,5 @@
 <div class="page-header">
-  <div>
-    <span class="eyebrow">{{ 'report.eyebrow' | t }}</span>
-    <h1 class="page-title">{{ report()?.name ?? ('report.viewer.defaultTitle' | t) }}</h1>
-    @if (report(); as rep) {
-      <p class="page-subtitle">{{ 'report.viewer.modelLabel' | t }} <span class="badge badge-meta">{{ rep.modelName }}</span></p>
-    }
-  </div>
+  <span class="eyebrow">{{ report()?.name ?? ('report.viewer.defaultTitle' | t) }}</span>
   <div class="cluster">
     <a [routerLink]="['/reports', id, 'edit']" class="btn btn-secondary">{{ 'report.viewer.edit' | t }}</a>
     <a routerLink="/reports" class="btn btn-ghost">{{ 'report.viewer.backToList' | t }}</a>

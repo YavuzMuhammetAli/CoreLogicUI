@@ -1,21 +1,4 @@
-.page-wrap {
-  padding: var(--space-6);
-}
-
-.page-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin-bottom: var(--space-6);
-}
-
-.page-title {
-  font-size: var(--text-2xl);
-  font-weight: 600;
-  color: var(--fg);
-  margin: var(--space-1) 0 0;
-}
+/* .page-wrap / .page-head global — bkz. styles.scss */
 
 .list-info {
   display: flex;

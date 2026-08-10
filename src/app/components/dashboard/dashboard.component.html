@@ -1,9 +1,5 @@
 <div class="page-header">
-  <div>
-    <span class="eyebrow">{{ 'dashboard.eyebrow' | t }}</span>
-    <h1 class="page-title">{{ dashboard()?.name ?? ('dashboard.view.defaultTitle' | t) }}</h1>
-    <p class="page-subtitle">{{ 'dashboard.view.subtitle' | t }}</p>
-  </div>
+  <span class="eyebrow">{{ dashboard()?.name ?? ('dashboard.view.defaultTitle' | t) }}</span>
   <a routerLink="/dashboard/new" class="btn btn-primary">{{ 'dashboard.view.newButton' | t }}</a>
 </div>
 

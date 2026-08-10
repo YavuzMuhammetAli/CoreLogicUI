@@ -158,6 +158,21 @@ export const routes: Routes = [
           import('./components/audit-log/audit-log.component').then(m => m.AuditLogComponent)
       },
       {
+        // G3: Tenant parametreleri — yedekleme zamanlaması, sistem e-postası, abonelik
+        path: 'parameters',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/parameters/parameters.component').then(m => m.ParametersComponent)
+      },
+      {
+        // G4: Yapay Zeka asistanı — model/rapor/dashboard önerir, kullanıcı onayıyla aktarır.
+        // adminGuard: ürettiği modelleri yayınlamak zaten admin işi (/build ile aynı seviye).
+        path: 'ai',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/ai-chat/ai-chat.component').then(m => m.AiChatComponent)
+      },
+      {
         // Kullanıcının kendi profil sayfası — authGuard layout'tan miras alınır
         path: 'profile',
         loadComponent: () =>

@@ -356,6 +356,47 @@ export class RelationshipsTabComponent implements OnChanges {
     });
   }
 
+  // ─── Ana ekranla dikiş: sıfırlama ve ESC ────────────────────────────────────
+
+  /**
+   * Sekmeyi boş duruma döndürür. Ana ekran, aynı route üzerinde başka bir modele
+   * geçildiğinde (alt model satırına tıklama) çağırır: component yeniden
+   * oluşturulmadığı için önceki modelin ilişkileri aksi halde ekranda kalır.
+   *
+   * `tableId` ayrıca ana ekrandan input olarak null'lanır; yeni ID çözüldüğünde
+   * ngOnChanges listeyi kendi yükler.
+   */
+  reset(): void {
+    this.relationships = [];
+    this.validation    = null;
+    this.errorMessage  = null;
+    this.toRemove      = null;
+    this.isSaving      = false;
+    this.isDeleting    = false;
+    this.pending.clear();
+    this.pendingIdSeq  = 0;
+    this.emitStatus();
+  }
+
+  /**
+   * ESC — ana ekranın HostListener'ından çağrılır. Bu sekmenin açık en üstteki
+   * diyaloğunu kapatır ve true döner; kapatacak bir şey yoksa false döner, ana
+   * ekran kendi popup'larıyla devam eder.
+   *
+   * Silme onayı burada yoktur: ConfirmDialogComponent kendi ESC işleyicisine sahiptir.
+   */
+  handleEscape(): boolean {
+    if (this.previewDialog?.open) {
+      this.previewDialog.close();
+      return true;
+    }
+    if (this.dialog?.open) {
+      this.dialog.close();
+      return true;
+    }
+    return false;
+  }
+
   // ─── Görüntüleme yardımcıları ───────────────────────────────────────────────
 
   /** İlişki tipinin çeviri anahtarını döner. */
