@@ -278,3 +278,18 @@ export function parseConditions(json: string | null | undefined): WorkflowCondit
     return [];
   }
 }
+
+/** Rollback hedefi seçiminde gösterilen adım özeti. */
+export interface WorkflowStepInfo {
+  key: string;
+  name: string;
+  isParallel: boolean;
+}
+
+/** Görevi başka bir kullanıcıya/role devretme isteği. */
+export interface ReassignTaskRequest {
+  taskId: number;
+  userId?: number | null;
+  roleId?: number | null;
+  reason?: string | null;
+}

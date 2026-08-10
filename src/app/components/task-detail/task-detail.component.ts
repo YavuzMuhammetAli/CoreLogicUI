@@ -10,6 +10,9 @@ import {
 } from '../../models/workflow.model';
 import { LanguageService } from '../../services/language.service';
 import { NotificationService } from '../../services/notification.service';
+import { PermissionService } from '../../services/permission.service';
+import { RoleAdminService } from '../../services/role-admin.service';
+import { Role } from '../../models/role';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { markDirty } from '../../utils/change-detection';
@@ -44,6 +47,8 @@ export class TaskDetailComponent implements OnInit {
   private readonly instanceService = inject(WorkflowInstanceService);
   private readonly languageService = inject(LanguageService);
   private readonly notification = inject(NotificationService);
+  private readonly permissionService = inject(PermissionService);
+  private readonly roleService = inject(RoleAdminService);
 
   // Şablonun çağırabilmesi için saf yardımcılar alan olarak bağlanıyor
   // (record-form-dialog ile aynı desen).
@@ -64,6 +69,18 @@ export class TaskDetailComponent implements OnInit {
   /** confirm-dialog'u açan bekleyen karar. */
   pendingDecision: 'approve' | 'reject' | null = null;
 
+  // ── Yönetici işlemleri (Faz 4) ────────────────────────────────────────────
+  /** Atlama, onaydan AYRI tutulur: audit'te ayırt edilebilmeli. */
+  pendingSkip = false;
+  skipping = false;
+  roles: Role[] = [];
+  reassignRoleId: number | null = null;
+  reassigning = false;
+
+  get isAdmin(): boolean {
+    return this.permissionService.isAdmin();
+  }
+
   get isClosed(): boolean {
     return !!this.task && this.task.status !== 'Pending';
   }
@@ -75,7 +92,9 @@ export class TaskDetailComponent implements OnInit {
       return;
     }
     this.load(id);
+    if (this.isAdmin) this.loadRoles();
   }
+
 
   private load(id: number): void {
     this.loading = true;
@@ -238,6 +257,75 @@ export class TaskDetailComponent implements OnInit {
     return this.task?.dueAt
       ? formatDate(new Date(this.task.dueAt), this.languageService.lang())
       : this.languageService.t('task.list.noDue');
+  }
+
+  // ── Yönetici işlemleri ────────────────────────────────────────────────────
+
+  private loadRoles(): void {
+    this.roleService.getRoles().pipe(markDirty(this.cdr)).subscribe({
+      next: res => { if (res.success) this.roles = res.data ?? []; },
+      error: () => { this.roles = []; }
+    });
+  }
+
+  askSkip(): void { this.pendingSkip = true; }
+  cancelSkip(): void { this.pendingSkip = false; }
+
+  confirmSkip(): void {
+    const task = this.task;
+    this.pendingSkip = false;
+    if (!task) return;
+
+    this.skipping = true;
+    this.taskService.skip(task.id, this.form.get('comment')?.value || null)
+      .pipe(markDirty(this.cdr)).subscribe({
+        next: res => {
+          this.skipping = false;
+          if (res.success) {
+            this.notification.success(res.message ?? '');
+            this.router.navigate(['/tasks']);
+          } else {
+            this.submitError = res.message ?? '';
+          }
+        },
+        error: err => {
+          this.skipping = false;
+          this.submitError = err?.error?.message ?? this.languageService.t('task.detail.serverError');
+        }
+      });
+  }
+
+  onReassignRoleChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.reassignRoleId = value ? Number(value) : null;
+  }
+
+  reassign(): void {
+    const task = this.task;
+    if (!task || !this.reassignRoleId) return;
+
+    this.reassigning = true;
+    this.taskService.reassign({ taskId: task.id, roleId: this.reassignRoleId })
+      .pipe(markDirty(this.cdr)).subscribe({
+        next: res => {
+          this.reassigning = false;
+          if (res.success) {
+            this.notification.success(res.message ?? '');
+            this.reassignRoleId = null;
+            this.load(task.id);
+          } else {
+            this.submitError = res.message ?? '';
+          }
+        },
+        error: err => {
+          this.reassigning = false;
+          this.submitError = err?.error?.message ?? this.languageService.t('task.detail.serverError');
+        }
+      });
+  }
+
+  get skipMessage(): string {
+    return this.languageService.t('task.detail.skipConfirm', { name: this.task?.name ?? '' });
   }
 
   errorFor(field: WorkflowFormField): string | null {

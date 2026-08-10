@@ -131,6 +131,39 @@
       }
     </div>
 
+    <!--
+      Yönetici işlemleri. Atlama, ONAYDAN AYRI bir uç: audit'te "müdür onayladı"
+      ile "yönetici geçti" ayırt edilebilmeli.
+    -->
+    @if (isAdmin && !isClosed) {
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">{{ 'task.detail.adminActions' | t }}</h2>
+          <p class="panel-subtitle">{{ 'task.detail.adminActionsHelp' | t }}</p>
+        </div>
+        <div class="panel-body">
+          <div class="admin-row">
+            <select class="input" [value]="reassignRoleId ?? ''" (change)="onReassignRoleChange($event)">
+              <option value="">{{ 'task.detail.reassignSelect' | t }}</option>
+              @for (role of roles; track role.id) {
+                <option [value]="role.id">{{ role.name }}</option>
+              }
+            </select>
+            <button type="button" class="btn btn-secondary"
+                    [disabled]="!reassignRoleId || reassigning"
+                    (click)="reassign()">
+              {{ 'task.detail.reassign' | t }}
+            </button>
+            <button type="button" class="btn btn-ghost wf-skip"
+                    [disabled]="skipping"
+                    (click)="askSkip()">
+              {{ 'task.detail.skip' | t }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
     @if (timeline.length > 0) {
       <div class="panel">
         <div class="panel-head">
@@ -160,3 +193,11 @@
   [busy]="saving"
   (confirmed)="confirmDecision()"
   (cancelled)="cancelDecision()" />
+
+<app-confirm-dialog
+  [open]="pendingSkip"
+  [title]="'task.detail.skipConfirmTitle' | t"
+  [message]="skipMessage"
+  [busy]="skipping"
+  (confirmed)="confirmSkip()"
+  (cancelled)="cancelSkip()" />

@@ -6,9 +6,11 @@ import { ListResponseModel } from '../models/responseModelList';
 import { DataResponseModel } from '../models/dataResponseModel';
 import {
   CompleteTaskRequest,
+  ReassignTaskRequest,
   StartWorkflowRequest,
   WorkflowChain,
   WorkflowInstance,
+  WorkflowStepInfo,
   WorkflowTask
 } from '../models/workflow.model';
 import { environment } from '../../environments/environment';
@@ -47,6 +49,21 @@ export class WorkflowTaskService {
   /** Görevi onaylar veya reddeder ve akışı ilerletir. */
   complete(request: CompleteTaskRequest): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/complete`, request);
+  }
+
+  /**
+   * Adımı atlar ve akışı ilerletir (admin).
+   * Tamamlamadan ayrı uç: audit'te "onaylandı" ile "atlandı" ayırt edilebilmeli.
+   */
+  skip(id: number, reason?: string | null): Observable<ResponseModel> {
+    let params = new HttpParams().set('id', id);
+    if (reason) params = params.set('reason', reason);
+    return this.http.post<ResponseModel>(`${this.baseUrl}/skip`, null, { params });
+  }
+
+  /** Görevi başka bir kullanıcıya/role devreder (admin). */
+  reassign(request: ReassignTaskRequest): Observable<ResponseModel> {
+    return this.http.post<ResponseModel>(`${this.baseUrl}/reassign`, request);
   }
 }
 
@@ -95,6 +112,22 @@ export class WorkflowInstanceService {
   verifyChain(instanceId: number): Observable<DataResponseModel<WorkflowChain>> {
     return this.http.get<DataResponseModel<WorkflowChain>>(
       `${this.baseUrl}/verifyChain`, { params: new HttpParams().set('instanceId', instanceId) });
+  }
+
+  /**
+   * Süreci önceki bir adıma geri alır (admin).
+   * Yalnızca akış konumu geri alınır; iş verisi korunur.
+   */
+  rollback(id: number, targetStepKey: string): Observable<ResponseModel> {
+    return this.http.post<ResponseModel>(`${this.baseUrl}/rollback`, null, {
+      params: new HttpParams().set('id', id).set('targetStepKey', targetStepKey)
+    });
+  }
+
+  /** Rollback hedefi seçimi için tanımdaki adımlar (admin). */
+  steps(instanceId: number): Observable<ListResponseModel<WorkflowStepInfo>> {
+    return this.http.get<ListResponseModel<WorkflowStepInfo>>(
+      `${this.baseUrl}/steps`, { params: new HttpParams().set('instanceId', instanceId) });
   }
 
   /** Süreci iptal eder ve açık görevlerini kapatır (admin). */

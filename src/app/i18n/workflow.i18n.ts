@@ -177,6 +177,19 @@ export const WORKFLOW_I18N: Translations = {
   'task.detail.serverError': { tr: 'Sunucuya ulaşılamadı.', en: 'Could not reach the server.' },
   'task.detail.submitFailed': { tr: 'Görev sonuçlandırılamadı.', en: 'The task could not be resolved.' },
   'task.detail.tooLong': { tr: 'En fazla {max} karakter.', en: 'At most {max} characters.' },
+  'task.detail.adminActions': { tr: 'Yönetici İşlemleri', en: 'Administrator Actions' },
+  'task.detail.adminActionsHelp': {
+    tr: 'Atlama ve yeniden atama denetim kaydına ayrı olarak işlenir.',
+    en: 'Skipping and reassignment are recorded separately in the audit log.'
+  },
+  'task.detail.reassign': { tr: 'Yeniden Ata', en: 'Reassign' },
+  'task.detail.reassignSelect': { tr: 'Devredilecek rolü seçin', en: 'Select a role to hand over to' },
+  'task.detail.skip': { tr: 'Adımı Atla', en: 'Skip Step' },
+  'task.detail.skipConfirmTitle': { tr: 'Adımı atla', en: 'Skip step' },
+  'task.detail.skipConfirm': {
+    tr: '{name} adımı atlanacak ve süreç bir sonraki adıma geçecek. Bu bir onay DEĞİLDİR ve denetim kaydında ayrıca görünür.',
+    en: 'The step {name} will be skipped and the process moves on. This is NOT an approval and appears separately in the audit log.'
+  },
   'task.detail.selectOption': { tr: 'Seçiniz', en: 'Select' },
 
   // ── workflow-instance (süreç detayı) ──────────────────────────────────────
@@ -197,6 +210,22 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.instance.chainBroken': {
     tr: 'Olay günlüğü zinciri {id} numaralı kayıtta bozuk.',
     en: 'The event log chain is broken at entry {id}.'
+  },
+  'workflow.instance.rollback': { tr: 'Geri Alma', en: 'Rollback' },
+  'workflow.instance.rollbackHelp': {
+    tr: 'Süreci daha önceki bir adıma döndürür; açık görevler iptal edilir.',
+    en: 'Returns the process to an earlier step; open tasks are cancelled.'
+  },
+  'workflow.instance.rollbackSelect': { tr: 'Hedef adım seçin', en: 'Select target step' },
+  'workflow.instance.rollbackAction': { tr: 'Geri Al', en: 'Roll Back' },
+  'workflow.instance.rollbackConfirmTitle': { tr: 'Süreci geri al', en: 'Roll back process' },
+  'workflow.instance.rollbackConfirm': {
+    tr: 'Süreç {step} adımına geri alınacak ve açık görevler iptal edilecek.',
+    en: 'The process will be rolled back to step {step} and open tasks will be cancelled.'
+  },
+  'workflow.instance.rollbackDataWarning': {
+    tr: 'Dikkat: yalnızca akış konumu geri alınır. Sonraki adımların kayda yazdığı veriler KORUNUR.',
+    en: 'Note: only the flow position is reverted. Data written to the record by later steps is PRESERVED.'
   },
   'workflow.instance.loadFailed': { tr: 'Süreç yüklenemedi.', en: 'Process could not be loaded.' },
   'workflow.instance.serverError': { tr: 'Sunucuya ulaşılamadı.', en: 'Could not reach the server.' },

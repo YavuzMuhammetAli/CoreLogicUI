@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject }
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { WorkflowInstanceService } from '../../services/workflow-task.service';
-import { WorkflowChain, WorkflowEvent, WorkflowInstance, WorkflowTask } from '../../models/workflow.model';
+import {
+  WorkflowChain, WorkflowEvent, WorkflowInstance, WorkflowStepInfo, WorkflowTask
+} from '../../models/workflow.model';
 import { LanguageService } from '../../services/language.service';
 import { NotificationService } from '../../services/notification.service';
 import { PermissionService } from '../../services/permission.service';
@@ -45,6 +47,13 @@ export class WorkflowInstanceComponent implements OnInit {
   cancelling = false;
   pendingCancel = false;
 
+  // ── Rollback ──────────────────────────────────────────────────────────────
+  /** Tanımdaki adımlar — rollback hedefi seçimi için. */
+  steps: WorkflowStepInfo[] = [];
+  rollbackTarget = '';
+  rollingBack = false;
+  pendingRollback = false;
+
   get isAdmin(): boolean {
     return this.permissionService.isAdmin();
   }
@@ -75,6 +84,7 @@ export class WorkflowInstanceComponent implements OnInit {
         }
         this.instance = res.data;
         this.stepGroups = this.groupByStep(res.data.tasks ?? []);
+        if (this.isAdmin) this.loadSteps(id);
       },
       error: err => {
         this.loading = false;
@@ -108,6 +118,57 @@ export class WorkflowInstanceComponent implements OnInit {
         this.notification.warn(err?.error?.message ?? this.languageService.t('workflow.instance.serverError'));
       }
     });
+  }
+
+  /** Rollback hedefleri instance'ın BAŞLADIĞI sürümün tanımından gelir. */
+  private loadSteps(instanceId: number): void {
+    this.instanceService.steps(instanceId).pipe(markDirty(this.cdr)).subscribe({
+      next: res => {
+        if (res.success) this.steps = res.data ?? [];
+      },
+      error: () => { this.steps = []; }
+    });
+  }
+
+  /** ngModel yerine düz change: bu ekranda reactive form yok, FormsModule getirmeye değmez. */
+  onRollbackTargetChange(event: Event): void {
+    this.rollbackTarget = (event.target as HTMLSelectElement).value;
+  }
+
+  askRollback(): void {
+    if (!this.rollbackTarget) return;
+    this.pendingRollback = true;
+  }
+
+  cancelRollback(): void { this.pendingRollback = false; }
+
+  confirmRollback(): void {
+    const instance = this.instance;
+    const target = this.rollbackTarget;
+    this.pendingRollback = false;
+    if (!instance || !target) return;
+
+    this.rollingBack = true;
+    this.instanceService.rollback(instance.id, target).pipe(markDirty(this.cdr)).subscribe({
+      next: res => {
+        this.rollingBack = false;
+        if (res.success) {
+          this.notification.success(res.message ?? '');
+          this.rollbackTarget = '';
+          this.load(instance.id);
+        } else {
+          this.notification.warn(res.message ?? '');
+        }
+      },
+      error: err => {
+        this.rollingBack = false;
+        this.notification.warn(err?.error?.message ?? this.languageService.t('workflow.instance.serverError'));
+      }
+    });
+  }
+
+  get rollbackMessage(): string {
+    return this.languageService.t('workflow.instance.rollbackConfirm', { step: this.rollbackTarget });
   }
 
   askCancel(): void { this.pendingCancel = true; }

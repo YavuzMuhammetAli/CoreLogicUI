@@ -85,3 +85,19 @@
     flex-basis: 100%;
   }
 }
+
+// Yönetici işlemleri satırı.
+.admin-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+
+  .input { flex: 1 1 200px; max-width: 320px; }
+}
+
+// Atlama yıkıcı sayılmaz ama dikkat çekmeli — dolgu yerine renkli ghost.
+.wf-skip {
+  color: var(--warn);
+  margin-left: auto;
+}

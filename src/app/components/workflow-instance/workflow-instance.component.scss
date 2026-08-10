@@ -89,3 +89,12 @@
 @media (max-width: 768px) {
   .timeline-time { margin-left: 0; flex-basis: 100%; }
 }
+
+.rollback-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+
+  .input { flex: 1 1 240px; max-width: 380px; }
+}
