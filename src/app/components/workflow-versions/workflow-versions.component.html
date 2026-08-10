@@ -1,0 +1,52 @@
+<div class="page-header">
+  <span class="eyebrow">{{ 'workflow.versions.title' | t }} · {{ code }}</span>
+  <div class="cluster">
+    <a routerLink="/workflows" class="btn btn-ghost btn-sm">{{ 'workflow.instance.back' | t }}</a>
+  </div>
+</div>
+
+@if (loading) {
+  <div class="panel"><div class="empty-state"><span class="spinner" [attr.aria-label]="'common.loading' | t"></span></div></div>
+}
+@if (loadError) {
+  <div class="alert alert-danger" role="alert">{{ loadError }}</div>
+}
+
+@if (!loading && !loadError) {
+  <div class="panel">
+    <div class="panel-body">
+      <p class="muted-hint">{{ 'workflow.versions.hint' | t }}</p>
+
+      @if (versions.length > 0) {
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{{ 'workflow.versions.colVersion' | t }}</th>
+              <th>{{ 'workflow.list.colName' | t }}</th>
+              <th>{{ 'workflow.versions.colStatus' | t }}</th>
+              <th>{{ 'workflow.list.colTrigger' | t }}</th>
+              <th>{{ 'workflow.versions.colCreated' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (version of versions; track version.id) {
+              <tr>
+                <td>{{ version.version > 0 ? 'v' + version.version : '—' }}</td>
+                <td>{{ version.name }}</td>
+                <td>
+                  <span class="badge" [class]="'badge ' + statusClass(version.status)">
+                    {{ 'workflow.status.' + version.status | t }}
+                  </span>
+                </td>
+                <td>{{ 'workflow.trigger.' + version.triggerEvent | t }}</td>
+                <td>{{ when(version.createdOn) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <div class="empty-state"><p>{{ 'workflow.versions.empty' | t }}</p></div>
+      }
+    </div>
+  </div>
+}

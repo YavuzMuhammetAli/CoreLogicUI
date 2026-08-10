@@ -179,6 +179,40 @@ export const WORKFLOW_I18N: Translations = {
   'task.detail.tooLong': { tr: 'En fazla {max} karakter.', en: 'At most {max} characters.' },
   'task.detail.selectOption': { tr: 'Seçiniz', en: 'Select' },
 
+  // ── workflow-instance (süreç detayı) ──────────────────────────────────────
+  'workflow.instance.title': { tr: 'Süreç Detayı', en: 'Process Detail' },
+  'workflow.instance.back': { tr: 'İş akışlarına dön', en: 'Back to workflows' },
+  'workflow.instance.status': { tr: 'Durum', en: 'Status' },
+  'workflow.instance.currentStep': { tr: 'Açık adım', en: 'Current step' },
+  'workflow.instance.startedAt': { tr: 'Başlangıç', en: 'Started' },
+  'workflow.instance.completedAt': { tr: 'Bitiş', en: 'Completed' },
+  'workflow.instance.steps': { tr: 'Adımlar ve görevler', en: 'Steps and tasks' },
+  'workflow.instance.parallel': { tr: 'Paralel', en: 'Parallel' },
+  'workflow.instance.bySystem': { tr: 'Sistem', en: 'System' },
+  'workflow.instance.verifyChain': { tr: 'Zinciri Doğrula', en: 'Verify Chain' },
+  'workflow.instance.chainValid': {
+    tr: 'Olay günlüğü bütünlüğü doğrulandı ({count} kayıt).',
+    en: 'Event log integrity verified ({count} entries).'
+  },
+  'workflow.instance.chainBroken': {
+    tr: 'Olay günlüğü zinciri {id} numaralı kayıtta bozuk.',
+    en: 'The event log chain is broken at entry {id}.'
+  },
+  'workflow.instance.loadFailed': { tr: 'Süreç yüklenemedi.', en: 'Process could not be loaded.' },
+  'workflow.instance.serverError': { tr: 'Sunucuya ulaşılamadı.', en: 'Could not reach the server.' },
+
+  // ── workflow-versions (sürüm geçmişi) ─────────────────────────────────────
+  'workflow.versions.title': { tr: 'Sürüm Geçmişi', en: 'Version History' },
+  'workflow.versions.colVersion': { tr: 'Sürüm', en: 'Version' },
+  'workflow.versions.colStatus': { tr: 'Durum', en: 'Status' },
+  'workflow.versions.colCreated': { tr: 'Oluşturma', en: 'Created' },
+  'workflow.versions.empty': { tr: 'Bu akışın sürüm geçmişi yok.', en: 'This workflow has no version history.' },
+  'workflow.versions.hint': {
+    tr: 'Yayınlanan her sürüm değişmezdir; çalışan süreçler başladıkları sürümde devam eder.',
+    en: 'Every published version is immutable; running processes continue on the version they started with.'
+  },
+  'workflow.versions.loadFailed': { tr: 'Sürümler yüklenemedi.', en: 'Versions could not be loaded.' },
+
   // ── Ortak sözlükler ───────────────────────────────────────────────────────
   'workflow.status.Draft': { tr: 'Taslak', en: 'Draft' },
   'workflow.status.Published': { tr: 'Yayında', en: 'Published' },

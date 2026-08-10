@@ -20,6 +20,7 @@ import { PublishedColumnSchema } from '../../services/published-table.service';
 import { RecordFormDialogComponent } from '../shared/record-form-dialog/record-form-dialog.component';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { LookupPickerComponent } from '../shared/lookup-picker/lookup-picker.component';
+import { WorkflowPanelComponent } from '../shared/workflow-panel/workflow-panel.component';
 import { LookupLabelService } from '../../services/lookup-label.service';
 import {
   StagedNode,
@@ -96,7 +97,8 @@ interface TabState {
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, ColumnVisibilityComponent,
-    TranslatePipe, RecordFormDialogComponent, ConfirmDialogComponent, LookupPickerComponent
+    TranslatePipe, RecordFormDialogComponent, ConfirmDialogComponent, LookupPickerComponent,
+    WorkflowPanelComponent
   ],
   templateUrl: './model-detail.component.html',
   styleUrls: ['./model-detail.component.scss'],

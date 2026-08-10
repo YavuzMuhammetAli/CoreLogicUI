@@ -122,6 +122,14 @@
                 @for (header of tableHeaders; track header.key) {
                   <th scope="col">{{ header.label }}</th>
                 }
+                <!--
+                  H: Süreç durumu kolonu — YALNIZCA bu modelde akış varsa çizilir.
+                  Kolon her modelde görünseydi, akış kullanmayan modellerde
+                  sürekli boş bir sütun olurdu.
+                -->
+                @if (hasWorkflowStatus) {
+                  <th scope="col">{{ 'workflow.panel.title' | t }}</th>
+                }
               </tr>
             </thead>
             <tbody>
@@ -163,6 +171,13 @@
                         </button>
                       } @else {
                         {{ cellValue(row, header.key) }}
+                      }
+                    </td>
+                  }
+                  @if (hasWorkflowStatus) {
+                    <td [attr.data-label]="'workflow.panel.title' | t">
+                      @if (workflowStatusOf(row); as wfStatus) {
+                        <span class="badge badge-warn">{{ wfStatus }}</span>
                       }
                     </td>
                   }

@@ -1,0 +1,144 @@
+<div class="page-header">
+  <span class="eyebrow">{{ 'workflow.instance.title' | t }}</span>
+  <div class="cluster">
+    <a routerLink="/workflows" class="btn btn-ghost btn-sm">{{ 'workflow.instance.back' | t }}</a>
+    @if (isAdmin) {
+      <button type="button" class="btn btn-secondary btn-sm" [disabled]="verifying" (click)="verifyChain()">
+        {{ 'workflow.instance.verifyChain' | t }}
+      </button>
+    }
+    @if (canCancel) {
+      <button type="button" class="btn btn-danger btn-sm" [disabled]="cancelling" (click)="askCancel()">
+        {{ 'workflow.panel.cancel' | t }}
+      </button>
+    }
+  </div>
+</div>
+
+@if (loading) {
+  <div class="panel"><div class="empty-state"><span class="spinner" [attr.aria-label]="'common.loading' | t"></span></div></div>
+}
+@if (loadError) {
+  <div class="alert alert-danger" role="alert">{{ loadError }}</div>
+}
+
+@if (chain; as c) {
+  <div class="alert" [class.alert-success]="c.isValid" [class.alert-danger]="!c.isValid" role="status">
+    @if (c.isValid) {
+      {{ 'workflow.instance.chainValid' | t:{ count: c.eventCount } }}
+    } @else {
+      {{ 'workflow.instance.chainBroken' | t:{ id: c.brokenAtEventId ?? 0 } }} {{ c.reason }}
+    }
+  </div>
+}
+
+@if (instance; as inst) {
+  <div class="flow">
+    <div class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">{{ inst.definitionName }}</h2>
+        <p class="panel-subtitle">v{{ inst.definitionVersion }}</p>
+      </div>
+      <div class="panel-body">
+        <dl class="instance-meta">
+          <div>
+            <dt>{{ 'workflow.instance.status' | t }}</dt>
+            <dd><span class="badge" [class]="'badge ' + statusClass(inst.status)">
+              {{ 'workflow.instance.' + inst.status | t }}
+            </span></dd>
+          </div>
+          <div>
+            <dt>{{ 'task.detail.record' | t }}</dt>
+            <dd><a [routerLink]="['/models', inst.entityType, inst.entityId]">
+              {{ inst.entityType }} #{{ inst.entityId }}
+            </a></dd>
+          </div>
+          <div>
+            <dt>{{ 'workflow.instance.currentStep' | t }}</dt>
+            <dd>{{ inst.currentStepKey || '—' }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'workflow.instance.startedAt' | t }}</dt>
+            <dd>{{ when(inst.startedAt) }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'workflow.instance.completedAt' | t }}</dt>
+            <dd>{{ when(inst.completedAt) }}</dd>
+          </div>
+        </dl>
+
+        @if (inst.errorMessage) {
+          <div class="alert alert-danger" role="alert">{{ inst.errorMessage }}</div>
+        }
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2 class="panel-title">{{ 'workflow.instance.steps' | t }}</h2></div>
+      <div class="panel-body">
+        <div class="stack">
+          @for (group of stepGroups; track group.stepKey) {
+            <div class="step-group" [class.step-group--parallel]="isParallelGroup(group)">
+              <div class="step-group-head">
+                <code class="step-key">{{ group.stepKey }}</code>
+                @if (isParallelGroup(group)) {
+                  <span class="badge badge-meta">{{ 'workflow.instance.parallel' | t }}</span>
+                }
+              </div>
+              <table class="data-table">
+                <tbody>
+                  @for (task of group.tasks; track task.id) {
+                    <tr>
+                      <td>
+                        {{ task.name }}
+                        @if (task.branchKey) { <code class="branch-tag">{{ task.branchKey }}</code> }
+                      </td>
+                      <td>{{ task.assignedRoleName || ('#' + (task.assignedUserId ?? '')) }}</td>
+                      <td>
+                        <span class="badge" [class]="'badge ' + taskStatusClass(task.status)">
+                          {{ 'workflow.task.' + task.status | t }}
+                        </span>
+                      </td>
+                      <td>{{ when(task.completedAt) }}</td>
+                      <td>
+                        @if (task.completedAt && !task.completedBy) {
+                          <span class="badge badge-meta">{{ 'workflow.instance.bySystem' | t }}</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    @if (inst.timeline.length > 0) {
+      <div class="panel">
+        <div class="panel-head"><h2 class="panel-title">{{ 'task.detail.timeline' | t }}</h2></div>
+        <div class="panel-body">
+          <ol class="timeline">
+            @for (event of inst.timeline; track event.id) {
+              <li>
+                <span class="timeline-dot" aria-hidden="true"></span>
+                <span class="timeline-label">{{ eventLabel(event) }}</span>
+                @if (event.stepKey) { <code class="timeline-step">{{ event.stepKey }}</code> }
+                <span class="timeline-time">{{ when(event.createdAt) }}</span>
+              </li>
+            }
+          </ol>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<app-confirm-dialog
+  [open]="pendingCancel"
+  [title]="'workflow.panel.cancelConfirmTitle' | t"
+  [message]="'workflow.panel.cancelConfirm' | t"
+  [busy]="cancelling"
+  (confirmed)="confirmCancel()"
+  (cancelled)="cancelCancel()" />

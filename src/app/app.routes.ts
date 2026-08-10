@@ -216,6 +216,19 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/deleted-workflows/deleted-workflows.component').then(m => m.DeletedWorkflowsComponent)
       },
+      // "instances" ve "versions" da sabit segment — ":id"'den ÖNCE gelmeli.
+      {
+        path: 'workflows/instances/:id',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/workflow-instance/workflow-instance.component').then(m => m.WorkflowInstanceComponent)
+      },
+      {
+        path: 'workflows/versions/:code',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/workflow-versions/workflow-versions.component').then(m => m.WorkflowVersionsComponent)
+      },
       {
         path: 'workflows/:id/edit',
         canActivate: [adminGuard],

@@ -54,7 +54,11 @@
                     <span class="badge badge-meta">{{ 'workflow.list.disabledBadge' | t }}</span>
                   }
                 </td>
-                <td><code class="wf-code">{{ workflow.code }}</code></td>
+                <td>
+                  <a [routerLink]="['/workflows/versions', workflow.code]" class="wf-code-link">
+                    <code class="wf-code">{{ workflow.code }}</code>
+                  </a>
+                </td>
                 <td>{{ workflow.modelName }}</td>
                 <td>{{ 'workflow.trigger.' + workflow.triggerEvent | t }}</td>
                 <td>

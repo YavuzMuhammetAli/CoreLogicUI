@@ -142,6 +142,15 @@ export interface WorkflowTask {
   isOverdue: boolean;
 }
 
+/** Olay günlüğü zincir doğrulama sonucu. */
+export interface WorkflowChain {
+  isValid: boolean;
+  eventCount: number;
+  /** İlk bozuk satırın ID'si; zincir sağlamsa null. */
+  brokenAtEventId?: number | null;
+  reason?: string | null;
+}
+
 export interface StartWorkflowRequest {
   entityType: string;
   entityId: number;

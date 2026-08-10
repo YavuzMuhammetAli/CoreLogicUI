@@ -555,6 +555,14 @@
     (cancelled)="closeRecordDialog()" />
 }
 
+<!--
+  H: Süreç paneli — yalnızca KAYITLI kayıtlarda. Yeni kayıtta henüz ID yok ve
+  bir sürece bağlanamaz. Panel, workflow modülü kurulu değilse kendini gizler.
+-->
+@if (!isNew && recordId > 0 && typeName) {
+  <app-workflow-panel [entityType]="typeName" [entityId]="recordId" />
+}
+
 <!-- ══ TOPLU SİLME / KALDIRMA ONAYI ═══════════════════════════════════════════ -->
 <app-confirm-dialog
   [open]="!!bulkState"

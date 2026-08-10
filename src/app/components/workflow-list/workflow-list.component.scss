@@ -14,3 +14,11 @@
 .table-wrapper {
   overflow-x: auto;
 }
+
+// Kod, sürüm geçmişine bağlantı — "hangi süreç hangi kurallarla koştu"
+// sorusu denetimde sıkça sorulur.
+.wf-code-link {
+  text-decoration: none;
+
+  &:hover .wf-code { color: var(--accent); text-decoration: underline; }
+}

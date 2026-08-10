@@ -399,6 +399,29 @@ export class ModelDataComponent implements OnInit {
     return Number(row['ID'] ?? row['id'] ?? 0);
   }
 
+  /**
+   * H: Kaydın açık iş akışındaki durumu.
+   *
+   * WorkflowStatus DbBaseObject'ten gelen bir SİSTEM kolonudur; kullanıcı
+   * kolonları arasında (tableHeaders) yer almaz ama satır verisinde taşınır.
+   * Sunucu camelCase döndüğü için iki yazım da denenir.
+   */
+  workflowStatusOf(row: DataRow): string {
+    const value = row['workflowStatus'] ?? row['WorkflowStatus'];
+    return typeof value === 'string' ? value.trim() : '';
+  }
+
+  /**
+   * Süreç kolonu yalnızca en az bir satırda durum varsa çizilir.
+   *
+   * Akış kullanmayan modellerde kolonu her zaman göstermek, sürekli boş bir
+   * sütun bırakırdı; kolon listesi zaten admin tarafından yönetiliyor ve
+   * gereksiz genişlik pahalı.
+   */
+  get hasWorkflowStatus(): boolean {
+    return this.rows.some(row => this.workflowStatusOf(row) !== '');
+  }
+
   /** Sürüm geçmişini backend'den yükler */
   loadVersions(): void {
     this.publishedTableService.getVersions(this.typeName).pipe(markDirty(this.cdr)).subscribe({

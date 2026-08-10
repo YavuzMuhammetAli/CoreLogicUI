@@ -1,0 +1,91 @@
+.instance-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+
+  dt {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    margin-bottom: var(--space-1);
+  }
+
+  dd { margin: 0; color: var(--fg); }
+}
+
+// Adım grubu — paralel adımda dallar bir arada durur, düz liste "aynı adım iki
+// kez açılmış" gibi okunurdu.
+.step-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 10px);
+  overflow: hidden;
+}
+
+.step-group--parallel {
+  border-style: dashed;
+  border-color: var(--accent);
+}
+
+.step-group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-warm);
+}
+
+.step-key,
+.branch-tag,
+.timeline-step {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--fg-2);
+}
+
+.branch-tag {
+  margin-left: var(--space-2);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--surface-warm);
+}
+
+// Zaman çizelgesi — task-detail ile aynı görünüm.
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--space-4);
+  border-left: 2px solid var(--border);
+
+  li {
+    position: relative;
+    padding: var(--space-2) 0 var(--space-2) var(--space-3);
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+}
+
+.timeline-dot {
+  position: absolute;
+  left: calc(-1 * var(--space-4) - 5px);
+  top: calc(var(--space-2) + 6px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.timeline-label { color: var(--fg); font-weight: 500; }
+
+.timeline-time {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+@media (max-width: 768px) {
+  .timeline-time { margin-left: 0; flex-basis: 100%; }
+}

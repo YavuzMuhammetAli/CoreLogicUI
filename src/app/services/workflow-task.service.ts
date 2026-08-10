@@ -7,6 +7,7 @@ import { DataResponseModel } from '../models/dataResponseModel';
 import {
   CompleteTaskRequest,
   StartWorkflowRequest,
+  WorkflowChain,
   WorkflowInstance,
   WorkflowTask
 } from '../models/workflow.model';
@@ -83,6 +84,17 @@ export class WorkflowInstanceService {
     return this.http.get<ListResponseModel<WorkflowInstance>>(`${this.baseUrl}/forEntity`, {
       params: new HttpParams().set('entityType', entityType).set('entityId', entityId)
     });
+  }
+
+  /**
+   * Olay günlüğü zincirini doğrular (denetim, admin).
+   *
+   * Günlük salt-ekleme olduğu için normalde bozulamaz; bu uç veritabanına
+   * doğrudan müdahale edilip edilmediğini gösterir.
+   */
+  verifyChain(instanceId: number): Observable<DataResponseModel<WorkflowChain>> {
+    return this.http.get<DataResponseModel<WorkflowChain>>(
+      `${this.baseUrl}/verifyChain`, { params: new HttpParams().set('instanceId', instanceId) });
   }
 
   /** Süreci iptal eder ve açık görevlerini kapatır (admin). */

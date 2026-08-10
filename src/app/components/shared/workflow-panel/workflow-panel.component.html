@@ -1,0 +1,48 @@
+<!--
+  Modül kurulu değilse ya da yetki yoksa panel HİÇ çizilmez — kayıt ekranı
+  akış olmadan da tam çalışmalı.
+-->
+@if (!unavailable) {
+  <div class="panel">
+    <div class="panel-head">
+      <h2 class="panel-title">{{ 'workflow.panel.title' | t }}</h2>
+      @if (manualWorkflows.length > 0 && !hasRunning) {
+        <div class="panel-actions">
+          @for (workflow of manualWorkflows; track workflow.id) {
+            <button type="button" class="btn btn-secondary btn-sm"
+                    [disabled]="starting"
+                    (click)="start(workflow.code)">
+              {{ 'workflow.panel.start' | t }}: {{ workflow.name }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="panel-body">
+      @if (loading) {
+        <div class="empty-state"><span class="spinner" [attr.aria-label]="'common.loading' | t"></span></div>
+      } @else if (instances.length === 0) {
+        <p class="muted-hint">{{ 'workflow.panel.none' | t }}</p>
+      } @else {
+        <ul class="instance-list">
+          @for (instance of instances; track instance.id) {
+            <li>
+              <a [routerLink]="['/workflows/instances', instance.id]" class="instance-link">
+                {{ instance.definitionName }}
+                <span class="instance-version">v{{ instance.definitionVersion }}</span>
+              </a>
+              <span class="badge" [class]="'badge ' + statusClass(instance.status)">
+                {{ 'workflow.instance.' + instance.status | t }}
+              </span>
+              @if (instance.currentStepKey) {
+                <code class="instance-step">{{ instance.currentStepKey }}</code>
+              }
+              <span class="instance-time">{{ when(instance.startedAt) }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </div>
+}
