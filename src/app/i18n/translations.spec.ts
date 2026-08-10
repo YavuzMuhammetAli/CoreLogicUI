@@ -74,7 +74,10 @@ describe('TRANSLATIONS', () => {
   it('deleted-* ekranlarının tamamı aynı anahtar setine sahiptir', () => {
     // Dört ekran tek generic component kullanır; component bu son ekleri
     // {prefix}.{suffix} olarak çözer. Biri eksikse o ekranda ham anahtar görünür.
-    const prefixes = ['deleted.models', 'deleted.drafts', 'deleted.reports', 'deleted.dashboards'];
+    const prefixes = [
+      'deleted.models', 'deleted.drafts', 'deleted.reports',
+      'deleted.dashboards', 'deleted.workflows'
+    ];
     const suffixes = [
       'backLink', 'title', 'refresh', 'loadingAria', 'loading',
       'empty', 'emptyHint', 'countSuffix', 'loadFailed',

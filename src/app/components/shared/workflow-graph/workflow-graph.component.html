@@ -1,0 +1,52 @@
+@if (isEmpty()) {
+  <div class="empty-state">
+    <p>{{ 'workflow.build.previewEmpty' | t }}</p>
+  </div>
+} @else {
+  <div class="graph-scroll">
+    <svg class="workflow-graph"
+         [attr.viewBox]="viewBox()"
+         role="img"
+         [attr.aria-label]="'workflow.build.previewAria' | t">
+      <defs>
+        <marker id="wf-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" class="arrow-head" />
+        </marker>
+        <marker id="wf-arrow-reject" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" class="arrow-head arrow-head--reject" />
+        </marker>
+      </defs>
+
+      <!-- Kenarlar önce çizilir ki düğümler üstte kalsın. -->
+      @for (edge of edges(); track edge.key) {
+        <g class="graph-edge" [class.graph-edge--reject]="edge.isRejection">
+          <path [attr.d]="edge.path"
+                [attr.marker-end]="edge.isRejection ? 'url(#wf-arrow-reject)' : 'url(#wf-arrow)'" />
+          <text [attr.x]="edge.labelX" [attr.y]="edge.labelY" text-anchor="middle">{{ edge.label }}</text>
+        </g>
+      }
+
+      @for (node of nodes(); track node.key) {
+        <g class="graph-node"
+           [class.graph-node--start]="node.isStart"
+           [class.graph-node--terminal]="node.isTerminal"
+           [class.graph-node--reject]="node.isRejection">
+          <rect [attr.x]="node.x" [attr.y]="node.y"
+                [attr.width]="node.width" [attr.height]="node.height"
+                [attr.rx]="node.isTerminal ? node.height / 2 : 8" />
+          <text [attr.x]="node.x + node.width / 2"
+                [attr.y]="node.y + (node.isTerminal ? node.height / 2 + 4 : 22)"
+                text-anchor="middle">{{ node.label }}</text>
+          @if (!node.isTerminal) {
+            <text class="node-key"
+                  [attr.x]="node.x + node.width / 2"
+                  [attr.y]="node.y + 38"
+                  text-anchor="middle">{{ node.key }}</text>
+          }
+        </g>
+      }
+    </svg>
+  </div>
+}

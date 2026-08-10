@@ -111,7 +111,39 @@
           </svg>
           {{ 'layout.ai' | t }}
         </a>
+        <a
+          class="nav-item"
+          routerLink="/workflows"
+          routerLinkActive="active"
+          [attr.aria-label]="'layout.workflowsAria' | t">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="16" width="7" height="5" rx="1"/>
+            <path d="M6.5 8v6a2 2 0 0 0 2 2h9"/>
+          </svg>
+          {{ 'layout.workflows' | t }}
+        </a>
       }
+
+      <!--
+        H: Görevlerim — admin bloğunun DIŞINDA, çünkü onay görevleri normal
+        kullanıcılara düşer. Rozet bekleyen görev sayısını gösterir; projede
+        SignalR olmadığı için bu sayı pollanır (layout.component.ts).
+      -->
+      <a
+        class="nav-item"
+        routerLink="/tasks"
+        routerLinkActive="active"
+        [attr.aria-label]="'layout.tasksAria' | t">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+        {{ 'layout.tasks' | t }}
+        @if (pendingTaskCount() > 0) {
+          <span class="nav-badge" [attr.aria-label]="'layout.tasksBadgeAria' | t:{ count: pendingTaskCount() }">
+            {{ pendingTaskCount() }}
+          </span>
+        }
+      </a>
 
       <!-- Normal kullanıcı: yalnızca okuma yetkili tablolar -->
       @if (!permissionService.isAdmin()) {

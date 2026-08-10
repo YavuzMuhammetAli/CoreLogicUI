@@ -1,0 +1,93 @@
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { ResponseModel } from '../models/responseModel';
+import { ListResponseModel } from '../models/responseModelList';
+import { DataResponseModel } from '../models/dataResponseModel';
+import {
+  CompleteTaskRequest,
+  StartWorkflowRequest,
+  WorkflowInstance,
+  WorkflowTask
+} from '../models/workflow.model';
+import { environment } from '../../environments/environment';
+
+/**
+ * Görev servisi — backend WorkflowTaskController (`/WorkflowTask`).
+ *
+ * Bu uçlar admin İSTEMEZ: yetkilendirme atamayla yapılır (görevi yalnızca atanan
+ * kullanıcı ya da atanan rolün üyesi kapatabilir, kontrol sunucuda).
+ */
+@Injectable({ providedIn: 'root' })
+export class WorkflowTaskService {
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = `${environment.apiBaseUrl}/WorkflowTask`;
+
+  /** Oturumdaki kullanıcının bekleyen görevleri (doğrudan atananlar + rol havuzu). */
+  my(): Observable<ListResponseModel<WorkflowTask>> {
+    return this.http.get<ListResponseModel<WorkflowTask>>(`${this.baseUrl}/my`);
+  }
+
+  /** Sidebar rozeti — tam listeyi çekmeden yalnız sayı. */
+  myCount(): Observable<DataResponseModel<number>> {
+    return this.http.get<DataResponseModel<number>>(`${this.baseUrl}/myCount`);
+  }
+
+  get(id: number): Observable<DataResponseModel<WorkflowTask>> {
+    return this.http.get<DataResponseModel<WorkflowTask>>(
+      `${this.baseUrl}/get`, { params: new HttpParams().set('id', id) });
+  }
+
+  forInstance(instanceId: number): Observable<ListResponseModel<WorkflowTask>> {
+    return this.http.get<ListResponseModel<WorkflowTask>>(
+      `${this.baseUrl}/forInstance`, { params: new HttpParams().set('instanceId', instanceId) });
+  }
+
+  /** Görevi onaylar veya reddeder ve akışı ilerletir. */
+  complete(request: CompleteTaskRequest): Observable<ResponseModel> {
+    return this.http.post<ResponseModel>(`${this.baseUrl}/complete`, request);
+  }
+}
+
+/**
+ * Süreç servisi — backend WorkflowInstanceController (`/WorkflowInstance`).
+ *
+ * Görev servisiyle aynı dosyada duruyor çünkü ikisi de "çalışan süreç" alanına ait
+ * ve ekranlar (görev detayı, kayıt detayındaki Süreç paneli) ikisini birlikte
+ * kullanıyor. Tanım yönetimi ise ayrı bir yetki alanı olduğu için ayrı serviste.
+ */
+@Injectable({ providedIn: 'root' })
+export class WorkflowInstanceService {
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = `${environment.apiBaseUrl}/WorkflowInstance`;
+
+  /** Elle süreç başlatır. Yetki: kayıt üzerinde güncelleme izni (sunucuda denetlenir). */
+  start(request: StartWorkflowRequest): Observable<DataResponseModel<number>> {
+    return this.http.post<DataResponseModel<number>>(`${this.baseUrl}/start`, request);
+  }
+
+  /** Zaman çizelgesi ve görevleriyle birlikte tek süreç. */
+  get(id: number): Observable<DataResponseModel<WorkflowInstance>> {
+    return this.http.get<DataResponseModel<WorkflowInstance>>(
+      `${this.baseUrl}/get`, { params: new HttpParams().set('id', id) });
+  }
+
+  list(status?: string): Observable<ListResponseModel<WorkflowInstance>> {
+    let params = new HttpParams();
+    if (status) params = params.set('status', status);
+    return this.http.get<ListResponseModel<WorkflowInstance>>(`${this.baseUrl}/list`, { params });
+  }
+
+  /** Kayıt detayındaki "Süreç" panelinin veri kaynağı. */
+  forEntity(entityType: string, entityId: number): Observable<ListResponseModel<WorkflowInstance>> {
+    return this.http.get<ListResponseModel<WorkflowInstance>>(`${this.baseUrl}/forEntity`, {
+      params: new HttpParams().set('entityType', entityType).set('entityId', entityId)
+    });
+  }
+
+  /** Süreci iptal eder ve açık görevlerini kapatır (admin). */
+  cancel(id: number): Observable<ResponseModel> {
+    return this.http.post<ResponseModel>(
+      `${this.baseUrl}/cancel`, null, { params: new HttpParams().set('id', id) });
+  }
+}

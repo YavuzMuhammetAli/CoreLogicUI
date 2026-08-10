@@ -1,0 +1,87 @@
+// Görev künyesi — etiket/değer çiftleri esnek ızgarada.
+.task-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+
+  dt {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    margin-bottom: var(--space-1);
+  }
+
+  dd {
+    margin: 0;
+    color: var(--fg);
+  }
+
+  .badge {
+    margin-left: var(--space-2);
+  }
+}
+
+.req {
+  color: var(--danger);
+  margin-left: 2px;
+}
+
+// Alan tipini gösteren küçük etiket (record-form-dialog ile aynı görünüm).
+.col-type-tag {
+  margin-left: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+// Süreç geçmişi — sol kenarda dikey çizgi, her olay bir nokta.
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--space-4);
+  border-left: 2px solid var(--border);
+
+  li {
+    position: relative;
+    padding: var(--space-2) 0 var(--space-2) var(--space-3);
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+}
+
+.timeline-dot {
+  position: absolute;
+  left: calc(-1 * var(--space-4) - 5px);
+  top: calc(var(--space-2) + 6px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.timeline-label {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.timeline-step {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--fg-2);
+}
+
+.timeline-time {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+@media (max-width: 768px) {
+  .timeline-time {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+}

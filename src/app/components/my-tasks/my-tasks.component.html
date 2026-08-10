@@ -1,0 +1,75 @@
+<div class="page-header">
+  <span class="eyebrow">{{ 'task.list.title' | t }}</span>
+  <div class="cluster">
+    <button type="button" class="btn btn-secondary btn-sm" (click)="load()">
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" />
+      </svg>
+      {{ 'task.list.refresh' | t }}
+    </button>
+  </div>
+</div>
+
+@if (loading()) {
+  <div class="panel">
+    <div class="empty-state">
+      <span class="spinner" [attr.aria-label]="'common.loading' | t"></span>
+    </div>
+  </div>
+}
+
+@if (loadError(); as error) {
+  <div class="alert alert-danger" role="alert">{{ error }}</div>
+}
+
+@if (!loading() && !loadError()) {
+  @if (hasTasks()) {
+    <div class="panel">
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{{ 'task.list.colTask' | t }}</th>
+              <th>{{ 'task.list.colWorkflow' | t }}</th>
+              <th>{{ 'task.list.colRecord' | t }}</th>
+              <th>{{ 'task.list.colAssigned' | t }}</th>
+              <th>{{ 'task.list.colDue' | t }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (task of tasks(); track task.id) {
+              <tr>
+                <td>{{ task.name }}</td>
+                <td>{{ task.workflowName }}</td>
+                <td>{{ task.entityType }} #{{ task.entityId }}</td>
+                <td>{{ assigneeLabel(task) }}</td>
+                <td>
+                  {{ dueLabel(task) }}
+                  @if (task.isOverdue) {
+                    <span class="badge badge-danger">{{ 'task.list.overdue' | t }}</span>
+                  }
+                </td>
+                <td>
+                  <div class="td-actions">
+                    <a [routerLink]="['/tasks', task.id]" class="btn btn-primary btn-sm">
+                      {{ 'task.list.open' | t }}
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  } @else {
+    <div class="panel">
+      <div class="empty-state">
+        <div class="empty-icon" aria-hidden="true">✅</div>
+        <h3>{{ 'task.list.emptyTitle' | t }}</h3>
+        <p>{{ 'task.list.emptyHint' | t }}</p>
+      </div>
+    </div>
+  }
+}

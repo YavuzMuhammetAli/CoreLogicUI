@@ -1,0 +1,242 @@
+import { Translations } from './translations.model';
+
+/**
+ * İş akışı modülü çevirileri.
+ *
+ * Kapsanan bileşenler:
+ *   components/workflow-list      → workflow.list.*
+ *   components/workflow-build     → workflow.build.*
+ *   components/my-tasks           → task.list.*
+ *   components/task-detail        → task.detail.*
+ *   ortak sözlükler               → workflow.status.*, workflow.trigger.*,
+ *                                   workflow.assign.*, workflow.timeout.*,
+ *                                   workflow.event.*
+ *   silinenler ekranı             → deleted.workflows.*
+ */
+export const WORKFLOW_I18N: Translations = {
+  // ── workflow-list ─────────────────────────────────────────────────────────
+  'workflow.list.title': { tr: 'İş Akışları', en: 'Workflows' },
+  'workflow.list.new': { tr: 'Yeni Akış', en: 'New Workflow' },
+  'workflow.list.deleted': { tr: 'Silinenler', en: 'Deleted' },
+  'workflow.list.colName': { tr: 'Ad', en: 'Name' },
+  'workflow.list.colCode': { tr: 'Kod', en: 'Code' },
+  'workflow.list.colModel': { tr: 'Model', en: 'Model' },
+  'workflow.list.colTrigger': { tr: 'Tetikleyici', en: 'Trigger' },
+  'workflow.list.colStatus': { tr: 'Durum', en: 'Status' },
+  'workflow.list.colVersion': { tr: 'Sürüm', en: 'Version' },
+  'workflow.list.colRunning': { tr: 'Çalışan', en: 'Running' },
+  'workflow.list.emptyTitle': { tr: 'Henüz iş akışı tanımlanmadı', en: 'No workflows defined yet' },
+  'workflow.list.emptyHint': {
+    tr: 'Bir modeli onay sürecine bağlamak için yeni bir akış oluşturun.',
+    en: 'Create a workflow to attach an approval process to a model.'
+  },
+  'workflow.list.loadFailed': { tr: 'İş akışları yüklenemedi.', en: 'Workflows could not be loaded.' },
+  'workflow.list.serverError': { tr: 'Sunucuya ulaşılamadı.', en: 'Could not reach the server.' },
+  'workflow.list.publish': { tr: 'Yayınla', en: 'Publish' },
+  'workflow.list.publishSuccess': { tr: 'Akış yayınlandı.', en: 'Workflow published.' },
+  'workflow.list.deleteConfirmTitle': { tr: 'Akışı sil', en: 'Delete workflow' },
+  'workflow.list.deleteConfirm': {
+    tr: '{name} akışı pasife alınacak. Çalışan süreçler kendi sürümleriyle devam eder.',
+    en: 'The workflow {name} will be deactivated. Running processes continue on their own versions.'
+  },
+  'workflow.list.disabledBadge': { tr: 'Kapalı', en: 'Disabled' },
+
+  // ── workflow-build ────────────────────────────────────────────────────────
+  'workflow.build.titleNew': { tr: 'Yeni İş Akışı', en: 'New Workflow' },
+  'workflow.build.titleEdit': { tr: 'Akışı Düzenle', en: 'Edit Workflow' },
+  'workflow.build.tabSteps': { tr: 'Adımlar', en: 'Steps' },
+  'workflow.build.tabTrigger': { tr: 'Tetikleyici', en: 'Trigger' },
+  'workflow.build.tabPreview': { tr: 'Önizleme', en: 'Preview' },
+  'workflow.build.tablistAria': { tr: 'Akış tasarım sekmeleri', en: 'Workflow design tabs' },
+  'workflow.build.name': { tr: 'Akış adı', en: 'Workflow name' },
+  'workflow.build.code': { tr: 'Kod', en: 'Code' },
+  'workflow.build.codeHelp': {
+    tr: 'Sürümler arası sabit kimlik. Harf ile başlar; harf, rakam ve alt çizgi içerebilir.',
+    en: 'Stable identity across versions. Starts with a letter; may contain letters, digits and underscores.'
+  },
+  'workflow.build.model': { tr: 'Hedef model', en: 'Target model' },
+  'workflow.build.selectModel': { tr: 'Model seçin', en: 'Select a model' },
+  'workflow.build.isEnabled': { tr: 'Akış etkin', en: 'Workflow enabled' },
+  'workflow.build.isEnabledHelp': {
+    tr: 'Kapatılırsa yeni süreç başlamaz; çalışanlar etkilenmez.',
+    en: 'When disabled, no new processes start; running ones are unaffected.'
+  },
+  'workflow.build.startStep': { tr: 'Başlangıç adımı', en: 'Start step' },
+  'workflow.build.addStep': { tr: 'Adım Ekle', en: 'Add Step' },
+  'workflow.build.removeStep': { tr: 'Adımı kaldır', en: 'Remove step' },
+  'workflow.build.stepKey': { tr: 'Anahtar', en: 'Key' },
+  'workflow.build.stepName': { tr: 'Adım adı', en: 'Step name' },
+  'workflow.build.assignMode': { tr: 'Atama', en: 'Assignment' },
+  'workflow.build.assignRole': { tr: 'Rol', en: 'Role' },
+  'workflow.build.assignUser': { tr: 'Kullanıcı', en: 'User' },
+  'workflow.build.selectRole': { tr: 'Rol seçin', en: 'Select a role' },
+  'workflow.build.selectUser': { tr: 'Kullanıcı seçin', en: 'Select a user' },
+  'workflow.build.dueHours': { tr: 'Süre (saat)', en: 'Due (hours)' },
+  'workflow.build.escalateHours': { tr: 'Yükseltme (saat)', en: 'Escalate (hours)' },
+  'workflow.build.onTimeout': { tr: 'Süre dolunca', en: 'On timeout' },
+  'workflow.build.onApprove': { tr: 'Onaylanırsa', en: 'If approved' },
+  'workflow.build.onReject': { tr: 'Reddedilirse', en: 'If rejected' },
+  'workflow.build.terminalCompleted': { tr: '→ Süreci tamamla', en: '→ Complete process' },
+  'workflow.build.terminalRejected': { tr: '→ Süreci reddet', en: '→ Reject process' },
+  'workflow.build.statusLabel': { tr: 'Kayıt durumu metni', en: 'Record status text' },
+  'workflow.build.statusLabelHelp': {
+    tr: 'Bu adım açıkken iş kaydının listede görünecek durumu.',
+    en: 'The status shown on the record in lists while this step is open.'
+  },
+  'workflow.build.formFields': { tr: 'Form alanları', en: 'Form fields' },
+  'workflow.build.addField': { tr: 'Alan Ekle', en: 'Add Field' },
+  'workflow.build.fieldName': { tr: 'Alan adı', en: 'Field name' },
+  'workflow.build.fieldType': { tr: 'Tip', en: 'Type' },
+  'workflow.build.fieldLabel': { tr: 'Etiket', en: 'Label' },
+  'workflow.build.fieldRequired': { tr: 'Zorunlu', en: 'Required' },
+  'workflow.build.fieldEnumValues': { tr: 'Seçenekler (| ile ayır)', en: 'Options (separate with |)' },
+  'workflow.build.noSteps': { tr: 'Henüz adım eklenmedi.', en: 'No steps added yet.' },
+  'workflow.build.triggerEvent': { tr: 'Ne zaman tetiklensin', en: 'When to trigger' },
+  'workflow.build.conditions': { tr: 'Koşullar', en: 'Conditions' },
+  'workflow.build.conditionsHelp': {
+    tr: 'Tüm koşullar sağlanırsa süreç başlar. Boş bırakılırsa koşulsuz tetiklenir.',
+    en: 'The process starts when all conditions are met. Leave empty to trigger unconditionally.'
+  },
+  'workflow.build.addCondition': { tr: 'Koşul Ekle', en: 'Add Condition' },
+  'workflow.build.conditionField': { tr: 'Alan', en: 'Field' },
+  'workflow.build.conditionOperator': { tr: 'Operatör', en: 'Operator' },
+  'workflow.build.conditionValue': { tr: 'Değer', en: 'Value' },
+  'workflow.build.noConditions': { tr: 'Koşul yok — her kayıtta tetiklenir.', en: 'No conditions — triggers on every record.' },
+  'workflow.build.save': { tr: 'Kaydet', en: 'Save' },
+  'workflow.build.saveAndPublish': { tr: 'Kaydet ve Yayınla', en: 'Save and Publish' },
+  'workflow.build.validationTitle': { tr: 'Tanım sorunları', en: 'Definition issues' },
+  'workflow.build.validationOk': { tr: 'Tanım geçerli.', en: 'The definition is valid.' },
+  'workflow.build.saveFailed': { tr: 'Akış kaydedilemedi.', en: 'Workflow could not be saved.' },
+  'workflow.build.loadFailed': { tr: 'Akış yüklenemedi.', en: 'Workflow could not be loaded.' },
+  'workflow.build.serverError': { tr: 'Sunucuya ulaşılamadı.', en: 'Could not reach the server.' },
+  'workflow.build.publishedNotEditable': {
+    tr: 'Yayınlanmış sürüm düzenlenemez.',
+    en: 'A published version cannot be edited.'
+  },
+  'workflow.build.previewEmpty': { tr: 'Önizleme için en az bir adım ekleyin.', en: 'Add at least one step to preview.' },
+  'workflow.build.previewAria': { tr: 'Akış şeması', en: 'Workflow diagram' },
+
+  // ── my-tasks ──────────────────────────────────────────────────────────────
+  'task.list.title': { tr: 'Görevlerim', en: 'My Tasks' },
+  'task.list.colTask': { tr: 'Görev', en: 'Task' },
+  'task.list.colWorkflow': { tr: 'Akış', en: 'Workflow' },
+  'task.list.colRecord': { tr: 'Kayıt', en: 'Record' },
+  'task.list.colAssigned': { tr: 'Atanan', en: 'Assigned to' },
+  'task.list.colDue': { tr: 'Süre', en: 'Due' },
+  'task.list.noDue': { tr: 'Süresiz', en: 'No deadline' },
+  'task.list.overdue': { tr: 'Gecikmiş', en: 'Overdue' },
+  'task.list.open': { tr: 'Aç', en: 'Open' },
+  'task.list.emptyTitle': { tr: 'Bekleyen göreviniz yok', en: 'You have no pending tasks' },
+  'task.list.emptyHint': {
+    tr: 'Size veya rolünüze bir onay düştüğünde burada görünecek.',
+    en: 'Approvals assigned to you or your role will appear here.'
+  },
+  'task.list.loadFailed': { tr: 'Görevler yüklenemedi.', en: 'Tasks could not be loaded.' },
+  'task.list.serverError': { tr: 'Sunucuya ulaşılamadı.', en: 'Could not reach the server.' },
+  'task.list.refresh': { tr: 'Yenile', en: 'Refresh' },
+
+  // ── task-detail ───────────────────────────────────────────────────────────
+  'task.detail.title': { tr: 'Görev', en: 'Task' },
+  'task.detail.back': { tr: 'Görevlerime dön', en: 'Back to my tasks' },
+  'task.detail.record': { tr: 'İlgili kayıt', en: 'Related record' },
+  'task.detail.openRecord': { tr: 'Kaydı aç', en: 'Open record' },
+  'task.detail.form': { tr: 'Onay formu', en: 'Approval form' },
+  'task.detail.comment': { tr: 'Açıklama', en: 'Comment' },
+  'task.detail.approve': { tr: 'Onayla', en: 'Approve' },
+  'task.detail.reject': { tr: 'Reddet', en: 'Reject' },
+  'task.detail.approveConfirmTitle': { tr: 'Görevi onayla', en: 'Approve task' },
+  'task.detail.approveConfirm': {
+    tr: '{name} adımı onaylanacak ve süreç bir sonraki adıma geçecek.',
+    en: 'The step {name} will be approved and the process moves to the next step.'
+  },
+  'task.detail.rejectConfirmTitle': { tr: 'Görevi reddet', en: 'Reject task' },
+  'task.detail.rejectConfirm': {
+    tr: '{name} adımı reddedilecek. Bu işlem geri alınamaz.',
+    en: 'The step {name} will be rejected. This action cannot be undone.'
+  },
+  'task.detail.timeline': { tr: 'Süreç geçmişi', en: 'Process history' },
+  'task.detail.alreadyClosed': { tr: 'Bu görev sonuçlandırılmış.', en: 'This task has been resolved.' },
+  'task.detail.decision': { tr: 'Karar', en: 'Decision' },
+  'task.detail.loadFailed': { tr: 'Görev yüklenemedi.', en: 'Task could not be loaded.' },
+  'task.detail.serverError': { tr: 'Sunucuya ulaşılamadı.', en: 'Could not reach the server.' },
+  'task.detail.submitFailed': { tr: 'Görev sonuçlandırılamadı.', en: 'The task could not be resolved.' },
+  'task.detail.tooLong': { tr: 'En fazla {max} karakter.', en: 'At most {max} characters.' },
+  'task.detail.selectOption': { tr: 'Seçiniz', en: 'Select' },
+
+  // ── Ortak sözlükler ───────────────────────────────────────────────────────
+  'workflow.status.Draft': { tr: 'Taslak', en: 'Draft' },
+  'workflow.status.Published': { tr: 'Yayında', en: 'Published' },
+  'workflow.status.Archived': { tr: 'Arşiv', en: 'Archived' },
+
+  'workflow.instance.Running': { tr: 'Devam ediyor', en: 'Running' },
+  'workflow.instance.Completed': { tr: 'Tamamlandı', en: 'Completed' },
+  'workflow.instance.Rejected': { tr: 'Reddedildi', en: 'Rejected' },
+  'workflow.instance.Cancelled': { tr: 'İptal edildi', en: 'Cancelled' },
+  'workflow.instance.Failed': { tr: 'Hata', en: 'Failed' },
+
+  'workflow.task.Pending': { tr: 'Bekliyor', en: 'Pending' },
+  'workflow.task.Completed': { tr: 'Onaylandı', en: 'Approved' },
+  'workflow.task.Rejected': { tr: 'Reddedildi', en: 'Rejected' },
+  'workflow.task.Skipped': { tr: 'Atlandı', en: 'Skipped' },
+  'workflow.task.Expired': { tr: 'Süresi doldu', en: 'Expired' },
+  'workflow.task.Cancelled': { tr: 'İptal edildi', en: 'Cancelled' },
+
+  'workflow.trigger.onCreate': { tr: 'Kayıt oluşturulunca', en: 'When a record is created' },
+  'workflow.trigger.onUpdate': { tr: 'Kayıt güncellenince', en: 'When a record is updated' },
+  'workflow.trigger.manual': { tr: 'Elle başlatılınca', en: 'When started manually' },
+
+  'workflow.assign.role': { tr: 'Role', en: 'To a role' },
+  'workflow.assign.user': { tr: 'Kullanıcıya', en: 'To a user' },
+  'workflow.assign.creator': { tr: 'Kaydı oluşturana', en: 'To the record creator' },
+
+  'workflow.timeout.escalate': { tr: 'Üst amire bildir', en: 'Notify the supervisor' },
+  'workflow.timeout.autoApprove': { tr: 'Otomatik onayla', en: 'Auto-approve' },
+  'workflow.timeout.autoReject': { tr: 'Otomatik reddet', en: 'Auto-reject' },
+
+  'workflow.event.InstanceStarted': { tr: 'Süreç başladı', en: 'Process started' },
+  'workflow.event.StepEntered': { tr: 'Adıma girildi', en: 'Entered step' },
+  'workflow.event.TaskCreated': { tr: 'Görev oluşturuldu', en: 'Task created' },
+  'workflow.event.TaskCompleted': { tr: 'Görev onaylandı', en: 'Task approved' },
+  'workflow.event.TaskRejected': { tr: 'Görev reddedildi', en: 'Task rejected' },
+  'workflow.event.TaskSkipped': { tr: 'Görev atlandı', en: 'Task skipped' },
+  'workflow.event.TaskExpired': { tr: 'Görev süresi doldu', en: 'Task expired' },
+  'workflow.event.TaskEscalated': { tr: 'Görev yükseltildi', en: 'Task escalated' },
+  'workflow.event.TaskReassigned': { tr: 'Görev yeniden atandı', en: 'Task reassigned' },
+  'workflow.event.InstanceCompleted': { tr: 'Süreç tamamlandı', en: 'Process completed' },
+  'workflow.event.InstanceRejected': { tr: 'Süreç reddedildi', en: 'Process rejected' },
+  'workflow.event.InstanceCancelled': { tr: 'Süreç iptal edildi', en: 'Process cancelled' },
+  'workflow.event.InstanceFailed': { tr: 'Süreç hataya düştü', en: 'Process failed' },
+  'workflow.event.RolledBack': { tr: 'Geri alındı', en: 'Rolled back' },
+
+  // ── Kayıt detayındaki Süreç paneli ────────────────────────────────────────
+  'workflow.panel.title': { tr: 'Süreç', en: 'Process' },
+  'workflow.panel.start': { tr: 'Süreci Başlat', en: 'Start Process' },
+  'workflow.panel.startSuccess': { tr: 'Süreç başlatıldı.', en: 'Process started.' },
+  'workflow.panel.none': { tr: 'Bu kayıt için süreç yok.', en: 'No process for this record.' },
+  'workflow.panel.cancel': { tr: 'Süreci İptal Et', en: 'Cancel Process' },
+  'workflow.panel.cancelConfirmTitle': { tr: 'Süreci iptal et', en: 'Cancel process' },
+  'workflow.panel.cancelConfirm': {
+    tr: 'Süreç iptal edilecek ve açık görevler kapatılacak.',
+    en: 'The process will be cancelled and open tasks closed.'
+  },
+
+  // ── Silinenler ekranı (deleted-list ile paylaşılan sözleşme) ──────────────
+  'deleted.workflows.backLink': { tr: 'İş akışlarına dön', en: 'Back to workflows' },
+  'deleted.workflows.title': { tr: 'Silinmiş İş Akışları', en: 'Deleted Workflows' },
+  'deleted.workflows.refresh': { tr: 'Yenile', en: 'Refresh' },
+  'deleted.workflows.loadingAria': { tr: 'Silinmiş akışlar yükleniyor', en: 'Loading deleted workflows' },
+  'deleted.workflows.loading': { tr: 'Yükleniyor…', en: 'Loading…' },
+  'deleted.workflows.empty': { tr: 'Silinmiş iş akışı yok', en: 'No deleted workflows' },
+  'deleted.workflows.emptyHint': {
+    tr: 'Silinen akışlar burada listelenir ve geri yüklenebilir.',
+    en: 'Deleted workflows are listed here and can be restored.'
+  },
+  'deleted.workflows.countSuffix': { tr: 'akış', en: 'workflows' },
+  'deleted.workflows.loadFailed': { tr: 'Silinmiş akışlar yüklenemedi.', en: 'Deleted workflows could not be loaded.' },
+  'deleted.workflows.restoreConfirm': {
+    tr: '{name} akışı geri yüklenecek.',
+    en: 'The workflow {name} will be restored.'
+  },
+  'deleted.workflows.restoreConfirmTitle': { tr: 'Akışı geri yükle', en: 'Restore workflow' },
+  'deleted.workflows.restoreSuccess': { tr: 'Akış geri yüklendi.', en: 'Workflow restored.' }
+};

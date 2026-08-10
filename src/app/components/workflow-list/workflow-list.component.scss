@@ -1,0 +1,16 @@
+// Kod sütunu — akışın sürümler arası sabit kimliği, monospace okunur olsun.
+.wf-code {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--fg-2);
+}
+
+// Tehlikeli eylemi ghost butonda kırmızıya çeker; .btn-danger tam dolgu olduğu
+// için satır içi eylem kümesinde fazla baskın kalıyordu.
+.wf-danger {
+  color: var(--danger);
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}

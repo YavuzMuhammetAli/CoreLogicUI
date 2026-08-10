@@ -1,0 +1,94 @@
+// Yakınlaştırma yok; taşan şema kaydırılarak görülür (entity-graph ile aynı).
+.graph-scroll {
+  overflow: auto;
+  max-height: 520px;
+  padding: var(--space-2);
+}
+
+.workflow-graph {
+  width: 100%;
+  min-width: 320px;
+  height: auto;
+}
+
+.graph-node {
+  rect {
+    fill: var(--surface);
+    stroke: var(--border);
+    stroke-width: 1.5;
+  }
+
+  text {
+    fill: var(--fg);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .node-key {
+    fill: var(--muted);
+    font-size: 10px;
+    font-weight: 400;
+    font-family: var(--font-mono, monospace);
+  }
+}
+
+// Başlangıç adımı aksan rengiyle çerçevelenir.
+.graph-node--start rect {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+.graph-node--terminal {
+  rect {
+    fill: var(--success-bg);
+    stroke: var(--success);
+  }
+
+  text {
+    fill: var(--success);
+    font-size: 12px;
+  }
+}
+
+.graph-node--reject {
+  rect {
+    fill: var(--danger-bg);
+    stroke: var(--danger);
+  }
+
+  text {
+    fill: var(--danger);
+  }
+}
+
+.graph-edge {
+  path {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 1.5;
+  }
+
+  text {
+    fill: var(--muted);
+    font-size: 10px;
+  }
+}
+
+// Red yolu kesikli: onay yolundan bakışta ayrılsın.
+.graph-edge--reject path {
+  stroke: var(--danger);
+  stroke-dasharray: 4 3;
+  opacity: 0.75;
+}
+
+.graph-edge--reject text {
+  fill: var(--danger);
+}
+
+.arrow-head {
+  fill: var(--border);
+}
+
+.arrow-head--reject {
+  fill: var(--danger);
+}

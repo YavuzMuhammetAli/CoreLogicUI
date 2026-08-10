@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, HostListener, inject, OnInit, PLATFORM_ID, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, HostListener, inject, OnDestroy, OnInit, PLATFORM_ID, ViewChild } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
@@ -12,8 +12,10 @@ import { ThemeService } from '../../services/theme.service';
 import { LanguageService } from '../../services/language.service';
 import { DashboardService } from '../../services/dashboard.service';
 import { DashboardDefinition } from '../../models/dashboard.model';
+import { WorkflowTaskService } from '../../services/workflow-task.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { markDirty } from '../../utils/change-detection';
+import { signal } from '@angular/core';
 
 @Component({
   selector: 'app-layout',
@@ -23,7 +25,7 @@ import { markDirty } from '../../utils/change-detection';
   styleUrls: ['./layout.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class LayoutComponent implements OnInit {
+export class LayoutComponent implements OnInit, OnDestroy {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -44,9 +46,24 @@ export class LayoutComponent implements OnInit {
   /** Admin tarafından navigasyonda gösterilmek üzere yayınlanmış dashboard'lar — tüm kullanıcılar görür */
   navDashboards: DashboardDefinition[] = [];
 
+  /**
+   * H: Sidebar'daki "Görevlerim" rozeti — bekleyen onay sayısı.
+   *
+   * Projede SignalR/WebSocket olmadığı için anlık bildirim yok; sayı belirli
+   * aralıklarla yeniden çekilir. Sinyal kullanılıyor ki markDirty gerekmesin.
+   */
+  readonly pendingTaskCount = signal(0);
+
+  /** Rozet yenileme aralığı (ms). Kullanıcı beklemesin diye kısa, sunucuyu
+   *  yormasın diye 30 sn'den seyrek değil. */
+  private static readonly TaskPollIntervalMs = 30_000;
+
+  private taskPollTimer?: ReturnType<typeof setInterval>;
+
   private readonly platformId   = inject(PLATFORM_ID);
   private readonly userProfile  = inject(UserProfileService);
   private readonly dashboardService = inject(DashboardService);
+  private readonly taskService  = inject(WorkflowTaskService);
   readonly themeService         = inject(ThemeService);
   readonly languageService      = inject(LanguageService);
 
@@ -80,6 +97,12 @@ export class LayoutComponent implements OnInit {
         console.warn('[CoreLogic] loadAssembly başarısız:', err?.message);
       }
     });
+
+    // H: Görev rozeti. isPlatformBrowser kontrolünün ALTINDA — sunucu tarafında
+    // zamanlayıcı kurmak anlamsız ve sızıntı olurdu.
+    this.refreshTaskCount();
+    this.taskPollTimer = setInterval(
+      () => this.refreshTaskCount(), LayoutComponent.TaskPollIntervalMs);
 
     // Profil fotoğrafını backend'den çek; başarısız olursa token verisi yeterli
     if (tokenUser) {
@@ -175,5 +198,25 @@ export class LayoutComponent implements OnInit {
   /** Arayüz dili (TR/EN) arasında geçiş yapar */
   toggleLanguage(): void {
     this.languageService.toggle();
+  }
+
+  /**
+   * H: Bekleyen görev sayısını tazeler.
+   *
+   * Hata sessizce yutulur ve rozet son bilinen değerinde kalır: workflow modülü
+   * kurulmamış bir tenant'ta (migrasyon < 017) bu uç hata döner ve her 30 saniyede
+   * kullanıcıya uyarı göstermek anlamsız olurdu.
+   */
+  private refreshTaskCount(): void {
+    this.taskService.myCount().subscribe({
+      next: res => {
+        if (res.success) this.pendingTaskCount.set(res.data ?? 0);
+      },
+      error: () => { /* sessiz — sınıf notuna bak */ }
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.taskPollTimer) clearInterval(this.taskPollTimer);
   }
 }

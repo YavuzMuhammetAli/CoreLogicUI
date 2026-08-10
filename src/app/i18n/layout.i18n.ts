@@ -25,6 +25,14 @@ export const LAYOUT_I18N: Translations = {
   'layout.parametersAria': { tr: 'Parametreler', en: 'Parameters' },
   'layout.ai': { tr: 'Yapay Zeka', en: 'AI Assistant' },
   'layout.aiAria': { tr: 'Yapay Zeka asistanı', en: 'AI assistant' },
+  'layout.workflows': { tr: 'İş Akışları', en: 'Workflows' },
+  'layout.workflowsAria': { tr: 'İş akışı tasarımı', en: 'Workflow design' },
+  'layout.tasks': { tr: 'Görevlerim', en: 'My Tasks' },
+  'layout.tasksAria': { tr: 'Bekleyen onay görevlerim', en: 'My pending approval tasks' },
+  'layout.tasksBadgeAria': {
+    tr: '{count} bekleyen görev',
+    en: '{count} pending tasks'
+  },
   'layout.tableAria': { tr: '{name} tablosu', en: '{name} table' },
   'layout.noAccessibleTables': { tr: 'Erişebileceğiniz tablo yok.', en: 'You have no accessible tables.' },
   'layout.reports': { tr: 'Raporlar', en: 'Reports' },

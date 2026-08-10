@@ -179,6 +179,50 @@ export const routes: Routes = [
           import('./components/user-profile/user-profile.component').then(m => m.UserProfileComponent)
       },
 
+      // H: Görevlerim — adminGuard YOK. Yetkilendirme atamayla yapılır (görevi
+      // yalnızca atanan kullanıcı ya da atanan rolün üyesi kapatabilir, kontrol
+      // backend'de). Bu ekran aynı zamanda görev gelen kutusudur.
+      {
+        path: 'tasks',
+        loadComponent: () =>
+          import('./components/my-tasks/my-tasks.component').then(m => m.MyTasksComponent)
+      },
+      {
+        path: 'tasks/:id',
+        loadComponent: () =>
+          import('./components/task-detail/task-detail.component').then(m => m.TaskDetailComponent)
+      },
+
+      // H: İş akışı tasarımı — tamamı adminGuard (projede adlandırılmış yetki yok,
+      // tasarım/yayın /build ve /ai gibi admin'e bağlı).
+      {
+        path: 'workflows',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/workflow-list/workflow-list.component').then(m => m.WorkflowListComponent)
+      },
+      // "new" ve "deleted" sabit segmentleri ":id" param'ından ÖNCE gelmeli —
+      // aksi halde Angular bu string'leri ID olarak yakalar.
+      {
+        path: 'workflows/new',
+        canActivate: [adminGuard],
+        data: { mode: 'new' },
+        loadComponent: () =>
+          import('./components/workflow-build/workflow-build.component').then(m => m.WorkflowBuildComponent)
+      },
+      {
+        path: 'workflows/deleted',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/deleted-workflows/deleted-workflows.component').then(m => m.DeletedWorkflowsComponent)
+      },
+      {
+        path: 'workflows/:id/edit',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/workflow-build/workflow-build.component').then(m => m.WorkflowBuildComponent)
+      },
+
       // Metadata-driven raporlama — yetki kontrolü backend'de (model üzerinde Read);
       // authGuard yeterli, ayrıca adminGuard gerekmiyor.
       {

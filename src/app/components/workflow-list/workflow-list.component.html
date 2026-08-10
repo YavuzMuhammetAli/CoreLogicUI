@@ -1,0 +1,109 @@
+<div class="page-header">
+  <span class="eyebrow">{{ 'workflow.list.title' | t }}</span>
+  <div class="cluster">
+    <a routerLink="/workflows/deleted" class="btn btn-secondary btn-sm">
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+      </svg>
+      {{ 'workflow.list.deleted' | t }}
+    </a>
+    <a routerLink="/workflows/new" class="btn btn-primary">
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+      {{ 'workflow.list.new' | t }}
+    </a>
+  </div>
+</div>
+
+@if (loading) {
+  <div class="panel">
+    <div class="empty-state">
+      <span class="spinner" [attr.aria-label]="'common.loading' | t"></span>
+    </div>
+  </div>
+}
+
+@if (loadError) {
+  <div class="alert alert-danger" role="alert">{{ loadError }}</div>
+}
+
+@if (!loading && !loadError) {
+  @if (workflows.length > 0) {
+    <div class="panel">
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{{ 'workflow.list.colName' | t }}</th>
+              <th>{{ 'workflow.list.colCode' | t }}</th>
+              <th>{{ 'workflow.list.colModel' | t }}</th>
+              <th>{{ 'workflow.list.colTrigger' | t }}</th>
+              <th>{{ 'workflow.list.colStatus' | t }}</th>
+              <th>{{ 'workflow.list.colVersion' | t }}</th>
+              <th>{{ 'workflow.list.colRunning' | t }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (workflow of workflows; track workflow.id) {
+              <tr>
+                <td>
+                  {{ workflow.name }}
+                  @if (!workflow.isEnabled) {
+                    <span class="badge badge-meta">{{ 'workflow.list.disabledBadge' | t }}</span>
+                  }
+                </td>
+                <td><code class="wf-code">{{ workflow.code }}</code></td>
+                <td>{{ workflow.modelName }}</td>
+                <td>{{ 'workflow.trigger.' + workflow.triggerEvent | t }}</td>
+                <td>
+                  <span class="badge" [class]="'badge ' + statusClass(workflow.status)">
+                    {{ 'workflow.status.' + workflow.status | t }}
+                  </span>
+                </td>
+                <td>{{ workflow.version > 0 ? 'v' + workflow.version : '—' }}</td>
+                <td>{{ workflow.runningInstanceCount || '—' }}</td>
+                <td>
+                  <div class="td-actions" (click)="$event.stopPropagation()">
+                    @if (workflow.status === 'Draft') {
+                      <a [routerLink]="['/workflows', workflow.id, 'edit']" class="btn btn-ghost btn-sm">
+                        {{ 'common.edit' | t }}
+                      </a>
+                      <button type="button" class="btn btn-secondary btn-sm"
+                              [disabled]="busyId === workflow.id"
+                              (click)="publish(workflow)">
+                        {{ 'workflow.list.publish' | t }}
+                      </button>
+                    }
+                    <button type="button" class="btn btn-ghost btn-sm wf-danger"
+                            [disabled]="busyId === workflow.id"
+                            (click)="askDelete(workflow)">
+                      {{ 'common.delete' | t }}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  } @else {
+    <div class="panel">
+      <div class="empty-state">
+        <div class="empty-icon" aria-hidden="true">🔀</div>
+        <h3>{{ 'workflow.list.emptyTitle' | t }}</h3>
+        <p>{{ 'workflow.list.emptyHint' | t }}</p>
+        <a routerLink="/workflows/new" class="btn btn-primary">{{ 'workflow.list.new' | t }}</a>
+      </div>
+    </div>
+  }
+}
+
+<app-confirm-dialog
+  [open]="!!pendingDelete"
+  [title]="'workflow.list.deleteConfirmTitle' | t"
+  [message]="deleteMessage"
+  (confirmed)="confirmDelete()"
+  (cancelled)="cancelDelete()" />
