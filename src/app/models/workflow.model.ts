@@ -230,6 +230,14 @@ export interface WorkflowStep {
   mode?: WorkflowJoinMode | null;
   onComplete?: string | null;
   onAnyReject?: string | null;
+
+  /**
+   * Canvas'ta elle taşınmış konum. YOKSA otomatik yerleşim kullanılır —
+   * bu sayede canvas'tan önce oluşturulmuş tanımlar da düzgün çizilir ve
+   * form tabanlı düzenleme konum belirtmek zorunda kalmaz.
+   */
+  x?: number | null;
+  y?: number | null;
 }
 
 /** Bir adımdan çıkan geçişler — tekil ve paralel adımda farklı alanlar kullanılır. */

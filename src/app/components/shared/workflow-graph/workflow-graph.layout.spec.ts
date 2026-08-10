@@ -210,6 +210,17 @@ describe('layoutWorkflow', () => {
       .toBe('herhangi biri');
   });
 
+  it('elle taşınmış konum otomatik yerleşimi ETKİLEMEZ', () => {
+    // Şema (salt-okunur önizleme) her zaman otomatik yerleşimi kullanır; canvas
+    // ise step.x/y varsa onu tercih eder. İkisinin ayrı kalması bilinçli:
+    // önizleme kullanıcının canvas'ta dağıttığı düğümlerden etkilenmemeli.
+    const moved: WorkflowStep = { ...step('a'), x: 999, y: 999 };
+    const layout = layoutWorkflow(graph([moved], 'a'));
+
+    expect(layout.nodes.find(n => n.key === 'a')!.x).toBe(PADDING);
+    expect(layout.nodes.find(n => n.key === 'a')!.y).toBe(PADDING);
+  });
+
   it('adım anahtarı büyük/küçük harf duyarsız eşleşir', () => {
     const layout = layoutWorkflow(graph([step('Yonetici', 'FINANS'), step('finans')], 'yonetici'));
 

@@ -31,8 +31,9 @@ import { ResponseModel } from '../../models/responseModel';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { markDirty } from '../../utils/change-detection';
 import { WorkflowGraphComponent } from '../shared/workflow-graph/workflow-graph.component';
+import { WorkflowCanvasComponent } from '../shared/workflow-canvas/workflow-canvas.component';
 
-type TabId = 'steps' | 'trigger' | 'preview';
+type TabId = 'steps' | 'canvas' | 'trigger' | 'preview';
 
 /**
  * Atama nesnesini form değerlerinden kurar. Adım ve dal aynı alan adlarını
@@ -68,18 +69,23 @@ function buildSla(source: Record<string, unknown>): WorkflowSla | null {
 const FORM_FIELD_TYPES = ['string', 'int', 'decimal', 'boolean', 'datetime', 'dateonly', 'enum'] as const;
 
 /**
- * Akış tasarım ekranı — FORM TABANLI (sürükle-bırak canvas değil).
+ * Akış tasarım ekranı — form ve canvas AYNI veriyi düzenler.
  *
- * Gerekçe: UI'da CDK, drag-drop veya diyagram kütüphanesi yok; canvas tek başına
- * ~2 haftalık iş. report-build de aynı tercihi yapmıştı ("Drag&drop ileride;
- * şimdilik form tabanlı yeterli"). Adım listesi report-build'in FormArray
- * desenini, sekme çubuğu table-detail'i izliyor; Önizleme sekmesinde
- * salt-okunur SVG akış şeması var.
+ * Dört sekme: Adımlar (form), Tasarım (sürükle-bırak canvas), Tetikleyici,
+ * Önizleme (salt-okunur şema).
+ *
+ * Canvas form yerine GEÇMEZ, onu tamamlar: canvas konum ve bağlantı için hızlı,
+ * form ise atama/SLA/form alanları gibi ayrıntılar için tek pratik yol. İkisi de
+ * aynı FormArray üzerinde çalışır, dolayısıyla hangi sekmede düzenlendiğinin
+ * kaydedilen tanıma etkisi yoktur.
+ *
+ * Projede CDK, drag-drop ve diyagram kütüphanesi YOK — canvas native Pointer
+ * Events ile yazıldı (dashboard-build'in sürükleme deseni).
  */
 @Component({
   selector: 'app-workflow-build',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe, WorkflowGraphComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe, WorkflowGraphComponent, WorkflowCanvasComponent],
   templateUrl: './workflow-build.component.html',
   styleUrl: './workflow-build.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -215,6 +221,9 @@ export class WorkflowBuildComponent implements OnInit {
       onApprove: [step?.onApprove ?? step?.onComplete ?? ''],
       onReject: [step?.onReject ?? step?.onAnyReject ?? ''],
       statusLabel: [''],
+      // Canvas konumu. Formda görünmez; yalnız canvas yazar ve buildGraph okur.
+      x: [step?.x ?? null],
+      y: [step?.y ?? null],
       fields: this.fb.array([]),
       branches: this.fb.array([])
     });
@@ -448,7 +457,9 @@ export class WorkflowBuildComponent implements OnInit {
           sla: null,
           form: null,
           onComplete: approveTarget,
-          onAnyReject: rejectTarget
+          onAnyReject: rejectTarget,
+          x: step['x'] as number | null,
+          y: step['y'] as number | null
         };
       }
 
@@ -468,7 +479,9 @@ export class WorkflowBuildComponent implements OnInit {
           }))
         } : null,
         onApprove: approveTarget,
-        onReject: rejectTarget
+        onReject: rejectTarget,
+        x: step['x'] as number | null,
+        y: step['y'] as number | null
       };
     });
 
@@ -570,6 +583,49 @@ export class WorkflowBuildComponent implements OnInit {
 
   setTab(tab: TabId): void {
     this.activeTab.set(tab);
+  }
+
+  // ── Canvas köprüsü ────────────────────────────────────────────────────────
+
+  /** Canvas'ta seçili adım — form sekmesine geçince odaklanan satır. */
+  readonly selectedStepKey = signal<string | null>(null);
+
+  /**
+   * Canvas'ta taşınan düğümün konumu tanıma yazılır.
+   *
+   * emitEvent: false ile: her taşımada valueChanges tetiklenip önizleme
+   * yeniden kurulsaydı sürükleme gözle görülür şekilde takılırdı. Önizleme
+   * zaten bırakıştan sonra elle tazeleniyor.
+   */
+  onNodeMoved(event: { key: string; x: number; y: number }): void {
+    const control = this.findStepControl(event.key);
+    if (!control) return;
+
+    control.patchValue({ x: Math.round(event.x), y: Math.round(event.y) }, { emitEvent: false });
+    this.refreshPreview();
+  }
+
+  /**
+   * Canvas'ta çizilen bağlantı adımın hedefine yazılır.
+   *
+   * Tekil ve paralel adımda aynı iki kontrol kullanılıyor (onApprove/onReject);
+   * buildGraph bunları adım tipine göre doğru alanlara ayırıyor.
+   */
+  onEdgeCreated(event: { from: string; to: string; port: 'approve' | 'reject' }): void {
+    const control = this.findStepControl(event.from);
+    if (!control) return;
+
+    control.patchValue(
+      event.port === 'approve' ? { onApprove: event.to } : { onReject: event.to });
+  }
+
+  onNodeSelected(key: string): void {
+    this.selectedStepKey.set(key);
+  }
+
+  private findStepControl(key: string) {
+    return this.stepsArray.controls.find(
+      c => String(c.value.key ?? '').toLowerCase() === key.toLowerCase());
   }
 
   /** Hedef adım açılır listesi: diğer adımlar + iki terminal. */

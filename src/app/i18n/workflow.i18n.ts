@@ -45,7 +45,14 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.build.titleNew': { tr: 'Yeni İş Akışı', en: 'New Workflow' },
   'workflow.build.titleEdit': { tr: 'Akışı Düzenle', en: 'Edit Workflow' },
   'workflow.build.tabSteps': { tr: 'Adımlar', en: 'Steps' },
+  'workflow.build.tabCanvas': { tr: 'Tasarım', en: 'Design' },
   'workflow.build.tabTrigger': { tr: 'Tetikleyici', en: 'Trigger' },
+  'workflow.canvas.hint': {
+    tr: 'Adımı gövdesinden sürükleyerek taşıyın. Bağlantı için alt kenardaki yeşil (onay) ya da kırmızı (red) noktadan hedef adıma sürükleyin.',
+    en: 'Drag a step by its body to move it. To connect, drag from the green (approve) or red (reject) dot at the bottom edge onto the target step.'
+  },
+  'workflow.canvas.portApprove': { tr: 'Onay bağlantısı çiz', en: 'Draw approve connection' },
+  'workflow.canvas.portReject': { tr: 'Red bağlantısı çiz', en: 'Draw reject connection' },
   'workflow.build.tabPreview': { tr: 'Önizleme', en: 'Preview' },
   'workflow.build.tablistAria': { tr: 'Akış tasarım sekmeleri', en: 'Workflow design tabs' },
   'workflow.build.name': { tr: 'Akış adı', en: 'Workflow name' },

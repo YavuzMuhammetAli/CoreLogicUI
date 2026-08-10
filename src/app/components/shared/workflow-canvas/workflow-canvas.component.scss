@@ -1,0 +1,122 @@
+.canvas-hint {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.canvas-scroll {
+  position: relative;
+  overflow: auto;
+  max-height: 560px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 10px);
+  background:
+    radial-gradient(circle, var(--border) 1px, transparent 1px) 0 0 / 20px 20px,
+    var(--bg);
+}
+
+.canvas-surface {
+  position: relative;
+}
+
+// Kenarlar altta, düğümler üstte.
+.canvas-edges {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.canvas-edge {
+  path { fill: none; stroke: var(--border); stroke-width: 1.5; }
+  text { fill: var(--muted); font-size: 10px; }
+}
+
+.canvas-edge--reject {
+  path { stroke: var(--danger); stroke-dasharray: 4 3; opacity: 0.75; }
+  text { fill: var(--danger); }
+}
+
+.canvas-edge-pending {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+}
+
+.arrow-head { fill: var(--border); }
+.arrow-head--reject { fill: var(--danger); }
+
+// ── Düğüm ────────────────────────────────────────────────────────────────────
+
+.canvas-node {
+  position: absolute;
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: move;
+  // Sürüklerken metin seçimi ve dokunmatik kaydırma devreye girmemeli.
+  user-select: none;
+  touch-action: none;
+}
+
+.canvas-node--start {
+  border-color: var(--accent);
+  border-width: 2.5px;
+}
+
+.canvas-node--parallel {
+  border-style: dashed;
+  background: var(--surface-warm);
+}
+
+.canvas-node--selected {
+  box-shadow: 0 0 0 3px var(--elev-ring, rgba(29, 78, 216, 0.25));
+}
+
+.canvas-node-title {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg);
+}
+
+.canvas-node-key {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.canvas-node-branches {
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  font-size: 11px;
+  color: var(--fg-2);
+}
+
+// ── Portlar ──────────────────────────────────────────────────────────────────
+
+.canvas-port {
+  position: absolute;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  cursor: crosshair;
+  touch-action: none;
+
+  &:hover { transform: scale(1.25); }
+}
+
+.canvas-port--approve {
+  left: 32%;
+  background: var(--success);
+}
+
+.canvas-port--reject {
+  left: 62%;
+  background: var(--danger);
+}
