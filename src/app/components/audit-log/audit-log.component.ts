@@ -35,18 +35,18 @@ export class AuditLogComponent implements OnInit {
   fromDateFilter = '';
   toDateFilter = '';
 
-  // Sayfalama — backend tüm kayıtları döndürür, dilimleme client-side yapılır
+  // Sayfalama SUNUCUDA yapılır. Eskiden backend tüm kayıtları döndürüyor ve dilimleme
+  // istemcide oluyordu; audit tablosu milyonlarca satıra ulaştığında ekran açılmıyordu.
   pageIndex = signal(1);
   pageSize = signal(20);
   readonly pageSizeOptions = [20, 50, 100];
 
-  total = computed(() => this.rows().length);
+  /** Sunucudan gelen toplam kayıt sayısı (indirilen satır sayısı DEĞİL). */
+  total = signal(0);
   totalPages = computed(() => Math.ceil(this.total() / this.pageSize()) || 1);
 
-  pagedRows = computed(() => {
-    const start = (this.pageIndex() - 1) * this.pageSize();
-    return this.rows().slice(start, start + this.pageSize());
-  });
+  /** Sunucu zaten sayfayı döndürüyor — istemcide dilimleme yok. */
+  pagedRows = computed(() => this.rows());
 
   pageRangeStart = computed(() => this.total() === 0 ? 0 : (this.pageIndex() - 1) * this.pageSize() + 1);
   pageRangeEnd = computed(() => Math.min(this.pageIndex() * this.pageSize(), this.total()));
@@ -70,30 +70,41 @@ export class AuditLogComponent implements OnInit {
     this.load();
   }
 
+  /** Filtre değişiminde ilk sayfaya döner. */
   load(): void {
+    this.pageIndex.set(1);
+    this.fetch();
+  }
+
+  /** Mevcut sayfa/filtre ile sunucudan veri çeker. */
+  private fetch(): void {
     this.loading.set(true);
     this.loadError.set('');
     this.expandedId.set(null);
-    this.pageIndex.set(1);
 
     const from = this.fromDateFilter ? new Date(this.fromDateFilter) : null;
     const to = this.toDateFilter ? new Date(this.toDateFilter) : null;
 
-    this.auditLogService.getFiltered(this.entityNameFilter.trim() || undefined, from, to).pipe(markDirty(this.cdr)).subscribe({
-      next: res => {
-        if (!res.success) {
-          this.rows.set([]);
-          this.loadError.set(res.message);
-        } else {
-          this.rows.set(res.data ?? []);
+    this.auditLogService
+      .getFilteredPaged(this.pageIndex(), this.pageSize(), this.entityNameFilter.trim() || undefined, from, to)
+      .pipe(markDirty(this.cdr))
+      .subscribe({
+        next: res => {
+          if (!res.success) {
+            this.rows.set([]);
+            this.total.set(0);
+            this.loadError.set(res.message);
+          } else {
+            this.rows.set(res.data?.items ?? []);
+            this.total.set(res.data?.total ?? 0);
+          }
+          this.loading.set(false);
+        },
+        error: () => {
+          this.loadError.set(this.languageService.t('audit.loadFailed'));
+          this.loading.set(false);
         }
-        this.loading.set(false);
-      },
-      error: () => {
-        this.loadError.set(this.languageService.t('audit.loadFailed'));
-        this.loading.set(false);
-      }
-    });
+      });
   }
 
   clearFilters(): void {
@@ -110,6 +121,7 @@ export class AuditLogComponent implements OnInit {
   goToPage(p: number): void {
     if (p < 1 || p > this.totalPages() || p === this.pageIndex()) return;
     this.pageIndex.set(p);
+    this.fetch();   // sayfalama sunucuda — yeni sayfa istenmeli
   }
 
   prevPage(): void { this.goToPage(this.pageIndex() - 1); }
@@ -118,6 +130,7 @@ export class AuditLogComponent implements OnInit {
   changePageSize(size: number): void {
     this.pageSize.set(size);
     this.pageIndex.set(1);
+    this.fetch();
   }
 
   /** Badge rengi: Added=success, Modified=warn, Deleted=danger */
