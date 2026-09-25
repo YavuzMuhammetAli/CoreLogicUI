@@ -9,6 +9,12 @@ import {
   BackupHistoryItem,
   BackupSchedule,
   MailSetting,
+  NotificationLanguage,
+  NotificationTemplate,
+  NotificationTemplateContent,
+  NotificationTemplateKind,
+  NotificationTemplateSummary,
+  NotificationTemplateTestRequest,
   PurchasePlanRequest,
   TenantPlan,
   TenantSubscription
@@ -65,6 +71,67 @@ export class ParameterService {
   /** Kayıtlı ayarlarla deneme maili gönderir; SMTP hatası mesajda döner. */
   sendTestMail(to: string): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/mail/test`, { to });
+  }
+
+  // ── Bildirim şablonları ──────────────────────────────────────────────────
+
+  /** Tür listesi; her tür için özel şablon kayıtlı mı. */
+  listNotificationTemplates(
+    lang: NotificationLanguage
+  ): Observable<ListResponseModel<NotificationTemplateSummary>> {
+    return this.http.get<ListResponseModel<NotificationTemplateSummary>>(
+      `${this.baseUrl}/mail/templates`, { params: { lang } });
+  }
+
+  /** Etkin şablon + gömülü varsayılan + kullanılabilir yer tutucular. */
+  getNotificationTemplate(
+    kind: NotificationTemplateKind,
+    lang: NotificationLanguage
+  ): Observable<DataResponseModel<NotificationTemplate>> {
+    return this.http.get<DataResponseModel<NotificationTemplate>>(
+      `${this.baseUrl}/mail/templates/${kind}`, { params: { lang } });
+  }
+
+  /** Özel şablonu kaydeder; bilinmeyen yer tutucu içerirse backend reddeder. */
+  saveNotificationTemplate(
+    kind: NotificationTemplateKind,
+    lang: NotificationLanguage,
+    body: NotificationTemplateContent
+  ): Observable<ResponseModel> {
+    return this.http.put<ResponseModel>(
+      `${this.baseUrl}/mail/templates/${kind}`, body, { params: { lang } });
+  }
+
+  /** Özel şablonu siler — tür gömülü varsayılana döner. */
+  resetNotificationTemplate(
+    kind: NotificationTemplateKind,
+    lang: NotificationLanguage
+  ): Observable<ResponseModel> {
+    return this.http.delete<ResponseModel>(
+      `${this.baseUrl}/mail/templates/${kind}`, { params: { lang } });
+  }
+
+  /**
+   * Kaydedilmemiş şablonu örnek veriyle render eder. Render sunucuda yapılır ki
+   * önizleme ile gerçek gönderim aynı motordan geçsin.
+   */
+  previewNotificationTemplate(
+    kind: NotificationTemplateKind,
+    lang: NotificationLanguage,
+    body: NotificationTemplateContent
+  ): Observable<DataResponseModel<NotificationTemplateContent>> {
+    return this.http.post<DataResponseModel<NotificationTemplateContent>>(
+      `${this.baseUrl}/mail/templates/${kind}/preview`, body, { params: { lang } });
+  }
+
+  /** Şablonu örnek veriyle gerçekten gönderir; SMTP hatası mesajda döner. */
+  sendNotificationTemplateTest(
+    kind: NotificationTemplateKind,
+    lang: NotificationLanguage,
+    body: NotificationTemplateTestRequest
+  ): Observable<ResponseModel> {
+    return this.http.post<ResponseModel>(
+      `${this.baseUrl}/mail/templates/${kind}/test`, body, { params: { lang } });
   }
 
   // ── Abonelik ─────────────────────────────────────────────────────────────

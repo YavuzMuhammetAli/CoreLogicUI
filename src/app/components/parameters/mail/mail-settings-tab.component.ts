@@ -6,7 +6,13 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ParameterService } from '../../../services/parameter.service';
 import { LanguageService } from '../../../services/language.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
-import { MASKED_PASSWORD, MailSetting } from '../../../models/parameter.model';
+import { MASKED_PASSWORD, MailSetting, NotificationLanguage } from '../../../models/parameter.model';
+
+/**
+ * Yalnız http(s) mutlak adres — backend de aynı kuralı uygular. Bu adresler
+ * e-postaya link/görsel olarak basılır; göreli yol mail istemcisinde çalışmaz.
+ */
+const HTTP_URL = /^https?:\/\/\S+$/i;
 
 /**
  * E-posta sekmesi — sistemin mail gönderirken kullanacağı adres ve SMTP ayarları.
@@ -48,7 +54,11 @@ export class MailSettingsTabComponent implements OnInit {
     password: [''],
     from: ['', Validators.email],
     fromName: [''],
-    useSsl: [false]
+    useSsl: [false],
+    // Bildirim e-postası — bağlantı kökü, logo ve varsayılan dil
+    appUrl: ['', Validators.pattern(HTTP_URL)],
+    logoUrl: ['', Validators.pattern(HTTP_URL)],
+    defaultLanguage: ['tr' as NotificationLanguage]
   });
 
   readonly testForm: FormGroup = this.fb.group({
@@ -89,7 +99,10 @@ export class MailSettingsTabComponent implements OnInit {
             password: setting.password ?? '',
             from: setting.from ?? '',
             fromName: setting.fromName ?? '',
-            useSsl: setting.useSsl
+            useSsl: setting.useSsl,
+            appUrl: setting.appUrl ?? '',
+            logoUrl: setting.logoUrl ?? '',
+            defaultLanguage: setting.defaultLanguage ?? 'tr'
           });
           this.enabled.set(setting.enabled);
         }
@@ -136,7 +149,10 @@ export class MailSettingsTabComponent implements OnInit {
       password: value.password === '' ? null : value.password,
       from: String(value.from ?? '').trim(),
       fromName: String(value.fromName ?? '').trim() || null,
-      useSsl: !!value.useSsl
+      useSsl: !!value.useSsl,
+      appUrl: String(value.appUrl ?? '').trim() || null,
+      logoUrl: String(value.logoUrl ?? '').trim() || null,
+      defaultLanguage: value.defaultLanguage === 'en' ? 'en' : 'tr'
     };
 
     this.saving.set(true);

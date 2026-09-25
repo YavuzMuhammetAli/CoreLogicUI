@@ -10,9 +10,11 @@ export const PARAMETER_I18N: Translations = {
   'parameter.tablistAria': { tr: 'Parametre sekmeleri', en: 'Parameter tabs' },
   'parameter.backupTab': { tr: 'Yedekleme', en: 'Backup' },
   'parameter.mailTab': { tr: 'E-posta', en: 'Email' },
+  'parameter.templatesTab': { tr: 'Bildirim Şablonları', en: 'Notification Templates' },
   'parameter.subscriptionTab': { tr: 'Abonelik', en: 'Subscription' },
   'parameter.backupPanelAria': { tr: 'Yedekleme ayarları', en: 'Backup settings' },
   'parameter.mailPanelAria': { tr: 'E-posta ayarları', en: 'Email settings' },
+  'parameter.templatesPanelAria': { tr: 'Bildirim e-posta şablonları', en: 'Notification email templates' },
   'parameter.subscriptionPanelAria': { tr: 'Abonelik ayarları', en: 'Subscription settings' },
 
   // ── backup-settings-tab — zamanlama ──────────────────────────────────────
@@ -164,6 +166,123 @@ export const PARAMETER_I18N: Translations = {
     en: 'The email settings could not be saved.'
   },
   'parameter.mail.testFailed': { tr: 'Test maili gönderilemedi.', en: 'The test email could not be sent.' },
+  'parameter.mail.notificationTitle': { tr: 'Bildirim e-postaları', en: 'Notification emails' },
+  'parameter.mail.notificationIntro': {
+    tr: 'Kullanıcılara atanan görevler ve süreç bildirimleri, kayıtlı e-posta adreslerine bu ayarlarla gönderilir. E-postası kayıtlı olmayan kullanıcıya mail gitmez; bildirimi uygulama içinden görür.',
+    en: 'Tasks assigned to users and process notifications are emailed to their registered addresses using these settings. Users without a registered email get no email; they still see the notification in the app.'
+  },
+  'parameter.mail.appUrl': { tr: 'Uygulama adresi', en: 'Application URL' },
+  'parameter.mail.appUrlHelp': {
+    tr: 'E-postadaki "Görevi Aç" butonu bu adrese yönlenir (ör. https://app.firma.com). Boş bırakılırsa mailde buton gösterilmez.',
+    en: 'The "Open Task" button in the email points to this address (e.g. https://app.company.com). If left empty, no button is shown.'
+  },
+  'parameter.mail.logoUrl': { tr: 'Logo adresi', en: 'Logo URL' },
+  'parameter.mail.logoUrlHelp': {
+    tr: 'E-postanın başlığında gösterilir. Boş bırakılırsa gönderen adı yazılır.',
+    en: 'Shown in the email header. If left empty, the sender name is shown instead.'
+  },
+  'parameter.mail.urlInvalid': {
+    tr: 'http:// veya https:// ile başlayan geçerli bir adres girin.',
+    en: 'Enter a valid address starting with http:// or https://.'
+  },
+  'parameter.mail.defaultLanguage': { tr: 'Varsayılan bildirim dili', en: 'Default notification language' },
+  'parameter.mail.defaultLanguageHelp': {
+    tr: 'Kullanıcı arayüz dilini hiç seçmediyse bildirimleri bu dilde alır.',
+    en: 'Used for users who have never picked an interface language.'
+  },
+  'parameter.mail.languageTr': { tr: 'Türkçe', en: 'Turkish' },
+  'parameter.mail.languageEn': { tr: 'İngilizce', en: 'English' },
+
+  // ── notification-templates-tab ───────────────────────────────────────────
+  'parameter.templates.title': { tr: 'Bildirim E-posta Şablonları', en: 'Notification Email Templates' },
+  'parameter.templates.intro': {
+    tr: 'Her bildirim türü hazır bir kurumsal şablonla gönderilir. Dilerseniz konu satırını ve HTML içeriğini kendi kodunuzla değiştirebilirsiniz; değişiklik yalnız seçili tür ve dil için geçerlidir.',
+    en: 'Every notification type is sent with a ready-made corporate template. You can replace its subject line and HTML with your own code; changes apply only to the selected type and language.'
+  },
+  'parameter.templates.languageAria': { tr: 'Şablon dili', en: 'Template language' },
+  'parameter.templates.lang.tr': { tr: 'TR', en: 'TR' },
+  'parameter.templates.lang.en': { tr: 'EN', en: 'EN' },
+  'parameter.templates.kindListAria': { tr: 'Bildirim türleri', en: 'Notification types' },
+  'parameter.templates.kind.TaskAssigned': { tr: 'Görev atandı', en: 'Task assigned' },
+  'parameter.templates.kind.TaskEscalated': { tr: 'Görev gecikti', en: 'Task overdue' },
+  'parameter.templates.kind.TaskExpired': { tr: 'Görevin süresi doldu', en: 'Task expired' },
+  'parameter.templates.kind.WorkflowCompleted': { tr: 'Süreç tamamlandı', en: 'Process completed' },
+  'parameter.templates.kind.WorkflowRejected': { tr: 'Süreç reddedildi', en: 'Process rejected' },
+  'parameter.templates.kindHint.TaskAssigned': {
+    tr: 'Görev açıldığında veya devredildiğinde görevliye',
+    en: 'To the assignee when a task is opened or reassigned'
+  },
+  'parameter.templates.kindHint.TaskEscalated': {
+    tr: 'Süresi aşılan görev için hatırlatma',
+    en: 'Reminder for a task past its due time'
+  },
+  'parameter.templates.kindHint.TaskExpired': {
+    tr: 'Süre dolup görev otomatik kapandığında',
+    en: 'When a task expires and is closed automatically'
+  },
+  'parameter.templates.kindHint.WorkflowCompleted': {
+    tr: 'Süreç onaylanıp bittiğinde başlatana',
+    en: 'To the initiator when the process is approved'
+  },
+  'parameter.templates.kindHint.WorkflowRejected': {
+    tr: 'Süreç reddedildiğinde başlatana',
+    en: 'To the initiator when the process is rejected'
+  },
+  'parameter.templates.custom': { tr: 'Özel', en: 'Custom' },
+  'parameter.templates.default': { tr: 'Varsayılan', en: 'Default' },
+  'parameter.templates.subject': { tr: 'Konu', en: 'Subject' },
+  'parameter.templates.subjectRequired': {
+    tr: 'Konu satırı zorunludur (en fazla 200 karakter).',
+    en: 'The subject line is required (at most 200 characters).'
+  },
+  'parameter.templates.html': { tr: 'HTML içeriği', en: 'HTML content' },
+  'parameter.templates.htmlRequired': { tr: 'HTML içeriği zorunludur.', en: 'The HTML content is required.' },
+  'parameter.templates.htmlHelp': {
+    tr: 'E-posta istemcileri harici CSS ve script desteklemez; stilleri satır içi (style="...") yazın. {{#ad}}…{{/ad}} bloğu yalnız değer doluysa, {{^ad}}…{{/ad}} yalnız boşsa görünür.',
+    en: 'Email clients do not support external CSS or scripts; write inline styles (style="..."). A {{#name}}…{{/name}} block shows only when the value is set, {{^name}}…{{/name}} only when it is empty.'
+  },
+  'parameter.templates.placeholders': { tr: 'Yer tutucular', en: 'Placeholders' },
+  'parameter.templates.placeholdersHelp': {
+    tr: 'Tıklayınca son düzenlediğiniz alanda imlecin olduğu yere eklenir. Değerler gönderimde otomatik doldurulur.',
+    en: 'Click to insert at the cursor in the field you last edited. Values are filled in automatically when sending.'
+  },
+  'parameter.templates.ph.recipientName': { tr: 'Alıcının adı soyadı', en: 'Recipient\'s full name' },
+  'parameter.templates.ph.companyName': { tr: 'Şirket / gönderen adı', en: 'Company / sender name' },
+  'parameter.templates.ph.taskName': { tr: 'Görevin adı (süreç bildirimlerinde boş)', en: 'Task name (empty for process notifications)' },
+  'parameter.templates.ph.workflowName': { tr: 'Akışın adı', en: 'Workflow name' },
+  'parameter.templates.ph.recordLabel': { tr: 'İlgili kayıt (ör. Siparis #12)', en: 'Related record (e.g. Order #12)' },
+  'parameter.templates.ph.dueDate': { tr: 'Görevin son tarihi (varsa)', en: 'Task due date (if any)' },
+  'parameter.templates.ph.actionUrl': { tr: 'Görevi/kaydı açan bağlantı (uygulama adresi tanımlıysa)', en: 'Link to the task/record (when the application URL is set)' },
+  'parameter.templates.ph.logoUrl': { tr: 'Logo adresi (tanımlıysa)', en: 'Logo URL (if set)' },
+  'parameter.templates.ph.year': { tr: 'İçinde bulunulan yıl', en: 'Current year' },
+  'parameter.templates.loadDefault': { tr: 'Varsayılanı düzenleyiciye yükle', en: 'Load default into editor' },
+  'parameter.templates.reset': { tr: 'Varsayılana Dön', en: 'Reset to Default' },
+  'parameter.templates.save': { tr: 'Şablonu Kaydet', en: 'Save Template' },
+  'parameter.templates.resetConfirmTitle': { tr: 'Varsayılan şablona dönülsün mü?', en: 'Reset to the default template?' },
+  'parameter.templates.resetConfirmMessage': {
+    tr: 'Bu tür ve dil için kaydettiğiniz özel şablon silinecek ve bundan sonra hazır kurumsal şablon kullanılacak.',
+    en: 'Your custom template for this type and language will be deleted and the ready-made corporate template will be used from now on.'
+  },
+  'parameter.templates.discardConfirmTitle': { tr: 'Kaydedilmemiş değişiklikler', en: 'Unsaved changes' },
+  'parameter.templates.discardConfirmMessage': {
+    tr: 'Bu şablonda kaydetmediğiniz değişiklikler var. Devam ederseniz kaybolacak.',
+    en: 'This template has unsaved changes. They will be lost if you continue.'
+  },
+  'parameter.templates.previewTitle': { tr: 'Önizleme', en: 'Preview' },
+  'parameter.templates.previewIntro': {
+    tr: 'Düzenleyicideki içerik örnek verilerle gösterilir; yazdıkça güncellenir.',
+    en: 'The editor content is rendered with sample data and updates as you type.'
+  },
+  'parameter.templates.refreshPreview': { tr: 'Yenile', en: 'Refresh' },
+  'parameter.templates.testTitle': { tr: 'Şablonla Test E-postası', en: 'Test Email with Template' },
+  'parameter.templates.testIntro': {
+    tr: 'Düzenleyicideki şablonu (kaydetmeden) örnek verilerle gerçek bir adrese gönderir.',
+    en: 'Sends the template in the editor (without saving) to a real address using sample data.'
+  },
+  'parameter.templates.loadFailed': { tr: 'Şablon yüklenemedi.', en: 'The template could not be loaded.' },
+  'parameter.templates.saveFailed': { tr: 'Şablon kaydedilemedi.', en: 'The template could not be saved.' },
+  'parameter.templates.resetFailed': { tr: 'Şablon varsayılana döndürülemedi.', en: 'The template could not be reset.' },
+  'parameter.templates.previewFailed': { tr: 'Önizleme oluşturulamadı.', en: 'The preview could not be generated.' },
 
   // ── subscription-tab ─────────────────────────────────────────────────────
   'parameter.subscription.currentTitle': { tr: 'Mevcut Abonelik', en: 'Current Subscription' },

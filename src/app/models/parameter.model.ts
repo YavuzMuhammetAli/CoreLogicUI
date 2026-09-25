@@ -56,6 +56,12 @@ export interface MailSetting {
   from: string;
   fromName?: string | null;
   useSsl: boolean;
+  /** Bildirim e-postasındaki bağlantıların kökü (http/https); boşsa mailde buton çıkmaz. */
+  appUrl?: string | null;
+  /** Bildirim e-postası başlığındaki logo adresi (isteğe bağlı). */
+  logoUrl?: string | null;
+  /** Dil tercihi olmayan kullanıcıların bildirim dili. */
+  defaultLanguage: NotificationLanguage;
 }
 
 /**
@@ -63,6 +69,57 @@ export interface MailSetting {
  * Bu değer forma olduğu gibi yüklenir; değişmeden geri giderse parola korunur.
  */
 export const MASKED_PASSWORD = '••••••';
+
+// ── Bildirim şablonları ────────────────────────────────────────────────────
+
+/** Bildirim e-postası dili — UI'daki TR/EN ile aynı küme. */
+export type NotificationLanguage = 'tr' | 'en';
+
+/**
+ * Şablonu özelleştirilebilen bildirim türleri — backend `WorkflowNotifyKinds`
+ * ile birebir (ekrandaki sırayla). Yeniden atama `TaskAssigned` türünü kullanır.
+ */
+export const NOTIFICATION_TEMPLATE_KINDS = [
+  'TaskAssigned',
+  'TaskEscalated',
+  'TaskExpired',
+  'WorkflowCompleted',
+  'WorkflowRejected'
+] as const;
+
+export type NotificationTemplateKind = (typeof NOTIFICATION_TEMPLATE_KINDS)[number];
+
+/** GET /Parameter/mail/templates satırı. */
+export interface NotificationTemplateSummary {
+  kind: NotificationTemplateKind;
+  language: NotificationLanguage;
+  /** Admin bu tür+dil için kendi şablonunu kaydetmiş mi. */
+  isCustom: boolean;
+}
+
+/** GET /Parameter/mail/templates/{kind} — etkin şablon + gömülü varsayılan. */
+export interface NotificationTemplate {
+  kind: NotificationTemplateKind;
+  language: NotificationLanguage;
+  isCustom: boolean;
+  subject: string;
+  html: string;
+  defaultSubject: string;
+  defaultHtml: string;
+  /** Kullanılabilir yer tutucu adları — şablonda `{{ad}}` olarak yazılır. */
+  placeholders: string[];
+}
+
+/** PUT .../{kind} ve POST .../{kind}/preview gövdesi. */
+export interface NotificationTemplateContent {
+  subject: string;
+  html: string;
+}
+
+/** POST .../{kind}/test gövdesi. */
+export interface NotificationTemplateTestRequest extends NotificationTemplateContent {
+  to: string;
+}
 
 // ── Abonelik ───────────────────────────────────────────────────────────────
 

@@ -26,6 +26,15 @@
       type="button"
       class="tab-btn"
       role="tab"
+      [class.tab-btn--active]="activeTab() === 'templates'"
+      [attr.aria-selected]="activeTab() === 'templates'"
+      (click)="setTab('templates')">
+      {{ 'parameter.templatesTab' | t }}
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      role="tab"
       [class.tab-btn--active]="activeTab() === 'subscription'"
       [attr.aria-selected]="activeTab() === 'subscription'"
       (click)="setTab('subscription')">
@@ -37,6 +46,8 @@
     <app-backup-settings-tab />
   } @else if (activeTab() === 'mail') {
     <app-mail-settings-tab />
+  } @else if (activeTab() === 'templates') {
+    <app-notification-templates-tab />
   } @else {
     <app-subscription-tab />
   }

@@ -80,9 +80,10 @@ CoreLogicUI-master/
         │   ├── deleted-reports/            # Soft-delete edilmiş raporlar (admin)
         │   ├── deleted-dashboards/         # Soft-delete edilmiş dashboardlar (admin)
         │   ├── audit-log/                  # Denetim kayıtları — kim/ne zaman/ne değişti, filtre + sayfalama (admin)
-        │   ├── parameters/                 # Parametreler (admin) — 3 sekme: yedekleme zamanlaması, SMTP, abonelik
+        │   ├── parameters/                 # Parametreler (admin) — 4 sekme: yedekleme, SMTP, bildirim şablonları, abonelik
         │   │   ├── backup/                 #   Cron kurucu + "sonraki 5 çalışma" önizlemesi + yedek geçmişi
-        │   │   ├── mail/                   #   SMTP ayarları + test maili (parola maskeli taşınır)
+        │   │   ├── mail/                   #   SMTP ayarları + bildirim linki/logo/varsayılan dil + test maili (parola maskeli)
+        │   │   ├── templates/              #   Bildirim e-posta şablonları — tür×dil HTML editörü, sandbox iframe önizleme
         │   │   └── subscription/           #   Plan kartları + mevcut abonelik + satın alma (ödeme şimdilik stub)
         │   ├── ai-chat/                    # Yapay Zeka asistanı (admin) — sohbet + öneri kartları + içeri aktar/yayınla
         │   ├── database-proccess/          # /Database endpoint'lerini saran ekran (admin)
@@ -212,7 +213,7 @@ CoreLogicUI-master/
   /roles/new                → RoleDetailComponent              (adminGuard, data.mode='new')
   /roles/:id                → RoleDetailComponent              (adminGuard)
   /audit-logs               → AuditLogComponent               (adminGuard)
-  /parameters               → ParametersComponent             (adminGuard — yedekleme/e-posta/abonelik)
+  /parameters               → ParametersComponent             (adminGuard — yedekleme/e-posta/bildirim şablonları/abonelik)
   /ai                       → AiChatComponent                 (adminGuard — yapay zeka asistanı)
   /profile                  → UserProfileComponent             (authGuard yeterli)
   /reports                  → ReportListComponent               (authGuard yeterli)
@@ -265,14 +266,14 @@ Tüm servisler `@Injectable({ providedIn: 'root' })`, `inject(HttpClient)` (veya
 | `PermissionService` | `/Permission` — kendi izin durumu, signal (`isAdmin()`, `can()`), APP_INITIALIZER ile önyüklenir |
 | `PermissionAdminService` | `/Permission` — admin: kullanıcı bazlı izin atama |
 | `RoleAdminService` | `/Role` — RBAC rol CRUD, izin/üyelik yönetimi |
-| `UserProfileService` | `/Profile` — me/update/change-password/upload-photo/sil |
+| `UserProfileService` | `/Profile` — me/update/change-password/upload-photo/sil + `language` (bildirim e-postası dili; layout açılışta ve TR/EN değişiminde yazar) |
 | `ModelColumnSettingService` | `/ModelColumnSetting` — get/set kolon görünürlüğü |
 | `ReportService` | `/Report` — define/update/list/run/export (excel/pdf) |
 | `DashboardService` | `/Dashboard` — define/get/list + soft-delete/restore |
 | `AuditLogService` | `/AuditLog` — filtrelenmiş denetim kayıtları (admin-only) |
 | `UserAdminService` | `/User` — getall/create/update/setActive/resetPassword/setAdmin/delete (admin-only) |
 | `RelationshipService` | `/publish/models/{id}/relationships` (GET/POST/PUT/DELETE), `/validate-graph`, `/preview` |
-| `ParameterService` | `/Parameter` — `backup/schedule`, `backup/history`, `backup/run`, `mail`, `mail/test`, `subscription/*` (admin-only) |
+| `ParameterService` | `/Parameter` — `backup/schedule`, `backup/history`, `backup/run`, `mail`, `mail/test`, `mail/templates/{kind}` (+ `/preview`, `/test`), `subscription/*` (admin-only) |
 | `AiService` | `/Ai` — `conversations`, `chat` (SSE), `proposals/{id}/status`, `usage` (admin-only) |
 | `AiImportService` | Kendi ucu YOK — AI önerilerini `PublishedTableService`/`RelationshipService`/`ReportService`/`DashboardService` üzerinden aktarır |
 | `LanguageService` | HTTP yok — TR/EN dil tercihi, `localStorage`, `t()` metodu + `TranslatePipe` |
@@ -423,7 +424,8 @@ yazmadan gösterir.
 
 ## Parametreler Ekranı (G3)
 
-`/parameters` (adminGuard) üç bağımsız sekme taşır. Tümü `/Parameter` controller'ına gider,
+`/parameters` (adminGuard) dört bağımsız sekme taşır (bildirim şablonları: aşağıda
+[Bildirim E-postaları](#bildirim-e-postaları)). Tümü `/Parameter` controller'ına gider,
 tenant **istemciden alınmaz** — her uç çağıran admin'in ambient tenant'ında çalışır.
 
 ### Yedekleme
@@ -467,6 +469,44 @@ abonelik `isCurrent` ile işaretlenir. Satın alma önce `IPaymentGateway.Charge
 kaydını değiştirmekten ibaret olacak (`Plan`'da henüz parasal alan yok, o yüzden UI fiyat göstermez).
 `ChangePlan` iki yolu ayırır: aynı planda Trial/PastDue → satır yerinde `Active`'e çekilir
 (deneme dönüşümü), farklı plan → eskisi `Cancelled`, yenisi `Active` (aktif tek abonelik kuralı).
+
+## Bildirim E-postaları
+
+Akış bildirimleri (zil) aynı zamanda kullanıcının **kayıtlı e-postasına** HTML olarak gider.
+E-postası boş/bozuk ya da pasif (`Status=false`) kullanıcıya mail **gönderilmez** (zil bildirimi
+yine düşer). SMTP kapalıysa e-posta işi hiç açılmaz.
+
+| Tür | Ne zaman | Alıcı |
+|---|---|---|
+| `TaskAssigned` | Görev açıldı **veya yeniden atandı** | Görevli / rolün aktif üyeleri |
+| `TaskEscalated` / `TaskExpired` | SLA (WorkflowWorker) | Görevli / rol üyeleri |
+| `WorkflowCompleted` / `WorkflowRejected` | Süreç terminal duruma geçti | `StartedBy`, yoksa kaydın `CreatedBy`'ı |
+
+**Akış:** `workflow.notify` işi → kanallar (zil, webhook, e-posta). E-posta kanalı maili
+kendisi GÖNDERMEZ; e-postası olan her alıcı için ayrı `workflow.notify.email` işi açar
+(`WorkflowEmailJobHandler`) — yeniden deneme alıcı başına izole kalır, bozuk bir adres
+diğerlerini engellemez. Süreç bildirimi, onay transaction'ı geri alındıysa (instance terminal
+değilse) gönderilmez (`NotificationValues.StillApplies`).
+
+**Şablonlar** (`Business/Notifications/`): gömülü kurumsal iskelet `Templates/layout.html`
+(EmbeddedResource) + `DefaultNotificationTemplates` tür×dil metinleri. Admin `/parameters` →
+Bildirim Şablonları'ndan tür+dil başına kendi konu/HTML'ini yazar; `AppSetting`'te
+`mail.tpl.{kind}.{lang}.subject|html` olarak durur (migrasyon yok), "Varsayılana Dön" siler.
+Sözdizimi Mustache alt kümesi: `{{ad}}` (değer **HTML-encode**), `{{#ad}}…{{/ad}}` (doluysa),
+`{{^ad}}…{{/ad}}` (boşsa). Yer tutucu listesi KAPALI (`NotificationPlaceholders`) — bilinmeyen
+ad ya da kapanmamış bölüm kayıtta reddedilir. Önizleme sunucuda render edilir; UI onu
+`<iframe sandbox="">` + `bypassSecurityTrustHtml` ile gösterir (projedeki tek iframe).
+
+**Dil sırası:** kullanıcı tercihi (`UserPreference`, migrasyon **`019`**) → `mail.defaultLanguage`
+→ `tr`. Tercihi layout yazar (açılışta + TR/EN değişiminde, `PUT /Profile/language`). 019
+kurulmamış tenant'ta okuma SQL 208'i yutup varsayılana düşer — e-posta yine gider.
+
+**Bağlantı:** `mail.appUrl` (E-posta sekmesi) + `/tasks/{id}` ya da `/models/{tip}/{id}`.
+Boşsa mailde buton çıkmaz (göreli link mail istemcisinde çalışmaz). `mail.logoUrl` opsiyonel.
+
+> `User.Email` EF'te `IsRequired(false)` olarak eşlendi: Core'da Nullable açık ve NULL
+> e-postalı tek bir satır, onu içeren her `User` sorgusunu `SqlNullValueException` ile
+> düşürüyordu (rol üyelerine bildirim dahil — uçtan uca testte yakalandı).
 
 ## Form Tabanlı İş Akışı
 

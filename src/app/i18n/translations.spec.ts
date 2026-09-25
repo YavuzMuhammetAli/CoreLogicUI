@@ -1,4 +1,5 @@
 import { TRANSLATIONS } from './index';
+import { NOTIFICATION_TEMPLATE_KINDS } from '../models/parameter.model';
 
 /**
  * Çeviri sözlüğünün bütünlük testi.
@@ -69,6 +70,16 @@ describe('TRANSLATIONS', () => {
 
     const missing = required.filter(key => !TRANSLATIONS[key]);
     expect(missing).withContext(`Tanımsız anahtar: ${missing.join(', ')}`).toEqual([]);
+  });
+
+  it('bildirim şablonu türlerinin etiketleri tanımlıdır', () => {
+    // Şablon sekmesi tür adını/ipucunu 'parameter.templates.kind(Hint).{Kind}' olarak
+    // çözer; backend'e yeni bir tür eklenip burası unutulursa ham anahtar görünür.
+    const missing = NOTIFICATION_TEMPLATE_KINDS
+      .flatMap(kind => [`parameter.templates.kind.${kind}`, `parameter.templates.kindHint.${kind}`])
+      .filter(key => !TRANSLATIONS[key]);
+
+    expect(missing).withContext(`Eksik: ${missing.join(', ')}`).toEqual([]);
   });
 
   it('deleted-* ekranlarının tamamı aynı anahtar setine sahiptir', () => {

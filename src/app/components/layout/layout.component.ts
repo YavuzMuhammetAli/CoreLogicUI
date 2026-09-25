@@ -105,6 +105,11 @@ export class LayoutComponent implements OnInit, OnDestroy {
     this.taskPollTimer = setInterval(
       () => this.refreshTaskCount(), LayoutComponent.TaskPollIntervalMs);
 
+    // Arayüz dili bildirim e-postalarının dili olarak saklanır. Kabuk her açılışta
+    // bir kez yazar — dil tercihi hiç kaydedilmemiş mevcut kullanıcılar da (girişten
+    // ya da sayfa yenilemesinden sonra) tercihlerini böylece kazanır.
+    this.syncLanguagePreference();
+
     // Profil fotoğrafını backend'den çek; başarısız olursa token verisi yeterli
     if (tokenUser) {
       this.userProfile.getMe().pipe(markDirty(this.cdr)).subscribe({
@@ -199,6 +204,16 @@ export class LayoutComponent implements OnInit, OnDestroy {
   /** Arayüz dili (TR/EN) arasında geçiş yapar */
   toggleLanguage(): void {
     this.languageService.toggle();
+    this.syncLanguagePreference();
+  }
+
+  /**
+   * Seçili dili backend'e yazar; bildirim e-postaları bu dilde gider.
+   * Beklenmez ve hata yutulur: tercih tablosu kurulmamış bir tenant'ta (migrasyon
+   * < 019) ekran bozulmamalı — e-posta o durumda şirketin varsayılan dilinde gider.
+   */
+  private syncLanguagePreference(): void {
+    this.userProfile.setLanguage(this.languageService.lang()).subscribe({ error: () => {} });
   }
 
   /**

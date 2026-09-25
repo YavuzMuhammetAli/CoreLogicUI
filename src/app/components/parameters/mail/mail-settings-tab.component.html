@@ -112,6 +112,58 @@
           </label>
           <span class="field-help">{{ 'parameter.mail.useSslHelp' | t }}</span>
 
+          <!-- ── Bildirim e-postaları ──────────────────────────────────────── -->
+          <h3 class="settings-subhead">{{ 'parameter.mail.notificationTitle' | t }}</h3>
+          <p class="muted-hint">{{ 'parameter.mail.notificationIntro' | t }}</p>
+
+          <div class="settings-grid" style="margin-top: var(--space-4)">
+            <div class="field">
+              <label for="mailAppUrl">{{ 'parameter.mail.appUrl' | t }}</label>
+              <input
+                id="mailAppUrl"
+                class="input"
+                type="url"
+                spellcheck="false"
+                placeholder="https://app.firma.com"
+                formControlName="appUrl"
+                aria-describedby="mailAppUrlHelp"
+                [attr.aria-invalid]="f['appUrl'].invalid && f['appUrl'].touched">
+              @if (f['appUrl'].invalid && f['appUrl'].touched) {
+                <span class="field-error" role="alert">{{ 'parameter.mail.urlInvalid' | t }}</span>
+              } @else {
+                <span id="mailAppUrlHelp" class="field-help">{{ 'parameter.mail.appUrlHelp' | t }}</span>
+              }
+            </div>
+
+            <div class="field">
+              <label for="mailLogoUrl">{{ 'parameter.mail.logoUrl' | t }}</label>
+              <input
+                id="mailLogoUrl"
+                class="input"
+                type="url"
+                spellcheck="false"
+                placeholder="https://firma.com/logo.png"
+                formControlName="logoUrl"
+                aria-describedby="mailLogoUrlHelp"
+                [attr.aria-invalid]="f['logoUrl'].invalid && f['logoUrl'].touched">
+              @if (f['logoUrl'].invalid && f['logoUrl'].touched) {
+                <span class="field-error" role="alert">{{ 'parameter.mail.urlInvalid' | t }}</span>
+              } @else {
+                <span id="mailLogoUrlHelp" class="field-help">{{ 'parameter.mail.logoUrlHelp' | t }}</span>
+              }
+            </div>
+
+            <div class="field">
+              <label for="mailDefaultLanguage">{{ 'parameter.mail.defaultLanguage' | t }}</label>
+              <select id="mailDefaultLanguage" class="input" formControlName="defaultLanguage"
+                      aria-describedby="mailDefaultLanguageHelp">
+                <option value="tr">{{ 'parameter.mail.languageTr' | t }}</option>
+                <option value="en">{{ 'parameter.mail.languageEn' | t }}</option>
+              </select>
+              <span id="mailDefaultLanguageHelp" class="field-help">{{ 'parameter.mail.defaultLanguageHelp' | t }}</span>
+            </div>
+          </div>
+
           @if (formError()) {
             <div class="alert alert-danger" role="alert" style="margin-top: var(--space-4)">{{ formError() }}</div>
           }

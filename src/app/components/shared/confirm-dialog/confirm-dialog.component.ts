@@ -46,11 +46,13 @@ export class ConfirmDialogComponent {
 
   constructor() {
     // Modal her açıldığında ilk adıma dön — önceki açılıştan kalan ikinci aşama sızmasın.
+    // Angular 18'de effect içinde sinyal yazmak açık izin ister; yoksa her açılışta
+    // NG0600 fırlar (diyalog yine açılır ama adım sıfırlanmaz ve konsol kirlenir).
     effect(() => {
       if (this.open()) {
         this.step.set(1);
       }
-    });
+    }, { allowSignalWrites: true });
   }
 
   @HostListener('document:keydown.escape')

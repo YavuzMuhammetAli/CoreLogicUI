@@ -1,0 +1,236 @@
+<div class="tab-panel flow" role="tabpanel" [attr.aria-label]="'parameter.templatesPanelAria' | t">
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>{{ 'parameter.templates.title' | t }}</h2>
+      <div class="lang-switch" role="group" [attr.aria-label]="'parameter.templates.languageAria' | t">
+        @for (lang of languages; track lang) {
+          <button
+            type="button"
+            class="lang-btn"
+            [class.lang-btn--active]="selectedLang() === lang"
+            [attr.aria-pressed]="selectedLang() === lang"
+            (click)="selectLang(lang)">
+            {{ 'parameter.templates.lang.' + lang | t }}
+          </button>
+        }
+      </div>
+    </div>
+    <div class="panel-body">
+      <p class="muted-hint">{{ 'parameter.templates.intro' | t }}</p>
+
+      <div class="template-layout">
+
+        <!-- ── Tür listesi ────────────────────────────────────────────── -->
+        <nav class="kind-list" [attr.aria-label]="'parameter.templates.kindListAria' | t">
+          @for (kind of kinds; track kind) {
+            <button
+              type="button"
+              class="kind-item"
+              [class.kind-item--active]="selectedKind() === kind"
+              [attr.aria-current]="selectedKind() === kind ? 'true' : null"
+              (click)="selectKind(kind)">
+              <span class="kind-name">{{ 'parameter.templates.kind.' + kind | t }}</span>
+              <span class="kind-hint">{{ 'parameter.templates.kindHint.' + kind | t }}</span>
+              @if (isCustom(kind)) {
+                <span class="badge badge-meta">{{ 'parameter.templates.custom' | t }}</span>
+              } @else {
+                <span class="badge">{{ 'parameter.templates.default' | t }}</span>
+              }
+            </button>
+          }
+        </nav>
+
+        <!-- ── Düzenleyici ────────────────────────────────────────────── -->
+        <div class="editor">
+          @if (loadError()) {
+            <div class="alert alert-danger" role="alert">{{ loadError() }}</div>
+          }
+
+          @if (loading()) {
+            <div class="empty-state">
+              <span class="spinner" style="width: 32px; height: 32px;" [attr.aria-label]="'common.loading' | t"></span>
+            </div>
+          } @else if (template()) {
+            <form [formGroup]="form" (ngSubmit)="save()" class="stack">
+
+              <div class="field">
+                <label for="tplSubject">{{ 'parameter.templates.subject' | t }} <span class="req">*</span></label>
+                <input
+                  #subjectInput
+                  id="tplSubject"
+                  class="input"
+                  type="text"
+                  maxlength="200"
+                  spellcheck="false"
+                  formControlName="subject"
+                  (focus)="onFieldFocus('subject')"
+                  [attr.aria-invalid]="form.controls.subject.invalid && form.controls.subject.touched">
+                @if (form.controls.subject.invalid && form.controls.subject.touched) {
+                  <span class="field-error" role="alert">{{ 'parameter.templates.subjectRequired' | t }}</span>
+                }
+              </div>
+
+              <div class="field">
+                <span class="field-label">{{ 'parameter.templates.placeholders' | t }}</span>
+                <div class="placeholder-list">
+                  @for (name of template()!.placeholders; track name) {
+                    <button
+                      type="button"
+                      class="placeholder-chip"
+                      [title]="'parameter.templates.ph.' + name | t"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="insertPlaceholder(name)">{{ token(name) }}</button>
+                  }
+                </div>
+                <span class="field-help">{{ 'parameter.templates.placeholdersHelp' | t }}</span>
+              </div>
+
+              <div class="field">
+                <label for="tplHtml">{{ 'parameter.templates.html' | t }} <span class="req">*</span></label>
+                <textarea
+                  #htmlInput
+                  id="tplHtml"
+                  class="input code-input"
+                  rows="18"
+                  spellcheck="false"
+                  wrap="off"
+                  formControlName="html"
+                  (focus)="onFieldFocus('html')"
+                  aria-describedby="tplHtmlHelp"
+                  [attr.aria-invalid]="form.controls.html.invalid && form.controls.html.touched"></textarea>
+                @if (form.controls.html.invalid && form.controls.html.touched) {
+                  <span class="field-error" role="alert">{{ 'parameter.templates.htmlRequired' | t }}</span>
+                } @else {
+                  <span id="tplHtmlHelp" class="field-help">{{ 'parameter.templates.htmlHelp' | t }}</span>
+                }
+              </div>
+
+              @if (formError()) {
+                <div class="alert alert-danger" role="alert">{{ formError() }}</div>
+              }
+              @if (formSuccess()) {
+                <div class="alert alert-success" role="alert">{{ formSuccess() }}</div>
+              }
+
+              <div class="editor-actions">
+                <button type="button" class="btn btn-ghost btn-sm" (click)="loadDefaultIntoEditor()">
+                  {{ 'parameter.templates.loadDefault' | t }}
+                </button>
+                <span class="editor-actions-spacer"></span>
+                @if (template()!.isCustom) {
+                  <button type="button" class="btn btn-secondary" [disabled]="resetting()" (click)="requestReset()">
+                    {{ 'parameter.templates.reset' | t }}
+                  </button>
+                }
+                <button class="btn btn-primary" type="submit" [disabled]="saving() || !dirty()">
+                  @if (saving()) {
+                    <span class="spinner" aria-hidden="true"></span>
+                  }
+                  {{ 'parameter.templates.save' | t }}
+                </button>
+              </div>
+            </form>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Önizleme ──────────────────────────────────────────────────────── -->
+  @if (template()) {
+    <div class="panel">
+      <div class="panel-head">
+        <h2>{{ 'parameter.templates.previewTitle' | t }}</h2>
+        <button type="button" class="btn btn-ghost btn-sm" [disabled]="previewing()" (click)="refreshPreview()">
+          @if (previewing()) {
+            <span class="spinner" aria-hidden="true"></span>
+          }
+          {{ 'parameter.templates.refreshPreview' | t }}
+        </button>
+      </div>
+      <div class="panel-body">
+        <p class="muted-hint">{{ 'parameter.templates.previewIntro' | t }}</p>
+
+        @if (previewError()) {
+          <div class="alert alert-warn" role="alert" style="margin-top: var(--space-4)">{{ previewError() }}</div>
+        }
+
+        <div class="preview-frame">
+          <div class="preview-subject">
+            <span class="status-label">{{ 'parameter.templates.subject' | t }}</span>
+            <span class="preview-subject-text">{{ previewSubject() }}</span>
+          </div>
+          @if (previewHtml(); as html) {
+            <!-- sandbox="" : script/form/eklenti yok, opak origin — bkz. trustPreview() -->
+            <iframe
+              class="preview-iframe"
+              sandbox=""
+              referrerpolicy="no-referrer"
+              [title]="'parameter.templates.previewTitle' | t"
+              [srcdoc]="html"></iframe>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Test maili ─────────────────────────────────────────────────── -->
+    <div class="panel">
+      <div class="panel-head">
+        <h2>{{ 'parameter.templates.testTitle' | t }}</h2>
+      </div>
+      <div class="panel-body">
+        <p class="muted-hint">{{ 'parameter.templates.testIntro' | t }}</p>
+
+        <form [formGroup]="testForm" (ngSubmit)="sendTest()">
+          <div class="cluster" style="margin-top: var(--space-4); align-items: flex-start">
+            <div class="field" style="min-width: 260px">
+              <label for="tplTestTo">{{ 'parameter.mail.testTo' | t }} <span class="req">*</span></label>
+              <input
+                id="tplTestTo"
+                class="input"
+                type="email"
+                formControlName="to"
+                [attr.aria-invalid]="testForm.controls.to.invalid && testForm.controls.to.touched">
+              @if (testForm.controls.to.invalid && testForm.controls.to.touched) {
+                <span class="field-error" role="alert">{{ 'parameter.mail.testToRequired' | t }}</span>
+              }
+            </div>
+
+            <div class="field">
+              <label>&nbsp;</label>
+              <button class="btn btn-secondary" type="submit" [disabled]="testing()">
+                @if (testing()) {
+                  <span class="spinner" aria-hidden="true"></span>
+                }
+                {{ 'parameter.mail.sendTest' | t }}
+              </button>
+            </div>
+          </div>
+        </form>
+
+        @if (testError()) {
+          <div class="alert alert-danger" role="alert" style="margin-top: var(--space-4)">{{ testError() }}</div>
+        }
+        @if (testSuccess()) {
+          <div class="alert alert-success" role="alert" style="margin-top: var(--space-4)">{{ testSuccess() }}</div>
+        }
+      </div>
+    </div>
+  }
+</div>
+
+<app-confirm-dialog
+  [open]="resetConfirmOpen()"
+  [title]="'parameter.templates.resetConfirmTitle' | t"
+  [message]="'parameter.templates.resetConfirmMessage' | t"
+  [busy]="resetting()"
+  (confirmed)="confirmReset()"
+  (cancelled)="cancelReset()" />
+
+<app-confirm-dialog
+  [open]="pendingSwitch() !== null"
+  [title]="'parameter.templates.discardConfirmTitle' | t"
+  [message]="'parameter.templates.discardConfirmMessage' | t"
+  (confirmed)="confirmSwitch()"
+  (cancelled)="cancelSwitch()" />

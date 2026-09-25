@@ -2,12 +2,13 @@ import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { BackupSettingsTabComponent } from './backup/backup-settings-tab.component';
 import { MailSettingsTabComponent } from './mail/mail-settings-tab.component';
+import { NotificationTemplatesTabComponent } from './templates/notification-templates-tab.component';
 import { SubscriptionTabComponent } from './subscription/subscription-tab.component';
 
-type TabId = 'backup' | 'mail' | 'subscription';
+type TabId = 'backup' | 'mail' | 'templates' | 'subscription';
 
 /**
- * Parametreler ekranı (admin) — üç bağımsız sekmenin kabuğu.
+ * Parametreler ekranı (admin) — dört bağımsız sekmenin kabuğu.
  *
  * Sekmeler `@if` ile değiştirilir, yani seçilmeyen sekme hiç oluşturulmaz ve
  * veri çekmez. table-detail'deki ilişkiler sekmesinden farklı olarak burada
@@ -20,6 +21,7 @@ type TabId = 'backup' | 'mail' | 'subscription';
     TranslatePipe,
     BackupSettingsTabComponent,
     MailSettingsTabComponent,
+    NotificationTemplatesTabComponent,
     SubscriptionTabComponent
   ],
   templateUrl: './parameters.component.html',

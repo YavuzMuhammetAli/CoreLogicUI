@@ -23,6 +23,16 @@
   align-items: start;
 }
 
+/* Aynı form içindeki ikinci bölüm başlığı (ör. e-posta sekmesinde "Bildirim e-postaları"). */
+.settings-subhead {
+  margin: var(--space-6) 0 var(--space-1);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-soft);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg);
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;

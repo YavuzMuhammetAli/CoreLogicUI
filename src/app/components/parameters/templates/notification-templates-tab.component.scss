@@ -1,0 +1,214 @@
+/*
+ * Bildirim Şablonları sekmesi. Ortak sekme gövdesi stilleri parameters.shared.scss'te;
+ * burada yalnız bu ekrana özgü düzen (tür listesi + düzenleyici + önizleme) var.
+ */
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+/* ── Şablon dili (TR/EN) ─────────────────────────────────────────────────── */
+
+.lang-switch {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.lang-btn {
+  padding: var(--space-1) var(--space-3);
+  font: 600 var(--text-xs) / 1.6 var(--font-mono);
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  background: var(--surface);
+  border: none;
+  cursor: pointer;
+
+  & + & {
+    border-left: 1px solid var(--border);
+  }
+
+  &:hover {
+    color: var(--fg);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+
+  &--active {
+    color: var(--accent);
+    background: var(--meta-bg);
+  }
+}
+
+/* ── Tür listesi + düzenleyici ───────────────────────────────────────────── */
+
+.template-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: var(--space-6);
+  margin-top: var(--space-5);
+  align-items: start;
+}
+
+.kind-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.kind-item {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color var(--motion-fast) var(--ease-standard),
+              background var(--motion-fast) var(--ease-standard);
+
+  &:hover {
+    border-color: var(--border);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+
+  &--active {
+    border-color: var(--accent);
+    background: var(--meta-bg);
+  }
+}
+
+.kind-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.kind-hint {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.editor {
+  min-width: 0;
+}
+
+.field-label {
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.placeholder-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.placeholder-chip {
+  padding: 2px var(--space-2);
+  font: 500 var(--text-xs) / 1.6 var(--font-mono);
+  color: var(--meta);
+  background: var(--meta-bg);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--meta);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+}
+
+/* HTML düzenleyici — satır kaydırma kapalı ki etiket yapısı okunabilsin. */
+.code-input {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  min-height: 360px;
+  white-space: pre;
+  overflow: auto;
+  tab-size: 2;
+}
+
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.editor-actions-spacer {
+  flex: 1;
+}
+
+/* ── Önizleme ────────────────────────────────────────────────────────────── */
+
+.preview-frame {
+  margin-top: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.preview-subject {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-warm);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.preview-subject-text {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg);
+  word-break: break-word;
+}
+
+/*
+ * E-posta istemcileri koyu temayı çoğu zaman uygulamaz; önizleme de gerçek
+ * maile benzesin diye iframe arka planı temadan bağımsız beyaz.
+ */
+.preview-iframe {
+  display: block;
+  width: 100%;
+  height: 640px;
+  border: 0;
+  background: #ffffff;
+}
+
+@media (max-width: 900px) {
+  .template-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .kind-list {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .kind-item {
+    min-width: 200px;
+  }
+}

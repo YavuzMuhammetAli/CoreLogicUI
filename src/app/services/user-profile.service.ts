@@ -37,6 +37,18 @@ export class UserProfileService {
     return this.http.post<DataResponseModel<string>>(`${this.baseUrl}/upload-photo`, form);
   }
 
+  /**
+   * Arayüz dilini backend'e yazar (PUT /Profile/language). Bildirim e-postaları
+   * arka planda gönderildiği için isteğin Accept-Language'ı yoktur; kullanıcının
+   * hangi dilde mail alacağı buradan öğrenilir.
+   *
+   * Bu metot LanguageService'e KONMADI: languageInterceptor o servisi kullanıyor,
+   * HttpClient enjekte etmek döngüsel DI oluştururdu.
+   */
+  setLanguage(language: 'tr' | 'en'): Observable<ResponseModel> {
+    return this.http.put<ResponseModel>(`${this.baseUrl}/language`, { language });
+  }
+
   /** Profil fotoğrafını siler (DELETE /Profile/photo). */
   deletePhoto(): Observable<ResponseModel> {
     return this.http.delete<ResponseModel>(`${this.baseUrl}/photo`);
