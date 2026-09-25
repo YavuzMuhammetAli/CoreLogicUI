@@ -5,14 +5,14 @@ import {
 import { isPlatformBrowser } from '@angular/common';
 import { WorkflowGraph, outgoingTargets } from '../../../models/workflow.model';
 import { layoutWorkflow } from '../workflow-graph/workflow-graph.layout';
-import { edgeGeometry, portPositions } from '../workflow-graph/workflow-edge.geometry';
+import { EdgeRequest, portPositions, routeEdges } from '../workflow-graph/workflow-edge.geometry';
 import {
   CanvasEdge, CanvasNode, PortKind,
   nodeAt, resolveNodePositions
 } from './workflow-canvas.hit-test';
 import {
   Camera, IDENTITY_CAMERA, Point, ViewportRect, ZOOM_STEP,
-  boundsOf, fitToView, panBy, screenToWorld, zoomAt, zoomAtCenter
+  boundsOf, fitToView, gridStyle, panBy, screenToWorld, zoomAt, zoomAtCenter
 } from './workflow-canvas.camera';
 import { LanguageService } from '../../../services/language.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
@@ -65,6 +65,12 @@ export class WorkflowCanvasComponent {
   readonly nodeSelected = output<string>();
   /** Düğüme çift tıklandı — adım ayrıntı pop-up'ı açılmalı (salt-okunurda da). */
   readonly nodeOpened = output<string>();
+  /**
+   * "Otomatik düzenle" — tüm adımların elle verilmiş konumu silinmeli ki
+   * otomatik yerleşim devreye girsin. Elle yerleşim kendiliğinden ezilmez;
+   * yalnızca kullanıcı isteyince.
+   */
+  readonly layoutReset = output<void>();
 
   private readonly platformId = inject(PLATFORM_ID);
   private readonly languageService = inject(LanguageService);
@@ -84,6 +90,12 @@ export class WorkflowCanvasComponent {
   readonly zoomPercent = computed(() => Math.round(this.camera().zoom * 100));
   readonly showEdgeLabels = computed(() => this.camera().zoom > EDGE_LABEL_MIN_ZOOM);
 
+  /** Viewport'taki noktalı ızgara — kamerayla birlikte ölçeklenir ve kayar. */
+  readonly grid = computed(() => {
+    const { step, offsetX, offsetY } = gridStyle(this.camera());
+    return { size: `${step}px ${step}px`, position: `${offsetX}px ${offsetY}px` };
+  });
+
   /**
    * Otomatik yerleşim AYRI bir computed'de duruyor.
    *
@@ -97,55 +109,60 @@ export class WorkflowCanvasComponent {
   readonly nodes = computed<CanvasNode[]>(() =>
     resolveNodePositions(this.graph(), this.autoLayout().nodes, this.liveOffsets()));
 
-  /** Kenarlar düğüm konumlarından türetilir; sürüklerken canlı takip eder. */
+  /**
+   * Kenarlar düğüm konumlarından türetilir; sürüklerken canlı takip eder.
+   *
+   * Onay kenarı yeşil, red kenarı kırmızı porttan çıkar — ikisi aynı noktadan
+   * çıksaydı üst üste binerdi. Hedef kaynağın altında değilse (red → önceki
+   * adım) kenar kutuların içinden değil sağından dolaştırılır (bkz. routeEdges).
+   */
   readonly edges = computed<CanvasEdge[]>(() => {
     const graph = this.graph();
     if (!graph) return [];
 
-    const byKey = new Map(this.nodes().map(node => [node.key.toLowerCase(), node]));
+    const nodes = this.nodes();
+    const byKey = new Map(nodes.map(node => [node.key.toLowerCase(), node]));
     const approveLabel = this.languageService.t('workflow.canvas.edgeApprove');
     const rejectLabel = this.languageService.t('workflow.canvas.edgeReject');
-    const edges: CanvasEdge[] = [];
+    const pending: Array<Omit<CanvasEdge, 'geometry'> & { request: EdgeRequest }> = [];
 
     for (const step of graph.steps) {
       const source = byKey.get(step.key.toLowerCase());
       if (!source) continue;
 
       const { approve, reject } = outgoingTargets(step);
-      this.pushEdge(edges, byKey, source, approve, approveLabel, 'approve');
-      this.pushEdge(edges, byKey, source, reject, rejectLabel, 'reject');
+      const [approvePort, rejectPort] = portPositions(2, source.width);
+      const outgoing: Array<{ targetKey: string | null | undefined; label: string; port: PortKind; offset: number }> = [
+        { targetKey: approve, label: approveLabel, port: 'approve', offset: approvePort },
+        { targetKey: reject, label: rejectLabel, port: 'reject', offset: rejectPort }
+      ];
+
+      for (const edge of outgoing) {
+        // Terminal ve boş hedefler canvas'ta çizilmez: her düğümden iki terminale
+        // ok çekmek şemayı okunmaz hale getirirdi. Terminaller form sekmesinde görünür.
+        if (!edge.targetKey) continue;
+
+        const target = byKey.get(edge.targetKey.toLowerCase());
+        if (!target) continue;
+
+        pending.push({
+          key: `${source.key}->${edge.targetKey}:${edge.port}`,
+          label: edge.label,
+          isRejection: edge.port === 'reject',
+          from: source.key,
+          to: edge.targetKey,
+          port: edge.port,
+          request: { source, target, sourceOffsetX: edge.offset }
+        });
+      }
     }
 
-    return edges;
+    const geometries = routeEdges(pending.map(edge => edge.request), nodes);
+
+    return pending.map(({ request, ...edge }, index) => ({ ...edge, geometry: geometries[index] }));
   });
 
-  private pushEdge(
-    edges: CanvasEdge[],
-    byKey: Map<string, CanvasNode>,
-    source: CanvasNode,
-    targetKey: string | null | undefined,
-    label: string,
-    port: PortKind
-  ): void {
-    // Terminal ve boş hedefler canvas'ta çizilmez: her düğümden iki terminale
-    // ok çekmek şemayı okunmaz hale getirirdi. Terminaller form sekmesinde görünür.
-    if (!targetKey) return;
-
-    const target = byKey.get(targetKey.toLowerCase());
-    if (!target) return;
-
-    edges.push({
-      key: `${source.key}->${targetKey}:${port}`,
-      label,
-      isRejection: port === 'reject',
-      from: source.key,
-      to: targetKey,
-      port,
-      geometry: edgeGeometry(source, target)
-    });
-  }
-
-  /** Sürüklenen geçici bağlantının yolu. */
+  /** Sürüklenen geçici bağlantının yolu — sürüklenen portun kendisinden başlar. */
   readonly pendingPath = computed(() => {
     const pending = this.pendingEdge();
     if (!pending) return null;
@@ -153,7 +170,8 @@ export class WorkflowCanvasComponent {
     const source = this.nodes().find(node => node.key === pending.from);
     if (!source) return null;
 
-    const x1 = source.x + source.width / 2;
+    const [approvePort, rejectPort] = portPositions(2, source.width);
+    const x1 = source.x + (pending.port === 'approve' ? approvePort : rejectPort);
     const y1 = source.y + source.height;
     const midY = (y1 + pending.y) / 2;
 
@@ -216,16 +234,33 @@ export class WorkflowCanvasComponent {
     this.camera.set(IDENTITY_CAMERA);
   }
 
-  /** Tüm düğümleri görünüre sığdırır ve ortalar. */
+  /** Elle konumları bırakıp otomatik yerleşime döner; kamera başa alınır. */
+  autoArrange(): void {
+    this.liveOffsets.set({});
+    this.camera.set(IDENTITY_CAMERA);
+    this.layoutReset.emit();
+  }
+
+  /**
+   * Tüm şemayı görünüre sığdırır ve sol-üst köşeye yaslar.
+   *
+   * Sınıra kenarlar da girer: sağdan dolaşan geri dönüş eğrileri kutuların
+   * dışına taşıyor, yalnız düğümlere göre sığdırınca kırpılıyordu.
+   */
   fitToScreen(): void {
     const element = this.viewportRef()?.nativeElement;
-    const bounds = boundsOf(this.nodes());
+    const bounds = boundsOf([
+      ...this.nodes(),
+      ...this.edges().map(({ geometry: g }) => ({
+        x: g.minX, y: g.minY, width: g.maxX - g.minX, height: g.maxY - g.minY
+      }))
+    ]);
     if (!element || !bounds) return;
 
     this.camera.set(fitToView(bounds, {
       width: element.clientWidth,
       height: element.clientHeight
-    }));
+    }, 32, 1, 'start'));
   }
 
   private viewportRect(): ViewportRect | null {

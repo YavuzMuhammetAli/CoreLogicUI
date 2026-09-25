@@ -16,14 +16,29 @@ import { WorkflowStep } from '../../../models/workflow.model';
  */
 
 export const NODE_WIDTH = 168;
-export const NODE_HEIGHT = 52;
-export const COLUMN_GAP = 40;
-export const ROW_GAP = 56;
+/**
+ * Canvas kutusu bu yükseklikte SABİT çizilir (min-height değil). Daha önce 52'ydi
+ * ve DOM içeriği (başlık + anahtar + padding) kutuyu ~60px'e uzatıyordu; model
+ * gerçekte olduğundan kısa sandığı için alt satır kutunun üstüne biniyordu.
+ */
+export const NODE_HEIGHT = 60;
+/** Aynı katmandaki iki kutu arası. */
+export const COLUMN_GAP = 56;
+/** Katmanlar arası — "onay"/"red" etiketi ve ok başı buraya sığmalı. */
+export const ROW_GAP = 80;
 export const PADDING = 24;
 export const TERMINAL_HEIGHT = 34;
 export const LABEL_OFFSET = 6;
 /** Paralel kutuda her dal satırının yüksekliği. */
 export const BRANCH_LINE_HEIGHT = 15;
+/** Geri dönen kenarın, yolundaki en sağ kutudan ne kadar açıkta dolaşacağı. */
+export const BACK_EDGE_BULGE = 40;
+/** Dikeyde örtüşen geri dönüşler arasındaki yatay şerit aralığı. */
+export const BACK_EDGE_LANE_GAP = 18;
+/** Hedef, kaynağın altından en az bu kadar aşağıdaysa kenar "ileri" sayılır. */
+export const FORWARD_MIN_GAP = 16;
+/** Etiketin kenar üzerindeki konumu (0 = kaynak): portun hemen altına düşer. */
+const LABEL_T = 0.3;
 
 export interface Point {
   x: number;
@@ -70,14 +85,23 @@ export interface EdgeGeometry {
 }
 
 /**
- * Kaynağın alt-ortasından hedefin üst-ortasına kenar geometrisi.
+ * Kaynağın altından hedefin üst-ortasına kenar geometrisi.
+ *
+ * `sourceOffsetX` çıkış noktasının kaynağın soluna göre yatay konumudur — onay ve
+ * red kenarları kendi portlarından (bkz. `portPositions`) çıksın, aynı noktadan
+ * çıkıp üst üste binmesin diye. Verilmezse alt-orta.
  *
  * Sınırlar (min/max) yalnızca UÇ NOKTALARDAN hesaplanır, kontrol noktalarından
  * değil: dikey eğri uçların çizdiği kutunun dışına taşmaz ve mevcut viewBox
  * davranışı böyle kurulmuştu.
  */
-export function edgeGeometry(source: EdgeBox, target: EdgeBox, style: EdgeStyle = 'bezier'): EdgeGeometry {
-  const x1 = source.x + source.width / 2;
+export function edgeGeometry(
+  source: EdgeBox,
+  target: EdgeBox,
+  style: EdgeStyle = 'bezier',
+  sourceOffsetX?: number
+): EdgeGeometry {
+  const x1 = source.x + (sourceOffsetX ?? source.width / 2);
   const y1 = source.y + source.height;
   const x2 = target.x + target.width / 2;
   const y2 = target.y;
@@ -92,10 +116,14 @@ export function edgeGeometry(source: EdgeBox, target: EdgeBox, style: EdgeStyle 
     ? `M ${x1} ${y1} V ${midY} H ${x2} V ${y2}`
     : `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
 
+  // Etiket orta noktada değil kaynağa yakın: hangi porttan çıktığı okunur ve
+  // çok girişli bir hedefin üstünde etiketler üst üste yığılmaz.
+  const label = cubicPointAt(p0, p1, p2, p3, LABEL_T);
+
   return {
     path,
-    labelX: (x1 + x2) / 2,
-    labelY: midY - LABEL_OFFSET,
+    labelX: label.x,
+    labelY: label.y,
     minX: Math.min(x1, x2),
     minY: Math.min(y1, y2),
     maxX: Math.max(x1, x2),
@@ -131,6 +159,127 @@ export function selfLoopGeometry(node: EdgeBox): EdgeGeometry {
     p0, p1, p2, p3,
     style: 'bezier'
   };
+}
+
+/**
+ * Geri dönen (rework) kenar: hedef kaynağın altında değil.
+ *
+ * Alttan çıkıp üstteki hedefe inen bir eğri aradaki kutuların İÇİNDEN geçerdi.
+ * Bunun yerine kaynağın sağ-ortasından çıkar, `clearX` hizasına kadar sağa açılıp
+ * yukarı dolaşır ve hedefe sağından girer.
+ *
+ * Kübik eğri kontrol noktalarının x'ine ulaşamaz; kontrol noktası, eğrinin en
+ * sağ noktası tam `clearX`'e dayanacak şekilde hesaplanır (bkz. backControlX).
+ */
+export function backEdgeGeometry(source: EdgeBox, target: EdgeBox, clearX: number): EdgeGeometry {
+  const p0: Point = { x: source.x + source.width, y: source.y + source.height / 2 };
+  const p3: Point = { x: target.x + target.width, y: target.y + target.height / 2 };
+  const edgeX = Math.max(p0.x, p3.x);
+  const controlX = backControlX(p0.x, p3.x, Math.max(clearX, edgeX));
+
+  const p1: Point = { x: controlX, y: p0.y };
+  const p2: Point = { x: controlX, y: p3.y };
+  const label = cubicPointAt(p0, p1, p2, p3, 0.5);
+
+  return {
+    path: `M ${p0.x} ${p0.y} C ${p1.x} ${p1.y}, ${p2.x} ${p2.y}, ${p3.x} ${p3.y}`,
+    labelX: label.x,
+    labelY: label.y - LABEL_OFFSET,
+    minX: Math.min(p0.x, p3.x),
+    minY: Math.min(p0.y, p3.y),
+    maxX: Math.max(edgeX, clearX),
+    maxY: Math.max(p0.y, p3.y),
+    p0, p1, p2, p3,
+    style: 'bezier'
+  };
+}
+
+/**
+ * İki kontrol noktası da aynı `cx`'te olan kübik eğride
+ * `x(t) = u³·x0 + 3ut·cx + t³·x3` (u = 1 − t) — her t için cx'e göre artan
+ * doğrusal. Eğrinin tepesinin `clearX`'e ulaştığı en küçük cx, t örnekleri
+ * üzerinden `(clearX − u³·x0 − t³·x3) / 3ut`'nin en küçüğüdür. Uçlar farklı
+ * hizadayken sabit bir oran (ör. 3/4) tutmuyor, tepe kısa kalıyordu.
+ */
+function backControlX(x0: number, x3: number, clearX: number): number {
+  let best = Infinity;
+
+  for (let i = 1; i < EDGE_SAMPLE_COUNT; i++) {
+    const t = i / EDGE_SAMPLE_COUNT;
+    const u = 1 - t;
+    best = Math.min(best, (clearX - u * u * u * x0 - t * t * t * x3) / (3 * u * t));
+  }
+
+  return best;
+}
+
+/** Hedef kaynağın altında mı? Değilse kenar geri döner ve yandan dolaştırılır. */
+export function isForward(source: EdgeBox, target: EdgeBox): boolean {
+  return target.y >= source.y + source.height + FORWARD_MIN_GAP;
+}
+
+/** `routeEdges` girdisi: bir kenarın uçları ve çıkış portu. */
+export interface EdgeRequest {
+  source: EdgeBox;
+  target: EdgeBox;
+  sourceOffsetX?: number;
+}
+
+/**
+ * Kenarların hepsini birlikte yönlendirir — geri dönüşlerin şerit ataması
+ * birbirine bağlı olduğu için tek tek hesaplanamaz.
+ *
+ *   - İleri kenar: porttan hedefin üst-ortasına bezier.
+ *   - Geri kenar: dikey aralığındaki (`obstacles`) en sağ kutunun sağından,
+ *     kendisiyle dikeyde örtüşen önceki geri dönüş sayısı kadar dış şeritte.
+ *     Kısa döngüler önce yönlendirilir ki içte kalsın, uzunlar dışa açılsın.
+ *
+ * Sonuç girdiyle AYNI sırada döner.
+ */
+export function routeEdges(
+  requests: ReadonlyArray<EdgeRequest>,
+  obstacles: ReadonlyArray<EdgeBox>
+): EdgeGeometry[] {
+  const result: EdgeGeometry[] = new Array(requests.length);
+  const back: Array<{ index: number; top: number; bottom: number }> = [];
+
+  requests.forEach((request, index) => {
+    const { source, target, sourceOffsetX } = request;
+
+    if (isForward(source, target)) {
+      result[index] = edgeGeometry(source, target, 'bezier', sourceOffsetX);
+      return;
+    }
+
+    back.push({
+      index,
+      top: Math.min(source.y, target.y),
+      bottom: Math.max(source.y + source.height, target.y + target.height)
+    });
+  });
+
+  back.sort((a, b) => (a.bottom - a.top) - (b.bottom - b.top));
+
+  const routed: Array<{ top: number; bottom: number }> = [];
+
+  for (const item of back) {
+    const { source, target } = requests[item.index];
+
+    const rightmost = Math.max(
+      source.x + source.width,
+      target.x + target.width,
+      ...obstacles
+        .filter(box => box.y < item.bottom && box.y + box.height > item.top)
+        .map(box => box.x + box.width));
+
+    const lane = routed.filter(other => other.top < item.bottom && other.bottom > item.top).length;
+
+    result[item.index] = backEdgeGeometry(
+      source, target, rightmost + BACK_EDGE_BULGE + lane * BACK_EDGE_LANE_GAP);
+    routed.push({ top: item.top, bottom: item.bottom });
+  }
+
+  return result;
 }
 
 /**

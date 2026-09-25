@@ -101,6 +101,11 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.canvas.zoomOut': { tr: 'Uzaklaştır', en: 'Zoom out' },
   'workflow.canvas.zoomReset': { tr: 'Yakınlaştırmayı sıfırla', en: 'Reset zoom' },
   'workflow.canvas.fit': { tr: 'Ekrana sığdır', en: 'Fit to screen' },
+  'workflow.canvas.autoLayout': { tr: 'Otomatik düzenle', en: 'Auto arrange' },
+  'workflow.canvas.autoLayoutHint': {
+    tr: 'Elle verilen konumları sıfırlar; onay yolu dikey, red dalı sağda olacak şekilde yeniden dizer.',
+    en: 'Resets manual positions and re-arranges the steps with the approve path vertical and reject branches to the right.'
+  },
   'workflow.build.tabPreview': { tr: 'Önizleme', en: 'Preview' },
   'workflow.build.tablistAria': { tr: 'Akış tasarım sekmeleri', en: 'Workflow design tabs' },
   'workflow.build.name': { tr: 'Akış adı', en: 'Workflow name' },

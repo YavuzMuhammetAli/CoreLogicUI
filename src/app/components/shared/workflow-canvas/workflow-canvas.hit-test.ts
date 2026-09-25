@@ -63,12 +63,13 @@ export function resolveNodePositions(
 
   const auto = new Map(autoNodes.map(node => [node.key.toLowerCase(), node]));
 
-  return graph.steps.map(step => {
+  const nodes = graph.steps.map(step => {
     const fallback = auto.get(step.key.toLowerCase());
     const live = liveOffsets[step.key];
     const size = nodeSize(step);
+    const pinned = !!live || (step.x != null && step.y != null);
 
-    return {
+    const node: CanvasNode = {
       key: step.key,
       label: step.name || step.key,
       x: live?.x ?? step.x ?? fallback?.x ?? DEFAULT_NODE_X,
@@ -79,7 +80,48 @@ export function resolveNodePositions(
       isParallel: step.type === 'parallel',
       branchLabels: branchLabelsOf(step)
     };
+
+    return { node, pinned };
   });
+
+  avoidPinnedOverlap(nodes);
+
+  return nodes.map(entry => entry.node);
+}
+
+/** Kutular arasında bırakılan asgari boşluk (çakışma sayılma eşiği). */
+const OVERLAP_MARGIN = 16;
+/** Çakışma çözümünün en fazla deneme sayısı — kötü bir tanımda bile sonlanmalı. */
+const OVERLAP_MAX_STEPS = 64;
+
+/**
+ * Konumu tanımda OLMAYAN (otomatik yerleşimden gelen) düğüm, elle konumlanmış
+ * bir düğümün üstüne düşerse boş yer bulana dek aşağı itilir.
+ *
+ * Otomatik yerleşim elle taşınmış kutulardan habersizdir: kullanıcı bir kutuyu
+ * sürükleyip bıraktıktan sonra yeni eklenen adım tam onun üstüne düşebiliyordu.
+ * Elle konulmuş kutu hiç kıpırdatılmaz — kullanıcının kararı.
+ */
+function avoidPinnedOverlap(entries: Array<{ node: CanvasNode; pinned: boolean }>): void {
+  const settled = entries.filter(entry => entry.pinned).map(entry => entry.node);
+
+  for (const entry of entries) {
+    if (entry.pinned) continue;
+
+    const node = entry.node;
+    for (let i = 0; i < OVERLAP_MAX_STEPS; i++) {
+      const blocker = settled.find(other => overlaps(node, other));
+      if (!blocker) break;
+      node.y = blocker.y + blocker.height + OVERLAP_MARGIN;
+    }
+
+    settled.push(node);
+  }
+}
+
+function overlaps(a: CanvasNode, b: CanvasNode): boolean {
+  return a.x < b.x + b.width + OVERLAP_MARGIN && a.x + a.width + OVERLAP_MARGIN > b.x &&
+         a.y < b.y + b.height + OVERLAP_MARGIN && a.y + a.height + OVERLAP_MARGIN > b.y;
 }
 
 /**

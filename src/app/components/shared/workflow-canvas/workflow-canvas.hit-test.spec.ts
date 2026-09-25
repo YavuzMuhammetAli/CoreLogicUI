@@ -69,6 +69,27 @@ describe('resolveNodePositions', () => {
     expect(nodes[0].x).toBe(77);
   });
 
+  it('otomatik konumlu düğüm elle konumlanmış düğümün üstüne düşmez', () => {
+    // 'a' elle 24,24'e konmuş; 'b'nin otomatik konumu tam oraya düşüyor.
+    const nodes = resolveNodePositions(
+      graph([step('a', { x: 24, y: 24 }), step('b')]),
+      [{ key: 'a', x: 300, y: 24 }, { key: 'b', x: 24, y: 24 }],
+      {});
+
+    const [a, b] = nodes;
+    expect(a.x).toBe(24);
+    expect(a.y).toBe(24);
+    expect(b.y).toBeGreaterThanOrEqual(a.y + a.height);
+  });
+
+  it('elle konumlanmış düğümler birbirine binse bile yerinden oynatılmaz', () => {
+    const nodes = resolveNodePositions(
+      graph([step('a', { x: 50, y: 50 }), step('b', { x: 60, y: 60 })]), [], {});
+
+    expect(nodes[1].x).toBe(60);
+    expect(nodes[1].y).toBe(60);
+  });
+
   it('sıfır konumu varsayılana düşmez', () => {
     // `?? ` kullanıldığı için 0 geçerli bir konumdur; `||` olsaydı sıfır
     // yutulur ve düğüm 24,24'e kaçardı.

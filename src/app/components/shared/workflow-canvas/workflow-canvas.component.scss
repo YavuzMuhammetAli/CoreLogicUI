@@ -33,7 +33,10 @@
   height: 560px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 10px);
-  background: var(--bg);
+  // Noktalı ızgara pencerenin TAMAMINDA. Aralık ve kayma şablondan kamerayla
+  // senkron bağlanıyor (bkz. gridStyle); nokta ekran uzayında 1px kalır.
+  background-color: var(--bg);
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
   cursor: grab;
   // Dokunmatikte tarayıcının kendi kaydırma/yakınlaştırma jesti devreye girmemeli.
   touch-action: none;
@@ -48,8 +51,8 @@
   top: 0;
   left: 0;
   transform-origin: 0 0;
-  // Izgara dünyanın içinde olduğu için yakınlaşınca birlikte ölçekleniyor.
-  background: radial-gradient(circle, var(--border) 1px, transparent 1px) 0 0 / 20px 20px;
+  // Izgara burada DEĞİL viewport'ta: bu eleman yalnızca içerik kadar büyük,
+  // ızgara da onunla sınırlı kalıyordu.
   // will-change: transform VERİLMEZ — tarayıcı katmanı sabit çözünürlükte
   // rasterize eder ve yazılar yakınlaşmada bulanıklaşır.
 }
@@ -63,7 +66,15 @@
 
 .canvas-edge {
   path { fill: none; stroke: var(--border); stroke-width: 1.5; }
-  text { fill: var(--muted); font-size: 10px; }
+  // Zemin renginde hale: etiket çizginin üstüne düştüğünde de okunur kalır.
+  text {
+    fill: var(--muted);
+    font-size: 10px;
+    paint-order: stroke;
+    stroke: var(--bg);
+    stroke-width: 3px;
+    stroke-linejoin: round;
+  }
 }
 
 .canvas-edge--reject {
@@ -83,10 +94,14 @@
 
 // ── Düğüm ────────────────────────────────────────────────────────────────────
 
+// Yükseklik şablondan SABİT verilir (NODE_HEIGHT + dal × BRANCH_LINE_HEIGHT).
+// Aşağıdaki satır yükseklikleri o hesaba sığacak şekilde sabitlendi:
+// 8 + 20 (başlık) + 16 (anahtar) + 8 + kenarlık ≤ 60. Değiştirirsen
+// workflow-edge.geometry.ts'teki sabitleri de güncelle, yoksa kutular yine biner.
 .canvas-node {
   position: absolute;
   box-sizing: border-box;
-  padding: var(--space-2) var(--space-3) var(--space-3);
+  padding: var(--space-2) var(--space-3);
   border: 1.5px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -114,8 +129,17 @@
   box-shadow: 0 0 0 3px var(--elev-ring, rgba(29, 78, 216, 0.25));
 }
 
+.canvas-node-title,
+.canvas-node-key {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .canvas-node-title {
   font-size: var(--text-sm);
+  line-height: 20px;
   font-weight: 500;
   color: var(--fg);
 }
@@ -123,15 +147,23 @@
 .canvas-node-key {
   font-family: var(--font-mono, monospace);
   font-size: var(--text-xs);
+  line-height: 16px;
   color: var(--muted);
 }
 
 .canvas-node-branches {
   list-style: none;
-  margin: var(--space-1) 0 0;
+  margin: 0;
   padding: 0;
   font-size: 11px;
+  line-height: 15px; // = BRANCH_LINE_HEIGHT
   color: var(--fg-2);
+
+  li {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 // ── Portlar ──────────────────────────────────────────────────────────────────

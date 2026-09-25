@@ -194,6 +194,7 @@
           [selectedKey]="selectedStepKey()"
           [readonly]="readonlyMode()"
           (nodeMoved)="onNodeMoved($event)"
+          (layoutReset)="onLayoutReset()"
           (edgeCreated)="onEdgeCreated($event)"
           (nodeSelected)="onNodeSelected($event)"
           (nodeOpened)="openStepByKey($event)" />

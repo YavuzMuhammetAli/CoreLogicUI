@@ -650,6 +650,18 @@ export class WorkflowBuildComponent implements OnInit {
   }
 
   /**
+   * Canvas'taki "Otomatik düzenle": konumlar silinir, canvas otomatik yerleşime
+   * düşer. null yazılır (hesaplanan koordinat değil) — böylece sonradan eklenen
+   * adımlar da aynı düzene katılır ve yerleşim kuralı değişirse tanım onu izler.
+   */
+  onLayoutReset(): void {
+    for (const control of this.stepsArray.controls) {
+      control.patchValue({ x: null, y: null }, { emitEvent: false });
+    }
+    this.refreshPreview();
+  }
+
+  /**
    * Canvas'ta çizilen bağlantı adımın hedefine yazılır.
    *
    * Tekil ve paralel adımda aynı iki kontrol kullanılıyor (onApprove/onReject);

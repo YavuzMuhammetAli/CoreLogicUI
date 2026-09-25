@@ -1,6 +1,7 @@
 import {
-  BRANCH_LINE_HEIGHT, NODE_HEIGHT, NODE_WIDTH,
-  cubicPointAt, distanceToEdge, edgeGeometry, nodeSize, portPositions, selfLoopGeometry
+  BRANCH_LINE_HEIGHT, FORWARD_MIN_GAP, NODE_HEIGHT, NODE_WIDTH,
+  backEdgeGeometry, cubicPointAt, distanceToEdge, edgeGeometry, isForward, nodeSize,
+  portPositions, routeEdges, selfLoopGeometry
 } from './workflow-edge.geometry';
 import { WorkflowStep } from '../../../models/workflow.model';
 
@@ -47,10 +48,21 @@ describe('edgeGeometry', () => {
     expect(geometry.maxY).toBe(Math.max(geometry.p0.y, geometry.p3.y));
   });
 
-  it('etiket iki uç arasında ortalanır', () => {
+  it('etiket iki uç arasında ama KAYNAĞA yakın durur', () => {
     const geometry = edgeGeometry(SOURCE, TARGET);
+    const midY = (geometry.p0.y + geometry.p3.y) / 2;
 
-    expect(geometry.labelX).toBeCloseTo((geometry.p0.x + geometry.p3.x) / 2, 6);
+    expect(geometry.labelY).toBeGreaterThan(geometry.p0.y);
+    expect(geometry.labelY).toBeLessThan(midY);
+    expect(geometry.labelX).toBeGreaterThanOrEqual(geometry.p0.x);
+    expect(geometry.labelX).toBeLessThan((geometry.p0.x + geometry.p3.x) / 2);
+  });
+
+  it('sourceOffsetX verilince çıkış o porttan olur', () => {
+    const geometry = edgeGeometry(SOURCE, TARGET, 'bezier', 56);
+
+    expect(geometry.p0).toEqual({ x: 100 + 56, y: 100 + NODE_HEIGHT });
+    expect(geometry.p3).toEqual({ x: 400 + NODE_WIDTH / 2, y: 300 });
   });
 
   it('geri dönen (yukarı akan) kenarda da uçları doğru bağlar', () => {
@@ -87,6 +99,78 @@ describe('selfLoopGeometry', () => {
     expect(geometry.p0.x).toBe(SOURCE.x + SOURCE.width);
     expect(geometry.p3.x).toBe(SOURCE.x + SOURCE.width);
     expect(geometry.maxX).toBeGreaterThan(SOURCE.x + SOURCE.width);
+  });
+});
+
+describe('isForward', () => {
+  it('hedef kaynağın yeterince altındaysa ileri', () => {
+    expect(isForward(SOURCE, TARGET)).toBeTrue();
+  });
+
+  it('hedef üstte ya da aynı hizadaysa geri', () => {
+    expect(isForward(TARGET, SOURCE)).toBeFalse();
+    expect(isForward(SOURCE, { ...TARGET, y: SOURCE.y })).toBeFalse();
+  });
+
+  it('kaynağın altına yapışık hedef (boşluk < FORWARD_MIN_GAP) geri sayılır', () => {
+    const touching = { ...TARGET, y: SOURCE.y + SOURCE.height + FORWARD_MIN_GAP - 1 };
+
+    expect(isForward(SOURCE, touching)).toBeFalse();
+  });
+});
+
+describe('backEdgeGeometry', () => {
+  it('kaynağın sağından çıkar, hedefe sağından girer', () => {
+    const geometry = backEdgeGeometry(TARGET, SOURCE, 700);
+
+    expect(geometry.p0).toEqual({ x: TARGET.x + TARGET.width, y: TARGET.y + TARGET.height / 2 });
+    expect(geometry.p3).toEqual({ x: SOURCE.x + SOURCE.width, y: SOURCE.y + SOURCE.height / 2 });
+  });
+
+  it('eğrinin tepesi clearX hizasına ulaşır', () => {
+    const geometry = backEdgeGeometry(TARGET, SOURCE, 700);
+    const samples = Array.from({ length: 41 }, (_, i) =>
+      cubicPointAt(geometry.p0, geometry.p1, geometry.p2, geometry.p3, i / 40).x);
+
+    expect(Math.max(...samples)).toBeGreaterThanOrEqual(699);
+    expect(geometry.maxX).toBeGreaterThanOrEqual(700);
+  });
+});
+
+describe('routeEdges', () => {
+  const top = { x: 0, y: 0, width: NODE_WIDTH, height: NODE_HEIGHT };
+  const middle = { x: 0, y: 200, width: NODE_WIDTH, height: NODE_HEIGHT };
+  const wide = { x: 300, y: 200, width: NODE_WIDTH, height: NODE_HEIGHT };
+  const bottom = { x: 0, y: 400, width: NODE_WIDTH, height: NODE_HEIGHT };
+
+  it('ileri kenarı porttan çıkarır', () => {
+    const [geometry] = routeEdges([{ source: top, target: middle, sourceOffsetX: 112 }], [top, middle]);
+
+    expect(geometry.p0.x).toBe(112);
+    expect(geometry.p3.y).toBe(middle.y);
+  });
+
+  it('geri kenarı yolundaki en sağ kutunun da sağından dolaştırır', () => {
+    const [geometry] = routeEdges([{ source: bottom, target: top }], [top, middle, wide, bottom]);
+
+    expect(geometry.maxX).toBeGreaterThan(wide.x + wide.width);
+  });
+
+  it('dikeyde örtüşen iki geri dönüş farklı şeritlere düşer, kısa olan içte', () => {
+    const [long, short] = routeEdges(
+      [{ source: bottom, target: top }, { source: middle, target: top }],
+      [top, middle, bottom]);
+
+    expect(long.maxX).toBeGreaterThan(short.maxX);
+  });
+
+  it('sonucu girdiyle aynı sırada döner', () => {
+    const result = routeEdges(
+      [{ source: bottom, target: top }, { source: top, target: middle }],
+      [top, middle, bottom]);
+
+    expect(result[0].p3.x).toBe(top.x + top.width);
+    expect(result[1].p3).toEqual({ x: middle.x + middle.width / 2, y: middle.y });
   });
 });
 

@@ -105,12 +105,22 @@ export function panBy(camera: Camera, deltaX: number, deltaY: number): Camera {
 }
 
 /**
- * Verilen dünya sınırlarını viewport'a sığdırır ve ortalar.
+ * Verilen dünya sınırlarını viewport'a sığdırır.
  *
  * `maxZoom` varsayılanı 1: tek düğümlü bir şemayı ekranı dolduracak kadar
  * büyütmek istemiyoruz, sığdırmak "her şeyi gör" demek, "yakınlaş" demek değil.
+ *
+ * `align`: `center` sınırı ortalar; `start` sol-üst köşeye (padding kadar
+ * içeriden) yaslar. Tasarımcı `start` kullanır — zoom 1'de kalan küçük bir
+ * şemanın ortada, her yanında boşlukla durması "sığdırılmamış" gibi görünüyordu.
  */
-export function fitToView(bounds: Bounds, viewport: { width: number; height: number }, padding = 32, maxZoom = 1): Camera {
+export function fitToView(
+  bounds: Bounds,
+  viewport: { width: number; height: number },
+  padding = 32,
+  maxZoom = 1,
+  align: 'center' | 'start' = 'center'
+): Camera {
   const width = bounds.maxX - bounds.minX;
   const height = bounds.maxY - bounds.minY;
 
@@ -129,11 +139,47 @@ export function fitToView(bounds: Bounds, viewport: { width: number; height: num
     Math.min(maxZoom, MAX_ZOOM)
   ));
 
+  if (align === 'start') {
+    return {
+      zoom,
+      panX: padding - bounds.minX * zoom,
+      panY: padding - bounds.minY * zoom
+    };
+  }
+
   return {
     zoom,
     panX: (viewport.width - width * zoom) / 2 - bounds.minX * zoom,
     panY: (viewport.height - height * zoom) / 2 - bounds.minY * zoom
   };
+}
+
+/** Izgaranın dünya birimindeki temel aralığı (zoom 1'de noktalar arası px). */
+export const GRID_STEP = 20;
+/** Bundan sık ızgara gürültüye döner; aralık ikiye katlanır. */
+export const GRID_MIN_SCREEN_STEP = 10;
+
+/**
+ * Viewport arka planındaki noktalı ızgaranın ekran uzayındaki ölçüsü ve kayması.
+ *
+ * Izgara `.canvas-world`'de değil viewport'ta çiziliyor: dünya elemanı yalnızca
+ * içerik kadar büyük, uzaklaşınca/kaydırınca pencerenin kalanı ızgarasız kalıyordu.
+ * Kamerayla senkron olsun diye aralık zoom ile ölçeklenir ve pan kadar kayar —
+ * noktalar dünya koordinatına bağlı kalır, düğümlerle birlikte hareket eder.
+ */
+export function gridStyle(camera: Camera): { step: number; offsetX: number; offsetY: number } {
+  let step = GRID_STEP * camera.zoom;
+  // Uzaklaştıkça aralık ikiye katlanır (tasarım araçlarındaki gibi). zoom ≤ 0
+  // savunması: sonsuz döngüye girilmesin.
+  while (step > 0 && step < GRID_MIN_SCREEN_STEP) step *= 2;
+  if (step <= 0) step = GRID_STEP;
+
+  return { step, offsetX: positiveMod(camera.panX, step), offsetY: positiveMod(camera.panY, step) };
+}
+
+/** JS `%` negatif sonuç verebilir; background-position için [0, m) aralığı gerekir. */
+function positiveMod(value: number, m: number): number {
+  return ((value % m) + m) % m;
 }
 
 /** Düğüm kutularından kapsayan sınır. Liste boşsa null. */

@@ -1,6 +1,6 @@
 import {
-  Camera, IDENTITY_CAMERA, MAX_ZOOM, MIN_ZOOM, ViewportRect,
-  boundsOf, clampZoom, fitToView, panBy, screenToWorld, worldToScreen, zoomAt, zoomAtCenter
+  Camera, GRID_MIN_SCREEN_STEP, GRID_STEP, IDENTITY_CAMERA, MAX_ZOOM, MIN_ZOOM, ViewportRect,
+  boundsOf, clampZoom, fitToView, gridStyle, panBy, screenToWorld, worldToScreen, zoomAt, zoomAtCenter
 } from './workflow-canvas.camera';
 
 /**
@@ -167,6 +167,63 @@ describe('fitToView', () => {
     const bounds = { minX: 0, minY: 0, maxX: 400, maxY: 200 };
 
     expect(fitToView(bounds, { width: 0, height: 0 })).toEqual(IDENTITY_CAMERA);
+  });
+});
+
+describe('fitToView — align: start', () => {
+  const viewport = { width: 800, height: 600 };
+
+  it('küçük şemayı ortalamaz, sol-üst köşeye padding kadar içeriden yaslar', () => {
+    const bounds = { minX: 300, minY: 200, maxX: 500, maxY: 300 };
+    const cam = fitToView(bounds, viewport, 32, 1, 'start');
+
+    expect(cam.zoom).toBe(1);
+    expect(bounds.minX * cam.zoom + cam.panX).toBeCloseTo(32, 6);
+    expect(bounds.minY * cam.zoom + cam.panY).toBeCloseTo(32, 6);
+  });
+
+  it('büyük şemada küçülür, sol-üstten başlar ve sağ-alt viewport içinde kalır', () => {
+    // MIN_ZOOM kelepçesine takılmayacak ölçüde (gereken zoom ≈ 0.49).
+    const bounds = { minX: -100, minY: 50, maxX: 1400, maxY: 1050 };
+    const cam = fitToView(bounds, viewport, 32, 1, 'start');
+
+    expect(cam.zoom).toBeLessThan(1);
+    expect(bounds.minX * cam.zoom + cam.panX).toBeCloseTo(32, 6);
+    expect(bounds.minY * cam.zoom + cam.panY).toBeCloseTo(32, 6);
+    expect(bounds.maxX * cam.zoom + cam.panX).toBeLessThanOrEqual(viewport.width - 32 + 0.001);
+    expect(bounds.maxY * cam.zoom + cam.panY).toBeLessThanOrEqual(viewport.height - 32 + 0.001);
+  });
+});
+
+describe('gridStyle', () => {
+  it('zoom 1\'de temel aralık, pan kadar kayar', () => {
+    const grid = gridStyle(camera(1, 45, 7));
+
+    expect(grid.step).toBe(GRID_STEP);
+    expect(grid.offsetX).toBe(5);
+    expect(grid.offsetY).toBe(7);
+  });
+
+  it('zoom ile ölçeklenir', () => {
+    expect(gridStyle(camera(2)).step).toBe(GRID_STEP * 2);
+  });
+
+  it('çok uzaklaşınca aralık ikiye katlanır, gürültüye dönmez', () => {
+    const step = gridStyle(camera(MIN_ZOOM)).step;
+
+    expect(step).toBeGreaterThanOrEqual(GRID_MIN_SCREEN_STEP);
+    expect(step % (GRID_STEP * MIN_ZOOM)).toBe(0);
+  });
+
+  it('negatif pan\'da kayma [0, aralık) içinde kalır', () => {
+    const grid = gridStyle(camera(1, -45, -1));
+
+    expect(grid.offsetX).toBe(15);
+    expect(grid.offsetY).toBe(19);
+  });
+
+  it('bozuk zoom sonsuz döngüye girmez', () => {
+    expect(gridStyle(camera(0)).step).toBe(GRID_STEP);
   });
 });
 

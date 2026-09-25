@@ -1,7 +1,7 @@
-import { WorkflowGraph, WorkflowStep, outgoingTargets, WORKFLOW_TERMINAL_COMPLETED, WORKFLOW_TERMINAL_REJECTED } from '../../../models/workflow.model';
+import { WorkflowGraph, outgoingTargets, WORKFLOW_TERMINAL_COMPLETED, WORKFLOW_TERMINAL_REJECTED } from '../../../models/workflow.model';
 import {
-  NODE_WIDTH, NODE_HEIGHT, COLUMN_GAP, ROW_GAP, PADDING, TERMINAL_HEIGHT,
-  edgeGeometry, nodeSize
+  NODE_WIDTH, COLUMN_GAP, ROW_GAP, PADDING, TERMINAL_HEIGHT,
+  EdgeRequest, nodeSize, portPositions, routeEdges
 } from './workflow-edge.geometry';
 
 /**
@@ -137,59 +137,56 @@ function computeLayers(graph: WorkflowGraph): Map<string, number> {
   return layers;
 }
 
+/** Yan yana iki kutunun merkezleri arası — onay/red dallanmasının yarısı bu kadar kayar. */
+const COLUMN_PITCH = NODE_WIDTH + COLUMN_GAP;
+
+/**
+ * Düğümleri yerleştirir.
+ *
+ * Dikey: her katmanın y'si bir önceki katmanın EN UZUN kutusunun altından
+ * ROW_GAP kadar aşağıdadır. Sabit `layer * (NODE_HEIGHT + ROW_GAP)` paralel
+ * kutuyu (dal başına uzar) hesaba katmıyor, alt satır onun üstüne biniyordu.
+ *
+ * Yatay: her düğüm, üst katmandaki ebeveynlerinin altına yerleşmek ister.
+ * Ebeveyn İKİ ayrı adıma dallanıyorsa onay hedefi sola, red hedefi sağa yarım
+ * sütun kayar — kutudaki yeşil/kırmızı portların sırasıyla aynı. Tek hedefte
+ * kayma yok: onay zinciri dikey bir omurga olarak kalır. Aynı yeri isteyen
+ * kutular soldan sağa itilir, sonra katman dengede kalsın diye geri ortalanır.
+ */
 function placeNodes(graph: WorkflowGraph, layers: Map<string, number>): LayoutNode[] {
-  // Katman → o katmandaki adımlar (tanım sırasını korur).
-  const byLayer = new Map<number, string[]>();
-  for (const step of graph.steps) {
-    const layer = layers.get(step.key.toLowerCase()) ?? 0;
-    const bucket = byLayer.get(layer) ?? [];
-    bucket.push(step.key);
-    byLayer.set(layer, bucket);
-  }
-
-  const nodes: LayoutNode[] = [];
-
-  for (const step of graph.steps) {
-    const layer = layers.get(step.key.toLowerCase()) ?? 0;
-    const column = byLayer.get(layer) ?? [];
-    const columnIndex = column.indexOf(step.key);
-
+  const nodes: LayoutNode[] = graph.steps.map(step => {
     const isParallel = step.type === 'parallel';
-    const branchLabels = isParallel
-      ? (step.branches ?? []).map(b => b.name || b.key)
-      : [];
+    const size = nodeSize(step);
 
-    nodes.push({
+    return {
       key: step.key,
       label: step.name || step.key,
-      layer,
-      x: PADDING + columnIndex * (NODE_WIDTH + COLUMN_GAP),
-      y: PADDING + layer * (NODE_HEIGHT + ROW_GAP),
-      width: nodeSize(step).width,
+      layer: layers.get(step.key.toLowerCase()) ?? 0,
+      x: 0,
+      y: 0,
+      width: size.width,
       // Paralel kutu dalları da listeliyor; yükseklik formülü nodeSize'da.
-      height: nodeSize(step).height,
+      height: size.height,
       isStart: eq(step.key, graph.startStep),
       isTerminal: false,
       isRejection: false,
       isParallel,
-      branchLabels,
+      branchLabels: isParallel ? (step.branches ?? []).map(b => b.name || b.key) : [],
       joinLabel: isParallel ? (step.mode === 'any' ? 'herhangi biri' : 'tümü') : ''
-    });
-  }
+    };
+  });
 
   // Terminaller yalnızca gerçekten hedeflenmişse çizilir — her şemaya iki kutu
-  // eklemek gereksiz gürültü olurdu.
-  const maxLayer = Math.max(...nodes.map(n => n.layer));
-  const usedTerminals = collectUsedTerminals(graph);
-  let terminalIndex = 0;
+  // eklemek gereksiz gürültü olurdu. Hep en alt katmanda.
+  const terminalLayer = Math.max(...nodes.map(n => n.layer)) + 1;
 
-  for (const terminal of usedTerminals) {
+  for (const terminal of collectUsedTerminals(graph)) {
     nodes.push({
       key: terminal,
       label: terminal === WORKFLOW_TERMINAL_REJECTED ? 'Reddedildi' : 'Tamamlandı',
-      layer: maxLayer + 1,
-      x: PADDING + terminalIndex * (NODE_WIDTH + COLUMN_GAP),
-      y: PADDING + (maxLayer + 1) * (NODE_HEIGHT + ROW_GAP),
+      layer: terminalLayer,
+      x: 0,
+      y: 0,
       width: NODE_WIDTH,
       height: TERMINAL_HEIGHT,
       isStart: false,
@@ -197,12 +194,117 @@ function placeNodes(graph: WorkflowGraph, layers: Map<string, number>): LayoutNo
       isRejection: terminal === WORKFLOW_TERMINAL_REJECTED,
       isParallel: false,
       branchLabels: [],
-      joinLabel: ""
+      joinLabel: ''
     });
-    terminalIndex++;
   }
 
+  assignRows(nodes);
+  assignColumns(graph, nodes);
+
   return nodes;
+}
+
+/** Katman y'lerini birikimli hesaplar: satır yüksekliği = katmandaki en uzun kutu. */
+function assignRows(nodes: LayoutNode[]): void {
+  const layerHeights = new Map<number, number>();
+  for (const node of nodes) {
+    layerHeights.set(node.layer, Math.max(layerHeights.get(node.layer) ?? 0, node.height));
+  }
+
+  const layerY = new Map<number, number>();
+  let y = PADDING;
+  for (const layer of [...layerHeights.keys()].sort((a, b) => a - b)) {
+    layerY.set(layer, y);
+    y += layerHeights.get(layer)! + ROW_GAP;
+  }
+
+  for (const node of nodes) {
+    node.y = layerY.get(node.layer)!;
+  }
+}
+
+/**
+ * Katman katman, ebeveynler yerleştikten sonra x atar.
+ *
+ * Yalnızca İLERİ kenarlar (üst katmandan alta) hesaba katılır; geri dönüşler
+ * yerleşimi etkilemez, canvas'ta yandan dolaştırılır.
+ */
+function assignColumns(graph: WorkflowGraph, nodes: LayoutNode[]): void {
+  const byKey = new Map(nodes.map(node => [node.key.toLowerCase(), node]));
+
+  // Hedef → [ebeveyn, kayma yönü (-1 sol / 0 / +1 sağ)]
+  const parents = new Map<string, Array<{ parent: LayoutNode; bias: number }>>();
+  const addParent = (targetKey: string, parent: LayoutNode, bias: number) => {
+    const target = byKey.get(targetKey.toLowerCase());
+    if (!target || target.layer <= parent.layer) return;
+
+    const list = parents.get(target.key.toLowerCase()) ?? [];
+    list.push({ parent, bias });
+    parents.set(target.key.toLowerCase(), list);
+  };
+
+  for (const step of graph.steps) {
+    const source = byKey.get(step.key.toLowerCase());
+    if (!source) continue;
+
+    const { approve, reject } = outgoingTargets(step);
+    const approveTarget = approve || WORKFLOW_TERMINAL_COMPLETED;
+    const rejectTarget = reject || WORKFLOW_TERMINAL_REJECTED;
+
+    // Terminal hedefi dallanma sayılmaz: neredeyse her adımın reddi terminale
+    // gider ve bu sayılsaydı onay zinciri her katmanda yarım sütun sola kayardı.
+    const forks = !isTerminal(approveTarget) && !isTerminal(rejectTarget)
+      && !eq(approveTarget, rejectTarget)
+      && isBelow(byKey, source, approveTarget) && isBelow(byKey, source, rejectTarget);
+
+    addParent(approveTarget, source, forks ? -1 : 0);
+    addParent(rejectTarget, source, forks ? 1 : 0);
+  }
+
+  const layersInOrder = [...new Set(nodes.map(n => n.layer))].sort((a, b) => a - b);
+  const center = (node: LayoutNode) => node.x + node.width / 2;
+
+  for (const layer of layersInOrder) {
+    const row = nodes.filter(node => node.layer === layer);
+
+    const desired = row.map((node, order) => {
+      const incoming = parents.get(node.key.toLowerCase()) ?? [];
+      let wanted = incoming.length > 0
+        ? incoming.reduce((sum, p) => sum + center(p.parent) + p.bias * COLUMN_PITCH / 2, 0) / incoming.length
+        : 0;
+
+      // Terminaller: tamamlandı solda, reddedildi sağda (portlarla aynı sıra).
+      if (node.isTerminal) wanted += (node.isRejection ? 1 : -1) * COLUMN_PITCH / 2;
+
+      return { node, left: wanted - node.width / 2, order };
+    });
+
+    // Sıralama kararlı: eşitlikte tanım sırası korunur.
+    desired.sort((a, b) => a.left - b.left || a.order - b.order);
+
+    let previousRight = -Infinity;
+    let drift = 0;
+    for (const item of desired) {
+      const left = Math.max(item.left, previousRight + COLUMN_GAP);
+      drift += left - item.left;
+      item.node.x = left;
+      previousRight = left + item.node.width;
+    }
+
+    // İtme hep sağa doğru; ortalama kayma geri alınır ki katman istediği
+    // merkezin etrafında dengeli dursun (aralıklar değişmez, hepsi birlikte kayar).
+    const shift = drift / desired.length;
+    for (const item of desired) item.node.x -= shift;
+  }
+
+  // En soldaki kutu PADDING'den başlasın.
+  const minX = Math.min(...nodes.map(n => n.x));
+  for (const node of nodes) node.x += PADDING - minX;
+}
+
+function isBelow(byKey: Map<string, LayoutNode>, source: LayoutNode, targetKey: string): boolean {
+  const target = byKey.get(targetKey.toLowerCase());
+  return !!target && target.layer > source.layer;
 }
 
 /**
@@ -226,49 +328,55 @@ function collectUsedTerminals(graph: WorkflowGraph): string[] {
   return [WORKFLOW_TERMINAL_COMPLETED, WORKFLOW_TERMINAL_REJECTED].filter(t => used.has(t));
 }
 
+/**
+ * Onay kenarı yeşil porttan, red kenarı kırmızı porttan çıkar (canvas'taki port
+ * konumlarıyla aynı formül); geri dönüşler routeEdges'te yandan dolaştırılır.
+ */
 function buildEdges(graph: WorkflowGraph, byKey: Map<string, LayoutNode>): LayoutEdge[] {
-  const edges: LayoutEdge[] = [];
+  const pending: Array<{ key: string; label: string; isRejection: boolean; request: EdgeRequest }> = [];
 
   for (const step of graph.steps) {
     const source = byKey.get(step.key.toLowerCase());
     if (!source) continue;
 
     const { approve, reject } = outgoingTargets(step);
-    const approveTarget = approve || WORKFLOW_TERMINAL_COMPLETED;
-    const rejectTarget = reject || WORKFLOW_TERMINAL_REJECTED;
+    const [approvePort, rejectPort] = portPositions(2, source.width);
+    const outgoing = [
+      { targetKey: approve || WORKFLOW_TERMINAL_COMPLETED, label: 'onay', isRejection: false, port: approvePort },
+      { targetKey: reject || WORKFLOW_TERMINAL_REJECTED, label: 'red', isRejection: true, port: rejectPort }
+    ];
 
-    pushEdge(edges, byKey, source, approveTarget, 'onay', false);
-    pushEdge(edges, byKey, source, rejectTarget, 'red', true);
+    for (const edge of outgoing) {
+      const target = byKey.get(edge.targetKey.toLowerCase());
+      // Hedefi çizilmemiş kenar sessizce atlanır (entity-graph ile aynı davranış).
+      if (!target) continue;
+
+      pending.push({
+        key: `${source.key}->${edge.targetKey}:${edge.label}`,
+        label: edge.label,
+        isRejection: edge.isRejection,
+        request: { source, target, sourceOffsetX: edge.port }
+      });
+    }
   }
 
-  return edges;
-}
+  const geometries = routeEdges(pending.map(p => p.request), [...byKey.values()]);
 
-function pushEdge(
-  edges: LayoutEdge[],
-  byKey: Map<string, LayoutNode>,
-  source: LayoutNode,
-  targetKey: string,
-  label: string,
-  isRejection: boolean
-): void {
-  const target = byKey.get(targetKey.toLowerCase());
-  // Hedefi çizilmemiş kenar sessizce atlanır (entity-graph ile aynı davranış).
-  if (!target) return;
+  return pending.map((edge, index) => {
+    const geometry = geometries[index];
 
-  const geometry = edgeGeometry(source, target);
-
-  edges.push({
-    key: `${source.key}->${targetKey}:${label}`,
-    path: geometry.path,
-    labelX: geometry.labelX,
-    labelY: geometry.labelY,
-    label,
-    isRejection,
-    minX: geometry.minX,
-    minY: geometry.minY,
-    maxX: geometry.maxX,
-    maxY: geometry.maxY
+    return {
+      key: edge.key,
+      path: geometry.path,
+      labelX: geometry.labelX,
+      labelY: geometry.labelY,
+      label: edge.label,
+      isRejection: edge.isRejection,
+      minX: geometry.minX,
+      minY: geometry.minY,
+      maxX: geometry.maxX,
+      maxY: geometry.maxY
+    };
   });
 }
 

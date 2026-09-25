@@ -1,4 +1,4 @@
-import { layoutWorkflow, EMPTY_VIEW_BOX, NODE_HEIGHT, ROW_GAP, PADDING } from './workflow-graph.layout';
+import { layoutWorkflow, EMPTY_VIEW_BOX, NODE_HEIGHT, ROW_GAP, PADDING, COLUMN_GAP } from './workflow-graph.layout';
 import { WorkflowGraph, WorkflowStep, WORKFLOW_TERMINAL_COMPLETED, WORKFLOW_TERMINAL_REJECTED } from '../../../models/workflow.model';
 
 /**
@@ -128,12 +128,107 @@ describe('layoutWorkflow', () => {
     expect(x + width).toBeGreaterThanOrEqual(maxNodeRight);
   });
 
-  it('ilk katman PADDING kadar içeriden başlar', () => {
+  it('ilk katman ve en soldaki kutu PADDING kadar içeriden başlar', () => {
     const layout = layoutWorkflow(graph([step('a')]));
     const a = layout.nodes.find(n => n.key === 'a')!;
 
-    expect(a.x).toBe(PADDING);
     expect(a.y).toBe(PADDING);
+    expect(Math.min(...layout.nodes.map(n => n.x))).toBe(PADDING);
+  });
+
+  it('aynı katmanda hiçbir iki kutu çakışmaz, arada COLUMN_GAP kalır', () => {
+    const layout = layoutWorkflow(graph([
+      step('a', 'b', 'c'),
+      step('b', 'd', 'e'),
+      step('c', 'd', 'e'),
+      step('d'),
+      step('e')
+    ]));
+
+    for (const layer of new Set(layout.nodes.map(n => n.layer))) {
+      const row = layout.nodes.filter(n => n.layer === layer).sort((p, q) => p.x - q.x);
+      for (let i = 1; i < row.length; i++) {
+        expect(row[i].x - (row[i - 1].x + row[i - 1].width)).toBeGreaterThanOrEqual(COLUMN_GAP - 0.001);
+      }
+    }
+  });
+
+  it('paralel kutunun altındaki satır onun ALTINDAN ROW_GAP kadar aşağıda başlar', () => {
+    // Paralel kutu dal başına uzar; sabit satır yüksekliği kullanılsaydı
+    // alt satır onun üstüne binerdi.
+    const parallel: WorkflowStep = {
+      key: 'p', type: 'parallel', name: 'P', mode: 'all',
+      branches: [1, 2, 3, 4, 5].map(i => ({ key: `d${i}`, name: `Dal ${i}` })),
+      onComplete: 'son'
+    };
+
+    const layout = layoutWorkflow(graph([parallel, step('son')], 'p'));
+    const p = layout.nodes.find(n => n.key === 'p')!;
+    const son = layout.nodes.find(n => n.key === 'son')!;
+
+    expect(son.y).toBe(p.y + p.height + ROW_GAP);
+  });
+
+  it('onay/red iki ayrı adıma dallanınca onay hedefi solda, red hedefi sağda', () => {
+    const layout = layoutWorkflow(graph([
+      step('a', 'onayla', 'duzelt'),
+      step('onayla'),
+      step('duzelt')
+    ]));
+
+    const onayla = layout.nodes.find(n => n.key === 'onayla')!;
+    const duzelt = layout.nodes.find(n => n.key === 'duzelt')!;
+    const a = layout.nodes.find(n => n.key === 'a')!;
+
+    expect(onayla.x).toBeLessThan(duzelt.x);
+    // Ebeveyn iki çocuğun ortasında kalır.
+    expect(a.x + a.width / 2).toBeCloseTo(
+      (onayla.x + onayla.width / 2 + duzelt.x + duzelt.width / 2) / 2, 6);
+  });
+
+  it('red terminale giden onay zinciri dikey bir omurga olarak kalır', () => {
+    // Neredeyse her adımın reddi terminale gider; bu dallanma sayılsaydı
+    // zincir her katmanda yarım sütun sola kayardı.
+    const layout = layoutWorkflow(graph([
+      step('a', 'b'),
+      step('b', 'c'),
+      step('c')
+    ]));
+
+    const xs = ['a', 'b', 'c'].map(key => layout.nodes.find(n => n.key === key)!.x);
+    expect(new Set(xs).size).toBe(1);
+  });
+
+  it('terminallerde tamamlandı solda, reddedildi sağda', () => {
+    const layout = layoutWorkflow(graph([step('a')]));
+
+    const completed = layout.nodes.find(n => n.key === WORKFLOW_TERMINAL_COMPLETED)!;
+    const rejected = layout.nodes.find(n => n.key === WORKFLOW_TERMINAL_REJECTED)!;
+
+    expect(completed.x).toBeLessThan(rejected.x);
+  });
+
+  it('başa dönen red kenarı tüm kutuların sağından dolaşır', () => {
+    const layout = layoutWorkflow(graph([
+      step('a', 'b'),
+      step('b', 'c', 'a'),   // red → başa dön
+      step('c')
+    ]));
+
+    const back = layout.edges.find(e => e.key === 'b->a:red')!;
+    const rightmost = Math.max(...layout.nodes
+      .filter(n => n.key === 'a' || n.key === 'b')
+      .map(n => n.x + n.width));
+
+    expect(back.maxX).toBeGreaterThan(rightmost);
+  });
+
+  it('onay ve red kenarı aynı noktadan çıkmaz', () => {
+    const layout = layoutWorkflow(graph([step('a', 'b', 'c'), step('b'), step('c')]));
+    const approve = layout.edges.find(e => e.key === 'a->b:onay')!;
+    const reject = layout.edges.find(e => e.key === 'a->c:red')!;
+
+    expect(approve.path.split(' C ')[0]).not.toBe(reject.path.split(' C ')[0]);
   });
 
   it('katmanlar arası dikey aralık sabittir', () => {
@@ -216,8 +311,9 @@ describe('layoutWorkflow', () => {
     // önizleme kullanıcının canvas'ta dağıttığı düğümlerden etkilenmemeli.
     const moved: WorkflowStep = { ...step('a'), x: 999, y: 999 };
     const layout = layoutWorkflow(graph([moved], 'a'));
+    const reference = layoutWorkflow(graph([step('a')], 'a'));
 
-    expect(layout.nodes.find(n => n.key === 'a')!.x).toBe(PADDING);
+    expect(layout.nodes.find(n => n.key === 'a')!.x).toBe(reference.nodes.find(n => n.key === 'a')!.x);
     expect(layout.nodes.find(n => n.key === 'a')!.y).toBe(PADDING);
   });
 

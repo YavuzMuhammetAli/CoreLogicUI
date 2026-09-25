@@ -9,6 +9,20 @@
     </p>
 
     <div class="canvas-zoom cluster">
+      @if (!locked()) {
+        <button type="button" class="btn btn-secondary btn-sm" (click)="autoArrange()"
+                [title]="'workflow.canvas.autoLayoutHint' | t">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="9" y="3" width="6" height="5" rx="1" />
+            <rect x="3" y="16" width="6" height="5" rx="1" />
+            <rect x="15" y="16" width="6" height="5" rx="1" />
+            <path d="M12 8v4M6 16v-4h12v4" />
+          </svg>
+          {{ 'workflow.canvas.autoLayout' | t }}
+        </button>
+      }
+
       <button type="button" class="btn btn-ghost btn-sm" (click)="zoomOut()"
               [attr.aria-label]="'workflow.canvas.zoomOut' | t">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -46,6 +60,8 @@
   <div class="canvas-viewport"
        #viewport
        [class.canvas-viewport--panning]="panning()"
+       [style.background-size]="grid().size"
+       [style.background-position]="grid().position"
        (wheel)="onWheel($event)"
        (pointerdown)="onSurfacePointerDown($event)">
 
@@ -99,11 +115,12 @@
              [style.left.px]="node.x"
              [style.top.px]="node.y"
              [style.width.px]="node.width"
-             [style.min-height.px]="node.height"
+             [style.height.px]="node.height"
              (pointerdown)="onNodeDragStart($event, node)"
              (dblclick)="nodeOpened.emit(node.key)">
 
-          <div class="canvas-node-title">{{ node.label }}</div>
+          <!-- Yükseklik sabit (model = DOM); uzun ad kesilir, tamamı ipucunda. -->
+          <div class="canvas-node-title" [title]="node.label">{{ node.label }}</div>
           <code class="canvas-node-key">{{ node.key }}</code>
 
           @if (node.isParallel) {
