@@ -3,52 +3,41 @@ import {
   inject, input, output, signal, viewChild, computed
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { WorkflowGraph, WorkflowStep, outgoingTargets } from '../../../models/workflow.model';
+import { WorkflowGraph, outgoingTargets } from '../../../models/workflow.model';
+import { layoutWorkflow } from '../workflow-graph/workflow-graph.layout';
+import { edgeGeometry, portPositions } from '../workflow-graph/workflow-edge.geometry';
 import {
-  layoutWorkflow, NODE_WIDTH, NODE_HEIGHT, BRANCH_LINE_HEIGHT
-} from '../workflow-graph/workflow-graph.layout';
+  CanvasEdge, CanvasNode, PortKind,
+  nodeAt, resolveNodePositions
+} from './workflow-canvas.hit-test';
+import {
+  Camera, IDENTITY_CAMERA, Point, ViewportRect, ZOOM_STEP,
+  boundsOf, fitToView, panBy, screenToWorld, zoomAt, zoomAtCenter
+} from './workflow-canvas.camera';
+import { LanguageService } from '../../../services/language.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 
-/** Canvas'ta çizilen düğüm — konum ve ölçü dahil. */
-interface CanvasNode {
-  key: string;
-  label: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  isStart: boolean;
-  isParallel: boolean;
-  branchLabels: string[];
-}
+export type { CanvasEdge, CanvasNode, PortKind } from './workflow-canvas.hit-test';
 
-/** İki düğüm arasındaki bağlantı. */
-interface CanvasEdge {
-  key: string;
-  path: string;
-  labelX: number;
-  labelY: number;
-  label: string;
-  isRejection: boolean;
-}
-
-/** Sürüklenen bağlantının hangi çıkıştan başladığı. */
-type PortKind = 'approve' | 'reject';
+/** Kenar etiketleri bu zoom seviyesinin altında okunamıyor, gizlenir. */
+const EDGE_LABEL_MIN_ZOOM = 0.55;
 
 /**
- * Sürükle-bırak akış tasarımcısı (Faz 5).
+ * Sürükle-bırak akış tasarımcısı.
  *
  * Projede CDK, drag-drop ya da diyagram kütüphanesi YOK; her şey native Pointer
- * Events ile yazıldı — dashboard-build'in sürükleme deseniyle aynı yaklaşım.
+ * Events ile yazıldı — dashboard-build'in sürükleme desenindeki yaklaşım.
  *
- * İki etkileşim var:
- *   1) DÜĞÜM TAŞIMA — gövdeden sürükle. Konum tanıma yazılır (step.x/y).
+ * Dört etkileşim var:
+ *   1) DÜĞÜM TAŞIMA   — gövdeden sürükle. Konum tanıma yazılır (step.x/y).
  *   2) BAĞLANTI ÇİZME — çıkış portundan sürükleyip hedef düğümde bırak.
- *      Yeşil port onay, kırmızı port red yolunu bağlar.
+ *   3) KAYDIRMA       — boş zeminde ya da orta tuşla sürükle.
+ *   4) YAKINLAŞTIRMA  — Ctrl/Cmd + tekerlek (imce altındaki nokta sabit kalır).
  *
- * Konum tanımda YOKSA otomatik yerleşim (layoutWorkflow) kullanılır; böylece
- * canvas'tan önce yazılmış tanımlar da düzgün açılır ve form tabanlı düzenleme
- * konum belirtmek zorunda kalmaz.
+ * Kamera tek bir CSS transform'dur (`.canvas-world`); dünya koordinatları hiç
+ * değişmez, dolayısıyla `layoutWorkflow()` ve `step.x/y` bugünkü anlamını korur.
+ * Geometri, kamera ve isabet testi saf modüllerde (bkz. kardeş dosyalar) —
+ * bu component yalnızca sinyal, DOM dinleyicisi ve output tutar.
  */
 @Component({
   selector: 'app-workflow-canvas',
@@ -61,63 +50,61 @@ type PortKind = 'approve' | 'reject';
 export class WorkflowCanvasComponent {
   readonly graph = input<WorkflowGraph | null>(null);
   readonly selectedKey = input<string | null>(null);
+  /**
+   * Salt-okunur mod: taşıma ve bağlantı kapalı, yakınlaştırma/kaydırma/seçim
+   * açık. Yayınlanmış akışın şemasını göstermek ve (Faz 9) çalışan süreci
+   * izlemek için. Alan adı `locked`, çünkü `readonly` bir sınıf üyesi adı
+   * olarak kullanılamıyor.
+   */
+  readonly locked = input(false, { alias: 'readonly' });
 
   /** Düğüm taşındı — (key, x, y). Konum tanıma yazılmalı. */
   readonly nodeMoved = output<{ key: string; x: number; y: number }>();
   /** Bağlantı kuruldu — kaynak adımın onApprove/onReject'i güncellenmeli. */
   readonly edgeCreated = output<{ from: string; to: string; port: PortKind }>();
   readonly nodeSelected = output<string>();
+  /** Düğüme çift tıklandı — adım ayrıntı pop-up'ı açılmalı (salt-okunurda da). */
+  readonly nodeOpened = output<string>();
 
   private readonly platformId = inject(PLATFORM_ID);
-  private readonly canvasRef = viewChild<ElementRef<HTMLElement>>('canvas');
+  private readonly languageService = inject(LanguageService);
+  private readonly viewportRef = viewChild<ElementRef<HTMLElement>>('viewport');
 
   /**
    * Sürükleme sırasında konumlar burada tutulur ve her pointer olayında
    * tanıma yazılmaz — form değişimi tüm grafiği yeniden kurar ve sürükleme
    * takılırdı. Tanıma yazma yalnızca bırakışta (pointerup) yapılır.
    */
-  private readonly liveOffsets = signal<Record<string, { x: number; y: number }>>({});
+  private readonly liveOffsets = signal<Record<string, Point>>({});
 
   /** Bağlantı çizilirken imcin bulunduğu nokta — geçici çizgi için. */
   readonly pendingEdge = signal<{ from: string; port: PortKind; x: number; y: number } | null>(null);
 
-  readonly nodes = computed<CanvasNode[]>(() => {
-    const graph = this.graph();
-    if (!graph) return [];
+  readonly camera = signal<Camera>(IDENTITY_CAMERA);
+  readonly zoomPercent = computed(() => Math.round(this.camera().zoom * 100));
+  readonly showEdgeLabels = computed(() => this.camera().zoom > EDGE_LABEL_MIN_ZOOM);
 
-    // Otomatik yerleşim yalnızca KONUMU OLMAYAN düğümler için başlangıç noktası.
-    const auto = layoutWorkflow(graph);
-    const offsets = this.liveOffsets();
+  /**
+   * Otomatik yerleşim AYRI bir computed'de duruyor.
+   *
+   * Daha önce `nodes` içinde `liveOffsets()` ile aynı yerde okunuyordu; sürükleme
+   * saniyede ~60 kez `liveOffsets`'i değiştirdiği için BFS + yerleştirme + kenar
+   * kurulumu 60 Hz yeniden koşuyordu. Ayrılınca yerleşim yalnızca grafik
+   * değiştiğinde hesaplanır.
+   */
+  private readonly autoLayout = computed(() => layoutWorkflow(this.graph()));
 
-    return graph.steps.map(step => {
-      const fallback = auto.nodes.find(n => n.key.toLowerCase() === step.key.toLowerCase());
-      const live = offsets[step.key];
-      const branchLabels = step.type === 'parallel'
-        ? (step.branches ?? []).map(b => b.name || b.key)
-        : [];
-
-      return {
-        key: step.key,
-        label: step.name || step.key,
-        x: live?.x ?? step.x ?? fallback?.x ?? 24,
-        y: live?.y ?? step.y ?? fallback?.y ?? 24,
-        width: NODE_WIDTH,
-        height: step.type === 'parallel'
-          ? NODE_HEIGHT + branchLabels.length * BRANCH_LINE_HEIGHT
-          : NODE_HEIGHT,
-        isStart: step.key.toLowerCase() === (graph.startStep ?? '').toLowerCase(),
-        isParallel: step.type === 'parallel',
-        branchLabels
-      };
-    });
-  });
+  readonly nodes = computed<CanvasNode[]>(() =>
+    resolveNodePositions(this.graph(), this.autoLayout().nodes, this.liveOffsets()));
 
   /** Kenarlar düğüm konumlarından türetilir; sürüklerken canlı takip eder. */
   readonly edges = computed<CanvasEdge[]>(() => {
     const graph = this.graph();
     if (!graph) return [];
 
-    const byKey = new Map(this.nodes().map(n => [n.key.toLowerCase(), n]));
+    const byKey = new Map(this.nodes().map(node => [node.key.toLowerCase(), node]));
+    const approveLabel = this.languageService.t('workflow.canvas.edgeApprove');
+    const rejectLabel = this.languageService.t('workflow.canvas.edgeReject');
     const edges: CanvasEdge[] = [];
 
     for (const step of graph.steps) {
@@ -125,8 +112,8 @@ export class WorkflowCanvasComponent {
       if (!source) continue;
 
       const { approve, reject } = outgoingTargets(step);
-      this.pushEdge(edges, byKey, source, approve, 'onay', false);
-      this.pushEdge(edges, byKey, source, reject, 'red', true);
+      this.pushEdge(edges, byKey, source, approve, approveLabel, 'approve');
+      this.pushEdge(edges, byKey, source, reject, rejectLabel, 'reject');
     }
 
     return edges;
@@ -138,7 +125,7 @@ export class WorkflowCanvasComponent {
     source: CanvasNode,
     targetKey: string | null | undefined,
     label: string,
-    isRejection: boolean
+    port: PortKind
   ): void {
     // Terminal ve boş hedefler canvas'ta çizilmez: her düğümden iki terminale
     // ok çekmek şemayı okunmaz hale getirirdi. Terminaller form sekmesinde görünür.
@@ -147,20 +134,14 @@ export class WorkflowCanvasComponent {
     const target = byKey.get(targetKey.toLowerCase());
     if (!target) return;
 
-    // Kaynağın alt-orta noktasından hedefin üst-orta noktasına kübik eğri.
-    const x1 = source.x + source.width / 2;
-    const y1 = source.y + source.height;
-    const x2 = target.x + target.width / 2;
-    const y2 = target.y;
-    const midY = (y1 + y2) / 2;
-
     edges.push({
-      key: `${source.key}->${targetKey}:${label}`,
-      path: `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`,
-      labelX: (x1 + x2) / 2,
-      labelY: midY - 6,
+      key: `${source.key}->${targetKey}:${port}`,
       label,
-      isRejection
+      isRejection: port === 'reject',
+      from: source.key,
+      to: targetKey,
+      port,
+      geometry: edgeGeometry(source, target)
     });
   }
 
@@ -169,7 +150,7 @@ export class WorkflowCanvasComponent {
     const pending = this.pendingEdge();
     if (!pending) return null;
 
-    const source = this.nodes().find(n => n.key === pending.from);
+    const source = this.nodes().find(node => node.key === pending.from);
     if (!source) return null;
 
     const x1 = source.x + source.width / 2;
@@ -178,6 +159,131 @@ export class WorkflowCanvasComponent {
 
     return `M ${x1} ${y1} C ${x1} ${midY}, ${pending.x} ${midY}, ${pending.x} ${pending.y}`;
   });
+
+  /** Çıkış portlarının düğüm içindeki yatay konumu (px). */
+  readonly portOffsets = computed(() => portPositions(2, this.nodes()[0]?.width ?? 168));
+
+  /** Canvas yüzeyinin gerekli boyutu — düğümler taşınca büyür. */
+  readonly canvasSize = computed(() => {
+    const nodes = this.nodes();
+    if (nodes.length === 0) return { width: 600, height: 320 };
+
+    return {
+      width: Math.max(600, ...nodes.map(node => node.x + node.width + 80)),
+      height: Math.max(320, ...nodes.map(node => node.y + node.height + 80))
+    };
+  });
+
+  // ── Kamera ────────────────────────────────────────────────────────────────
+
+  /**
+   * Tekerlek: Ctrl/Cmd ile imce merkezli yakınlaştırma, düz tekerlekle kaydırma.
+   * Trackpad pinch hareketi de tarayıcıda `ctrlKey` ile geldiği için aynı yoldan
+   * geçer.
+   *
+   * Dinleyici şablondan bağlanıyor; `wheel` yalnızca window/document/body'ye
+   * eklendiğinde varsayılan olarak passive olur, sıradan bir div'de değil —
+   * dolayısıyla `preventDefault()` burada çalışır.
+   */
+  onWheel(event: WheelEvent): void {
+    const rect = this.viewportRect();
+    if (!rect) return;
+
+    event.preventDefault();
+
+    if (event.ctrlKey || event.metaKey) {
+      const factor = event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP;
+      this.camera.update(camera => zoomAt(camera, factor, event.clientX, event.clientY, rect));
+      return;
+    }
+
+    const deltaX = event.shiftKey ? -event.deltaY : -event.deltaX;
+    const deltaY = event.shiftKey ? 0 : -event.deltaY;
+    this.camera.update(camera => panBy(camera, deltaX, deltaY));
+  }
+
+  zoomIn(): void {
+    const rect = this.viewportRect();
+    if (rect) this.camera.update(camera => zoomAtCenter(camera, ZOOM_STEP, rect));
+  }
+
+  zoomOut(): void {
+    const rect = this.viewportRect();
+    if (rect) this.camera.update(camera => zoomAtCenter(camera, 1 / ZOOM_STEP, rect));
+  }
+
+  resetZoom(): void {
+    this.camera.set(IDENTITY_CAMERA);
+  }
+
+  /** Tüm düğümleri görünüre sığdırır ve ortalar. */
+  fitToScreen(): void {
+    const element = this.viewportRef()?.nativeElement;
+    const bounds = boundsOf(this.nodes());
+    if (!element || !bounds) return;
+
+    this.camera.set(fitToView(bounds, {
+      width: element.clientWidth,
+      height: element.clientHeight
+    }));
+  }
+
+  private viewportRect(): ViewportRect | null {
+    const element = this.viewportRef()?.nativeElement;
+    if (!element) return null;
+
+    const rect = element.getBoundingClientRect();
+    return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+  }
+
+  /** Ekran koordinatını dünya koordinatına çevirir. */
+  private toWorldPoint(event: PointerEvent): Point {
+    const rect = this.viewportRect();
+    if (!rect) return { x: event.clientX, y: event.clientY };
+
+    return screenToWorld(event.clientX, event.clientY, rect, this.camera());
+  }
+
+  // ── Zemin kaydırma ────────────────────────────────────────────────────────
+
+  private panState: { startX: number; startY: number; origin: Camera } | null = null;
+  readonly panning = signal(false);
+
+  /**
+   * Boş zeminde ya da orta tuşla sürükleme kamerayı kaydırır. Düğüm ve port
+   * kendi `pointerdown`'larında `stopPropagation()` çağırdığı için buraya
+   * yalnızca gerçekten boş zemine yapılan basışlar düşer.
+   */
+  onSurfacePointerDown(event: PointerEvent): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    // Sağ tuş menüsü Faz 7'de gelecek; şimdilik tarayıcıya bırakılıyor.
+    if (event.button !== 0 && event.button !== 1) return;
+
+    event.preventDefault();
+
+    this.panState = { startX: event.clientX, startY: event.clientY, origin: this.camera() };
+    this.panning.set(true);
+
+    document.addEventListener('pointermove', this.onSurfacePointerMove);
+    document.addEventListener('pointerup', this.onSurfacePointerUp);
+  }
+
+  private readonly onSurfacePointerMove = (event: PointerEvent): void => {
+    const state = this.panState;
+    if (!state) return;
+
+    this.camera.set(panBy(
+      state.origin,
+      event.clientX - state.startX,
+      event.clientY - state.startY));
+  };
+
+  private readonly onSurfacePointerUp = (): void => {
+    this.panState = null;
+    this.panning.set(false);
+    document.removeEventListener('pointermove', this.onSurfacePointerMove);
+    document.removeEventListener('pointerup', this.onSurfacePointerUp);
+  };
 
   // ── Düğüm taşıma ──────────────────────────────────────────────────────────
 
@@ -192,6 +298,9 @@ export class WorkflowCanvasComponent {
     event.stopPropagation();
 
     this.nodeSelected.emit(node.key);
+    // Salt-okunur modda seçim çalışır, taşıma çalışmaz.
+    if (this.locked()) return;
+
     this.dragState = {
       key: node.key,
       startX: event.clientX,
@@ -209,10 +318,14 @@ export class WorkflowCanvasComponent {
     const state = this.dragState;
     if (!state) return;
 
+    // Ekran pikseli dünya birimine çevrilir; aksi halde uzaklaşınca düğüm
+    // imcin çok gerisinde kalırdı.
+    const zoom = this.camera().zoom;
+
     // Negatif konuma izin verilmez; düğüm canvas'ın dışına kaçarsa geri
     // getirmenin tek yolu tanımı elle düzenlemek olurdu.
-    const x = Math.max(0, state.originX + (event.clientX - state.startX));
-    const y = Math.max(0, state.originY + (event.clientY - state.startY));
+    const x = Math.max(0, state.originX + (event.clientX - state.startX) / zoom);
+    const y = Math.max(0, state.originY + (event.clientY - state.startY) / zoom);
 
     this.liveOffsets.update(current => ({ ...current, [state.key]: { x, y } }));
   };
@@ -232,12 +345,12 @@ export class WorkflowCanvasComponent {
   // ── Bağlantı çizme ────────────────────────────────────────────────────────
 
   onPortDragStart(event: PointerEvent, node: CanvasNode, port: PortKind): void {
-    if (!isPlatformBrowser(this.platformId)) return;
+    if (!isPlatformBrowser(this.platformId) || this.locked()) return;
 
     event.preventDefault();
     event.stopPropagation();
 
-    const point = this.toCanvasPoint(event);
+    const point = this.toWorldPoint(event);
     this.pendingEdge.set({ from: node.key, port, x: point.x, y: point.y });
 
     document.addEventListener('pointermove', this.onPortDragMove);
@@ -248,7 +361,7 @@ export class WorkflowCanvasComponent {
     const pending = this.pendingEdge();
     if (!pending) return;
 
-    const point = this.toCanvasPoint(event);
+    const point = this.toWorldPoint(event);
     this.pendingEdge.set({ ...pending, x: point.x, y: point.y });
   };
 
@@ -260,7 +373,7 @@ export class WorkflowCanvasComponent {
 
     if (!pending) return;
 
-    const target = this.nodeAt(this.toCanvasPoint(event));
+    const target = nodeAt(this.nodes(), this.toWorldPoint(event));
     // Kendine bağlantı yok sayılır: sonsuz döngü kurmanın en kolay yolu bu
     // ve kullanıcının bunu isteyerek yaptığı bir senaryo yok.
     if (!target || target.key === pending.from) return;
@@ -268,34 +381,7 @@ export class WorkflowCanvasComponent {
     this.edgeCreated.emit({ from: pending.from, to: target.key, port: pending.port });
   };
 
-  /** Ekran koordinatını canvas koordinatına çevirir (kaydırma dahil). */
-  private toCanvasPoint(event: PointerEvent): { x: number; y: number } {
-    const element = this.canvasRef()?.nativeElement;
-    if (!element) return { x: event.clientX, y: event.clientY };
-
-    const rect = element.getBoundingClientRect();
-    return {
-      x: event.clientX - rect.left + element.scrollLeft,
-      y: event.clientY - rect.top + element.scrollTop
-    };
-  }
-
-  private nodeAt(point: { x: number; y: number }): CanvasNode | null {
-    return this.nodes().find(n =>
-      point.x >= n.x && point.x <= n.x + n.width &&
-      point.y >= n.y && point.y <= n.y + n.height) ?? null;
-  }
-
-  /** Canvas yüzeyinin gerekli boyutu — düğümler taşınca büyür. */
-  readonly canvasSize = computed(() => {
-    const nodes = this.nodes();
-    if (nodes.length === 0) return { width: 600, height: 320 };
-
-    return {
-      width: Math.max(600, ...nodes.map(n => n.x + n.width + 80)),
-      height: Math.max(320, ...nodes.map(n => n.y + n.height + 80))
-    };
-  });
+  // ── Yardımcılar ───────────────────────────────────────────────────────────
 
   isSelected(node: CanvasNode): boolean {
     return this.selectedKey() === node.key;

@@ -3,10 +3,54 @@
     <p>{{ 'workflow.build.previewEmpty' | t }}</p>
   </div>
 } @else {
-  <p class="canvas-hint">{{ 'workflow.canvas.hint' | t }}</p>
+  <div class="canvas-toolbar">
+    <p class="canvas-hint">
+      {{ (locked() ? 'workflow.canvas.hintReadonly' : 'workflow.canvas.hint') | t }}
+    </p>
 
-  <div class="canvas-scroll" #canvas>
-    <div class="canvas-surface"
+    <div class="canvas-zoom cluster">
+      <button type="button" class="btn btn-ghost btn-sm" (click)="zoomOut()"
+              [attr.aria-label]="'workflow.canvas.zoomOut' | t">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M5 12h14" />
+        </svg>
+      </button>
+
+      <button type="button" class="btn btn-ghost btn-sm canvas-zoom-level" (click)="resetZoom()"
+              [attr.aria-label]="'workflow.canvas.zoomReset' | t">{{ zoomPercent() }}%</button>
+
+      <button type="button" class="btn btn-ghost btn-sm" (click)="zoomIn()"
+              [attr.aria-label]="'workflow.canvas.zoomIn' | t">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </button>
+
+      <button type="button" class="btn btn-secondary btn-sm" (click)="fitToScreen()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
+        </svg>
+        {{ 'workflow.canvas.fit' | t }}
+      </button>
+    </div>
+  </div>
+
+  <!--
+    Viewport kamerayı taşır, dünya ise içeriği. Kaydırma `overflow: auto` ile
+    DEĞİL transform ile yapılıyor: scrollLeft/scrollTop ile transform aynı anda
+    haritalamaya karışır ve kaydırılabilir alan ölçekle büyümez.
+  -->
+  <div class="canvas-viewport"
+       #viewport
+       [class.canvas-viewport--panning]="panning()"
+       (wheel)="onWheel($event)"
+       (pointerdown)="onSurfacePointerDown($event)">
+
+    <div class="canvas-world"
+         [style.transform]="'translate(' + camera().panX + 'px, ' + camera().panY + 'px) scale(' + camera().zoom + ')'"
          [style.width.px]="canvasSize().width"
          [style.height.px]="canvasSize().height">
 
@@ -29,15 +73,20 @@
 
         @for (edge of edges(); track edge.key) {
           <g class="canvas-edge" [class.canvas-edge--reject]="edge.isRejection">
-            <path [attr.d]="edge.path"
+            <!-- non-scaling-stroke: uzaklaşınca çizgi kaybolmasın, yaklaşınca kalınlaşmasın. -->
+            <path [attr.d]="edge.geometry.path"
+                  vector-effect="non-scaling-stroke"
                   [attr.marker-end]="edge.isRejection ? 'url(#wfc-arrow-reject)' : 'url(#wfc-arrow)'" />
-            <text [attr.x]="edge.labelX" [attr.y]="edge.labelY" text-anchor="middle">{{ edge.label }}</text>
+            @if (showEdgeLabels()) {
+              <text [attr.x]="edge.geometry.labelX" [attr.y]="edge.geometry.labelY"
+                    text-anchor="middle">{{ edge.label }}</text>
+            }
           </g>
         }
 
         <!-- Sürüklenirken imci takip eden geçici çizgi. -->
         @if (pendingPath(); as path) {
-          <path class="canvas-edge-pending" [attr.d]="path" />
+          <path class="canvas-edge-pending" [attr.d]="path" vector-effect="non-scaling-stroke" />
         }
       </svg>
 
@@ -46,11 +95,13 @@
              [class.canvas-node--start]="node.isStart"
              [class.canvas-node--parallel]="node.isParallel"
              [class.canvas-node--selected]="isSelected(node)"
+             [class.canvas-node--locked]="locked()"
              [style.left.px]="node.x"
              [style.top.px]="node.y"
              [style.width.px]="node.width"
              [style.min-height.px]="node.height"
-             (pointerdown)="onNodeDragStart($event, node)">
+             (pointerdown)="onNodeDragStart($event, node)"
+             (dblclick)="nodeOpened.emit(node.key)">
 
           <div class="canvas-node-title">{{ node.label }}</div>
           <code class="canvas-node-key">{{ node.key }}</code>
@@ -58,21 +109,27 @@
           @if (node.isParallel) {
             <ul class="canvas-node-branches">
               @for (branch of node.branchLabels; track branch) {
-                <li>▸ {{ branch }}</li>
+                <li>&#9656; {{ branch }}</li>
               }
             </ul>
           }
 
           <!--
             Çıkış portları. Yeşil onay, kırmızı red yolunu bağlar; porttan
-            sürükleyip hedef düğümde bırakmak bağlantıyı kurar.
+            sürükleyip hedef düğümde bırakmak bağlantıyı kurar. Konumlar
+            portPositions() ile eşit aralıklı — geçiş başına port geldiğinde
+            (Faz 10) aynı formül N porta genelleniyor.
           -->
-          <button type="button" class="canvas-port canvas-port--approve"
-                  (pointerdown)="onPortDragStart($event, node, 'approve')"
-                  [attr.aria-label]="'workflow.canvas.portApprove' | t"></button>
-          <button type="button" class="canvas-port canvas-port--reject"
-                  (pointerdown)="onPortDragStart($event, node, 'reject')"
-                  [attr.aria-label]="'workflow.canvas.portReject' | t"></button>
+          @if (!locked()) {
+            <button type="button" class="canvas-port canvas-port--approve"
+                    [style.left.px]="portOffsets()[0] - 7"
+                    (pointerdown)="onPortDragStart($event, node, 'approve')"
+                    [attr.aria-label]="'workflow.canvas.portApprove' | t"></button>
+            <button type="button" class="canvas-port canvas-port--reject"
+                    [style.left.px]="portOffsets()[1] - 7"
+                    (pointerdown)="onPortDragStart($event, node, 'reject')"
+                    [attr.aria-label]="'workflow.canvas.portReject' | t"></button>
+          }
         </div>
       }
     </div>

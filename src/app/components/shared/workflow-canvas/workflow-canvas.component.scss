@@ -1,22 +1,57 @@
+.canvas-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  flex-wrap: wrap;
+}
+
 .canvas-hint {
-  margin: 0 0 var(--space-2);
+  margin: 0;
   font-size: var(--text-xs);
   color: var(--muted);
+  flex: 1 1 320px;
 }
 
-.canvas-scroll {
+.canvas-zoom {
+  flex: 0 0 auto;
+}
+
+.canvas-zoom-level {
+  min-width: 56px;
+  font-variant-numeric: tabular-nums;
+}
+
+// ── Kamera ───────────────────────────────────────────────────────────────────
+
+.canvas-viewport {
   position: relative;
-  overflow: auto;
-  max-height: 560px;
+  // Kaydırma transform ile yapılıyor; overflow: auto ikinci bir haritalama
+  // kaynağı olurdu (bkz. workflow-canvas.camera.ts).
+  overflow: hidden;
+  height: 560px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 10px);
-  background:
-    radial-gradient(circle, var(--border) 1px, transparent 1px) 0 0 / 20px 20px,
-    var(--bg);
+  background: var(--bg);
+  cursor: grab;
+  // Dokunmatikte tarayıcının kendi kaydırma/yakınlaştırma jesti devreye girmemeli.
+  touch-action: none;
 }
 
-.canvas-surface {
-  position: relative;
+.canvas-viewport--panning {
+  cursor: grabbing;
+}
+
+.canvas-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  // Izgara dünyanın içinde olduğu için yakınlaşınca birlikte ölçekleniyor.
+  background: radial-gradient(circle, var(--border) 1px, transparent 1px) 0 0 / 20px 20px;
+  // will-change: transform VERİLMEZ — tarayıcı katmanı sabit çözünürlükte
+  // rasterize eder ve yazılar yakınlaşmada bulanıklaşır.
 }
 
 // Kenarlar altta, düğümler üstte.
@@ -61,6 +96,10 @@
   touch-action: none;
 }
 
+.canvas-node--locked {
+  cursor: default;
+}
+
 .canvas-node--start {
   border-color: var(--accent);
   border-width: 2.5px;
@@ -97,6 +136,8 @@
 
 // ── Portlar ──────────────────────────────────────────────────────────────────
 
+// Yatay konum portPositions() ile şablondan bağlanıyor; burada yalnızca
+// görünüm ve dikey hizalama var.
 .canvas-port {
   position: absolute;
   bottom: -7px;
@@ -112,11 +153,9 @@
 }
 
 .canvas-port--approve {
-  left: 32%;
   background: var(--success);
 }
 
 .canvas-port--reject {
-  left: 62%;
   background: var(--danger);
 }

@@ -53,6 +53,16 @@ export const WORKFLOW_I18N: Translations = {
   },
   'workflow.canvas.portApprove': { tr: 'Onay bağlantısı çiz', en: 'Draw approve connection' },
   'workflow.canvas.portReject': { tr: 'Red bağlantısı çiz', en: 'Draw reject connection' },
+  'workflow.canvas.hintReadonly': {
+    tr: 'Bu akış yayınlandı; şema salt-okunur. Ayrıntıları görmek için adıma çift tıklayın. Yakınlaşmak için Ctrl + tekerlek, kaydırmak için boş zemini sürükleyin.',
+    en: 'This workflow is published; the diagram is read-only. Double-click a step to see its details. Ctrl + wheel to zoom, drag the empty background to pan.'
+  },
+  'workflow.canvas.edgeApprove': { tr: 'onay', en: 'approve' },
+  'workflow.canvas.edgeReject': { tr: 'red', en: 'reject' },
+  'workflow.canvas.zoomIn': { tr: 'Yakınlaştır', en: 'Zoom in' },
+  'workflow.canvas.zoomOut': { tr: 'Uzaklaştır', en: 'Zoom out' },
+  'workflow.canvas.zoomReset': { tr: 'Yakınlaştırmayı sıfırla', en: 'Reset zoom' },
+  'workflow.canvas.fit': { tr: 'Ekrana sığdır', en: 'Fit to screen' },
   'workflow.build.tabPreview': { tr: 'Önizleme', en: 'Preview' },
   'workflow.build.tablistAria': { tr: 'Akış tasarım sekmeleri', en: 'Workflow design tabs' },
   'workflow.build.name': { tr: 'Akış adı', en: 'Workflow name' },

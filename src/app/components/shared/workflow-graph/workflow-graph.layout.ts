@@ -1,4 +1,8 @@
 import { WorkflowGraph, WorkflowStep, outgoingTargets, WORKFLOW_TERMINAL_COMPLETED, WORKFLOW_TERMINAL_REJECTED } from '../../../models/workflow.model';
+import {
+  NODE_WIDTH, NODE_HEIGHT, COLUMN_GAP, ROW_GAP, PADDING, TERMINAL_HEIGHT,
+  edgeGeometry, nodeSize
+} from './workflow-edge.geometry';
 
 /**
  * Akış şeması geometrisi — SAF fonksiyon, Angular import'u YOK.
@@ -11,15 +15,12 @@ import { WorkflowGraph, WorkflowStep, outgoingTargets, WORKFLOW_TERMINAL_COMPLET
  *      katmanlar başlangıç adımından en uzun yol ile burada hesaplanıyor.
  */
 
-export const NODE_WIDTH = 168;
-export const NODE_HEIGHT = 52;
-export const COLUMN_GAP = 40;
-export const ROW_GAP = 56;
-export const PADDING = 24;
-export const TERMINAL_HEIGHT = 34;
-export const LABEL_OFFSET = 6;
-/** Paralel kutuda her dal satırının yüksekliği. */
-export const BRANCH_LINE_HEIGHT = 15;
+// Geometri sabitleri ve kenar formulu workflow-edge.geometry.ts'te; buradan
+// yeniden disa aktariliyor ki mevcut ithal edenler (spec dahil) degismesin.
+export {
+  NODE_WIDTH, NODE_HEIGHT, COLUMN_GAP, ROW_GAP,
+  PADDING, TERMINAL_HEIGHT, LABEL_OFFSET, BRANCH_LINE_HEIGHT
+} from './workflow-edge.geometry';
 
 export const EMPTY_VIEW_BOX = '0 0 100 60';
 
@@ -164,11 +165,9 @@ function placeNodes(graph: WorkflowGraph, layers: Map<string, number>): LayoutNo
       layer,
       x: PADDING + columnIndex * (NODE_WIDTH + COLUMN_GAP),
       y: PADDING + layer * (NODE_HEIGHT + ROW_GAP),
-      width: NODE_WIDTH,
-      // Paralel kutu dalları da listeliyor; her dal için bir satır yüksekliği ekler.
-      height: isParallel
-        ? NODE_HEIGHT + branchLabels.length * BRANCH_LINE_HEIGHT
-        : NODE_HEIGHT,
+      width: nodeSize(step).width,
+      // Paralel kutu dalları da listeliyor; yükseklik formülü nodeSize'da.
+      height: nodeSize(step).height,
       isStart: eq(step.key, graph.startStep),
       isTerminal: false,
       isRejection: false,
@@ -257,25 +256,19 @@ function pushEdge(
   // Hedefi çizilmemiş kenar sessizce atlanır (entity-graph ile aynı davranış).
   if (!target) return;
 
-  const x1 = source.x + source.width / 2;
-  const y1 = source.y + source.height;
-  const x2 = target.x + target.width / 2;
-  const y2 = target.y;
-
-  const midY = (y1 + y2) / 2;
-  const path = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+  const geometry = edgeGeometry(source, target);
 
   edges.push({
     key: `${source.key}->${targetKey}:${label}`,
-    path,
-    labelX: (x1 + x2) / 2,
-    labelY: midY - LABEL_OFFSET,
+    path: geometry.path,
+    labelX: geometry.labelX,
+    labelY: geometry.labelY,
     label,
     isRejection,
-    minX: Math.min(x1, x2),
-    minY: Math.min(y1, y2),
-    maxX: Math.max(x1, x2),
-    maxY: Math.max(y1, y2)
+    minX: geometry.minX,
+    minY: geometry.minY,
+    maxX: geometry.maxX,
+    maxY: geometry.maxY
   });
 }
 
