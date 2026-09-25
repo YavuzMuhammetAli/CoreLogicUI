@@ -1,0 +1,128 @@
+{
+  "$comment": "10 rol + model bazli izin bitmasklari. Gerekce: ../03-roller-ve-yetki.md. PermissionAction: Read=1 Create=2 Update=4 Delete=8 All=15 Navigation=16 OwnRecordsOnly=32",
+  "version": "1.0",
+
+  "permissionBits": {
+    "Read": 1, "Create": 2, "Update": 4, "Delete": 8,
+    "All": 15, "Navigation": 16, "OwnRecordsOnly": 32
+  },
+
+  "$note": "Approve biti YOKTUR. Onay yetkisi workflow gorev atamasiyla dogar — workflows.json icindeki assignment.roleId alanlari bu rollere isaret eder.",
+
+  "roles": [
+    {
+      "code": "admin", "name": "Sistem Yoneticisi", "isPlatformAdmin": true,
+      "note": "Tenant admin rolu. HasPermission kosulsuz true doner (PermissionManager.cs:116) — izin tablosu hic okunmaz."
+    },
+    {
+      "code": "purchasing-manager", "name": "Satin Alma Muduru",
+      "permissions": {
+        "PurchaseRequest": 21, "PurchaseRequestItem": 21, "PurchaseRequestApproval": 21,
+        "Rfq": 21, "RfqItem": 21, "RfqSupplier": 21,
+        "SupplierQuotation": 21, "SupplierQuotationItem": 21,
+        "QuotationComparison": 21, "QuotationComparisonLine": 21,
+        "PurchaseOrder": 31, "PurchaseOrderItem": 31, "PurchaseOrderApproval": 31, "PurchaseOrderAttachment": 31,
+        "Supplier": 21, "SupplierContact": 21, "SupplierAddress": 21, "SupplierDocument": 21,
+        "SupplierRating": 31,
+        "Product": 21, "PriceList": 21, "PriceListItem": 21, "ProductSupplier": 21,
+        "GoodsReceipt": 17, "GoodsReceiptItem": 17,
+        "Budget": 1, "BudgetTransaction": 1,
+        "SupplierInvoice": 1, "Payment": 1,
+        "Department": 1, "CostCenter": 1, "Employee": 1
+      }
+    },
+    {
+      "code": "purchasing-specialist", "name": "Satin Alma Uzmani",
+      "permissions": {
+        "Rfq": 31, "RfqItem": 31, "RfqSupplier": 31,
+        "SupplierQuotation": 31, "SupplierQuotationItem": 31,
+        "QuotationComparison": 31, "QuotationComparisonLine": 31,
+        "Supplier": 31, "SupplierContact": 31, "SupplierAddress": 31, "SupplierDocument": 31,
+        "SupplierCategory": 31, "SupplierRating": 23,
+        "Product": 31, "ProductCategory": 31, "ProductSubCategory": 31, "Unit": 31, "Brand": 31,
+        "ProductSupplier": 31, "PriceList": 31, "PriceListItem": 31,
+        "PurchaseOrder": 23, "PurchaseOrderItem": 23, "PurchaseOrderAttachment": 23,
+        "PurchaseRequest": 1, "PurchaseRequestItem": 1,
+        "GoodsReceipt": 1, "Employee": 1, "Department": 1
+      },
+      "note": "PurchaseOrder icin 23 = Create+Read+Update+Navigation (Delete YOK)."
+    },
+    {
+      "code": "finance-manager", "name": "Finans Muduru",
+      "permissions": {
+        "Budget": 31, "BudgetPeriod": 31, "BudgetItem": 31, "BudgetTransaction": 31,
+        "SupplierInvoice": 21, "SupplierInvoiceItem": 21, "InvoiceException": 21,
+        "Payment": 31, "PaymentAllocation": 31,
+        "SupplierBankAccount": 21,
+        "Supplier": 5, "CostCenter": 21, "ExchangeRate": 31,
+        "PurchaseRequest": 1, "PurchaseOrder": 1, "GoodsReceipt": 1,
+        "Employee": 1, "Department": 1
+      }
+    },
+    {
+      "code": "finance-specialist", "name": "Finans Uzmani",
+      "permissions": {
+        "SupplierInvoice": 31, "SupplierInvoiceItem": 31, "InvoiceException": 31, "InvoiceAttachment": 31,
+        "Payment": 23, "PaymentAllocation": 23,
+        "SupplierBankAccount": 1,
+        "PurchaseOrder": 1, "PurchaseOrderItem": 1,
+        "GoodsReceipt": 1, "GoodsReceiptItem": 1,
+        "Budget": 1, "ExchangeRate": 1, "Supplier": 1
+      }
+    },
+    {
+      "code": "department-manager", "name": "Departman Muduru",
+      "permissions": {
+        "PurchaseRequest": 21, "PurchaseRequestItem": 21, "PurchaseRequestApproval": 21,
+        "Budget": 1, "BudgetTransaction": 1,
+        "PurchaseOrder": 1, "Product": 1,
+        "CompanyVehicle": 17
+      },
+      "note": "UYARI: 'kendi departmani' kisiti UYGULANAMIYOR — OwnRecordsOnly yalniz CreatedBy'a bakar. Departman muduru TUM talepleri gorur (G-09)."
+    },
+    {
+      "code": "employee", "name": "Calisan",
+      "permissions": {
+        "PurchaseRequest": 55, "PurchaseRequestItem": 55, "PurchaseRequestAttachment": 55,
+        "Product": 1, "ProductCategory": 1, "Unit": 1,
+        "Department": 1, "CostCenter": 1
+      },
+      "note": "55 = Create+Read+Update+Navigation+OwnRecordsOnly. Delete YOK. OwnRecordsOnly platformun tek calisan satir seviyesi kisitidir."
+    },
+    {
+      "code": "warehouse-manager", "name": "Depo Sorumlusu",
+      "permissions": {
+        "GoodsReceipt": 31, "GoodsReceiptItem": 31,
+        "PurchaseOrder": 1, "PurchaseOrderItem": 1,
+        "Product": 1, "Unit": 1, "Supplier": 1
+      },
+      "note": "UYARI: PurchaseOrderItem Read izni UnitPrice'i da acar — depo fiyat gormemeli ama alan seviyesi yetki yok (G-09)."
+    },
+    {
+      "code": "management", "name": "Ust Yonetim",
+      "permissions": {
+        "PurchaseRequest": 21, "Supplier": 21,
+        "PurchaseOrder": 17, "SupplierInvoice": 17, "Payment": 17,
+        "Budget": 17, "BudgetTransaction": 17,
+        "Rfq": 17, "SupplierQuotation": 17, "QuotationComparison": 17,
+        "GoodsReceipt": 17, "Product": 17, "Employee": 17, "Department": 17,
+        "CompanyVehicle": 17
+      },
+      "note": "Hicbir sey olusturmaz/silmez. PurchaseRequest ve Supplier'da Update var — onay adimi icin."
+    },
+    {
+      "code": "supplier-user", "name": "Tedarikci Kullanicisi",
+      "permissions": {},
+      "notImplementable": true,
+      "note": "BUGUN UYGULANAMAZ. Platformda disaridan sirkete katilim yok; her kullanici cagiran admin'in ambient tenant'ina eklenir. Ayrica 'yalniz kendi tedarikci kaydina bagli teklifleri gorsun' ifade edilemez (OwnRecordsOnly yalniz CreatedBy'a bakar). Gerekce: ../03-roller-ve-yetki.md R10."
+    }
+  ],
+
+  "workflowRoleMapping": {
+    "$note": "workflows.json icindeki assignment.roleId degerleri bu kodlara karsilik gelir. Gercek OperationClaim ID'leri tenant'a ozgudur; publish-all.ps1 calisma aninda /Role listesinden cozer ve JSON'a enjekte eder.",
+    "2": "purchasing-manager",
+    "4": "finance-manager",
+    "6": "department-manager",
+    "9": "management"
+  }
+}

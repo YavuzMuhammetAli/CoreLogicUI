@@ -1,0 +1,98 @@
+{
+  "$comment": "6 RelationshipDefinition. Gerekce ve derinlik analizi: ../05-entity-iliskileri.md. R3/R4/R5 T-06 sonucuna gore lookup'a cevrilebilir.",
+  "version": "1.0",
+
+  "relationships": [
+    {
+      "id": "R1",
+      "sourceModel": "Employee",
+      "targetModel": "Employee",
+      "relationshipType": "SelfReference",
+      "propertyName": "Manager",
+      "inverseProperty": "Subordinates",
+      "required": false,
+      "cascadeDelete": false,
+      "displayName": "Yonetici",
+      "expectedDepth": 0,
+      "note": "SelfReference cycle beyaz listesinde (RelationshipGraph.cs:178). Cascade her zaman NO ACTION'a duser."
+    },
+    {
+      "id": "R2",
+      "sourceModel": "SupplierCategory",
+      "targetModel": "SupplierCategory",
+      "relationshipType": "SelfReference",
+      "propertyName": "ParentCategory",
+      "inverseProperty": "Children",
+      "required": false,
+      "cascadeDelete": false,
+      "displayName": "Ust Kategori",
+      "expectedDepth": 0,
+      "note": "models.json'da ayrica ParentCategoryId lookup kolonu VAR. LegacyFkConflictRule catismasi bekleniyor — T-06 ile birlikte dogrulanacak. Catisirsa bu iliski dusurulur, lookup kalir."
+    },
+    {
+      "id": "R3",
+      "sourceModel": "Supplier",
+      "targetModel": "SupplierQuotation",
+      "relationshipType": "OneToMany",
+      "propertyName": "Quotations",
+      "inverseProperty": "Supplier",
+      "required": false,
+      "cascadeDelete": false,
+      "displayName": "Teklifler",
+      "expectedDepth": 1,
+      "conflictsWith": "SupplierQuotation.SupplierId (lookup)",
+      "note": "RISKLI: ayni bagin lookup karsiligiyla ayni FK kolonunu uretir. Tasarim karari — kullanici deneyimi kazanir; T-06 ham int sorununu dogrularsa bu iliski IPTAL, lookup kalir."
+    },
+    {
+      "id": "R4",
+      "sourceModel": "PurchaseOrder",
+      "targetModel": "GoodsReceipt",
+      "relationshipType": "OneToMany",
+      "propertyName": "Receipts",
+      "inverseProperty": "PurchaseOrder",
+      "required": false,
+      "cascadeDelete": false,
+      "displayName": "Mal Kabuller",
+      "expectedDepth": 1,
+      "conflictsWith": "GoodsReceipt.PurchaseOrderId (lookup)",
+      "note": "Rollup'in OLMASI GEREKEN yeri (ReceivedQuantity). G-05 nedeniyle rollup zaten calismadigi icin navigation'in pratik getirisi dusuk."
+    },
+    {
+      "id": "R5",
+      "sourceModel": "PurchaseRequest",
+      "targetModel": "Rfq",
+      "relationshipType": "OneToOne",
+      "propertyName": "Rfq",
+      "inverseProperty": "PurchaseRequest",
+      "required": false,
+      "cascadeDelete": false,
+      "displayName": "Teklif Talebi",
+      "expectedDepth": 1,
+      "conflictsWith": "Rfq.PurchaseRequestId (lookup)",
+      "expectedIndex": "UX_Rfq_PurchaseRequestId_Rel",
+      "note": "BR-09'u GERCEKTEN garanti eden tek mekanizma — platformun UNIQUE urettigi tek durum (RelationshipMigrationGenerator.cs:120-128). Bu nedenle lookup'a CEVRILMEMELI; tekillik kaybedilir. Test T-10."
+    },
+    {
+      "id": "R6",
+      "sourceModel": "Product",
+      "targetModel": "Supplier",
+      "relationshipType": "ManyToMany",
+      "propertyName": "AlternativeSuppliers",
+      "inverseProperty": "CatalogProducts",
+      "joinTableName": "ProductSupplierLink",
+      "required": false,
+      "cascadeDelete": false,
+      "displayName": "Alternatif Tedarikciler",
+      "expectedDepth": 1,
+      "note": "Join tablosu DbBaseObject kolonlari TASIMAZ -> audit'lenmez, soft-delete edilmez, CreatedBy tutmaz. Asil kayit ProductSupplier modelidir; bu iliski yalniz navigation ve ManyToMany yetenegini sinamak icin. Test T-11."
+    }
+  ],
+
+  "expectedValidation": {
+    "maxDepthObserved": 1,
+    "maxDepthAllowed": 3,
+    "cycleRisks": ["R1 (SelfReference — beyaz listede)", "R2 (SelfReference — beyaz listede)"],
+    "legacyFkConflicts": ["R2", "R3", "R4", "R5"],
+    "note": "validate-graph, R2/R3/R4/R5 icin LegacyFkConflictRule hatasi dondurebilir. O durumda ilgili lookup kolonu models.json'dan cikarilir VEYA iliski dusurulur. Karar T-06 sonucuna baglidir ve 20-canli-dogrulama-sonuclari.md'ye yazilir."
+  }
+}

@@ -1,0 +1,682 @@
+{
+  "$comment": "CoreLogic Procurement — 50 model. Anahtar sozlugu icin seed/README.md. Turkce etiketler 'lbl' alaninda; model/kolon adlari ASCII (SqlIdentifier deseni).",
+  "version": "1.0",
+  "generatedFor": "docs/satinalma-blueprint",
+  "models": [
+
+    { "name": "Company", "label": "Sirket", "parent": null, "wave": 1, "cols": [
+      { "n": "Code", "t": "string", "r": true, "lbl": "Kod", "rx": "^[A-Z0-9_-]{2,20}$", "rxMsg": "2-20 buyuk harf/rakam" },
+      { "n": "Name", "t": "string", "r": true, "lbl": "Ad", "minLen": 2, "maxLen": 200 },
+      { "n": "LegalName", "t": "string", "r": true, "lbl": "Unvan", "maxLen": 250 },
+      { "n": "TaxNumber", "t": "string", "r": true, "lbl": "Vergi No", "rx": "^[0-9]{10,11}$", "rxMsg": "10 veya 11 hane" },
+      { "n": "TaxOffice", "t": "string", "lbl": "Vergi Dairesi", "maxLen": 100 },
+      { "n": "Address", "t": "string", "lbl": "Adres", "maxLen": 250 },
+      { "n": "City", "t": "string", "lbl": "Sehir", "maxLen": 100 },
+      { "n": "Country", "t": "enum", "r": true, "lbl": "Ulke", "enum": "TR|DE|US|GB|CN|IT|FR|Other" },
+      { "n": "Phone", "t": "string", "lbl": "Telefon", "rx": "^[0-9+ ()-]{7,20}$" },
+      { "n": "Email", "t": "string", "lbl": "E-posta", "rx": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" },
+      { "n": "DefaultCurrency", "t": "enum", "r": true, "lbl": "Varsayilan Para Birimi", "enum": "TRY|USD|EUR|GBP" },
+      { "n": "IsActive", "t": "boolean", "r": true, "lbl": "Aktif" }
+    ]},
+
+    { "name": "Position", "label": "Pozisyon", "parent": null, "wave": 1, "cols": [
+      { "n": "Code", "t": "string", "r": true, "lbl": "Kod", "rx": "^[A-Z0-9_-]{2,20}$" },
+      { "n": "Name", "t": "string", "r": true, "lbl": "Ad", "maxLen": 150 },
+      { "n": "Level", "t": "int", "r": true, "lbl": "Seviye", "min": 1, "max": 10 },
+      { "n": "IsManagerial", "t": "boolean", "r": true, "lbl": "Yonetici Pozisyonu" }
+    ]},
+
+    { "name": "Unit", "label": "Birim", "parent": null, "wave": 1, "cols": [
+      { "n": "Code", "t": "string", "r": true, "lbl": "Kod", "rx": "^[A-Z]{1,5}$", "rxMsg": "EA, KG, M, LT, BOX" },
+      { "n": "Name", "t": "string", "r": true, "lbl": "Ad", "maxLen": 100 },
+      { "n": "Precision", "t": "int", "r": true, "lbl": "Ondalik Basamak", "min": 0, "max": 4 },
+      { "n": "IsActive", "t": "boolean", "r": true, "lbl": "Aktif" }
+    ]},
+
+    { "name": "Brand", "label": "Marka", "parent": null, "wave": 1, "cols": [
+      { "n": "Code", "t": "string", "r": true, "lbl": "Kod", "rx": "^[A-Z0-9_-]{2,20}$" },
+      { "n": "Name", "t": "string", "r": true, "lbl": "Ad", "maxLen": 150 },
+      { "n": "Country", "t": "enum", "lbl": "Mense", "enum": "TR|DE|US|GB|CN|IT|FR|Other" },
+      { "n": "IsActive", "t": "boolean", "r": true, "lbl": "Aktif" }
+    ]},
+
+    { "name": "ProductCategory", "label": "Urun Kategorisi", "parent": null, "wave": 1, "cols": [
+      { "n": "Code", "t": "string", "r": true, "lbl": "Kod", "rx": "^[A-Z0-9_-]{2,20}$" },
+      { "n": "Name", "t": "string", "r": true, "lbl": "Ad", "maxLen": 150 },
+      { "n": "Description", "t": "string", "lbl": "Aciklama", "maxLen": 250 },
+      { "n": "IsActive", "t": "boolean", "r": true, "lbl": "Aktif" }
+    ]},
+
+    { "name": "SupplierCategory", "label": "Tedarikci Kategorisi", "parent": null, "wave": 1,
+      "$bug": "H-10: KENDI KENDINE LOOKUP PUBLISH'I KIRIYOR. 'ParentCategoryId' lookup kolonu KALDIRILDI; ust kategori bagi R2 (SelfReference iliskisi) ile kurulur. Bkz. 18-teknik-zorluklar-ve-backlog.md H-10.",
+      "cols": [
+      { "n": "Code", "t": "string", "r": true, "lbl": "Kod", "rx": "^[A-Z0-9_-]{2,20}$" },
+      { "n": "Name", "t": "string", "r": true, "lbl": "Ad", "maxLen": 150 },
+      { "n": "ParentCategoryName", "t": "string", "lbl": "Ust Kategori", "maxLen": 150 },
+      { "n": "Description", "t": "string", "lbl": "Aciklama", "maxLen": 250 }
+    ]},
+
+    { "name": "BudgetPeriod", "label": "Butce Donemi", "parent": null, "wave": 1, "cols": [
+      { "n": "Code", "t": "string", "r": true, "lbl": "Kod", "rx": "^[0-9]{4}-(Q[1-4]|H[12]|FY)$", "rxMsg": "Ornek: 2026-Q4" },
+      { "n": "Name", "t": "string", "r": true, "lbl": "Ad", "maxLen": 100 },
+      { "n": "StartDate", "t": "dateonly", "r": true, "lbl": "Baslangic" },
+      { "n": "EndDate", "t": "dateonly", "r": true, "lbl": "Bitis" },
+      { "n": "Status", "t": "enum", "r": true, "lbl": "Durum", "enum": "Open|Locked|Closed" }
+    ]},
+
+    { "name": "ExchangeRate", "label": "Doviz Kuru", "parent": null, "wave": 1, "cols": [
+      { "n": "CurrencyCode", "t": "enum", "r": true, "lbl": "Para Birimi", "enum": "USD|EUR|GBP" },
+      { "n": "RateDate", "t": "dateonly", "r": true, "lbl": "Tarih" },
+      { "n": "BuyRate", "t": "decimal", "r": true, "lbl": "Alis", "min": 0 },
+      { "n": "SellRate", "t": "decimal", "r": true, "lbl": "Satis", "min": 0 },
+      { "n": "Source", "t": "enum", "r": true, "lbl": "Kaynak", "enum": "TCMB|Manual|Api" }
+    ]},
+
+    { "name": "Branch", "label": "Sube", "parent": null, "wave": 2, "cols": [
+      { "n": "CompanyId", "t": "lookup", "r": true, "lbl": "Sirket", "lk": "Company", "lkd": "Name" },
+      { "n": "CompanyName", "t": "string", "r": true, "lbl": "Sirket Adi", "maxLen": 200 },
+      { "n": "Code", "t": "string", "r": true, "lbl": "Kod", "rx": "^[A-Z0-9_-]{2,20}$" },
+      { "n": "Name", "t": "string", "r": true, "lbl": "Ad", "maxLen": 150 },
+      { "n": "Address", "t": "string", "lbl": "Adres", "maxLen": 250 },
+      { "n": "City", "t": "string", "lbl": "Sehir", "maxLen": 100 },
+      { "n": "Phone", "t": "string", "lbl": "Telefon" },
+      { "n": "IsActive", "t": "boolean", "r": true, "lbl": "Aktif" }
+    ]},
+
+    { "name": "ProductSubCategory", "label": "Urun Alt Kategorisi", "parent": "ProductCategory", "wave": 2, "cols": [
+      { "n": "Code", "t": "string", "r": true, "lbl": "Kod", "rx": "^[A-Z0-9_-]{2,20}$" },
+      { "n": "Name", "t": "string", "r": true, "lbl": "Ad", "maxLen": 150 },
+      { "n": "DefaultVatRate", "t": "decimal", "lbl": "Varsayilan KDV %", "min": 0, "max": 100 },
+      { "n": "IsActive", "t": "boolean", "r": true, "lbl": "Aktif" }
+    ]},
+
+    { "name": "Department", "label": "Departman", "parent": null, "wave": 3, "cols": [
+      { "n": "CompanyId", "t": "lookup", "r": true, "lbl": "Sirket", "lk": "Company", "lkd": "Name" },
+      { "n": "BranchId", "t": "lookup", "lbl": "Sube", "lk": "Branch", "lkd": "Name" },
+      { "n": "Code", "t": "string", "r": true, "lbl": "Kod", "rx": "^[A-Z0-9_-]{2,20}$" },
+      { "n": "Name", "t": "string", "r": true, "lbl": "Ad", "maxLen": 150 },
+      { "n": "ManagerName", "t": "string", "lbl": "Yonetici", "maxLen": 150 },
+      { "n": "IsActive", "t": "boolean", "r": true, "lbl": "Aktif" }
+    ]},
+
+    { "name": "Employee", "label": "Calisan", "parent": null, "wave": 4, "cols": [
+      { "n": "EmployeeNumber", "t": "string", "r": true, "lbl": "Sicil No", "rx": "^[A-Z0-9-]{3,20}$" },
+      { "n": "FirstName", "t": "string", "r": true, "lbl": "Ad", "minLen": 2, "maxLen": 100 },
+      { "n": "LastName", "t": "string", "r": true, "lbl": "Soyad", "minLen": 2, "maxLen": 100 },
+      { "n": "FullName", "t": "string", "r": true, "lbl": "Ad Soyad", "maxLen": 200 },
+      { "n": "Email", "t": "string", "r": true, "lbl": "E-posta", "rx": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" },
+      { "n": "Phone", "t": "string", "lbl": "Telefon" },
+      { "n": "DepartmentId", "t": "lookup", "r": true, "lbl": "Departman", "lk": "Department", "lkd": "Name" },
+      { "n": "DepartmentName", "t": "string", "r": true, "lbl": "Departman Adi", "maxLen": 150 },
+      { "n": "PositionId", "t": "lookup", "r": true, "lbl": "Pozisyon", "lk": "Position", "lkd": "Name" },
+      { "n": "PositionName", "t": "string", "r": true, "lbl": "Pozisyon Adi", "maxLen": 150 },
+      { "n": "PlatformUserId", "t": "int", "lbl": "Platform Kullanici ID", "min": 0 },
+      { "n": "HireDate", "t": "dateonly", "r": true, "lbl": "Ise Giris" },
+      { "n": "IsActive", "t": "boolean", "r": true, "lbl": "Aktif" }
+    ]},
+
+    { "name": "CostCenter", "label": "Masraf Merkezi", "parent": null, "wave": 5, "cols": [
+      { "n": "Code", "t": "string", "r": true, "lbl": "Kod", "rx": "^[A-Z0-9_.-]{2,30}$" },
+      { "n": "Name", "t": "string", "r": true, "lbl": "Ad", "maxLen": 150 },
+      { "n": "DepartmentId", "t": "lookup", "r": true, "lbl": "Departman", "lk": "Department", "lkd": "Name" },
+      { "n": "DepartmentName", "t": "string", "r": true, "lbl": "Departman Adi", "maxLen": 150 },
+      { "n": "IsActive", "t": "boolean", "r": true, "lbl": "Aktif" }
+    ]},
+
+    { "name": "Budget", "label": "Butce", "parent": null, "wave": 5, "cols": [
+      { "n": "Code", "t": "string", "r": true, "lbl": "Kod", "maxLen": 50 },
+      { "n": "Name", "t": "string", "r": true, "lbl": "Ad", "maxLen": 150 },
+      { "n": "BudgetPeriodId", "t": "lookup", "r": true, "lbl": "Donem", "lk": "BudgetPeriod", "lkd": "Code" },
+      { "n": "PeriodCode", "t": "string", "r": true, "lbl": "Donem Kodu", "maxLen": 50 },
+      { "n": "DepartmentId", "t": "lookup", "r": true, "lbl": "Departman", "lk": "Department", "lkd": "Name" },
+      { "n": "DepartmentName", "t": "string", "r": true, "lbl": "Departman Adi", "maxLen": 150 },
+      { "n": "CostCenterId", "t": "lookup", "lbl": "Masraf Merkezi", "lk": "CostCenter", "lkd": "Code" },
+      { "n": "CostCenterCode", "t": "string", "lbl": "Masraf Merkezi Kodu", "maxLen": 50 },
+      { "n": "Currency", "t": "enum", "r": true, "lbl": "Para Birimi", "enum": "TRY|USD|EUR|GBP" },
+      { "n": "PlannedAmount", "t": "decimal", "r": true, "lbl": "Planlanan", "min": 0 },
+      { "n": "CommittedAmount", "t": "decimal", "r": true, "lbl": "Taahhut", "min": 0 },
+      { "n": "ActualAmount", "t": "decimal", "r": true, "lbl": "Gerceklesen", "min": 0 },
+      { "n": "AvailableAmount", "t": "decimal", "r": true, "lbl": "Kullanilabilir" },
+      { "n": "Status", "t": "enum", "r": true, "lbl": "Durum", "enum": "Draft|Approved|Active|Closed" },
+      { "n": "OwnerEmployeeId", "t": "lookup", "r": true, "lbl": "Sorumlu", "lk": "Employee", "lkd": "FullName" },
+      { "n": "AlertThresholdPercent", "t": "int", "lbl": "Uyari Esigi %", "min": 0, "max": 100 }
+    ]},
+
+    { "name": "BudgetItem", "label": "Butce Kalemi", "parent": "Budget", "wave": 5, "cols": [
+      { "n": "ProductCategoryId", "t": "lookup", "r": true, "lbl": "Kategori", "lk": "ProductCategory", "lkd": "Name" },
+      { "n": "CategoryName", "t": "string", "r": true, "lbl": "Kategori Adi", "maxLen": 150 },
+      { "n": "PlannedAmount", "t": "decimal", "r": true, "lbl": "Planlanan", "min": 0 },
+      { "n": "CommittedAmount", "t": "decimal", "r": true, "lbl": "Taahhut", "min": 0 },
+      { "n": "ActualAmount", "t": "decimal", "r": true, "lbl": "Gerceklesen", "min": 0 },
+      { "n": "Note", "t": "string", "lbl": "Not", "maxLen": 250 }
+    ]},
+
+    { "name": "Supplier", "label": "Tedarikci", "parent": null, "wave": 6, "cols": [
+      { "n": "SupplierCode", "t": "string", "r": true, "lbl": "Tedarikci Kodu", "rx": "^SUP-[0-9]{5}$", "rxMsg": "Format: SUP-00001" },
+      { "n": "LegalName", "t": "string", "r": true, "lbl": "Unvan", "minLen": 2, "maxLen": 250 },
+      { "n": "TradeName", "t": "string", "lbl": "Ticari Ad", "maxLen": 200 },
+      { "n": "TaxNumber", "t": "string", "r": true, "lbl": "Vergi No", "rx": "^[0-9]{10,11}$" },
+      { "n": "TaxOffice", "t": "string", "r": true, "lbl": "Vergi Dairesi", "maxLen": 100 },
+      { "n": "Status", "t": "enum", "r": true, "lbl": "Durum", "enum": "Draft|PendingApproval|Active|Suspended|Blacklisted|Archived" },
+      { "n": "CategoryId", "t": "lookup", "r": true, "lbl": "Kategori", "lk": "SupplierCategory", "lkd": "Name" },
+      { "n": "CategoryName", "t": "string", "r": true, "lbl": "Kategori Adi", "maxLen": 150 },
+      { "n": "Country", "t": "enum", "r": true, "lbl": "Ulke", "enum": "TR|DE|US|GB|CN|IT|FR|Other" },
+      { "n": "City", "t": "string", "lbl": "Sehir", "maxLen": 100 },
+      { "n": "Website", "t": "string", "lbl": "Web Sitesi", "maxLen": 200 },
+      { "n": "Email", "t": "string", "r": true, "lbl": "E-posta", "rx": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" },
+      { "n": "Phone", "t": "string", "r": true, "lbl": "Telefon" },
+      { "n": "DefaultCurrency", "t": "enum", "r": true, "lbl": "Para Birimi", "enum": "TRY|USD|EUR|GBP" },
+      { "n": "PaymentTermDays", "t": "int", "r": true, "lbl": "Odeme Vadesi (gun)", "min": 0, "max": 365 },
+      { "n": "RatingAverage", "t": "decimal", "lbl": "Ortalama Puan", "min": 0, "max": 5 },
+      { "n": "IsPreferred", "t": "boolean", "r": true, "lbl": "Tercihli" },
+      { "n": "ApprovedOn", "t": "datetime", "lbl": "Onay Tarihi" },
+      { "n": "ApprovedByEmployeeId", "t": "lookup", "lbl": "Onaylayan", "lk": "Employee", "lkd": "FullName" },
+      { "n": "BlacklistReason", "t": "string", "lbl": "Kara Liste Gerekcesi", "maxLen": 250 },
+      { "n": "Notes", "t": "string", "lbl": "Notlar", "maxLen": 250 }
+    ]},
+
+    { "name": "SupplierContact", "label": "Tedarikci Yetkilisi", "parent": "Supplier", "wave": 6, "cols": [
+      { "n": "FullName", "t": "string", "r": true, "lbl": "Ad Soyad", "minLen": 2, "maxLen": 200 },
+      { "n": "Title", "t": "string", "lbl": "Unvan", "maxLen": 100 },
+      { "n": "Email", "t": "string", "r": true, "lbl": "E-posta", "rx": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" },
+      { "n": "Phone", "t": "string", "lbl": "Telefon" },
+      { "n": "Mobile", "t": "string", "lbl": "Cep" },
+      { "n": "IsPrimary", "t": "boolean", "r": true, "lbl": "Birincil" }
+    ]},
+
+    { "name": "SupplierAddress", "label": "Tedarikci Adresi", "parent": "Supplier", "wave": 6, "cols": [
+      { "n": "AddressType", "t": "enum", "r": true, "lbl": "Adres Tipi", "enum": "HeadOffice|Billing|Shipping|Warehouse" },
+      { "n": "Line1", "t": "string", "r": true, "lbl": "Adres 1", "maxLen": 250 },
+      { "n": "Line2", "t": "string", "lbl": "Adres 2", "maxLen": 250 },
+      { "n": "District", "t": "string", "lbl": "Ilce", "maxLen": 100 },
+      { "n": "City", "t": "string", "lbl": "Sehir", "maxLen": 100 },
+      { "n": "PostalCode", "t": "string", "lbl": "Posta Kodu", "maxLen": 20 },
+      { "n": "Country", "t": "enum", "r": true, "lbl": "Ulke", "enum": "TR|DE|US|GB|CN|IT|FR|Other" },
+      { "n": "IsDefault", "t": "boolean", "r": true, "lbl": "Varsayilan" }
+    ]},
+
+    { "name": "SupplierBankAccount", "label": "Tedarikci Banka Hesabi", "parent": "Supplier", "wave": 6, "cols": [
+      { "n": "BankName", "t": "string", "r": true, "lbl": "Banka", "maxLen": 150 },
+      { "n": "BranchName", "t": "string", "lbl": "Sube", "maxLen": 150 },
+      { "n": "AccountHolder", "t": "string", "r": true, "lbl": "Hesap Sahibi", "maxLen": 200 },
+      { "n": "Iban", "t": "string", "r": true, "lbl": "IBAN", "rx": "^[A-Z]{2}[0-9A-Z]{13,32}$", "rxMsg": "Gecerli IBAN giriniz" },
+      { "n": "SwiftCode", "t": "string", "lbl": "SWIFT", "rx": "^[A-Z0-9]{8,11}$" },
+      { "n": "Currency", "t": "enum", "r": true, "lbl": "Para Birimi", "enum": "TRY|USD|EUR|GBP" },
+      { "n": "IsDefault", "t": "boolean", "r": true, "lbl": "Varsayilan" }
+    ]},
+
+    { "name": "SupplierDocument", "label": "Tedarikci Belgesi", "parent": "Supplier", "wave": 6, "cols": [
+      { "n": "DocumentType", "t": "enum", "r": true, "lbl": "Belge Tipi", "enum": "TaxCertificate|TradeRegistry|ActivityCertificate|ISO9001|ISO14001|Insurance|Contract|Other" },
+      { "n": "DocumentNumber", "t": "string", "lbl": "Belge No", "maxLen": 100 },
+      { "n": "IssueDate", "t": "dateonly", "r": true, "lbl": "Duzenleme Tarihi" },
+      { "n": "ExpiryDate", "t": "dateonly", "lbl": "Gecerlilik Bitisi" },
+      { "n": "DocumentFile", "t": "file", "r": true, "lbl": "Dosya" },
+      { "n": "DocumentFileName", "t": "string", "r": true, "lbl": "Dosya Adi", "maxLen": 200 },
+      { "n": "IsVerified", "t": "boolean", "r": true, "lbl": "Dogrulandi" },
+      { "n": "VerifiedByEmployeeId", "t": "lookup", "lbl": "Dogrulayan", "lk": "Employee", "lkd": "FullName" }
+    ]},
+
+    { "name": "SupplierRating", "label": "Tedarikci Degerlendirmesi", "parent": "Supplier", "wave": 6, "cols": [
+      { "n": "PeriodYear", "t": "int", "r": true, "lbl": "Yil", "min": 2020, "max": 2100 },
+      { "n": "PeriodQuarter", "t": "enum", "r": true, "lbl": "Ceyrek", "enum": "Q1|Q2|Q3|Q4" },
+      { "n": "QualityScore", "t": "decimal", "r": true, "lbl": "Kalite", "min": 0, "max": 5 },
+      { "n": "DeliveryScore", "t": "decimal", "r": true, "lbl": "Teslimat", "min": 0, "max": 5 },
+      { "n": "PriceScore", "t": "decimal", "r": true, "lbl": "Fiyat", "min": 0, "max": 5 },
+      { "n": "ServiceScore", "t": "decimal", "r": true, "lbl": "Hizmet", "min": 0, "max": 5 },
+      { "n": "OverallScore", "t": "decimal", "r": true, "lbl": "Genel", "min": 0, "max": 5 },
+      { "n": "EvaluatedByEmployeeId", "t": "lookup", "r": true, "lbl": "Degerlendiren", "lk": "Employee", "lkd": "FullName" },
+      { "n": "EvaluationDate", "t": "dateonly", "r": true, "lbl": "Degerlendirme Tarihi" },
+      { "n": "Comment", "t": "string", "lbl": "Yorum", "maxLen": 250 }
+    ]},
+
+    { "name": "Product", "label": "Urun", "parent": null, "wave": 7, "cols": [
+      { "n": "Sku", "t": "string", "r": true, "lbl": "SKU", "rx": "^[A-Z0-9-]{3,30}$" },
+      { "n": "Name", "t": "string", "r": true, "lbl": "Ad", "minLen": 2, "maxLen": 250 },
+      { "n": "Description", "t": "string", "lbl": "Aciklama", "maxLen": 250 },
+      { "n": "ItemType", "t": "enum", "r": true, "lbl": "Tip", "enum": "Product|Service" },
+      { "n": "CategoryId", "t": "lookup", "r": true, "lbl": "Kategori", "lk": "ProductCategory", "lkd": "Name" },
+      { "n": "CategoryName", "t": "string", "r": true, "lbl": "Kategori Adi", "maxLen": 150 },
+      { "n": "SubCategoryId", "t": "lookup", "lbl": "Alt Kategori", "lk": "ProductSubCategory", "lkd": "Name" },
+      { "n": "SubCategoryName", "t": "string", "lbl": "Alt Kategori Adi", "maxLen": 150 },
+      { "n": "BrandId", "t": "lookup", "lbl": "Marka", "lk": "Brand", "lkd": "Name" },
+      { "n": "BrandName", "t": "string", "lbl": "Marka Adi", "maxLen": 150 },
+      { "n": "UnitId", "t": "lookup", "r": true, "lbl": "Birim", "lk": "Unit", "lkd": "Code" },
+      { "n": "UnitCode", "t": "string", "r": true, "lbl": "Birim Kodu", "maxLen": 10 },
+      { "n": "VatRate", "t": "decimal", "r": true, "lbl": "KDV %", "min": 0, "max": 100 },
+      { "n": "MinimumStock", "t": "decimal", "lbl": "Min Stok", "min": 0 },
+      { "n": "MaximumStock", "t": "decimal", "lbl": "Max Stok", "min": 0 },
+      { "n": "Barcode", "t": "string", "lbl": "Barkod", "rx": "^[0-9]{8,14}$" },
+      { "n": "ProductImage", "t": "image", "lbl": "Gorsel" },
+      { "n": "IsActive", "t": "boolean", "r": true, "lbl": "Aktif" }
+    ]},
+
+    { "name": "ProductSupplier", "label": "Urun Tedarikcisi", "parent": null, "wave": 8, "cols": [
+      { "n": "ProductId", "t": "lookup", "r": true, "lbl": "Urun", "lk": "Product", "lkd": "Name" },
+      { "n": "ProductName", "t": "string", "r": true, "lbl": "Urun Adi", "maxLen": 250 },
+      { "n": "ProductSku", "t": "string", "r": true, "lbl": "SKU", "maxLen": 30 },
+      { "n": "SupplierId", "t": "lookup", "r": true, "lbl": "Tedarikci", "lk": "Supplier", "lkd": "LegalName" },
+      { "n": "SupplierName", "t": "string", "r": true, "lbl": "Tedarikci Adi", "maxLen": 250 },
+      { "n": "SupplierPartNumber", "t": "string", "lbl": "Tedarikci Parca No", "maxLen": 100 },
+      { "n": "LeadTimeDays", "t": "int", "r": true, "lbl": "Tedarik Suresi (gun)", "min": 0, "max": 365 },
+      { "n": "MinOrderQuantity", "t": "decimal", "r": true, "lbl": "Min Siparis Miktari", "min": 0 },
+      { "n": "LastPurchasePrice", "t": "decimal", "lbl": "Son Alis Fiyati", "min": 0 },
+      { "n": "LastPurchaseDate", "t": "dateonly", "lbl": "Son Alis Tarihi" },
+      { "n": "Currency", "t": "enum", "r": true, "lbl": "Para Birimi", "enum": "TRY|USD|EUR|GBP" },
+      { "n": "IsPreferred", "t": "boolean", "r": true, "lbl": "Tercihli" }
+    ]},
+
+    { "name": "PriceList", "label": "Fiyat Listesi", "parent": null, "wave": 8, "cols": [
+      { "n": "Code", "t": "string", "r": true, "lbl": "Kod", "maxLen": 50 },
+      { "n": "Name", "t": "string", "r": true, "lbl": "Ad", "maxLen": 150 },
+      { "n": "SupplierId", "t": "lookup", "r": true, "lbl": "Tedarikci", "lk": "Supplier", "lkd": "LegalName" },
+      { "n": "SupplierName", "t": "string", "r": true, "lbl": "Tedarikci Adi", "maxLen": 250 },
+      { "n": "Currency", "t": "enum", "r": true, "lbl": "Para Birimi", "enum": "TRY|USD|EUR|GBP" },
+      { "n": "ValidFrom", "t": "dateonly", "r": true, "lbl": "Gecerlilik Baslangici" },
+      { "n": "ValidTo", "t": "dateonly", "r": true, "lbl": "Gecerlilik Bitisi" },
+      { "n": "Status", "t": "enum", "r": true, "lbl": "Durum", "enum": "Draft|Active|Expired" },
+      { "n": "Notes", "t": "string", "lbl": "Notlar", "maxLen": 250 }
+    ]},
+
+    { "name": "PriceListItem", "label": "Fiyat Listesi Kalemi", "parent": "PriceList", "wave": 8, "cols": [
+      { "n": "ProductId", "t": "lookup", "r": true, "lbl": "Urun", "lk": "Product", "lkd": "Name" },
+      { "n": "ProductName", "t": "string", "r": true, "lbl": "Urun Adi", "maxLen": 250 },
+      { "n": "ProductSku", "t": "string", "r": true, "lbl": "SKU", "maxLen": 30 },
+      { "n": "UnitPrice", "t": "decimal", "r": true, "lbl": "Birim Fiyat", "min": 0 },
+      { "n": "DiscountRate", "t": "decimal", "lbl": "Iskonto %", "min": 0, "max": 100 },
+      { "n": "MinQuantity", "t": "decimal", "r": true, "lbl": "Min Miktar", "min": 0 },
+      { "n": "VatRate", "t": "decimal", "r": true, "lbl": "KDV %", "min": 0, "max": 100 },
+      { "n": "LeadTimeDays", "t": "int", "lbl": "Tedarik Suresi", "min": 0, "max": 365 }
+    ]},
+
+    { "name": "PurchaseRequest", "label": "Satin Alma Talebi", "parent": null, "wave": 9, "cols": [
+      { "n": "RequestNumber", "t": "string", "r": true, "lbl": "Talep No", "rx": "^PR-[0-9]{4}-[0-9]{4}$", "rxMsg": "Format: PR-2026-0001" },
+      { "n": "RequesterEmployeeId", "t": "lookup", "r": true, "lbl": "Talep Eden", "lk": "Employee", "lkd": "FullName" },
+      { "n": "RequesterName", "t": "string", "r": true, "lbl": "Talep Eden Adi", "maxLen": 200 },
+      { "n": "DepartmentId", "t": "lookup", "r": true, "lbl": "Departman", "lk": "Department", "lkd": "Name" },
+      { "n": "DepartmentName", "t": "string", "r": true, "lbl": "Departman Adi", "maxLen": 150 },
+      { "n": "CostCenterId", "t": "lookup", "r": true, "lbl": "Masraf Merkezi", "lk": "CostCenter", "lkd": "Code" },
+      { "n": "CostCenterCode", "t": "string", "r": true, "lbl": "Masraf Merkezi Kodu", "maxLen": 50 },
+      { "n": "Priority", "t": "enum", "r": true, "lbl": "Oncelik", "enum": "Low|Normal|High|Urgent" },
+      { "n": "RequestDate", "t": "dateonly", "r": true, "lbl": "Talep Tarihi" },
+      { "n": "RequiredDate", "t": "dateonly", "r": true, "lbl": "Ihtiyac Tarihi" },
+      { "n": "Description", "t": "string", "r": true, "lbl": "Aciklama", "minLen": 10, "maxLen": 250 },
+      { "n": "Status", "t": "enum", "r": true, "lbl": "Durum", "enum": "Draft|Submitted|UnderReview|Approved|Rejected|Cancelled|Completed" },
+      { "n": "Currency", "t": "enum", "r": true, "lbl": "Para Birimi", "enum": "TRY|USD|EUR|GBP" },
+      { "n": "TotalAmount", "t": "decimal", "r": true, "lbl": "Toplam Tutar", "min": 0 },
+      { "n": "TotalAmountTry", "t": "decimal", "r": true, "lbl": "Toplam Tutar (TL)", "min": 0 },
+      { "n": "BudgetId", "t": "lookup", "lbl": "Butce", "lk": "Budget", "lkd": "Name" },
+      { "n": "BudgetCheckResult", "t": "enum", "r": true, "lbl": "Butce Kontrolu", "enum": "NotChecked|Sufficient|Insufficient|Overridden" },
+      { "n": "RejectionReason", "t": "string", "lbl": "Red Gerekcesi", "maxLen": 250 }
+    ]},
+
+    { "name": "PurchaseRequestItem", "label": "Talep Kalemi", "parent": "PurchaseRequest", "wave": 9, "cols": [
+      { "n": "LineNumber", "t": "int", "r": true, "lbl": "Satir No", "min": 1 },
+      { "n": "ProductId", "t": "lookup", "lbl": "Urun", "lk": "Product", "lkd": "Name" },
+      { "n": "ProductName", "t": "string", "lbl": "Urun Adi", "maxLen": 250 },
+      { "n": "ProductSku", "t": "string", "lbl": "SKU", "maxLen": 30 },
+      { "n": "Description", "t": "string", "r": true, "lbl": "Aciklama", "minLen": 3, "maxLen": 250 },
+      { "n": "Quantity", "t": "decimal", "r": true, "lbl": "Miktar", "min": 0.001 },
+      { "n": "UnitId", "t": "lookup", "r": true, "lbl": "Birim", "lk": "Unit", "lkd": "Code" },
+      { "n": "UnitCode", "t": "string", "r": true, "lbl": "Birim Kodu", "maxLen": 10 },
+      { "n": "EstimatedUnitPrice", "t": "decimal", "r": true, "lbl": "Tahmini Birim Fiyat", "min": 0 },
+      { "n": "EstimatedLineTotal", "t": "decimal", "r": true, "lbl": "Tahmini Satir Toplami", "min": 0 },
+      { "n": "RequiredDate", "t": "dateonly", "lbl": "Ihtiyac Tarihi" },
+      { "n": "Note", "t": "string", "lbl": "Not", "maxLen": 250 }
+    ]},
+
+    { "name": "PurchaseRequestAttachment", "label": "Talep Eki", "parent": "PurchaseRequest", "wave": 9, "cols": [
+      { "n": "FileName", "t": "string", "r": true, "lbl": "Dosya Adi", "maxLen": 200 },
+      { "n": "AttachmentFile", "t": "file", "r": true, "lbl": "Dosya" },
+      { "n": "DocumentType", "t": "enum", "r": true, "lbl": "Belge Tipi", "enum": "Specification|Quote|Drawing|Justification|Other" },
+      { "n": "Description", "t": "string", "lbl": "Aciklama", "maxLen": 250 }
+    ]},
+
+    { "name": "PurchaseRequestApproval", "label": "Talep Onayi", "parent": "PurchaseRequest", "wave": 9, "cols": [
+      { "n": "StepOrder", "t": "int", "r": true, "lbl": "Adim Sirasi", "min": 1 },
+      { "n": "StepName", "t": "string", "r": true, "lbl": "Adim Adi", "maxLen": 150 },
+      { "n": "ApproverEmployeeId", "t": "lookup", "lbl": "Onaylayan", "lk": "Employee", "lkd": "FullName" },
+      { "n": "ApproverName", "t": "string", "lbl": "Onaylayan Adi", "maxLen": 200 },
+      { "n": "Decision", "t": "enum", "r": true, "lbl": "Karar", "enum": "Pending|Approved|Rejected|Skipped" },
+      { "n": "DecisionDate", "t": "datetime", "lbl": "Karar Tarihi" },
+      { "n": "Comment", "t": "string", "lbl": "Yorum", "maxLen": 250 },
+      { "n": "WorkflowTaskId", "t": "int", "lbl": "Gorev ID", "min": 0 }
+    ]},
+
+    { "name": "Rfq", "label": "Teklif Talebi", "parent": null, "wave": 10, "cols": [
+      { "n": "RfqNumber", "t": "string", "r": true, "lbl": "RFQ No", "rx": "^RFQ-[0-9]{4}-[0-9]{4}$" },
+      { "n": "PurchaseRequestId", "t": "lookup", "r": true, "lbl": "Satin Alma Talebi", "lk": "PurchaseRequest", "lkd": "RequestNumber" },
+      { "n": "PurchaseRequestNumber", "t": "string", "r": true, "lbl": "Talep No", "maxLen": 50 },
+      { "n": "Title", "t": "string", "r": true, "lbl": "Baslik", "minLen": 5, "maxLen": 250 },
+      { "n": "IssueDate", "t": "dateonly", "r": true, "lbl": "Yayin Tarihi" },
+      { "n": "DueDate", "t": "dateonly", "r": true, "lbl": "Son Teklif Tarihi" },
+      { "n": "Status", "t": "enum", "r": true, "lbl": "Durum", "enum": "Draft|Sent|Collecting|Evaluating|Awarded|Cancelled|Expired" },
+      { "n": "BuyerEmployeeId", "t": "lookup", "r": true, "lbl": "Satin Almaci", "lk": "Employee", "lkd": "FullName" },
+      { "n": "BuyerName", "t": "string", "r": true, "lbl": "Satin Almaci Adi", "maxLen": 200 },
+      { "n": "Currency", "t": "enum", "r": true, "lbl": "Para Birimi", "enum": "TRY|USD|EUR|GBP" },
+      { "n": "DeliveryAddress", "t": "string", "lbl": "Teslimat Adresi", "maxLen": 250 },
+      { "n": "Terms", "t": "string", "lbl": "Sartlar", "maxLen": 250 },
+      { "n": "Description", "t": "string", "lbl": "Aciklama", "maxLen": 250 }
+    ]},
+
+    { "name": "RfqItem", "label": "RFQ Kalemi", "parent": "Rfq", "wave": 10, "cols": [
+      { "n": "LineNumber", "t": "int", "r": true, "lbl": "Satir No", "min": 1 },
+      { "n": "ProductId", "t": "lookup", "lbl": "Urun", "lk": "Product", "lkd": "Name" },
+      { "n": "ProductName", "t": "string", "lbl": "Urun Adi", "maxLen": 250 },
+      { "n": "ProductSku", "t": "string", "lbl": "SKU", "maxLen": 30 },
+      { "n": "Description", "t": "string", "r": true, "lbl": "Aciklama", "minLen": 3, "maxLen": 250 },
+      { "n": "Quantity", "t": "decimal", "r": true, "lbl": "Miktar", "min": 0.001 },
+      { "n": "UnitId", "t": "lookup", "r": true, "lbl": "Birim", "lk": "Unit", "lkd": "Code" },
+      { "n": "UnitCode", "t": "string", "r": true, "lbl": "Birim Kodu", "maxLen": 10 },
+      { "n": "TargetUnitPrice", "t": "decimal", "lbl": "Hedef Birim Fiyat", "min": 0 },
+      { "n": "Specification", "t": "string", "lbl": "Teknik Sartname", "maxLen": 250 },
+      { "n": "RequiredDate", "t": "dateonly", "lbl": "Ihtiyac Tarihi" }
+    ]},
+
+    { "name": "RfqSupplier", "label": "RFQ Tedarikcisi", "parent": "Rfq", "wave": 10, "cols": [
+      { "n": "SupplierId", "t": "lookup", "r": true, "lbl": "Tedarikci", "lk": "Supplier", "lkd": "LegalName" },
+      { "n": "SupplierName", "t": "string", "r": true, "lbl": "Tedarikci Adi", "maxLen": 250 },
+      { "n": "ContactEmail", "t": "string", "r": true, "lbl": "Iletisim E-postasi", "rx": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" },
+      { "n": "DueDate", "t": "dateonly", "lbl": "Son Teklif Tarihi" },
+      { "n": "SentOn", "t": "datetime", "lbl": "Gonderim" },
+      { "n": "RespondedOn", "t": "datetime", "lbl": "Yanit" },
+      { "n": "Status", "t": "enum", "r": true, "lbl": "Durum", "enum": "Invited|Sent|Responded|Declined|NoResponse" },
+      { "n": "Note", "t": "string", "lbl": "Not", "maxLen": 250 }
+    ]},
+
+    { "name": "SupplierQuotation", "label": "Tedarikci Teklifi", "parent": null, "wave": 11, "cols": [
+      { "n": "QuotationNumber", "t": "string", "r": true, "lbl": "Teklif No", "maxLen": 50 },
+      { "n": "RfqId", "t": "lookup", "r": true, "lbl": "RFQ", "lk": "Rfq", "lkd": "RfqNumber" },
+      { "n": "RfqNumber", "t": "string", "r": true, "lbl": "RFQ No", "maxLen": 50 },
+      { "n": "SupplierId", "t": "lookup", "r": true, "lbl": "Tedarikci", "lk": "Supplier", "lkd": "LegalName" },
+      { "n": "SupplierName", "t": "string", "r": true, "lbl": "Tedarikci Adi", "maxLen": 250 },
+      { "n": "QuotationDate", "t": "dateonly", "r": true, "lbl": "Teklif Tarihi" },
+      { "n": "ValidUntil", "t": "dateonly", "r": true, "lbl": "Gecerlilik" },
+      { "n": "Currency", "t": "enum", "r": true, "lbl": "Para Birimi", "enum": "TRY|USD|EUR|GBP" },
+      { "n": "Subtotal", "t": "decimal", "r": true, "lbl": "Ara Toplam", "min": 0 },
+      { "n": "DiscountAmount", "t": "decimal", "r": true, "lbl": "Iskonto", "min": 0 },
+      { "n": "VatAmount", "t": "decimal", "r": true, "lbl": "KDV", "min": 0 },
+      { "n": "GrandTotal", "t": "decimal", "r": true, "lbl": "Genel Toplam", "min": 0 },
+      { "n": "GrandTotalTry", "t": "decimal", "r": true, "lbl": "Genel Toplam (TL)", "min": 0 },
+      { "n": "DeliveryDays", "t": "int", "r": true, "lbl": "Teslimat (gun)", "min": 0, "max": 365 },
+      { "n": "PaymentTermDays", "t": "int", "r": true, "lbl": "Odeme Vadesi (gun)", "min": 0, "max": 365 },
+      { "n": "WarrantyMonths", "t": "int", "lbl": "Garanti (ay)", "min": 0, "max": 120 },
+      { "n": "Incoterm", "t": "enum", "lbl": "Teslim Sekli", "enum": "EXW|FCA|FOB|CIF|DAP|DDP" },
+      { "n": "Status", "t": "enum", "r": true, "lbl": "Durum", "enum": "Draft|Submitted|UnderEvaluation|Selected|Rejected|Expired" },
+      { "n": "QuotationFile", "t": "file", "lbl": "Teklif Dosyasi" },
+      { "n": "QuotationFileName", "t": "string", "lbl": "Dosya Adi", "maxLen": 200 },
+      { "n": "Notes", "t": "string", "lbl": "Notlar", "maxLen": 250 }
+    ]},
+
+    { "name": "SupplierQuotationItem", "label": "Teklif Kalemi", "parent": "SupplierQuotation", "wave": 11, "cols": [
+      { "n": "LineNumber", "t": "int", "r": true, "lbl": "Satir No", "min": 1 },
+      { "n": "RfqItemLineNumber", "t": "int", "r": true, "lbl": "RFQ Satir No", "min": 1 },
+      { "n": "ProductId", "t": "lookup", "lbl": "Urun", "lk": "Product", "lkd": "Name" },
+      { "n": "ProductName", "t": "string", "lbl": "Urun Adi", "maxLen": 250 },
+      { "n": "Quantity", "t": "decimal", "r": true, "lbl": "Miktar", "min": 0.001 },
+      { "n": "UnitId", "t": "lookup", "r": true, "lbl": "Birim", "lk": "Unit", "lkd": "Code" },
+      { "n": "UnitCode", "t": "string", "r": true, "lbl": "Birim Kodu", "maxLen": 10 },
+      { "n": "UnitPrice", "t": "decimal", "r": true, "lbl": "Birim Fiyat", "min": 0 },
+      { "n": "DiscountRate", "t": "decimal", "lbl": "Iskonto %", "min": 0, "max": 100 },
+      { "n": "VatRate", "t": "decimal", "r": true, "lbl": "KDV %", "min": 0, "max": 100 },
+      { "n": "LineTotal", "t": "decimal", "r": true, "lbl": "Satir Toplami", "min": 0 },
+      { "n": "DeliveryDays", "t": "int", "lbl": "Teslimat (gun)", "min": 0, "max": 365 },
+      { "n": "Note", "t": "string", "lbl": "Not", "maxLen": 250 }
+    ]},
+
+    { "name": "QuotationComparison", "label": "Teklif Karsilastirmasi", "parent": null, "wave": 12, "cols": [
+      { "n": "RfqId", "t": "lookup", "r": true, "lbl": "RFQ", "lk": "Rfq", "lkd": "RfqNumber" },
+      { "n": "RfqNumber", "t": "string", "r": true, "lbl": "RFQ No", "maxLen": 50 },
+      { "n": "ComparisonDate", "t": "dateonly", "r": true, "lbl": "Karsilastirma Tarihi" },
+      { "n": "PreparedByEmployeeId", "t": "lookup", "r": true, "lbl": "Hazirlayan", "lk": "Employee", "lkd": "FullName" },
+      { "n": "PreparedByName", "t": "string", "r": true, "lbl": "Hazirlayan Adi", "maxLen": 200 },
+      { "n": "Method", "t": "enum", "r": true, "lbl": "Yontem", "enum": "LowestPrice|BestValue|TechnicalScore|SoleSource|Other" },
+      { "n": "WeightPrice", "t": "int", "r": true, "lbl": "Fiyat Agirligi %", "min": 0, "max": 100 },
+      { "n": "WeightDelivery", "t": "int", "r": true, "lbl": "Teslimat Agirligi %", "min": 0, "max": 100 },
+      { "n": "WeightPayment", "t": "int", "r": true, "lbl": "Odeme Agirligi %", "min": 0, "max": 100 },
+      { "n": "WeightWarranty", "t": "int", "r": true, "lbl": "Garanti Agirligi %", "min": 0, "max": 100 },
+      { "n": "WeightRating", "t": "int", "r": true, "lbl": "Puan Agirligi %", "min": 0, "max": 100 },
+      { "n": "SelectedQuotationId", "t": "lookup", "lbl": "Secilen Teklif", "lk": "SupplierQuotation", "lkd": "QuotationNumber" },
+      { "n": "SelectedSupplierName", "t": "string", "lbl": "Secilen Tedarikci", "maxLen": 250 },
+      { "n": "SelectionReason", "t": "string", "r": true, "lbl": "Secim Gerekcesi", "minLen": 10, "maxLen": 250 },
+      { "n": "TotalSavings", "t": "decimal", "lbl": "Toplam Tasarruf" },
+      { "n": "Status", "t": "enum", "r": true, "lbl": "Durum", "enum": "Draft|PendingApproval|Approved|Rejected" }
+    ]},
+
+    { "name": "QuotationComparisonLine", "label": "Karsilastirma Satiri", "parent": "QuotationComparison", "wave": 12, "cols": [
+      { "n": "QuotationId", "t": "lookup", "r": true, "lbl": "Teklif", "lk": "SupplierQuotation", "lkd": "QuotationNumber" },
+      { "n": "SupplierName", "t": "string", "r": true, "lbl": "Tedarikci", "maxLen": 250 },
+      { "n": "GrandTotalTry", "t": "decimal", "r": true, "lbl": "Toplam (TL)", "min": 0 },
+      { "n": "DeliveryDays", "t": "int", "r": true, "lbl": "Teslimat (gun)", "min": 0 },
+      { "n": "PaymentTermDays", "t": "int", "r": true, "lbl": "Odeme Vadesi", "min": 0 },
+      { "n": "WarrantyMonths", "t": "int", "lbl": "Garanti (ay)", "min": 0 },
+      { "n": "SupplierRating", "t": "decimal", "lbl": "Tedarikci Puani", "min": 0, "max": 5 },
+      { "n": "PreviousPurchasePrice", "t": "decimal", "lbl": "Onceki Alis Fiyati", "min": 0 },
+      { "n": "PriceScore", "t": "decimal", "lbl": "Fiyat Puani", "min": 0, "max": 100 },
+      { "n": "DeliveryScore", "t": "decimal", "lbl": "Teslimat Puani", "min": 0, "max": 100 },
+      { "n": "PaymentScore", "t": "decimal", "lbl": "Odeme Puani", "min": 0, "max": 100 },
+      { "n": "WarrantyScore", "t": "decimal", "lbl": "Garanti Puani", "min": 0, "max": 100 },
+      { "n": "RatingScore", "t": "decimal", "lbl": "Puan Skoru", "min": 0, "max": 100 },
+      { "n": "TotalScore", "t": "decimal", "r": true, "lbl": "Toplam Puan", "min": 0, "max": 100 },
+      { "n": "Rank", "t": "int", "r": true, "lbl": "Sira", "min": 1 },
+      { "n": "IsSelected", "t": "boolean", "r": true, "lbl": "Secildi" }
+    ]},
+
+    { "name": "PurchaseOrder", "label": "Satin Alma Siparisi", "parent": null, "wave": 13, "cols": [
+      { "n": "OrderNumber", "t": "string", "r": true, "lbl": "Siparis No", "rx": "^PO-[0-9]{4}-[0-9]{4}$" },
+      { "n": "SupplierId", "t": "lookup", "r": true, "lbl": "Tedarikci", "lk": "Supplier", "lkd": "LegalName" },
+      { "n": "SupplierName", "t": "string", "r": true, "lbl": "Tedarikci Adi", "maxLen": 250 },
+      { "n": "QuotationId", "t": "lookup", "lbl": "Teklif", "lk": "SupplierQuotation", "lkd": "QuotationNumber" },
+      { "n": "QuotationNumber", "t": "string", "lbl": "Teklif No", "maxLen": 50 },
+      { "n": "PurchaseRequestId", "t": "lookup", "lbl": "Talep", "lk": "PurchaseRequest", "lkd": "RequestNumber" },
+      { "n": "PurchaseRequestNumber", "t": "string", "lbl": "Talep No", "maxLen": 50 },
+      { "n": "OrderDate", "t": "dateonly", "r": true, "lbl": "Siparis Tarihi" },
+      { "n": "ExpectedDeliveryDate", "t": "dateonly", "r": true, "lbl": "Beklenen Teslimat" },
+      { "n": "Currency", "t": "enum", "r": true, "lbl": "Para Birimi", "enum": "TRY|USD|EUR|GBP" },
+      { "n": "ExchangeRateUsed", "t": "decimal", "r": true, "lbl": "Kullanilan Kur", "min": 0 },
+      { "n": "PaymentTermDays", "t": "int", "r": true, "lbl": "Odeme Vadesi (gun)", "min": 0, "max": 365 },
+      { "n": "ShippingAddress", "t": "string", "r": true, "lbl": "Teslimat Adresi", "maxLen": 250 },
+      { "n": "BillingAddress", "t": "string", "r": true, "lbl": "Fatura Adresi", "maxLen": 250 },
+      { "n": "Subtotal", "t": "decimal", "r": true, "lbl": "Ara Toplam", "min": 0 },
+      { "n": "DiscountAmount", "t": "decimal", "r": true, "lbl": "Iskonto", "min": 0 },
+      { "n": "VatAmount", "t": "decimal", "r": true, "lbl": "KDV", "min": 0 },
+      { "n": "GrandTotal", "t": "decimal", "r": true, "lbl": "Genel Toplam", "min": 0 },
+      { "n": "GrandTotalTry", "t": "decimal", "r": true, "lbl": "Genel Toplam (TL)", "min": 0 },
+      { "n": "Status", "t": "enum", "r": true, "lbl": "Durum", "enum": "Draft|PendingApproval|Approved|SentToSupplier|PartiallyDelivered|Delivered|Cancelled|Closed" },
+      { "n": "BuyerEmployeeId", "t": "lookup", "r": true, "lbl": "Satin Almaci", "lk": "Employee", "lkd": "FullName" },
+      { "n": "BuyerName", "t": "string", "r": true, "lbl": "Satin Almaci Adi", "maxLen": 200 },
+      { "n": "DepartmentId", "t": "lookup", "r": true, "lbl": "Departman", "lk": "Department", "lkd": "Name" },
+      { "n": "DepartmentName", "t": "string", "r": true, "lbl": "Departman Adi", "maxLen": 150 },
+      { "n": "CostCenterId", "t": "lookup", "r": true, "lbl": "Masraf Merkezi", "lk": "CostCenter", "lkd": "Code" },
+      { "n": "CostCenterCode", "t": "string", "r": true, "lbl": "Masraf Merkezi Kodu", "maxLen": 50 },
+      { "n": "SentToSupplierOn", "t": "datetime", "lbl": "Tedarikciye Gonderim" },
+      { "n": "Notes", "t": "string", "lbl": "Notlar", "maxLen": 250 }
+    ]},
+
+    { "name": "PurchaseOrderItem", "label": "Siparis Kalemi", "parent": "PurchaseOrder", "wave": 13, "cols": [
+      { "n": "LineNumber", "t": "int", "r": true, "lbl": "Satir No", "min": 1 },
+      { "n": "ProductId", "t": "lookup", "lbl": "Urun", "lk": "Product", "lkd": "Name" },
+      { "n": "ProductName", "t": "string", "lbl": "Urun Adi", "maxLen": 250 },
+      { "n": "ProductSku", "t": "string", "lbl": "SKU", "maxLen": 30 },
+      { "n": "Description", "t": "string", "r": true, "lbl": "Aciklama", "minLen": 3, "maxLen": 250 },
+      { "n": "OrderedQuantity", "t": "decimal", "r": true, "lbl": "Siparis Miktari", "min": 0.001 },
+      { "n": "UnitId", "t": "lookup", "r": true, "lbl": "Birim", "lk": "Unit", "lkd": "Code" },
+      { "n": "UnitCode", "t": "string", "r": true, "lbl": "Birim Kodu", "maxLen": 10 },
+      { "n": "UnitPrice", "t": "decimal", "r": true, "lbl": "Birim Fiyat", "min": 0 },
+      { "n": "DiscountRate", "t": "decimal", "lbl": "Iskonto %", "min": 0, "max": 100 },
+      { "n": "VatRate", "t": "decimal", "r": true, "lbl": "KDV %", "min": 0, "max": 100 },
+      { "n": "LineTotal", "t": "decimal", "r": true, "lbl": "Satir Toplami", "min": 0 },
+      { "n": "ReceivedQuantity", "t": "decimal", "r": true, "lbl": "Teslim Alinan", "min": 0 },
+      { "n": "RemainingQuantity", "t": "decimal", "r": true, "lbl": "Kalan", "min": 0 },
+      { "n": "InvoicedQuantity", "t": "decimal", "r": true, "lbl": "Faturalanan", "min": 0 },
+      { "n": "ExpectedDeliveryDate", "t": "dateonly", "lbl": "Beklenen Teslimat" }
+    ]},
+
+    { "name": "PurchaseOrderApproval", "label": "Siparis Onayi", "parent": "PurchaseOrder", "wave": 13, "cols": [
+      { "n": "StepOrder", "t": "int", "r": true, "lbl": "Adim Sirasi", "min": 1 },
+      { "n": "StepName", "t": "string", "r": true, "lbl": "Adim Adi", "maxLen": 150 },
+      { "n": "ApproverEmployeeId", "t": "lookup", "lbl": "Onaylayan", "lk": "Employee", "lkd": "FullName" },
+      { "n": "ApproverName", "t": "string", "lbl": "Onaylayan Adi", "maxLen": 200 },
+      { "n": "Decision", "t": "enum", "r": true, "lbl": "Karar", "enum": "Pending|Approved|Rejected|Skipped" },
+      { "n": "DecisionDate", "t": "datetime", "lbl": "Karar Tarihi" },
+      { "n": "Comment", "t": "string", "lbl": "Yorum", "maxLen": 250 },
+      { "n": "WorkflowTaskId", "t": "int", "lbl": "Gorev ID", "min": 0 }
+    ]},
+
+    { "name": "PurchaseOrderAttachment", "label": "Siparis Eki", "parent": "PurchaseOrder", "wave": 13, "cols": [
+      { "n": "FileName", "t": "string", "r": true, "lbl": "Dosya Adi", "maxLen": 200 },
+      { "n": "AttachmentFile", "t": "file", "r": true, "lbl": "Dosya" },
+      { "n": "DocumentType", "t": "enum", "r": true, "lbl": "Belge Tipi", "enum": "SignedOrder|Contract|Specification|Correspondence|Other" },
+      { "n": "Description", "t": "string", "lbl": "Aciklama", "maxLen": 250 }
+    ]},
+
+    { "name": "GoodsReceipt", "label": "Mal Kabul", "parent": null, "wave": 14, "cols": [
+      { "n": "ReceiptNumber", "t": "string", "r": true, "lbl": "Mal Kabul No", "rx": "^GR-[0-9]{4}-[0-9]{4}$" },
+      { "n": "PurchaseOrderId", "t": "lookup", "r": true, "lbl": "Siparis", "lk": "PurchaseOrder", "lkd": "OrderNumber" },
+      { "n": "OrderNumber", "t": "string", "r": true, "lbl": "Siparis No", "maxLen": 50 },
+      { "n": "SupplierId", "t": "lookup", "r": true, "lbl": "Tedarikci", "lk": "Supplier", "lkd": "LegalName" },
+      { "n": "SupplierName", "t": "string", "r": true, "lbl": "Tedarikci Adi", "maxLen": 250 },
+      { "n": "ReceiptDate", "t": "dateonly", "r": true, "lbl": "Kabul Tarihi" },
+      { "n": "DeliveryNoteNumber", "t": "string", "r": true, "lbl": "Irsaliye No", "maxLen": 50 },
+      { "n": "ReceivedByEmployeeId", "t": "lookup", "r": true, "lbl": "Teslim Alan", "lk": "Employee", "lkd": "FullName" },
+      { "n": "ReceivedByName", "t": "string", "r": true, "lbl": "Teslim Alan Adi", "maxLen": 200 },
+      { "n": "Status", "t": "enum", "r": true, "lbl": "Durum", "enum": "Draft|Confirmed|PartiallyAccepted|Rejected|Cancelled" },
+      { "n": "InspectionResult", "t": "enum", "r": true, "lbl": "Kalite Kontrol", "enum": "NotInspected|Passed|Failed|Conditional" },
+      { "n": "IsPartial", "t": "boolean", "r": true, "lbl": "Kismi Teslimat" },
+      { "n": "DeliveryNoteFile", "t": "file", "lbl": "Irsaliye Dosyasi" },
+      { "n": "DeliveryNoteFileName", "t": "string", "lbl": "Dosya Adi", "maxLen": 200 },
+      { "n": "Notes", "t": "string", "lbl": "Notlar", "maxLen": 250 }
+    ]},
+
+    { "name": "GoodsReceiptItem", "label": "Mal Kabul Kalemi", "parent": "GoodsReceipt", "wave": 14, "cols": [
+      { "n": "LineNumber", "t": "int", "r": true, "lbl": "Satir No", "min": 1 },
+      { "n": "PurchaseOrderItemLineNumber", "t": "int", "r": true, "lbl": "Siparis Satir No", "min": 1 },
+      { "n": "ProductId", "t": "lookup", "lbl": "Urun", "lk": "Product", "lkd": "Name" },
+      { "n": "ProductName", "t": "string", "lbl": "Urun Adi", "maxLen": 250 },
+      { "n": "ProductSku", "t": "string", "lbl": "SKU", "maxLen": 30 },
+      { "n": "OrderedQuantity", "t": "decimal", "r": true, "lbl": "Siparis Miktari", "min": 0 },
+      { "n": "ReceivedQuantity", "t": "decimal", "r": true, "lbl": "Gelen Miktar", "min": 0 },
+      { "n": "AcceptedQuantity", "t": "decimal", "r": true, "lbl": "Kabul Edilen", "min": 0 },
+      { "n": "RejectedQuantity", "t": "decimal", "r": true, "lbl": "Reddedilen", "min": 0 },
+      { "n": "UnitId", "t": "lookup", "r": true, "lbl": "Birim", "lk": "Unit", "lkd": "Code" },
+      { "n": "UnitCode", "t": "string", "r": true, "lbl": "Birim Kodu", "maxLen": 10 },
+      { "n": "RejectionReason", "t": "string", "lbl": "Red Gerekcesi", "maxLen": 250 },
+      { "n": "BatchNumber", "t": "string", "lbl": "Parti No", "maxLen": 50 },
+      { "n": "ExpiryDate", "t": "dateonly", "lbl": "Son Kullanma" }
+    ]},
+
+    { "name": "SupplierInvoice", "label": "Tedarikci Faturasi", "parent": null, "wave": 15, "cols": [
+      { "n": "InvoiceNumber", "t": "string", "r": true, "lbl": "Fatura No", "maxLen": 50 },
+      { "n": "InternalNumber", "t": "string", "r": true, "lbl": "Dahili No", "rx": "^INV-[0-9]{4}-[0-9]{4}$" },
+      { "n": "SupplierId", "t": "lookup", "r": true, "lbl": "Tedarikci", "lk": "Supplier", "lkd": "LegalName" },
+      { "n": "SupplierName", "t": "string", "r": true, "lbl": "Tedarikci Adi", "maxLen": 250 },
+      { "n": "PurchaseOrderId", "t": "lookup", "r": true, "lbl": "Siparis", "lk": "PurchaseOrder", "lkd": "OrderNumber" },
+      { "n": "OrderNumber", "t": "string", "r": true, "lbl": "Siparis No", "maxLen": 50 },
+      { "n": "InvoiceDate", "t": "dateonly", "r": true, "lbl": "Fatura Tarihi" },
+      { "n": "DueDate", "t": "dateonly", "r": true, "lbl": "Vade Tarihi" },
+      { "n": "Currency", "t": "enum", "r": true, "lbl": "Para Birimi", "enum": "TRY|USD|EUR|GBP" },
+      { "n": "Subtotal", "t": "decimal", "r": true, "lbl": "Ara Toplam", "min": 0 },
+      { "n": "DiscountAmount", "t": "decimal", "r": true, "lbl": "Iskonto", "min": 0 },
+      { "n": "VatAmount", "t": "decimal", "r": true, "lbl": "KDV", "min": 0 },
+      { "n": "GrandTotal", "t": "decimal", "r": true, "lbl": "Genel Toplam", "min": 0 },
+      { "n": "GrandTotalTry", "t": "decimal", "r": true, "lbl": "Genel Toplam (TL)", "min": 0 },
+      { "n": "Status", "t": "enum", "r": true, "lbl": "Durum", "enum": "Draft|PendingMatch|Matched|Exception|Approved|PartiallyPaid|Paid|Cancelled" },
+      { "n": "MatchStatus", "t": "enum", "r": true, "lbl": "Eslestirme", "enum": "NotMatched|ThreeWayOk|QuantityMismatch|PriceMismatch|MissingReceipt|DuplicateInvoice|Exception" },
+      { "n": "MatchNote", "t": "string", "lbl": "Eslestirme Notu", "maxLen": 250 },
+      { "n": "PaidAmount", "t": "decimal", "r": true, "lbl": "Odenen", "min": 0 },
+      { "n": "RemainingAmount", "t": "decimal", "r": true, "lbl": "Kalan", "min": 0 },
+      { "n": "InvoiceFile", "t": "file", "lbl": "Fatura Dosyasi" },
+      { "n": "InvoiceFileName", "t": "string", "lbl": "Dosya Adi", "maxLen": 200 }
+    ]},
+
+    { "name": "SupplierInvoiceItem", "label": "Fatura Kalemi", "parent": "SupplierInvoice", "wave": 15, "cols": [
+      { "n": "LineNumber", "t": "int", "r": true, "lbl": "Satir No", "min": 1 },
+      { "n": "PurchaseOrderItemLineNumber", "t": "int", "r": true, "lbl": "Siparis Satir No", "min": 1 },
+      { "n": "ProductId", "t": "lookup", "lbl": "Urun", "lk": "Product", "lkd": "Name" },
+      { "n": "ProductName", "t": "string", "lbl": "Urun Adi", "maxLen": 250 },
+      { "n": "InvoicedQuantity", "t": "decimal", "r": true, "lbl": "Faturalanan Miktar", "min": 0.001 },
+      { "n": "UnitId", "t": "lookup", "r": true, "lbl": "Birim", "lk": "Unit", "lkd": "Code" },
+      { "n": "UnitCode", "t": "string", "r": true, "lbl": "Birim Kodu", "maxLen": 10 },
+      { "n": "UnitPrice", "t": "decimal", "r": true, "lbl": "Birim Fiyat", "min": 0 },
+      { "n": "VatRate", "t": "decimal", "r": true, "lbl": "KDV %", "min": 0, "max": 100 },
+      { "n": "LineTotal", "t": "decimal", "r": true, "lbl": "Satir Toplami", "min": 0 },
+      { "n": "MatchStatus", "t": "enum", "r": true, "lbl": "Eslestirme", "enum": "NotMatched|Ok|QuantityMismatch|PriceMismatch" }
+    ]},
+
+    { "name": "InvoiceException", "label": "Fatura Uyusmazligi", "parent": "SupplierInvoice", "wave": 15, "cols": [
+      { "n": "ExceptionType", "t": "enum", "r": true, "lbl": "Uyusmazlik Tipi", "enum": "QuantityOver|QuantityUnder|PriceOver|NoReceipt|DuplicateInvoice|VatMismatch|CurrencyMismatch|DateMismatch" },
+      { "n": "Severity", "t": "enum", "r": true, "lbl": "Onem", "enum": "Info|Warning|Blocking" },
+      { "n": "Description", "t": "string", "r": true, "lbl": "Aciklama", "minLen": 5, "maxLen": 250 },
+      { "n": "OrderedQuantity", "t": "decimal", "lbl": "Siparis Miktari", "min": 0 },
+      { "n": "ReceivedQuantity", "t": "decimal", "lbl": "Teslim Alinan", "min": 0 },
+      { "n": "InvoicedQuantity", "t": "decimal", "lbl": "Faturalanan", "min": 0 },
+      { "n": "DifferenceAmount", "t": "decimal", "lbl": "Fark Tutari" },
+      { "n": "Resolution", "t": "enum", "r": true, "lbl": "Cozum", "enum": "Open|Accepted|Rejected|Corrected|CreditNoteRequested" },
+      { "n": "ResolvedByEmployeeId", "t": "lookup", "lbl": "Cozen", "lk": "Employee", "lkd": "FullName" },
+      { "n": "ResolvedOn", "t": "datetime", "lbl": "Cozum Tarihi" },
+      { "n": "ResolutionNote", "t": "string", "lbl": "Cozum Notu", "maxLen": 250 }
+    ]},
+
+    { "name": "InvoiceAttachment", "label": "Fatura Eki", "parent": "SupplierInvoice", "wave": 15, "cols": [
+      { "n": "FileName", "t": "string", "r": true, "lbl": "Dosya Adi", "maxLen": 200 },
+      { "n": "AttachmentFile", "t": "file", "r": true, "lbl": "Dosya" },
+      { "n": "DocumentType", "t": "enum", "r": true, "lbl": "Belge Tipi", "enum": "Invoice|CreditNote|DeliveryNote|Correspondence|Other" },
+      { "n": "Description", "t": "string", "lbl": "Aciklama", "maxLen": 250 }
+    ]},
+
+    { "name": "Payment", "label": "Odeme", "parent": null, "wave": 16, "cols": [
+      { "n": "PaymentNumber", "t": "string", "r": true, "lbl": "Odeme No", "rx": "^PAY-[0-9]{4}-[0-9]{4}$" },
+      { "n": "SupplierId", "t": "lookup", "r": true, "lbl": "Tedarikci", "lk": "Supplier", "lkd": "LegalName" },
+      { "n": "SupplierName", "t": "string", "r": true, "lbl": "Tedarikci Adi", "maxLen": 250 },
+      { "n": "BankAccountId", "t": "lookup", "lbl": "Banka Hesabi", "lk": "SupplierBankAccount", "lkd": "Iban" },
+      { "n": "PlannedDate", "t": "dateonly", "r": true, "lbl": "Planlanan Tarih" },
+      { "n": "PaymentDate", "t": "dateonly", "lbl": "Odeme Tarihi" },
+      { "n": "Amount", "t": "decimal", "r": true, "lbl": "Tutar", "min": 0.01 },
+      { "n": "Currency", "t": "enum", "r": true, "lbl": "Para Birimi", "enum": "TRY|USD|EUR|GBP" },
+      { "n": "ExchangeRateUsed", "t": "decimal", "lbl": "Kullanilan Kur", "min": 0 },
+      { "n": "PaymentMethod", "t": "enum", "r": true, "lbl": "Odeme Sekli", "enum": "BankTransfer|Check|Cash|CreditCard|LetterOfCredit|Offset" },
+      { "n": "ReferenceNumber", "t": "string", "lbl": "Referans No", "maxLen": 100 },
+      { "n": "Status", "t": "enum", "r": true, "lbl": "Durum", "enum": "Planned|PendingApproval|Approved|Executed|Failed|Cancelled" },
+      { "n": "ApprovedByEmployeeId", "t": "lookup", "lbl": "Onaylayan", "lk": "Employee", "lkd": "FullName" },
+      { "n": "Notes", "t": "string", "lbl": "Notlar", "maxLen": 250 }
+    ]},
+
+    { "name": "PaymentAllocation", "label": "Odeme Dagitimi", "parent": "Payment", "wave": 16, "cols": [
+      { "n": "SupplierInvoiceId", "t": "lookup", "r": true, "lbl": "Fatura", "lk": "SupplierInvoice", "lkd": "InternalNumber" },
+      { "n": "InvoiceNumber", "t": "string", "r": true, "lbl": "Fatura No", "maxLen": 50 },
+      { "n": "AllocatedAmount", "t": "decimal", "r": true, "lbl": "Dagitilan Tutar", "min": 0.01 },
+      { "n": "AllocatedAmountTry", "t": "decimal", "r": true, "lbl": "Dagitilan (TL)", "min": 0.01 },
+      { "n": "Note", "t": "string", "lbl": "Not", "maxLen": 250 }
+    ]},
+
+    { "name": "BudgetTransaction", "label": "Butce Hareketi", "parent": null, "wave": 17, "cols": [
+      { "n": "BudgetId", "t": "lookup", "r": true, "lbl": "Butce", "lk": "Budget", "lkd": "Name" },
+      { "n": "BudgetCode", "t": "string", "r": true, "lbl": "Butce Kodu", "maxLen": 50 },
+      { "n": "TransactionDate", "t": "datetime", "r": true, "lbl": "Hareket Tarihi" },
+      { "n": "TransactionType", "t": "enum", "r": true, "lbl": "Hareket Tipi", "enum": "Commitment|Release|Actual|Adjustment|Reversal" },
+      { "n": "SourceDocumentType", "t": "enum", "r": true, "lbl": "Kaynak Belge", "enum": "PurchaseRequest|PurchaseOrder|SupplierInvoice|Manual" },
+      { "n": "SourceDocumentNumber", "t": "string", "r": true, "lbl": "Kaynak Belge No", "maxLen": 50 },
+      { "n": "Amount", "t": "decimal", "r": true, "lbl": "Tutar" },
+      { "n": "Currency", "t": "enum", "r": true, "lbl": "Para Birimi", "enum": "TRY|USD|EUR|GBP" },
+      { "n": "AmountTry", "t": "decimal", "r": true, "lbl": "Tutar (TL)" },
+      { "n": "Description", "t": "string", "r": true, "lbl": "Aciklama", "maxLen": 250 }
+    ]},
+
+    { "name": "CompanyVehicle", "label": "Sirket Araci", "parent": null, "wave": 18,
+      "$comment": "RUNTIME TESTI — sistem canliya alindiktan SONRA olusturulur. Bkz. 17-dinamik-model-mimarisi.md",
+      "cols": [
+      { "n": "PlateNumber", "t": "string", "r": true, "lbl": "Plaka", "rx": "^[0-9]{2}[A-Z]{1,3}[0-9]{2,4}$", "rxMsg": "Ornek: 34ABC123" },
+      { "n": "Brand", "t": "string", "r": true, "lbl": "Marka", "maxLen": 100 },
+      { "n": "Model", "t": "string", "r": true, "lbl": "Model", "maxLen": 100 },
+      { "n": "Year", "t": "int", "r": true, "lbl": "Model Yili", "min": 1990, "max": 2100 },
+      { "n": "DepartmentId", "t": "lookup", "r": true, "lbl": "Departman", "lk": "Department", "lkd": "Name" },
+      { "n": "DepartmentName", "t": "string", "r": true, "lbl": "Departman Adi", "maxLen": 150 },
+      { "n": "DriverEmployeeId", "t": "lookup", "lbl": "Surucu", "lk": "Employee", "lkd": "FullName" },
+      { "n": "DriverName", "t": "string", "lbl": "Surucu Adi", "maxLen": 200 },
+      { "n": "InsuranceExpiration", "t": "dateonly", "r": true, "lbl": "Sigorta Bitisi" },
+      { "n": "InspectionExpiration", "t": "dateonly", "lbl": "Muayene Bitisi" },
+      { "n": "PurchaseOrderId", "t": "lookup", "lbl": "Alim Siparisi", "lk": "PurchaseOrder", "lkd": "OrderNumber" },
+      { "n": "IsActive", "t": "boolean", "r": true, "lbl": "Aktif" }
+    ]}
+
+  ]
+}

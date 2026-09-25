@@ -1,0 +1,274 @@
+{
+  "$comment": "7 workflow tanimi. Tam gerekce ve motor sinirlari: ../08-workflow-tasarimi.md. roleId degerleri publish-all.ps1 tarafindan calisma aninda /Role listesinden cozulur (bkz. roles.json workflowRoleMapping).",
+  "version": "1.0",
+
+  "$criticalNote": "PR-ONAY-K1..K4 tutar araliklari KESISMEMELI. Bir kayit degisikligi en fazla tek akis baslatir ve ilk eslesende donguden cikilir (WorkflowWorker.cs:303); eslesme sirasi deterministik DEGILDIR. Araliklar kesisirse hangi kademenin calisacagi rastgele olur.",
+
+  "workflows": [
+    {
+      "name": "Satin Alma Talebi Onayi - Kademe 1",
+      "code": "PR_ONAY_K1",
+      "modelName": "PurchaseRequest",
+      "triggerEvent": "onUpdate",
+      "isEnabled": true,
+      "amountRange": "0 - 10.000 TL",
+      "triggerConditionJson": [
+        { "field": "Status", "operator": "eq", "value": "Submitted" },
+        { "field": "TotalAmountTry", "operator": "lt", "value": "10000" }
+      ],
+      "definitionJson": {
+        "startStep": "dept",
+        "entityStatusMap": { "dept": "Departman Muduru Onayinda" },
+        "steps": [
+          {
+            "key": "dept", "type": "approval", "name": "Departman Muduru Onayi",
+            "assignment": { "mode": "role", "roleId": 6 },
+            "sla": { "dueHours": 48, "escalateAfterHours": 72, "onTimeout": "escalate" },
+            "form": { "fields": [
+              { "name": "Comment", "dataType": "string", "isRequired": false, "label": "Aciklama" },
+              { "name": "BudgetChecked", "dataType": "boolean", "isRequired": true, "label": "Butce kontrol edildi" }
+            ]},
+            "onApprove": "", "onReject": ""
+          }
+        ]
+      }
+    },
+
+    {
+      "name": "Satin Alma Talebi Onayi - Kademe 2",
+      "code": "PR_ONAY_K2",
+      "modelName": "PurchaseRequest",
+      "triggerEvent": "onUpdate",
+      "isEnabled": true,
+      "amountRange": "10.000 - 50.000 TL",
+      "triggerConditionJson": [
+        { "field": "Status", "operator": "eq", "value": "Submitted" },
+        { "field": "TotalAmountTry", "operator": "ge", "value": "10000" },
+        { "field": "TotalAmountTry", "operator": "lt", "value": "50000" }
+      ],
+      "definitionJson": {
+        "startStep": "dept",
+        "entityStatusMap": { "dept": "Departman Muduru Onayinda", "purchasing": "Satin Alma Muduru Onayinda" },
+        "steps": [
+          {
+            "key": "dept", "type": "approval", "name": "Departman Muduru Onayi",
+            "assignment": { "mode": "role", "roleId": 6 },
+            "sla": { "dueHours": 48, "escalateAfterHours": 72, "onTimeout": "escalate" },
+            "onApprove": "purchasing", "onReject": ""
+          },
+          {
+            "key": "purchasing", "type": "approval", "name": "Satin Alma Muduru Onayi",
+            "assignment": { "mode": "role", "roleId": 2 },
+            "sla": { "dueHours": 48, "escalateAfterHours": 96, "onTimeout": "escalate" },
+            "form": { "fields": [
+              { "name": "Comment", "dataType": "string", "isRequired": false, "label": "Aciklama" },
+              { "name": "SuggestedSupplier", "dataType": "string", "isRequired": false, "label": "Onerilen Tedarikci" }
+            ]},
+            "onApprove": "", "onReject": ""
+          }
+        ]
+      }
+    },
+
+    {
+      "name": "Satin Alma Talebi Onayi - Kademe 3",
+      "code": "PR_ONAY_K3",
+      "modelName": "PurchaseRequest",
+      "triggerEvent": "onUpdate",
+      "isEnabled": true,
+      "amountRange": "50.000 - 250.000 TL",
+      "triggerConditionJson": [
+        { "field": "Status", "operator": "eq", "value": "Submitted" },
+        { "field": "TotalAmountTry", "operator": "ge", "value": "50000" },
+        { "field": "TotalAmountTry", "operator": "lt", "value": "250000" }
+      ],
+      "definitionJson": {
+        "startStep": "purchasing",
+        "entityStatusMap": { "purchasing": "Satin Alma Muduru Onayinda", "finance": "Finans Muduru Onayinda" },
+        "steps": [
+          {
+            "key": "purchasing", "type": "approval", "name": "Satin Alma Muduru Onayi",
+            "assignment": { "mode": "role", "roleId": 2 },
+            "sla": { "dueHours": 48, "escalateAfterHours": 96, "onTimeout": "escalate" },
+            "onApprove": "finance", "onReject": ""
+          },
+          {
+            "key": "finance", "type": "approval", "name": "Finans Muduru Onayi",
+            "assignment": { "mode": "role", "roleId": 4 },
+            "sla": { "dueHours": 72, "escalateAfterHours": 120, "onTimeout": "escalate" },
+            "form": { "fields": [
+              { "name": "Comment", "dataType": "string", "isRequired": true, "label": "Mali Degerlendirme" },
+              { "name": "BudgetAvailable", "dataType": "boolean", "isRequired": true, "label": "Butce Uygun" }
+            ]},
+            "onApprove": "", "onReject": ""
+          }
+        ]
+      }
+    },
+
+    {
+      "name": "Satin Alma Talebi Onayi - Kademe 4",
+      "code": "PR_ONAY_K4",
+      "modelName": "PurchaseRequest",
+      "triggerEvent": "onUpdate",
+      "isEnabled": true,
+      "amountRange": "250.000 TL ve uzeri",
+      "triggerConditionJson": [
+        { "field": "Status", "operator": "eq", "value": "Submitted" },
+        { "field": "TotalAmountTry", "operator": "ge", "value": "250000" }
+      ],
+      "definitionJson": {
+        "startStep": "purchasing",
+        "entityStatusMap": {
+          "purchasing": "Satin Alma Muduru Onayinda",
+          "finance": "Finans Muduru Onayinda",
+          "management": "Genel Mudur Onayinda"
+        },
+        "steps": [
+          {
+            "key": "purchasing", "type": "approval", "name": "Satin Alma Muduru Onayi",
+            "assignment": { "mode": "role", "roleId": 2 },
+            "sla": { "dueHours": 24, "escalateAfterHours": 48, "onTimeout": "escalate" },
+            "onApprove": "finance", "onReject": ""
+          },
+          {
+            "key": "finance", "type": "approval", "name": "Finans Muduru Onayi",
+            "assignment": { "mode": "role", "roleId": 4 },
+            "sla": { "dueHours": 48, "escalateAfterHours": 72, "onTimeout": "escalate" },
+            "onApprove": "management", "onReject": ""
+          },
+          {
+            "key": "management", "type": "approval", "name": "Genel Mudur Onayi",
+            "assignment": { "mode": "role", "roleId": 9 },
+            "sla": { "dueHours": 120, "escalateAfterHours": 168, "onTimeout": "escalate" },
+            "form": { "fields": [
+              { "name": "Comment", "dataType": "string", "isRequired": true, "label": "Yonetim Karari" },
+              { "name": "StrategicJustification", "dataType": "string", "isRequired": true, "label": "Stratejik Gerekce" }
+            ]},
+            "onApprove": "", "onReject": ""
+          }
+        ]
+      }
+    },
+
+    {
+      "name": "Tedarikci Onay Sureci",
+      "code": "SUPPLIER_ONAY",
+      "modelName": "Supplier",
+      "triggerEvent": "onUpdate",
+      "isEnabled": true,
+      "$test": "T-32 — paralel adim ve red semantigi",
+      "triggerConditionJson": [
+        { "field": "Status", "operator": "eq", "value": "PendingApproval" }
+      ],
+      "definitionJson": {
+        "startStep": "inceleme",
+        "entityStatusMap": { "inceleme": "Incelemede", "yonetim": "Yonetim Onayinda" },
+        "steps": [
+          {
+            "key": "inceleme", "type": "parallel", "name": "Ticari ve Mali Inceleme",
+            "mode": "all",
+            "branches": [
+              {
+                "key": "ticari", "name": "Ticari Inceleme",
+                "assignment": { "mode": "role", "roleId": 2 },
+                "sla": { "dueHours": 72, "escalateAfterHours": 120, "onTimeout": "escalate" },
+                "form": { "fields": [
+                  { "name": "CommercialNote", "dataType": "string", "isRequired": true, "label": "Ticari Degerlendirme" },
+                  { "name": "ReferenceChecked", "dataType": "boolean", "isRequired": true, "label": "Referans Kontrolu Yapildi" }
+                ]}
+              },
+              {
+                "key": "mali", "name": "Mali Inceleme",
+                "assignment": { "mode": "role", "roleId": 4 },
+                "sla": { "dueHours": 72, "escalateAfterHours": 120, "onTimeout": "escalate" },
+                "form": { "fields": [
+                  { "name": "TaxNumberVerified", "dataType": "boolean", "isRequired": true, "label": "Vergi No Dogrulandi" },
+                  { "name": "IbanVerified", "dataType": "boolean", "isRequired": true, "label": "IBAN Dogrulandi" },
+                  { "name": "CreditRating", "dataType": "string", "isRequired": false, "label": "Kredi Notu" }
+                ]}
+              }
+            ],
+            "onComplete": "yonetim",
+            "onAnyReject": ""
+          },
+          {
+            "key": "yonetim", "type": "approval", "name": "Yonetim Onayi",
+            "assignment": { "mode": "role", "roleId": 9 },
+            "sla": { "dueHours": 120, "escalateAfterHours": 168, "onTimeout": "escalate" },
+            "onApprove": "", "onReject": ""
+          }
+        ]
+      }
+    },
+
+    {
+      "name": "Satin Alma Siparisi Onayi",
+      "code": "PO_ONAY",
+      "modelName": "PurchaseOrder",
+      "triggerEvent": "onUpdate",
+      "isEnabled": true,
+      "triggerConditionJson": [
+        { "field": "Status", "operator": "eq", "value": "PendingApproval" }
+      ],
+      "definitionJson": {
+        "startStep": "purchasing",
+        "entityStatusMap": { "purchasing": "Satin Alma Muduru Onayinda", "finance": "Finans Onayinda" },
+        "steps": [
+          {
+            "key": "purchasing", "type": "approval", "name": "Satin Alma Muduru Onayi",
+            "assignment": { "mode": "role", "roleId": 2 },
+            "sla": { "dueHours": 24, "escalateAfterHours": 48, "onTimeout": "escalate" },
+            "onApprove": "finance", "onReject": ""
+          },
+          {
+            "key": "finance", "type": "approval", "name": "Finans Onayi",
+            "assignment": { "mode": "role", "roleId": 4 },
+            "sla": { "dueHours": 48, "escalateAfterHours": 72, "onTimeout": "autoApprove" },
+            "onApprove": "", "onReject": ""
+          }
+        ]
+      },
+      "$warning": "onTimeout=autoApprove: 48 saat icinde karar verilmezse sistem gorevi ONAYLANMIS sayar, yoruma 'Sure asimi - otomatik sonuclandirildi.' yazar, CompletedBy=null birakir. Gercek kurulumda 'escalate' tercih edilmeli."
+    },
+
+    {
+      "name": "Fatura Uyusmazligi Onayi",
+      "code": "INVOICE_EXCEPTION",
+      "modelName": "SupplierInvoice",
+      "triggerEvent": "onUpdate",
+      "isEnabled": true,
+      "triggerConditionJson": [
+        { "field": "Status", "operator": "eq", "value": "Exception" },
+        { "field": "MatchStatus", "operator": "ne", "value": "ThreeWayOk" }
+      ],
+      "definitionJson": {
+        "startStep": "finance",
+        "entityStatusMap": { "finance": "Finans Muduru Incelemesinde" },
+        "steps": [
+          {
+            "key": "finance", "type": "approval", "name": "Uyusmazlik Degerlendirmesi",
+            "assignment": { "mode": "role", "roleId": 4 },
+            "sla": { "dueHours": 24, "escalateAfterHours": 48, "onTimeout": "escalate" },
+            "form": { "fields": [
+              { "name": "Resolution", "dataType": "enum", "isRequired": true, "label": "Karar",
+                "enumValues": "Accepted|Rejected|CreditNoteRequested" },
+              { "name": "Comment", "dataType": "string", "isRequired": true, "label": "Gerekce" }
+            ]},
+            "onApprove": "", "onReject": ""
+          }
+        ]
+      },
+      "$warning": "Tetikleyici MatchStatus alanina bakar ve o alan 3-way matching'in ciktisidir — platformda hesaplanmiyor (G-02). Akis kurulur ama tetikleyicisi ELLE doldurulan bir alandir."
+    }
+  ],
+
+  "knownLimitations": [
+    "Kosullar YALNIZ tetikleme aninda degerlendirilir; akis ortasinda dallanma yok (WorkflowDefinitionModel.cs:189-240).",
+    "Kosul dili AND-only; OR ve parantez yok (WorkflowCondition.cs:74-91).",
+    "Motor yalniz WorkflowStatus yazabilir; is alani yazamaz (G-03).",
+    "entityStatusMap terminal adimlari (__completed/__rejected) kapsayamaz -> surec bitince WorkflowStatus BOSALIR.",
+    "Organizasyonel atama yok: 'talebin departman muduru' ifade edilemez; role atama TUM departman mudurlerini havuza koyar.",
+    "TUM SLA tanimlarinda hem dueHours hem escalateAfterHours DOLU — yalniz-eskalasyon SLA'si hic taranmiyor (H-1)."
+  ]
+}
