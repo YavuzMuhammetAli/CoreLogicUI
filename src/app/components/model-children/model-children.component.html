@@ -234,8 +234,12 @@
                       <input
                         [id]="'child-rec-' + state.typeName + '-' + col.columnName"
                         type="file"
-                        (change)="onFileSelected($event, col.columnName, state)"
+                        [attr.accept]="col.dataType === 'image' ? 'image/*' : null"
+                        (change)="onFileSelected($event, col, state)"
                         style="display: block; margin-bottom: var(--space-2)">
+                      @if (state.fileErrors[col.columnName]; as fileErr) {
+                        <span class="field-error" role="alert">{{ fileErr }}</span>
+                      }
                       @if (getControl(state, col.columnName).value) {
                         @if (isImage(getControl(state, col.columnName).value)) {
                           <img

@@ -223,6 +223,56 @@ Standart artık `.flow`:
 </label>
 ```
 
+#### ⚠️ Yan yana alanlar — `.field-row` + `.field-head`, başka yol YOK
+
+İki (veya daha fazla) alan yan yana duracaksa input kutuları **aynı hizada** olmalı.
+Kayma her zaman aynı sebepten çıkar: **etiket satırlarının yüksekliği farklıdır.**
+- Bir alanın etiketinin sağında düğme var (`↺ Etiketten üret`, `Kılavuz` — `.btn-sm` 32px),
+  komşusununki düz metin (~20px) → düğmeli alanın input'u aşağıda kalır.
+- Dar sabit genişlikte (`flex: 0 0 120px`) "Maks. Uzunluk ⓘ" iki satıra kırılır → o input aşağı kayar.
+- `align-items: end` ile "alttan hizalamak" yalnızca hiçbir alanın altında yardım/hata metni
+  yokken tutar; ilk hata mesajında bozulur.
+
+Bu hata model oluşturma ekranında (etiket|tablo adı), sütun popup'ında (Min/Maks/Regex)
+ve alt model kartında (etiket|ad|tip) **aynı anda** yaşandı. Standart artık global sınıflar:
+
+| Sınıf | Ne yapar |
+|---|---|
+| `.field-row` | 2 eşit sütunlu grid (`≤768px` tek sütun), `align-items: start`. İçindeki `.field`'ların doğrudan `<label>`'ı **otomatik** olarak sabit yükseklikte (32px), tek satır |
+| `.field-head` | Etiket + sağda düğme satırı. Aynı sabit yükseklik; etiket kırılmaz |
+| `.field--full` | `.field-row` içinde tüm satırı kaplayan alan (ör. enum değerleri) |
+
+```html
+<!-- ✅ -->
+<div class="field-row">
+  <div class="field">
+    <label for="label">Etiket <span class="req">*</span></label>   <!-- otomatik 32px -->
+    <input id="label" class="input" formControlName="label">
+    <span class="field-help">Yardım metni komşuyu kaydırmaz.</span>
+  </div>
+  <div class="field">
+    <div class="field-head">                                         <!-- düğmeli etiket -->
+      <label for="name">Alan Adı</label>
+      <button type="button" class="btn btn-ghost btn-sm" aria-label="Etiketten üret">…</button>
+    </div>
+    <input id="name" class="input" formControlName="name">
+  </div>
+</div>
+
+<!-- ❌ Kendi flex/grid satırın + sabit genişlik + align-items: end -->
+<div class="col-rules-row" style="display:flex">
+  <div class="field" style="flex: 0 0 120px">…</div>
+</div>
+```
+
+Kurallar:
+- Yan yana alan için component SCSS'inde **yerel satır/sütun sınıfı yazma** (`.col-rules-row`,
+  `.model-name-row` gibi — hepsi bu yüzden silindi). `.field-row` kullan.
+- Düğmeli etiket **her zaman** `.field-head` içinde. Düğme metni dar sütuna sığmayacaksa
+  (EN çevirisini de düşün) **ikon düğmesi** yap: metni `aria-label` + `title`'a taşı.
+- `.field-head label`'a `overflow: hidden` VERME — ⓘ (`app-help-hint`) balonu etiketin içindedir, kırpılır.
+- Birden çok `.field-row`/`.field` alt alta dizen gövdeye `.stack` ver (dikey boşluk).
+
 ### Veri Tablosu
 
 ```html
@@ -231,6 +281,7 @@ Standart artık `.flow`:
     <tr>
       <th>Ad</th>
       <th>Tip</th>
+      <th>Kurallar</th>
       <th></th>
     </tr>
   </thead>
@@ -239,16 +290,33 @@ Standart artık `.flow`:
       <tr>
         <td>{{ row.name }}</td>
         <td><span class="badge badge-meta">{{ row.type }}</span></td>
-        <td>
-          <div class="td-actions">
-            <button class="btn btn-ghost btn-sm">Düzenle</button>
-            <button class="btn btn-danger btn-sm">Sil</button>
-          </div>
+        <td class="td-muted">{{ row.rules }}</td>
+        <td class="td-actions">
+          <button class="btn btn-ghost btn-sm">Düzenle</button>
+          <button class="btn btn-danger btn-sm">Sil</button>
         </td>
       </tr>
     }
   </tbody>
 </table>
+```
+
+- `td-actions` **doğrudan `<td>`'ye** konur: hücre tablo hücresi olarak kalır, daralır (`width: 1%`)
+  ve düğmeler **en sağa** yaslanır. (`<div class="td-actions">` de çalışır — flex, sağa yaslı.)
+- Soluk/ikincil hücre metni için `.td-muted`.
+
+#### ⚠️ `<td>`'ye `display` değiştiren sınıf VERME
+
+`<td class="muted-hint">`, `<td class="cluster">`, `<td class="stack">` veya `display: flex/block`
+veren herhangi bir sınıf hücreyi **tablo hücresi olmaktan çıkarır**. Tarayıcı yan yana duran
+hücre-dışı kutuları **tek bir anonim hücreye** birleştirir: örneğin "Maks. uzunluk: 100" ile
+"Sil" düğmesi aynı hücrede **alt alta** görünür. Bu hata iki kez yaşandı (datatype-help regex
+tablosu, table-detail sütun tablosu). Flex gerekiyorsa hücrenin **içine** `<span>/<div>` koy:
+
+```html
+<!-- ❌ --> <td class="muted-hint">{{ rules }}</td>
+<!-- ✅ --> <td class="td-muted">{{ rules }}</td>
+<!-- ✅ --> <td><div class="cluster">…</div></td>
 ```
 
 ### Badge, Alert, Spinner, Empty State

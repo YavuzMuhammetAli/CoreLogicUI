@@ -319,6 +319,56 @@ p { margin: 0; }
   }
 }
 
+/* Etiket satırının sabit yüksekliği — .btn-sm ile aynı. Sağında düğme olan ve
+   olmayan alanlar yan yana durduğunda input'lar bu sayede aynı hizada kalır. */
+$field-head-height: 32px;
+
+/* Etiket + sağda düğme ("↺ Etiketten üret", "Kılavuz") satırı. Yüksekliği sabit;
+   etiket kırılmaz — kırılsaydı satır uzar, input aşağı kayardı.
+   NOT: overflow: hidden VERİLMEZ — ⓘ (app-help-hint) balonu etiketin içindedir, kırpılır. */
+.field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: $field-head-height;
+
+  label {
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  .btn {
+    flex-shrink: 0;
+  }
+}
+
+/* Yan yana alanlar: iki eşit sütun, dar ekranda tek sütun. Tek başına geniş alan: .field--full.
+   Hizalama kendiliğinden: içerideki alanların doğrudan <label>'ı .field-head ile aynı
+   sabit yükseklikte tek satırdır; düğmeli etiket .field-head'e sarılır. Böylece input'lar
+   satır boyunca hizalıdır, altlarındaki yardım/hata metni (align-items: start) komşuyu kaydırmaz. */
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
+  align-items: start;
+
+  > .field > label {
+    display: flex;
+    align-items: center;
+    min-height: $field-head-height;
+    white-space: nowrap;
+  }
+
+  > .field--full {
+    grid-column: 1 / -1;
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
 .input,
 input[type="text"],
 input[type="email"],
@@ -419,10 +469,32 @@ input[type="checkbox"] {
     background: var(--surface-warm);
   }
 
+  /* Aksiyon düğmeleri satırın en sağında. <div class="td-actions"> flex kutusudur. */
   .td-actions {
     display: flex;
+    justify-content: flex-end;
     gap: var(--space-2);
     white-space: nowrap;
+  }
+
+  /* <td class="td-actions"> ise TABLO HÜCRESİ olarak kalmalı: flex bir <td> hücre
+     olmaktan çıkar ve tarayıcı onu komşu hücre-dışı kutularla tek bir anonim
+     hücreye birleştirir — düğmeler satırın altına düşer. */
+  td.td-actions {
+    display: table-cell;
+    width: 1%;
+    text-align: right;
+    vertical-align: middle;
+
+    > * + * {
+      margin-left: var(--space-2);
+    }
+  }
+
+  /* İkincil (soluk) hücre metni. <td>'ye display değiştiren sınıf (muted-hint,
+     cluster, stack…) VERİLMEZ; bunun yerine bu sınıf kullanılır. */
+  .td-muted {
+    color: var(--muted);
   }
 }
 
@@ -458,6 +530,19 @@ input[type="checkbox"] {
   &.badge-warn    { color: var(--warn);    background: var(--warn-bg); }
   &.badge-danger  { color: var(--danger);  background: var(--danger-bg); }
   &.badge-meta    { color: var(--meta);    background: var(--meta-bg); }
+}
+
+/* ---- Otomatik değer işareti (ƒx) — kayıt formlarında alan etiketinin yanında ----
+   Formül `title` ile gösterilir; hem üst form hem alt kayıt pop-up'ı kullanır. */
+.auto-value-tag {
+  display: inline-block;
+  margin-left: var(--space-1);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  font: italic 600 10px / 1.6 var(--font-mono);
+  color: var(--accent);
+  background: var(--meta-bg);
+  cursor: help;
 }
 
 /* ---- Durum mesajı kutusu ---- */

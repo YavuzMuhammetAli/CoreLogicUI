@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, forwardRef, HostListener, Input, inject, OnInit, Output } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, forwardRef, HostListener, Input, inject, OnDestroy, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
@@ -19,6 +19,9 @@ import {
   validatorsFor, fkColumnFor, normalizeRow
 } from '../../model-detail/staged-tree.util';
 import { markDirty } from '../../../utils/change-detection';
+import { fileSizeError, formatFileSize } from '../../../utils/file-size';
+import { AutoValueFormBinding } from '../../../utils/auto-value/auto-value-form';
+import { AutoValueRule, buildAutoValuePlan } from '../../../utils/auto-value/auto-value';
 
 /** Alt model sekmesinin dialog içindeki görünüm durumu. */
 interface ChildTabView {
@@ -62,7 +65,7 @@ interface ChildTabView {
   styleUrls: ['./record-form-dialog.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class RecordFormDialogComponent implements OnInit {
+export class RecordFormDialogComponent implements OnInit, OnDestroy {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -99,6 +102,8 @@ export class RecordFormDialogComponent implements OnInit {
   meta: TypeMeta | null = null;
   loading = true;
   form: FormGroup | null = null;
+  /** Forma bağlı otomatik değer kuralları (kural yoksa null). */
+  private autoValues: AutoValueFormBinding | null = null;
 
   childTabs: ChildTabView[] = [];
   activeChildTab = '';
@@ -111,6 +116,8 @@ export class RecordFormDialogComponent implements OnInit {
 
   /** file input'ları için seçilen dosya adları (indirme etiketinde kullanılır). */
   fileNames: Record<string, string> = {};
+  /** Boyut sınırı nedeniyle reddedilen dosyaların hata metni (kolon → mesaj). */
+  fileErrors: Record<string, string> = {};
 
   /** altTipAdı → seçili satırların geçici localId'leri (toplu silme için). */
   selected: Record<string, Set<number>> = {};
@@ -133,6 +140,7 @@ export class RecordFormDialogComponent implements OnInit {
     this.metadata.meta$(this.node.typeName).pipe(markDirty(this.cdr)).subscribe(meta => {
       this.meta = meta;
       this.form = this.buildForm(meta);
+      this.bindAutoValues(meta, this.form);
       this.childTabs = meta.childTypeNames.map(typeName => ({
         typeName, meta: null, loaded: false, loading: false, error: null
       }));
@@ -160,6 +168,41 @@ export class RecordFormDialogComponent implements OnInit {
       controls[col.columnName] = [value, validatorsFor(col, meta.rules.get(col.columnName))];
     }
     return this.fb.group(controls);
+  }
+
+  /**
+   * Otomatik değer kurallarını forma bağlar. Açılış kuralları yalnız henüz sunucuya
+   * yazılmamış (yeni) satırda çalışır; FK kolonu formda olmadığı için plana girmez.
+   */
+  private bindAutoValues(meta: TypeMeta, form: FormGroup): void {
+    this.autoValues?.stop();
+    const plan = buildAutoValuePlan(this.editableColumns(meta).map(col => {
+      const rule = meta.rules.get(col.columnName);
+      return {
+        name: col.columnName,
+        dataType: col.dataType,
+        autoValueTrigger: rule?.autoValueTrigger,
+        autoValueExpression: rule?.autoValueExpression,
+        isReadOnly: rule?.isReadOnly
+      };
+    }));
+    this.autoValues = plan.rules.length > 0
+      ? new AutoValueFormBinding(form, plan, this.node.savedId === null).start()
+      : null;
+  }
+
+  /** Kolonun otomatik değer kuralı — etiketteki ƒx işareti için. */
+  autoValueRule(col: PublishedColumn): AutoValueRule | undefined {
+    return this.autoValues?.rule(col.columnName);
+  }
+
+  /** Numarası kayıtta verilecek alan (SEQ) — "Kaydedince atanır" ipucu. */
+  isAutoValuePending(col: PublishedColumn): boolean {
+    return !!this.autoValues?.isPending(col.columnName) && !this.form?.get(col.columnName)?.value;
+  }
+
+  ngOnDestroy(): void {
+    this.autoValues?.stop();
   }
 
   /** FK kolonu formda gösterilmez — kaydetme anında otomatik atanır. */
@@ -219,6 +262,15 @@ export class RecordFormDialogComponent implements OnInit {
     if (c.errors['max']) {
       return this.languageService.t('model.detail.fieldMax', { label, max: rule?.max ?? 0 });
     }
+    if (c.errors['maxFileSize']) {
+      const err = c.errors['maxFileSize'] as { limitKb: number; actualBytes: number };
+      const lang = this.languageService.lang();
+      return this.languageService.t('model.detail.fieldMaxFileSize', {
+        label,
+        actual: formatFileSize(err.actualBytes, lang),
+        limit: formatFileSize(err.limitKb * 1024, lang)
+      });
+    }
     return null;
   }
 
@@ -228,9 +280,22 @@ export class RecordFormDialogComponent implements OnInit {
 
   // ─── Dosya alanları ─────────────────────────────────────────────────────────
 
-  onFileSelected(event: Event, columnName: string): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
+  onFileSelected(event: Event, col: PublishedColumn): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
     if (!file) return;
+    const columnName = col.columnName;
+
+    // Boyut, dosya OKUNMADAN kontrol edilir; aşıyorsa önceki değer korunur.
+    const sizeError = fileSizeError(
+      file, col.dataType, this.meta?.rules.get(columnName)?.maxLength ?? col.maxLength, this.languageService.lang());
+    if (sizeError) {
+      this.fileErrors[columnName] = this.languageService.t(sizeError.key, { label: this.colLabel(col), ...sizeError.params });
+      input.value = '';
+      return;
+    }
+    delete this.fileErrors[columnName];
+
     this.fileNames[columnName] = file.name;
     const reader = new FileReader();
     reader.onload = () => {
@@ -498,7 +563,9 @@ export class RecordFormDialogComponent implements OnInit {
       this.form.markAllAsTouched();
       return;
     }
-    this.node.values = { ...this.node.values, ...this.form.value };
+    this.autoValues?.runSave();
+    // getRawValue: salt okunur (disabled) otomatik alanlar da düğüme yazılsın.
+    this.node.values = { ...this.node.values, ...this.form.getRawValue() };
     // Değerler düzeltildi; önceki kaydetme hatası artık geçersiz.
     this.node.error = null;
     // Kayıtlı bir düğümse `addTree` onu güncelleyemez; ayrıca `update()` gerekiyor.

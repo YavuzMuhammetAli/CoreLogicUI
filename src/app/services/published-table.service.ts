@@ -5,6 +5,7 @@ import { ResponseModel } from '../models/responseModel';
 import { DataResponseModel } from '../models/dataResponseModel';
 import { ListResponseModel } from '../models/responseModelList';
 import { environment } from '../../environments/environment';
+import { AutoValueTrigger } from '../utils/auto-value/auto-value';
 
 /** Bir modelin belirli bir versiyonunu temsil eder */
 export interface ModelVersion {
@@ -20,6 +21,8 @@ export interface ModelVersion {
 export interface PublishedTableDto {
   tableName: string;
   description: string;
+  /** Kullanıcı dostu model adı ("Satış Pazarlama Formu"); tableName bundan türetilir. */
+  label?: string | null;
   version: number;
   /** Alt model için parent model adı. Verilmezse kök model olarak kaydedilir. */
   parentTableName?: string;
@@ -46,18 +49,66 @@ export interface PublishedColumnSchema {
   // UI metadata: kullanıcı dostu gösterim
   label?: string | null;        // columnName yerine gösterilecek insan-dostu etiket
   description?: string | null;  // detay sayfasında "i" baloncuğunda gösterilecek açıklama
+  // Otomatik değer kuralı (bkz. utils/auto-value) — trigger null ise kural yok
+  autoValueTrigger?: AutoValueTrigger | null;
+  autoValueExpression?: string | null;
+  isReadOnly?: boolean | null;
+}
+
+/** POST /Published/addMember — kolon metadata'sı (query string olarak gider). */
+export interface AddMemberRequest {
+  typeName: string;
+  memberName: string;
+  memberType: string;
+  isRequired: boolean;
+  minLength?: number | null;
+  maxLength?: number | null;
+  min?: number | null;
+  max?: number | null;
+  regex?: string | null;
+  regexMessage?: string | null;
+  enumValues?: string | null;
+  lookupTargetTable?: string | null;
+  lookupDisplayColumn?: string | null;
+  label?: string | null;
+  description?: string | null;
+  autoValueTrigger?: AutoValueTrigger | null;
+  autoValueExpression?: string | null;
+  isReadOnly?: boolean | null;
+}
+
+/** POST /Published/setMemberAutoValue gövdesi. */
+export interface SetMemberAutoValueRequest {
+  typeName: string;
+  memberName: string;
+  trigger: AutoValueTrigger | null;
+  expression: string | null;
+  isReadOnly: boolean;
 }
 
 /** Tablo şeması + kolonları — GET /Published/getTable dönüşü */
 export interface PublishedTableSchema {
   tableName: string;
   description: string;
+  /** Kullanıcı dostu model adı. Eski kayıtlarda boş olabilir — o zaman tableName gösterilir. */
+  label?: string | null;
   version: number;
   columns: PublishedColumnSchema[];
   /** Üst (parent) modelin adı. null ise kök modeldir. */
   parentTableName?: string | null;
   /** Model ağacındaki derinlik. Kök = 1, maks = 4. */
   depth?: number;
+}
+
+/** GET /Published/getAll satırı (PublishedTable entity'si). */
+export interface PublishedTableRow {
+  id: number;
+  tableName: string;
+  description: string;
+  label?: string | null;
+  version: number;
+  parentTableId: number | null;
+  depth: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -73,45 +124,35 @@ export class PublishedTableService {
       params = params.set('parentTableName', table.parentTableName);
     }
     // parentTableName body entity'sinde yok; yalnızca query param olarak gönderilir
-    const body = { tableName: table.tableName, description: table.description, version: table.version };
+    const body = { tableName: table.tableName, description: table.description, label: table.label ?? null, version: table.version };
     return this.http.post<ResponseModel>(`${this.baseUrl}/addTable`, body, { params });
   }
 
   /** Tabloya kolon metadata kaydı ekler (opsiyonel kural parametreleri null ise query string'e eklenmez) */
-  addMember(
-    typeName: string,
-    memberName: string,
-    memberType: string,
-    isRequired: boolean,
-    minLength?: number | null,
-    maxLength?: number | null,
-    min?: number | null,
-    max?: number | null,
-    regex?: string | null,
-    regexMessage?: string | null,
-    enumValues?: string | null,
-    lookupTargetTable?: string | null,
-    lookupDisplayColumn?: string | null,
-    label?: string | null,
-    description?: string | null
-  ): Observable<ResponseModel> {
+  addMember(m: AddMemberRequest): Observable<ResponseModel> {
     let params = new HttpParams()
-      .set('typeName', typeName)
-      .set('memberName', memberName)
-      .set('memberType', memberType)
-      .set('isRequired', isRequired);
+      .set('typeName', m.typeName)
+      .set('memberName', m.memberName)
+      .set('memberType', m.memberType)
+      .set('isRequired', m.isRequired);
 
-    if (minLength != null)           params = params.set('minLength', minLength);
-    if (maxLength != null)           params = params.set('maxLength', maxLength);
-    if (min != null)                 params = params.set('min', min);
-    if (max != null)                 params = params.set('max', max);
-    if (regex?.trim())               params = params.set('regex', regex);
-    if (regexMessage?.trim())        params = params.set('regexMessage', regexMessage);
-    if (enumValues?.trim())          params = params.set('enumValues', enumValues);
-    if (lookupTargetTable?.trim())   params = params.set('lookupTargetTable', lookupTargetTable);
-    if (lookupDisplayColumn?.trim()) params = params.set('lookupDisplayColumn', lookupDisplayColumn);
-    if (label?.trim())               params = params.set('label', label);
-    if (description?.trim())         params = params.set('description', description);
+    if (m.minLength != null)           params = params.set('minLength', m.minLength);
+    if (m.maxLength != null)           params = params.set('maxLength', m.maxLength);
+    if (m.min != null)                 params = params.set('min', m.min);
+    if (m.max != null)                 params = params.set('max', m.max);
+    if (m.regex?.trim())               params = params.set('regex', m.regex);
+    if (m.regexMessage?.trim())        params = params.set('regexMessage', m.regexMessage);
+    if (m.enumValues?.trim())          params = params.set('enumValues', m.enumValues);
+    if (m.lookupTargetTable?.trim())   params = params.set('lookupTargetTable', m.lookupTargetTable);
+    if (m.lookupDisplayColumn?.trim()) params = params.set('lookupDisplayColumn', m.lookupDisplayColumn);
+    if (m.label?.trim())               params = params.set('label', m.label);
+    if (m.description?.trim())         params = params.set('description', m.description);
+    if (m.autoValueTrigger && m.autoValueExpression?.trim()) {
+      params = params
+        .set('autoValueTrigger', m.autoValueTrigger)
+        .set('autoValueExpression', m.autoValueExpression.trim());
+    }
+    if (m.isReadOnly)                  params = params.set('isReadOnly', true);
 
     return this.http.post<ResponseModel>(`${this.baseUrl}/addMember`, null, { params });
   }
@@ -143,8 +184,8 @@ export class PublishedTableService {
    * Kayıtlı tüm tabloları (taslak + yayınlanmış) getirir.
    * D-FK: parentTableId/depth, ana/alt model ağacını client-side kurmak için kullanılır.
    */
-  getAllTables(): Observable<ListResponseModel<{ id: number; tableName: string; description: string; version: number; parentTableId: number | null; depth: number }>> {
-    return this.http.get<ListResponseModel<{ id: number; tableName: string; description: string; version: number; parentTableId: number | null; depth: number }>>(
+  getAllTables(): Observable<ListResponseModel<PublishedTableRow>> {
+    return this.http.get<ListResponseModel<PublishedTableRow>>(
       `${this.baseUrl}/getAll`
     );
   }
@@ -174,6 +215,52 @@ export class PublishedTableService {
       .set('typeName', typeName)
       .set('memberName', memberName);
     return this.http.post<ResponseModel>(`${this.baseUrl}/removeMember`, null, { params });
+  }
+
+  /** Yalnızca model etiketini günceller — tablo adı, derinlik ve parent değişmez. */
+  setTableLabel(typeName: string, label: string | null): Observable<ResponseModel> {
+    let params = new HttpParams().set('typeName', typeName);
+    if (label?.trim()) params = params.set('label', label.trim());
+    return this.http.post<ResponseModel>(`${this.baseUrl}/setTableLabel`, null, { params });
+  }
+
+  /**
+   * Kayıtlı bir kolonun yalnızca UI metadata'sını (etiket/açıklama) günceller.
+   * Tip ve kurallar değişmez; yeniden yayınlama gerekmez.
+   */
+  updateMemberDisplay(
+    typeName: string,
+    memberName: string,
+    label: string | null,
+    description: string | null
+  ): Observable<ResponseModel> {
+    let params = new HttpParams()
+      .set('typeName', typeName)
+      .set('memberName', memberName);
+    if (label?.trim())       params = params.set('label', label.trim());
+    if (description?.trim()) params = params.set('description', description.trim());
+    return this.http.post<ResponseModel>(`${this.baseUrl}/updateMemberDisplay`, null, { params });
+  }
+
+  /**
+   * Kayıtlı bir image/file kolonunun dosya boyutu sınırını (KB) günceller; null sınırı
+   * kaldırır (platform tavanı geçerli olur). Kolon şeması değişmez, yeniden yayın gerekmez.
+   */
+  setMemberFileLimit(typeName: string, memberName: string, maxSizeKb: number | null): Observable<ResponseModel> {
+    let params = new HttpParams()
+      .set('typeName', typeName)
+      .set('memberName', memberName);
+    if (maxSizeKb != null) params = params.set('maxSizeKb', maxSizeKb);
+    return this.http.post<ResponseModel>(`${this.baseUrl}/setMemberFileLimit`, null, { params });
+  }
+
+  /**
+   * Kayıtlı bir kolonun otomatik değer kuralını yazar; `trigger` null ise kural kaldırılır.
+   * Sunucu formülü ayrıştırır, alanları ve tablodaki döngüleri denetler. Kolon şeması
+   * değişmez, yeniden yayın gerekmez — kural bir sonraki kayıtta devreye girer.
+   */
+  setMemberAutoValue(req: SetMemberAutoValueRequest): Observable<ResponseModel> {
+    return this.http.post<ResponseModel>(`${this.baseUrl}/setMemberAutoValue`, req);
   }
 
   /**

@@ -57,6 +57,10 @@
                     <!-- `below`: dialog paneli overflow-y:auto — yukarı açılan balon kırpılır -->
                     <app-help-hint [text]="col.description ?? ''" placement="below" />
                   }
+                  @if (autoValueRule(col); as rule) {
+                    <span class="auto-value-tag" [title]="rule.expression"
+                      [attr.aria-label]="'model.detail.autoValue.badgeAria' | t:{ expression: rule.expression }">ƒx</span>
+                  }
                   <span class="col-type-tag">{{ col.dataType }}</span>
                 </label>
 
@@ -90,8 +94,12 @@
                   <input
                     [id]="'rf-' + depth + '-' + col.columnName"
                     type="file"
-                    (change)="onFileSelected($event, col.columnName)"
+                    [attr.accept]="col.dataType === 'image' ? 'image/*' : null"
+                    (change)="onFileSelected($event, col)"
                     class="record-file-input">
+                  @if (fileErrors[col.columnName]; as fileErr) {
+                    <span class="field-error" role="alert">{{ fileErr }}</span>
+                  }
                   @if (ctrl(col.columnName).value) {
                     @if (isImage(ctrl(col.columnName).value)) {
                       <img
@@ -117,6 +125,10 @@
                     [attr.step]="stepFor(col.dataType)"
                     [attr.aria-invalid]="ctrl(col.columnName).touched && ctrl(col.columnName).invalid ? true : null"
                     [attr.aria-describedby]="errorFor(col) ? 'rf-err-' + depth + '-' + col.columnName : null">
+                }
+
+                @if (isAutoValuePending(col)) {
+                  <span class="field-help">{{ 'model.detail.autoValue.pending' | t }}</span>
                 }
 
                 @if (errorFor(col); as err) {

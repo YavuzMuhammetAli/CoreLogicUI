@@ -62,7 +62,7 @@
               </div>
             </div>
 
-            <h2 class="model-name">{{ model.typeName }}</h2>
+            <h2 class="model-name">{{ model.label || model.typeName }}</h2>
 
             <div class="model-meta">
               <span class="badge badge-meta">{{ 'model.list.columnCount' | t:{ count: model.columns.length } }}</span>
@@ -70,7 +70,7 @@
 
             <div class="model-columns">
               @for (col of model.columns.slice(0, 3); track col.columnName) {
-                <span class="col-chip">{{ col.columnName }}</span>
+                <span class="col-chip">{{ col.label || col.columnName }}</span>
               }
               @if (model.columns.length > 3) {
                 <span class="col-chip col-more">+{{ model.columns.length - 3 }}</span>

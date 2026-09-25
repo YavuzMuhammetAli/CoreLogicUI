@@ -2,6 +2,7 @@ import { ValidatorFn, Validators } from '@angular/forms';
 import { DynamicTreeNodeDto, PublishedColumn } from '../../services/published-model.service';
 import { PublishedColumnSchema, PublishedTableSchema } from '../../services/published-table.service';
 import { fieldValue, sanitizePayload } from '../model-data/model-data.util';
+import { isFileType, maxFileSizeValidator } from '../../utils/file-size';
 
 /** Dinamik tablo satırı — alan adı → değer. */
 export type DataRow = Record<string, unknown>;
@@ -204,6 +205,12 @@ export function validatorsFor(
   // Zorunluluk: getModels() `isNullable`, getSchema() `isRequired` döner — ikisi de kabul edilir.
   const required = rule ? rule.isRequired : col.isNullable === false;
   if (required) validators.push(Validators.required);
+
+  // image/file: maxLength = boyut sınırı (KB). Kural yoksa da platform tavanı uygulanır.
+  if (isFileType(col.dataType)) {
+    validators.push(maxFileSizeValidator(col.dataType, rule?.maxLength ?? col.maxLength));
+    return validators;
+  }
 
   if (!rule) return validators;
 

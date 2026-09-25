@@ -116,24 +116,18 @@ export class AiImportService {
           from(node.columns).pipe(
             concatMap(column =>
               this.publishedTable
-                .addMember(
-                  node.entityName,
-                  column.columnName,
-                  column.dataType,
+                .addMember({
+                  typeName: node.entityName,
+                  memberName: column.columnName,
+                  memberType: column.dataType,
                   // DİKKAT: form/öneri tarafı isNullable, API isRequired bekler.
-                  !column.isNullable,
-                  null,
-                  column.maxLength ?? null,
-                  null,
-                  null,
-                  null,
-                  null,
-                  column.enumValues ?? null,
-                  column.lookupTargetTable ?? null,
-                  column.lookupDisplayColumn ?? null,
-                  column.label ?? null,
-                  null
-                )
+                  isRequired: !column.isNullable,
+                  maxLength: column.maxLength ?? null,
+                  enumValues: column.enumValues ?? null,
+                  lookupTargetTable: column.lookupTargetTable ?? null,
+                  lookupDisplayColumn: column.lookupDisplayColumn ?? null,
+                  label: column.label ?? null
+                })
                 .pipe(this.ensureSuccess())
             ),
             toArray()

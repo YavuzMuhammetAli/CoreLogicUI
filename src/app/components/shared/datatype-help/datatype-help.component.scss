@@ -177,17 +177,6 @@
   line-height: 1.4;
 }
 
-/* Global `.data-table .td-actions` hücreyi flex yapar; bu da hücreyi tablo
-   yerleşiminden çıkarıp "Kullan" düğmesini satırın altına düşürür. Bu tabloda
-   hücre yeniden tablo hücresi olmalı. */
-.help-presets td.td-actions {
-  display: table-cell;
-  width: 1%;
-  white-space: nowrap;
-  text-align: right;
-  vertical-align: middle;
-}
-
 .help-syntax {
   max-width: 480px;
 }

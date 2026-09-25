@@ -17,6 +17,8 @@ export interface PublishedColumn {
   enumValues?: string | null;
   lookupTargetTable?: string | null;
   lookupDisplayColumn?: string | null;
+  /** string'te karakter sınırı; image/file'da dosya boyutu sınırı (KB) — bkz. utils/file-size.ts */
+  maxLength?: number | null;
   // UI metadata: kullanıcı dostu gösterim (şemadan — reflection'dan değil)
   label?: string | null;
   description?: string | null;
@@ -25,6 +27,8 @@ export interface PublishedColumn {
 /** Model meta verisi — backend PublishedModelInfo ile eşleşir */
 export interface PublishedModel {
   typeName: string;
+  /** Kullanıcı dostu model adı (PublishedTable.Label). Boşsa typeName gösterilir. */
+  label?: string | null;
   columns: PublishedColumn[];
 }
 

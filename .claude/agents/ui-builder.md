@@ -36,7 +36,10 @@ Yeni component'in stilini taklit et; yeni desen icat etme.
   - `.panel` / `.panel-head` / `.panel-body` / `.panel-actions`
   - `.btn` + `.btn-primary` / `.btn-secondary` / `.btn-danger` / `.btn-ghost` / `.btn-sm`
   - `.field` / `.input` / `.field-error` / `.field-help` / `.checkbox-label`
-  - `.data-table` / `.td-actions`
+  - `.field-row` / `.field-head` / `.field--full` — yan yana alanlar YALNIZCA bununla
+    (etiket satırı sabit yükseklik → input'lar hizalı; yerel satır sınıfı yazma)
+  - `.data-table` / `.td-actions` (doğrudan `<td>`'ye, sağa yaslı) / `.td-muted`
+    — `<td>`'ye `display` değiştiren sınıf (`muted-hint`, `cluster`…) VERME
   - `.badge` (+ `-success` / `-warn` / `-danger` / `-meta`)
   - `.alert` (+ `-success` / `-danger` / `-warn` / `-info`)
   - `.spinner` / `.empty-state` / `.eyebrow`

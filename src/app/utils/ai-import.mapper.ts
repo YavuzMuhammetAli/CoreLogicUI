@@ -28,6 +28,7 @@ import {
   SortDirection
 } from '../models/report.model';
 import { RelationshipType, RelationshipUpsert } from '../models/relationship.model';
+import { COLUMN_NAME_PATTERN, MODEL_NAME_PATTERN } from './identifier';
 
 /** Backend tool şemasıyla aynı beyaz listeler — istemci tarafı ikinci savunma hattı. */
 const DATA_TYPES = new Set([
@@ -46,8 +47,6 @@ const OPERATORS = new Set<ReportOperator>([
 
 const AGGREGATES = new Set<AggregateFunction>(['SUM', 'COUNT', 'AVG', 'MIN', 'MAX']);
 
-const MODEL_NAME_PATTERN = /^[A-Z][A-Za-z0-9]*$/;
-const COLUMN_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
 
 /** Dashboard grid genişliği (dashboard-build.component.ts:20 ile aynı). */
 const GRID_COLS = 12;

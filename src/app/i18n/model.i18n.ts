@@ -105,6 +105,10 @@ export const MODEL_I18N: Translations = {
   'model.detail.fieldMaxLength': { tr: '{label} en fazla {max} karakter olabilir.', en: '{label} can be at most {max} characters.' },
   'model.detail.fieldMin': { tr: '{label} en az {min} olmalıdır.', en: '{label} must be at least {min}.' },
   'model.detail.fieldMax': { tr: '{label} en fazla {max} olabilir.', en: '{label} can be at most {max}.' },
+  'model.detail.fieldMaxFileSize': {
+    tr: '{label}: seçilen dosya {actual}, en fazla {limit} olabilir. Daha küçük bir dosya seçin.',
+    en: '{label}: the selected file is {actual}; the maximum is {limit}. Choose a smaller file.'
+  },
   'model.detail.childrenLoading': { tr: 'İlişkili modeller yükleniyor...', en: 'Loading related models...' },
   'model.detail.newRecordInfoNote': { tr: 'Alt kayıtları şimdi ekleyebilirsiniz. <strong>Tümünü Kaydet</strong> butonuna bastığınızda ana kayıt ile birlikte kaydedilecek.', en: 'You can add sub-records now. When you press <strong>Save All</strong>, they will be saved together with the main record.' },
   // Kaydetme "hepsi ya da hiçbiri": ağacın tamamı tek transaction'da yazılır.
@@ -276,7 +280,22 @@ export const MODEL_I18N: Translations = {
   'model.node.namePattern': { tr: 'Geçerli tanımlayıcı girin.', en: 'Enter a valid identifier.' },
   'model.node.labelLabel': { tr: 'Etiket', en: 'Label' },
   'model.node.labelPlaceholder': { tr: 'Örn: Doğum Tarihi', en: 'e.g. Date of Birth' },
-  'model.node.labelHelp': { tr: 'Boş bırakılırsa Ad gösterilir.', en: 'If left blank, the Name is shown.' },
+  'model.node.labelHelp': { tr: 'Ekranlarda görünecek başlık; ad bundan üretilir.', en: 'The heading shown on screens; the name is generated from it.' },
+  'model.node.modelLabelLabel': { tr: 'Model Etiketi', en: 'Model Label' },
+  'model.node.modelLabelPlaceholder': { tr: 'Örn: Sipariş Kalemi', en: 'e.g. Order Item' },
+
+  // ── Model/alan adı doğrulaması (utils/identifier.ts) ──────────────────────────
+  'identifier.error.required': { tr: 'Ad zorunludur.', en: 'Name is required.' },
+  'identifier.error.maxLength': { tr: 'Ad en fazla {max} karakter olabilir.', en: 'The name can be at most {max} characters.' },
+  'identifier.error.pattern': {
+    tr: 'Yalnız İngilizce harf ve rakam kullanın, harfle başlayın (boşluk ve Türkçe karakter olmaz). Model adı büyük harfle başlar.',
+    en: 'Use only English letters and digits, starting with a letter (no spaces or special characters). Model names start with an uppercase letter.'
+  },
+  'identifier.error.keyword': { tr: '\'{name}\' programlama dilinde ayrılmış bir kelime; başka bir ad seçin.', en: '\'{name}\' is a reserved programming keyword; choose another name.' },
+  'identifier.error.reserved': { tr: '\'{name}\' adı sistem tarafından kullanılıyor; başka bir ad seçin.', en: 'The name \'{name}\' is used by the system; choose another name.' },
+  'identifier.error.sameAsModel': { tr: 'Alan adı model adıyla aynı olamaz.', en: 'A field name cannot be the same as the model name.' },
+  'identifier.error.parentFk': { tr: '\'{name}\' üst modele bağlantı için otomatik oluşturulur; başka bir ad seçin.', en: '\'{name}\' is created automatically to link to the parent model; choose another name.' },
+  'identifier.error.duplicate': { tr: '\'{name}\' adı zaten kullanılıyor.', en: 'The name \'{name}\' is already in use.' },
   'model.node.descriptionLabel': { tr: 'Açıklama', en: 'Description' },
   'model.node.descriptionPlaceholder': { tr: 'Bu alan ne için kullanılır?', en: 'What is this field used for?' },
   'model.node.typeLabel': { tr: 'Tip', en: 'Type' },
@@ -323,6 +342,21 @@ export const MODEL_I18N: Translations = {
   'table.detail.modelNameHelp': { tr: 'PascalCase, büyük harfle başlamalı. Örn: {example}', en: 'PascalCase, must start with an uppercase letter. e.g. {example}' },
   'table.detail.modelNameRequired': { tr: 'Model adı zorunludur.', en: 'Model name is required.' },
   'table.detail.modelNamePattern': { tr: 'Büyük harfle başlayan harf/rakam kullanın. Örn: Product', en: 'Use letters/digits starting with an uppercase letter. e.g. Product' },
+  'table.detail.modelLabelLabel': { tr: 'Model Etiketi', en: 'Model Label' },
+  'table.detail.modelLabelPlaceholder': { tr: 'Örn: Satış Pazarlama Formu', en: 'e.g. Sales Marketing Form' },
+  'table.detail.modelLabelHelp': { tr: 'Ekranlarda görünecek ad. Türkçe karakter ve boşluk kullanabilirsiniz.', en: 'The name shown on screens. Spaces and any characters are allowed.' },
+  'table.detail.tableNameLabel': { tr: 'Tablo Adı', en: 'Table Name' },
+  'table.detail.tableNameHelp': { tr: 'Etiketten otomatik üretilir; isterseniz değiştirebilirsiniz. Harf/rakam, büyük harfle başlar.', en: 'Generated from the label; you can change it. Letters/digits, starts with an uppercase letter.' },
+  'table.detail.tableNameLocked': { tr: 'Kayıtlı modelin tablo adı değiştirilemez.', en: 'The table name of a saved model cannot be changed.' },
+  'table.detail.fieldNameLabel': { tr: 'Alan Adı', en: 'Field Name' },
+  'table.detail.fieldNameHelp': { tr: 'Etiketten otomatik üretilir; isterseniz değiştirebilirsiniz.', en: 'Generated from the label; you can change it.' },
+  'table.detail.fieldNameLocked': { tr: 'Kayıtlı sütunun alan adı değiştirilemez; etiketi ve açıklamayı güncelleyebilirsiniz.', en: 'A saved column\'s field name cannot be changed; you can update its label and description.' },
+  'table.detail.regenerateFromLabel': { tr: 'Etiketten üret', en: 'Generate from label' },
+  'table.detail.labelRequired': { tr: 'Etiket zorunludur.', en: 'Label is required.' },
+  'table.detail.labelTooLong': { tr: 'Etiket en fazla {max} karakter olabilir.', en: 'Label can be at most {max} characters.' },
+  'table.detail.formInvalid': { tr: 'Formda hatalı ya da eksik alanlar var. Kırmızı ile işaretli alanları düzeltin.', en: 'The form has invalid or missing fields. Fix the fields marked in red.' },
+  'table.detail.labelUpdateFailed': { tr: 'Model etiketi güncellenemedi.', en: 'The model label could not be updated.' },
+  'table.detail.columnDisplayUpdateFailed': { tr: '\'{name}\' sütununun etiketi güncellenemedi.', en: 'The label of column \'{name}\' could not be updated.' },
   'table.detail.subModelsTablistAria': { tr: 'Alt modeller', en: 'Sub-models' },
   'table.detail.columnsTab': { tr: 'Sütunlar', en: 'Columns' },
   'table.detail.columnsPanelAria': { tr: 'Sütunlar', en: 'Columns' },
@@ -371,7 +405,7 @@ export const MODEL_I18N: Translations = {
   'table.detail.namePattern': { tr: 'Geçerli bir tanımlayıcı girin.', en: 'Enter a valid identifier.' },
   'table.detail.labelLabel': { tr: 'Etiket', en: 'Label' },
   'table.detail.labelPlaceholder': { tr: 'Örn: Doğum Tarihi', en: 'e.g. Date of Birth' },
-  'table.detail.labelHelp': { tr: 'Boş bırakılırsa Ad gösterilir.', en: 'If left blank, the Name is shown.' },
+  'table.detail.labelHelp': { tr: 'Ekranlarda görünecek başlık; alan adı bundan üretilir.', en: 'The heading shown on screens; the field name is generated from it.' },
   'table.detail.descriptionLabel': { tr: 'Açıklama', en: 'Description' },
   'table.detail.descriptionPlaceholder': { tr: 'Bu alan ne için kullanılır?', en: 'What is this field used for?' },
   'table.detail.descriptionHelp': { tr: 'Detay sayfasında "i" baloncuğunda gösterilir.', en: 'Shown in the "i" info bubble on the detail page.' },
@@ -414,7 +448,92 @@ export const MODEL_I18N: Translations = {
   'table.detail.schemaServerError': { tr: 'Şema okunurken sunucu hatası oluştu.', en: 'A server error occurred while reading the schema.' },
   'table.detail.ruleMinLength': { tr: 'min uzunluk: {value}', en: 'min length: {value}' },
   'table.detail.ruleMaxLength': { tr: 'maks uzunluk: {value}', en: 'max length: {value}' },
+  'table.detail.ruleMaxFileSize': { tr: 'maks boyut: {value}', en: 'max size: {value}' },
+  'table.detail.ruleMaxFileSizeDefault': { tr: 'maks boyut: {value} (varsayılan)', en: 'max size: {value} (default)' },
+  'table.detail.maxFileSize': { tr: 'Maks. Dosya Boyutu (MB)', en: 'Max. File Size (MB)' },
+  'table.detail.maxFileSizeHelp': { tr: 'Boş bırakılırsa {max} MB. En fazla {max} MB girilebilir.', en: 'If left blank, {max} MB. At most {max} MB.' },
+  'table.detail.maxFileSizeRange': { tr: '{min} ile {max} MB arasında bir değer girin.', en: 'Enter a value between {min} and {max} MB.' },
+  'table.detail.fileLimitUpdateFailed': { tr: '\'{name}\' sütununun dosya boyutu sınırı güncellenemedi.', en: 'The file size limit of column \'{name}\' could not be updated.' },
   'table.detail.ruleMin': { tr: 'min: {value}', en: 'min: {value}' },
   'table.detail.ruleMax': { tr: 'maks: {value}', en: 'max: {value}' },
-  'table.detail.ruleNone': { tr: '—', en: '—' }
+  'table.detail.ruleNone': { tr: '—', en: '—' },
+  'table.detail.ruleAutoValue': { tr: 'ƒx {trigger}', en: 'ƒx {trigger}' },
+
+  // ── Otomatik değer (sütun popup'ı) — bkz. utils/auto-value ─────────────────
+  'table.detail.autoValue.title': { tr: 'Otomatik Değer', en: 'Automatic Value' },
+  'table.detail.autoValue.help': {
+    tr: 'Alan bir formülle kendiliğinden doldurulur. Alanlar [Ad], metinler \'tırnak\' içinde yazılır. İşlemler: + - * / %, & (metin birleştirme), = != < <= > >=, AND OR NOT. Fonksiyonlar: IF, COALESCE, MIN, MAX, ROUND, ABS, CONCAT, UPPER, LOWER, TRIM, LEFT, RIGHT, LEN, TODAY, NOW, FORMAT_DATE, ADD_DAYS, SEQ. Boş alan hesapta 0 sayılır. Sunucu kaydederken aynı formülü yeniden hesaplar.',
+    en: 'The field is filled in automatically by a formula. Write fields as [Name] and text in \'quotes\'. Operators: + - * / %, & (join text), = != < <= > >=, AND OR NOT. Functions: IF, COALESCE, MIN, MAX, ROUND, ABS, CONCAT, UPPER, LOWER, TRIM, LEFT, RIGHT, LEN, TODAY, NOW, FORMAT_DATE, ADD_DAYS, SEQ. An empty field counts as 0. The server recalculates the same formula on save.'
+  },
+  'table.detail.autoValue.triggerLabel': { tr: 'Ne zaman çalışsın?', en: 'When should it run?' },
+  'table.detail.autoValue.trigger.none': { tr: 'Otomatik değer yok', en: 'No automatic value' },
+  'table.detail.autoValue.trigger.create': { tr: 'Form açıldığında', en: 'When the form opens' },
+  'table.detail.autoValue.trigger.change': { tr: 'Alan değiştiğinde', en: 'When a field changes' },
+  'table.detail.autoValue.trigger.save': { tr: 'Kaydedilirken', en: 'On save' },
+  'table.detail.autoValue.triggerHelp.none': { tr: 'Alanı kullanıcı doldurur.', en: 'The user fills in the field.' },
+  'table.detail.autoValue.triggerHelp.create': {
+    tr: 'Yalnız yeni kayıtta, form açılınca bir kez doldurulur. Sıra numarası (SEQ) kayıt anında verilir.',
+    en: 'Filled once when a new record form opens. Sequence numbers (SEQ) are assigned when the record is saved.'
+  },
+  'table.detail.autoValue.triggerHelp.change': {
+    tr: 'Formülde geçen alanlardan biri değişince yeniden hesaplanır.',
+    en: 'Recalculated whenever a field used in the formula changes.'
+  },
+  'table.detail.autoValue.triggerHelp.save': {
+    tr: 'Her kayıtta yeniden hesaplanır; alan salt okunurdur.',
+    en: 'Recalculated on every save; the field is read-only.'
+  },
+  'table.detail.autoValue.expressionLabel': { tr: 'Formül', en: 'Formula' },
+  'table.detail.autoValue.expressionPlaceholder': { tr: '[Fiyat] - [Vergi]', en: '[Price] - [Tax]' },
+  'table.detail.autoValue.expressionHelp': {
+    tr: 'Aşağıdaki alan ve fonksiyonlara tıklayarak formüle ekleyebilirsiniz.',
+    en: 'Click the fields and functions below to add them to the formula.'
+  },
+  'table.detail.autoValue.sequenceTemplate': { tr: 'Tarih + sıra no', en: 'Date + sequence no' },
+  'table.detail.autoValue.fields': { tr: 'Alanlar', en: 'Fields' },
+  'table.detail.autoValue.functions': { tr: 'Fonksiyonlar', en: 'Functions' },
+  'table.detail.autoValue.readOnly': { tr: 'Salt okunur (kullanıcı değiştiremez)', en: 'Read-only (users cannot change it)' },
+  'table.detail.autoValue.readOnlyForced': { tr: '— bu kuralda zorunlu', en: '— required for this rule' },
+  'table.detail.autoValue.readOnlyHelp': {
+    tr: 'Kapalıysa formül yalnızca öneri doldurur, kullanıcı değeri değiştirebilir. Açıksa değeri her zaman sistem belirler.',
+    en: 'When off, the formula only suggests a value that users can change. When on, the system always sets the value.'
+  },
+  'table.detail.autoValue.thisColumn': { tr: '(bu sütun)', en: '(this column)' },
+  'table.detail.autoValue.updateFailed': { tr: '\'{name}\' sütununun otomatik değer kuralı kaydedilemedi.', en: 'The automatic value rule of column \'{name}\' could not be saved.' },
+  'table.detail.autoValue.saveBlocked': { tr: '\'{name}\' sütununun formülü hatalı: {reason}', en: 'The formula of column \'{name}\' is invalid: {reason}' },
+
+  'table.detail.autoValue.fn.IF': { tr: 'IF(koşul, doğruysa, yanlışsa)', en: 'IF(condition, then, else)' },
+  'table.detail.autoValue.fn.ROUND': { tr: 'ROUND(sayı, basamak) — yarımlar yukarı', en: 'ROUND(number, digits) — halves round away from zero' },
+  'table.detail.autoValue.fn.CONCAT': { tr: 'CONCAT(a, b, …) — metinleri birleştirir', en: 'CONCAT(a, b, …) — joins text' },
+  'table.detail.autoValue.fn.COALESCE': { tr: 'COALESCE(a, b, …) — ilk dolu değer', en: 'COALESCE(a, b, …) — first non-empty value' },
+  'table.detail.autoValue.fn.TODAY': { tr: 'TODAY() ya da TODAY(\'ddMMyyyy\') — bugünün tarihi', en: 'TODAY() or TODAY(\'ddMMyyyy\') — today\'s date' },
+  'table.detail.autoValue.fn.NOW': { tr: 'NOW() ya da NOW(\'dd.MM.yyyy HH:mm\') — şu an', en: 'NOW() or NOW(\'dd.MM.yyyy HH:mm\') — current time' },
+  'table.detail.autoValue.fn.ADD_DAYS': { tr: 'ADD_DAYS(tarih, gün) — gün ekler/çıkarır', en: 'ADD_DAYS(date, days) — adds/subtracts days' },
+  'table.detail.autoValue.fn.FORMAT_DATE': { tr: 'FORMAT_DATE(tarih, \'dd.MM.yyyy\') — tarihi metne çevirir', en: 'FORMAT_DATE(date, \'dd.MM.yyyy\') — formats a date' },
+  'table.detail.autoValue.fn.SEQ': { tr: 'SEQ(hane, kapsam) — kayıtta verilen sıra no; kapsam değişince 1\'den başlar', en: 'SEQ(digits, scope) — sequence number assigned on save; restarts at 1 for each scope' },
+
+  'table.detail.autoValue.err.parse': { tr: '{reason} ({pos}. karakter)', en: '{reason} (character {pos})' },
+  'table.detail.autoValue.err.expressionRequired': { tr: 'Formül boş olamaz.', en: 'The formula cannot be empty.' },
+  'table.detail.autoValue.err.unknownField': { tr: '[{field}] adında bir alan yok.', en: 'There is no field named [{field}].' },
+  'table.detail.autoValue.err.targetType': { tr: 'Resim/dosya sütunlarına otomatik değer atanamaz.', en: 'Image/file columns cannot have an automatic value.' },
+  'table.detail.autoValue.err.sequenceTrigger': { tr: 'SEQ yalnızca "Form açıldığında" kuralında kullanılabilir.', en: 'SEQ can only be used with "When the form opens".' },
+  'table.detail.autoValue.err.sequenceRef': { tr: '[{field}] sıra numarası kayıtta verildiği için başka formülde kullanılamaz.', en: '[{field}] gets its sequence number on save, so other formulas cannot use it.' },
+  'table.detail.autoValue.err.cycle': { tr: 'Formüller birbirine döngüsel bağlı: {path}', en: 'The formulas depend on each other in a loop: {path}' },
+
+  'table.detail.autoValue.parse.empty': { tr: 'Formül boş', en: 'The formula is empty' },
+  'table.detail.autoValue.parse.tooLong': { tr: 'Formül çok uzun (en fazla 1000 karakter)', en: 'The formula is too long (1000 characters max)' },
+  'table.detail.autoValue.parse.tooDeep': { tr: 'Formül çok fazla iç içe', en: 'The formula is nested too deeply' },
+  'table.detail.autoValue.parse.unterminatedString': { tr: 'Metnin tırnağı kapanmamış', en: 'A text quote is not closed' },
+  'table.detail.autoValue.parse.unterminatedField': { tr: 'Alan adının ] işareti eksik', en: 'A field name is missing its ]' },
+  'table.detail.autoValue.parse.emptyField': { tr: '[ ] içinde alan adı yok', en: 'No field name inside [ ]' },
+  'table.detail.autoValue.parse.unexpectedChar': { tr: 'Geçersiz karakter: {arg}', en: 'Invalid character: {arg}' },
+  'table.detail.autoValue.parse.unexpectedToken': { tr: 'Beklenmeyen ifade: {arg}', en: 'Unexpected token: {arg}' },
+  'table.detail.autoValue.parse.unexpectedEnd': { tr: 'Formül yarım kalmış', en: 'The formula ends unexpectedly' },
+  'table.detail.autoValue.parse.unknownFunction': { tr: 'Bilinmeyen fonksiyon: {arg}', en: 'Unknown function: {arg}' },
+  'table.detail.autoValue.parse.argCount': { tr: '{arg} için argüman sayısı hatalı', en: 'Wrong number of arguments for {arg}' },
+  'table.detail.autoValue.parse.bareIdentifier': { tr: 'Alan adları köşeli parantezle yazılır: [{arg}]', en: 'Write field names in brackets: [{arg}]' },
+
+  // ── Otomatik değer (kayıt formları) ────────────────────────────────────────
+  'model.detail.autoValue.badgeAria': { tr: 'Otomatik değer: {expression}', en: 'Automatic value: {expression}' },
+  'model.detail.autoValue.pending': { tr: 'Kaydedince atanır', en: 'Assigned on save' }
 };

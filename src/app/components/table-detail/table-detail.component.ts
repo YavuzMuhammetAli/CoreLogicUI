@@ -4,7 +4,14 @@ import { ReactiveFormsModule, AbstractControl, FormArray, FormBuilder, FormGroup
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
 import { from, concatMap, switchMap, throwError, of, catchError } from 'rxjs';
-import { PublishedTableService, PublishedColumnSchema, PublishedTableSchema } from '../../services/published-table.service';
+import {
+  AddMemberRequest, PublishedTableService, PublishedColumnSchema, PublishedTableRow, PublishedTableSchema
+} from '../../services/published-table.service';
+import { RecordMetadataService } from '../../services/record-metadata.service';
+import {
+  AUTO_VALUE_TRIGGERS, AutoValueColumn, AutoValueTrigger, RuleIssue, buildAutoValuePlan
+} from '../../utils/auto-value/auto-value';
+import { parseExpression, usesSequence } from '../../utils/auto-value/expression';
 import { PublishedModelService } from '../../services/published-model.service';
 import { ModelNodeComponent, MAX_DEPTH } from '../model-node/model-node.component';
 import { LanguageService } from '../../services/language.service';
@@ -16,23 +23,36 @@ import { RegexPreset } from '../shared/datatype-help/regex-presets';
 import { RelationshipType } from '../../models/relationship.model';
 import { RelationshipsTabComponent } from './relationships/relationships-tab.component';
 import { markDirty } from '../../utils/change-detection';
+import {
+  MIN_FILE_LIMIT_MB, fileLimitMbValidator, formatFileSize, isFileType, kbToMb, maxFileKbFor, maxFileMbFor
+} from '../../utils/file-size';
+import { NUMERIC_COLUMN_TYPES, autoValueKey, normalizeColumnRules } from '../../utils/column-rules';
+import {
+  IDENTIFIER_MAX_LENGTH, IdentifierContext, IdentifierKind, LABEL_MAX_LENGTH, LabelNameSync,
+  identifierErrorMessage, identifierValidator, revalidateIdentifiers, sanitizeIdentifierInputEvent
+} from '../../utils/identifier';
 
 /** Ekrandaki sekmeler. */
 type TabId = 'columns' | 'subModels' | 'relationships';
 
 /** /Published/getAll satırı — model ağacını (parent/derinlik) kurmak için. */
-interface TableRow {
-  id: number;
-  tableName: string;
+type TableRow = PublishedTableRow;
+
+/** Kayıtlı bir kolonun düzenlenebilir UI metadata'sı — düzenleme modunda diff temeli. */
+interface ColumnDisplayMeta {
+  label: string;
   description: string;
-  version: number;
-  parentTableId: number | null;
-  depth: number;
+  /** image/file'da dosya boyutu sınırı (KB) — değişirse setMemberFileLimit ile yazılır. */
+  maxLength: number | null;
+  /** Otomatik değer kuralı (tetik|formül|salt okunur) — değişirse setMemberAutoValue ile yazılır. */
+  autoValueKey: string;
 }
 
 /** Kaydetme akışında kullanılan düzleştirilmiş düğüm verisi */
 interface TreeNode {
   entityName: string;
+  /** Kullanıcı dostu model adı (PublishedTable.Label). */
+  label: string | null;
   parentName: string | null;
   columns: {
     columnName: string;
@@ -49,8 +69,33 @@ interface TreeNode {
     lookupDisplayColumn?: string;
     label?: string;
     description?: string;
+    autoValueTrigger?: string;
+    autoValueExpression?: string;
+    isReadOnly?: boolean;
   }[];
 }
+
+type TreeColumn = TreeNode['columns'][number];
+
+/** Tasarımcı sütun değerini otomatik değer planlayıcısının girdisine çevirir. */
+function toAutoValueColumn(c: {
+  columnName: string; dataType: string;
+  autoValueTrigger?: string | null; autoValueExpression?: string | null; isReadOnly?: boolean | null;
+}): AutoValueColumn {
+  return {
+    name: c.columnName,
+    dataType: c.dataType,
+    autoValueTrigger: c.autoValueTrigger,
+    autoValueExpression: c.autoValueExpression,
+    isReadOnly: c.isReadOnly
+  };
+}
+
+/** Taslak sütunun henüz adı yokken planlayıcıda kullanılan yer tutucu ad. */
+const DRAFT_COLUMN = '__draft__';
+
+/** "Tarih + sıra no" şablonu — ör. 25092026-001; sayaç her gün sıfırlanır. */
+const SEQUENCE_TEMPLATE = "TODAY('ddMMyyyy') & '-' & SEQ(3, TODAY('ddMMyyyy'))";
 
 /**
  * TableDetailComponent — bir tablonun (modelin) oluşturma/düzenleme ekranı.
@@ -108,6 +153,30 @@ export class TableDetailComponent implements OnDestroy {
 
   /** Düzenleme modunda diff için: yüklenen şemadaki kolon adları */
   private originalColumnNames = new Set<string>();
+
+  /** Düzenleme modunda diff için: kayıtlı model etiketi ve kolonların etiket/açıklaması. */
+  private originalLabel: string | null = null;
+  private originalColumnMeta = new Map<string, ColumnDisplayMeta>();
+
+  /**
+   * Bu model bir alt modelse üst modelin adı — `{Parent}Id` FK kolonu sistem tarafından
+   * üretildiği için aynı adla kolon açılamaz. Kök modelde ve oluşturma modunda null.
+   */
+  private ownParentName: string | null = null;
+
+  // ─── Etiket → ad senkronu ───────────────────────────────────────────────────
+
+  readonly IDENTIFIER_MAX_LENGTH = IDENTIFIER_MAX_LENGTH;
+  readonly LABEL_MAX_LENGTH = LABEL_MAX_LENGTH;
+  readonly identifierErrorMessage = identifierErrorMessage;
+  readonly isFileType = isFileType;
+  readonly maxFileMbFor = maxFileMbFor;
+  readonly MIN_FILE_LIMIT_MB = MIN_FILE_LIMIT_MB;
+
+  /** Model etiketi → tablo adı. rootGroup her yeniden kurulduğunda tazelenir. */
+  private rootNameSync?: LabelNameSync;
+  /** Sütun popup'ında etiket → alan adı. Popup kapanınca bırakılır. */
+  private draftNameSync?: LabelNameSync;
 
   /** Adres çubuğunu sayfa yeniden yüklemeden güncellemek için (oluşturma → düzenleme geçişi). */
   private readonly location = inject(Location);
@@ -183,6 +252,8 @@ export class TableDetailComponent implements OnDestroy {
   // özet durum tutulur.
 
   private readonly publishedModelService = inject(PublishedModelService);
+  /** Kural kaydından sonra açık kayıt formlarının eski kuralı kullanmaması için. */
+  private readonly recordMetadata = inject(RecordMetadataService);
 
   @ViewChild(RelationshipsTabComponent) private relationshipsTab?: RelationshipsTabComponent;
 
@@ -210,25 +281,16 @@ export class TableDetailComponent implements OnDestroy {
     private languageService: LanguageService
   ) {
     this.isNew = this.route.snapshot.data['mode'] === 'new';
-    this.columnDraft = ModelNodeComponent.buildColumnGroupStatic(this.fb);
-
+    this.columnDraft = this.buildColumnDraft();
 
     if (this.isNew) {
-      // Oluşturma modu — boş kolon listesiyle başla, sütunlar popup'tan eklenir
-      this.rootGroup = this.fb.group({
-        entityName: ['MyEntity', [Validators.required, Validators.pattern(/^[A-Z][A-Za-z0-9]*$/)]],
-        columns:    this.fb.array([]),
-        subModels:  this.fb.array([])
-      });
+      // Oluşturma modu — ad ve etiket boş başlar; ad, etiket yazıldıkça üretilir
+      this.rootGroup = this.buildRootGroup('', '');
       this.trackFormChanges();
     } else {
       // Düzenleme modu — boş bir yer tutucu ile başla, şema yüklenince değiştirilir
       this.editTypeName = this.route.snapshot.paramMap.get('typeName');
-      this.rootGroup = this.fb.group({
-        entityName: [this.editTypeName, [Validators.required, Validators.pattern(/^[A-Z][A-Za-z0-9]*$/)]],
-        columns:    this.fb.array([]),
-        subModels:  this.fb.array([])
-      });
+      this.rootGroup = this.buildRootGroup(this.editTypeName ?? '', '');
       this.trackFormChanges();
       if (this.editTypeName) {
         this.loadForEdit(this.editTypeName);
@@ -251,6 +313,72 @@ export class TableDetailComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.formChangeSub?.unsubscribe();
     this.paramSub?.unsubscribe();
+    this.rootNameSync?.unsubscribe();
+    this.draftNameSync?.unsubscribe();
+  }
+
+  // ─── Form kurulumu ──────────────────────────────────────────────────────────
+
+  /**
+   * Kök model FormGroup'u. Oluşturma, düzenleme ve alt modele geçiş aynı fabrikadan
+   * geçer — doğrulayıcılar tek yerde durur.
+   *
+   * Model adı mevcut tablolarla çakışmamalı; düzenleme modunda ad kilitli
+   * (disabled) olduğundan doğrulanmaz, kontrol yalnızca oluşturmada anlamlıdır.
+   */
+  private buildRootGroup(entityName: string, label: string, columns: FormGroup[] = []): FormGroup {
+    return this.fb.group({
+      label:      [label, [Validators.required, Validators.maxLength(LABEL_MAX_LENGTH)]],
+      entityName: [entityName, [
+        Validators.required,
+        identifierValidator('model', () => ({ taken: this.isNew ? this.availableTables : [] }))
+      ]],
+      columns:    this.fb.array(columns),
+      subModels:  this.fb.array([])
+    });
+  }
+
+  /** Sütun popup'ının taslağı — ağaca bağlı olmadığı için bağlam dışarıdan verilir. */
+  private buildColumnDraft(): FormGroup {
+    return ModelNodeComponent.buildColumnGroupStatic(this.fb, () => this.columnDraftContext());
+  }
+
+  /** Popup'taki sütunun çakışmaması gerekenler: diğer sütunlar, model adı, üst FK kolonu. */
+  private columnDraftContext(): IdentifierContext {
+    // Taslak constructor'da rootGroup'tan önce kurulur ve doğrulayıcı hemen koşar.
+    if (!this.rootGroup) return {};
+    return {
+      taken: this.columns.controls
+        .filter((_, i) => i !== this.editingColumnIndex)
+        .map(c => c.get('columnName')!.value),
+      modelName: this.entityNameCtrl.value,
+      parentName: this.ownParentName
+    };
+  }
+
+  /** Ad alanına yazılırken Türkçe karakter/boşluk anında temizlenir. */
+  onNameInput(event: Event, control: AbstractControl, kind: IdentifierKind): void {
+    sanitizeIdentifierInputEvent(event, control, kind);
+  }
+
+  /** Tablo adındaki "↺ Etiketten üret". */
+  regenerateEntityName(): void {
+    this.rootNameSync?.regenerate();
+  }
+
+  /** Sütun popup'ındaki "↺ Etiketten üret". */
+  regenerateColumnName(): void {
+    this.draftNameSync?.regenerate();
+  }
+
+  /** Popup'ta düzenlenen sütun veritabanında kayıtlı mı (kayıtlıysa adı kilitlidir). */
+  get isEditingPersistedColumn(): boolean {
+    return this.columnDraft.get('columnName')!.disabled;
+  }
+
+  /** Başlıkta gösterilecek ad: kayıtlı etiket, yoksa tablo adı. */
+  get displayModelName(): string {
+    return (this.originalLabel ?? '').trim() || this.editTypeName || '';
   }
 
   // ─── G1: Sekme yönetimi ─────────────────────────────────────────────────────
@@ -276,7 +404,7 @@ export class TableDetailComponent implements OnDestroy {
    */
   addSubModel(): void {
     if (!this.canAddSubModel) return;
-    this.subModels.push(ModelNodeComponent.buildModelGroupStatic(this.fb, 'AltModel'));
+    this.subModels.push(ModelNodeComponent.buildModelGroupStatic(this.fb));
   }
 
   removeSubModel(index: number): void {
@@ -329,13 +457,12 @@ export class TableDetailComponent implements OnDestroy {
     this.relationshipsTab?.reset();
     this.subModelRows        = [];
     this.originalColumnNames = new Set<string>();
+    this.originalColumnMeta  = new Map<string, ColumnDisplayMeta>();
+    this.originalLabel       = null;
+    this.ownParentName       = null;
     this.activeTab.set('columns');
 
-    this.rootGroup = this.fb.group({
-      entityName: [typeName, [Validators.required, Validators.pattern(/^[A-Z][A-Za-z0-9]*$/)]],
-      columns:    this.fb.array([]),
-      subModels:  this.fb.array([])
-    });
+    this.rootGroup = this.buildRootGroup(typeName, '');
     this.trackFormChanges();
 
     this.loadForEdit(typeName);
@@ -459,15 +586,33 @@ export class TableDetailComponent implements OnDestroy {
 
   /** Bir sütun satırı için kısa kural özeti (tablo görünümünde gösterilir). */
   ruleSummary(col: AbstractControl): string {
-    const v = (col as FormGroup).getRawValue();
+    // Yalnız sütunun tipine ait kurallar gösterilir (formda eski tipin değeri kalmış olabilir).
+    const v = normalizeColumnRules((col as FormGroup).getRawValue());
     const parts: string[] = [];
+
+    if (isFileType(v.dataType)) {
+      // Sınır girilmediyse de platform tavanı geçerli — kullanıcı bunu görmeli.
+      const limitKb = v.maxLength ?? maxFileKbFor(v.dataType);
+      parts.push(this.languageService.t(
+        v.maxLength != null ? 'table.detail.ruleMaxFileSize' : 'table.detail.ruleMaxFileSizeDefault',
+        { value: formatFileSize(limitKb * 1024, this.languageService.lang()) }));
+      return parts.join(', ');
+    }
+
     if (v.minLength != null) parts.push(this.languageService.t('table.detail.ruleMinLength', { value: v.minLength }));
     if (v.maxLength != null) parts.push(this.languageService.t('table.detail.ruleMaxLength', { value: v.maxLength }));
-    if (v.min != null)       parts.push(this.languageService.t('table.detail.ruleMin', { value: v.min }));
-    if (v.max != null)       parts.push(this.languageService.t('table.detail.ruleMax', { value: v.max }));
+    if (NUMERIC_COLUMN_TYPES.has(v.dataType)) {
+      if (v.min != null)     parts.push(this.languageService.t('table.detail.ruleMin', { value: v.min }));
+      if (v.max != null)     parts.push(this.languageService.t('table.detail.ruleMax', { value: v.max }));
+    }
     if (v.regex)             parts.push('regex');
     if (v.enumValues)        parts.push(v.enumValues);
     if (v.lookupTargetTable) parts.push(`→ ${v.lookupTargetTable}`);
+    if (v.autoValueTrigger) {
+      parts.push(this.languageService.t('table.detail.ruleAutoValue', {
+        trigger: this.languageService.t('table.detail.autoValue.trigger.' + v.autoValueTrigger)
+      }));
+    }
     return parts.join(', ') || this.languageService.t('table.detail.ruleNone');
   }
 
@@ -493,6 +638,12 @@ export class TableDetailComponent implements OnDestroy {
 
   /** Herhangi bir form değişikliği kayıt durumunu geçersiz kılar — rootGroup her değiştiğinde yeniden çağrılır. */
   private trackFormChanges(): void {
+    // Etiket → tablo adı senkronu da yeni rootGroup'a bağlanır.
+    this.rootNameSync?.unsubscribe();
+    this.rootNameSync = new LabelNameSync(
+      this.rootGroup.get('label')!, this.entityNameCtrl, 'model',
+      () => ({ taken: this.isNew ? this.availableTables : [] }));
+
     this.formChangeSub?.unsubscribe();
     this.formChangeSub = this.rootGroup.valueChanges.pipe(markDirty(this.cdr)).subscribe(() => {
       if (this.isSaved) {
@@ -524,7 +675,14 @@ export class TableDetailComponent implements OnDestroy {
 
         const schema = res.data;
         this.originalColumnNames = new Set(schema.columns.map(c => c.name));
-        this.rootGroup = this.buildGroupFromSchema(schema);
+        this.originalColumnMeta = new Map(schema.columns.map(c => [
+          c.name, { label: (c.label ?? '').trim(), description: (c.description ?? '').trim(), maxLength: c.maxLength ?? null, autoValueKey: autoValueKey(c) }
+        ]));
+        this.ownParentName = schema.parentTableName ?? null;
+        // Etiketi olmayan eski modellerde etiket tablo adıyla önden doldurulur (zorunlu alan);
+        // diff temeli de aynı değer olduğu için kullanıcı değiştirmedikçe yazılmaz.
+        this.originalLabel = schema.label?.trim() || schema.tableName;
+        this.rootGroup = this.buildGroupFromSchema(schema, this.originalLabel);
         this.rootGroup.get('entityName')?.disable();
         this.trackFormChanges();
       },
@@ -536,21 +694,23 @@ export class TableDetailComponent implements OnDestroy {
   }
 
   /** Okunan şemadan kök düğüm FormGroup'u kurar (mevcut kolonlarla doldurulmuş, alt model yok). */
-  private buildGroupFromSchema(schema: PublishedTableSchema): FormGroup {
-    return this.fb.group({
-      entityName: [
-        schema.tableName,
-        [Validators.required, Validators.pattern(/^[A-Z][A-Za-z0-9]*$/)]
-      ],
-      columns:   this.fb.array(schema.columns.map(c => this.buildColumnGroupFromSchema(c))),
-      subModels: this.fb.array([])
-    });
+  private buildGroupFromSchema(schema: PublishedTableSchema, label: string): FormGroup {
+    return this.buildRootGroup(
+      schema.tableName,
+      label,
+      schema.columns.map(c => this.buildColumnGroupFromSchema(c)));
   }
 
-  /** Okunan bir kolon kaydından FormGroup kurar (model-node'un sütun FormGroup yapısıyla aynı). */
+  /**
+   * Okunan bir kolon kaydından FormGroup kurar (model-node'un sütun FormGroup yapısıyla aynı).
+   *
+   * Kayıtlı kolonun adı zaten veritabanında — yeni ad kurallarıyla yeniden doğrulanmaz
+   * (eski bir ad kuralı karşılamıyorsa model hiç kaydedilemez hale gelirdi). Adı
+   * değiştirilemez; popup'ta kilitli açılır.
+   */
   private buildColumnGroupFromSchema(col: PublishedColumnSchema): FormGroup {
     return this.fb.group({
-      columnName:          [col.name, [Validators.required, Validators.pattern(/^[A-Za-z][A-Za-z0-9_]*$/)]],
+      columnName:          [col.name, Validators.required],
       dataType:            [col.dataType],
       isNullable:          [!col.isRequired],
       minLength:           [col.minLength ?? null],
@@ -563,7 +723,15 @@ export class TableDetailComponent implements OnDestroy {
       lookupTargetTable:   [col.lookupTargetTable ?? ''],
       lookupDisplayColumn: [col.lookupDisplayColumn ?? ''],
       label:               [col.label ?? ''],
-      description:         [col.description ?? '']
+      description:         [col.description ?? ''],
+      // image/file: saklanan KB sınırı forma MB olarak gelir (normalizeColumnRules geri çevirir).
+      maxFileSizeMb:       [
+        isFileType(col.dataType) ? kbToMb(col.maxLength) : null,
+        fileLimitMbValidator
+      ],
+      autoValueTrigger:    [col.autoValueTrigger ?? ''],
+      autoValueExpression: [col.autoValueExpression ?? ''],
+      isReadOnly:          [!!col.isReadOnly]
     });
   }
 
@@ -571,29 +739,55 @@ export class TableDetailComponent implements OnDestroy {
 
   openAddColumnModal(): void {
     this.editingColumnIndex = null;
-    this.columnDraft = ModelNodeComponent.buildColumnGroupStatic(this.fb);
+    this.columnDraft = this.buildColumnDraft();
+    this.bindDraftNameSync();
     this.columnModalOpen = true;
   }
 
   openEditColumnModal(index: number): void {
     this.editingColumnIndex = index;
-    this.columnDraft = ModelNodeComponent.buildColumnGroupStatic(this.fb);
-    this.columnDraft.patchValue(this.getColumnGroup(index).getRawValue());
+    this.columnDraft = this.buildColumnDraft();
+    const source = this.getColumnGroup(index).getRawValue();
+    this.columnDraft.patchValue(source);
+
+    // Etiket artık zorunlu — etiketi olmayan eski sütunda ad önden doldurulur.
+    if (!source.label?.trim()) {
+      this.columnDraft.get('label')!.setValue(source.columnName);
+    }
+
+    // Kayıtlı sütunun adı kilitli: onSaveEdit diff'i ada göre çalışır; yeniden
+    // adlandırma "eskisini pasifle + yenisini ekle" demek olur ve veri eski kolonda kalır.
+    if (this.originalColumnNames.has(source.columnName)) {
+      this.columnDraft.get('columnName')!.disable();
+    }
+
     const targetTable = this.columnDraft.get('lookupTargetTable')?.value;
     if (targetTable) {
       this.onLookupTargetChange(targetTable);
     }
+    this.bindDraftNameSync();
     this.columnModalOpen = true;
+  }
+
+  private bindDraftNameSync(): void {
+    this.draftNameSync?.unsubscribe();
+    this.draftNameSync = new LabelNameSync(
+      this.columnDraft.get('label')!, this.columnDraft.get('columnName')!, 'column',
+      () => this.columnDraftContext());
   }
 
   /** Popup'taki sütunu doğrular, geçerliyse ekler/günceller ve popup'ı kapatır. */
   saveColumnModal(): void {
-    if (this.columnDraft.invalid) {
+    // Çakışma kontrolü kardeşlere bağlı; popup açıkken değişmiş olabilirler.
+    this.columnDraft.get('columnName')!.updateValueAndValidity();
+    this.columnDraft.get('maxFileSizeMb')!.updateValueAndValidity();
+    if (this.columnDraft.invalid || this.draftAutoValueError) {
       this.columnDraft.markAllAsTouched();
       return;
     }
 
-    const value = this.columnDraft.getRawValue();
+    // Kurallar tipe göre ayıklanır (tip değişince eski tipin kuralı kalmasın).
+    const value = normalizeColumnRules(this.columnDraft.getRawValue());
     if (this.editingColumnIndex === null) {
       const group = ModelNodeComponent.buildColumnGroupStatic(this.fb);
       group.patchValue(value);
@@ -606,12 +800,98 @@ export class TableDetailComponent implements OnDestroy {
   }
 
   closeColumnModal(): void {
+    this.draftNameSync?.unsubscribe();
+    this.draftNameSync = undefined;
     this.columnModalOpen = false;
     this.editingColumnIndex = null;
   }
 
   onColumnModalBackdropClick(): void {
     this.closeColumnModal();
+  }
+
+  // ─── Sütun popup'ı: otomatik değer ──────────────────────────────────────────
+
+  readonly autoValueTriggers = AUTO_VALUE_TRIGGERS;
+
+  /** Formülde kullanılabilen fonksiyonlar — tıklanınca "AD()" eklenir. */
+  readonly autoValueFunctions = ['IF', 'ROUND', 'CONCAT', 'COALESCE', 'TODAY', 'NOW', 'ADD_DAYS', 'FORMAT_DATE', 'SEQ'];
+
+  /** Formülde referans verilebilecek diğer sütunlar (dosya sütunları hariç). */
+  get autoValueFieldOptions(): { name: string; label: string }[] {
+    return (this.columns.getRawValue() as TreeColumn[])
+      .filter((c, i) => i !== this.editingColumnIndex && c.columnName?.trim() && !isFileType(c.dataType))
+      .map(c => ({ name: c.columnName, label: c.label?.trim() || c.columnName }));
+  }
+
+  /**
+   * Taslak sütunun formül sorunu (yoksa null). Tablonun diğer kurallarıyla birlikte
+   * planlanır — döngü ancak böyle görünür.
+   */
+  get draftAutoValueError(): string | null {
+    const draft = this.columnDraft.getRawValue() as TreeColumn;
+    if (!draft.autoValueTrigger) return null;
+
+    const name = draft.columnName?.trim() || DRAFT_COLUMN;
+    const others = (this.columns.getRawValue() as TreeColumn[])
+      .filter((c, i) => i !== this.editingColumnIndex && c.columnName?.trim());
+    const plan = buildAutoValuePlan([...others, { ...draft, columnName: name }].map(toAutoValueColumn));
+    const issue = plan.issues.find(i => i.column === name);
+    return issue ? this.autoValueIssueText(issue) : null;
+  }
+
+  /** `save` tetiği ve SEQ() salt okunurluğu zorunlu kılar (bkz. normalizeColumnRules). */
+  get draftReadOnlyForced(): boolean {
+    const trigger = this.columnDraft.get('autoValueTrigger')!.value;
+    if (trigger === 'save') return true;
+    const expression: string = this.columnDraft.get('autoValueExpression')!.value ?? '';
+    try {
+      return !!expression.trim() && usesSequence(parseExpression(expression));
+    } catch {
+      return false;
+    }
+  }
+
+  /** İmlecin olduğu yere bir parça ekler; fonksiyonlarda imleç parantezin içine konur. */
+  insertAutoValueToken(input: HTMLTextAreaElement, token: string, caretBack = 0): void {
+    const ctrl = this.columnDraft.get('autoValueExpression')!;
+    const value: string = ctrl.value ?? '';
+    const start = input.selectionStart ?? value.length;
+    const end = input.selectionEnd ?? value.length;
+    ctrl.setValue(value.slice(0, start) + token + value.slice(end));
+    ctrl.markAsTouched();
+    const caret = start + token.length - caretBack;
+    input.focus();
+    input.setSelectionRange(caret, caret);
+  }
+
+  /** "Tarih + sıra no" şablonu: yeni kayıtta tarih + günlük sayaç, ör. 25092026-001. */
+  applySequenceTemplate(): void {
+    this.columnDraft.patchValue({
+      autoValueTrigger: 'create',
+      autoValueExpression: SEQUENCE_TEMPLATE,
+      isReadOnly: true
+    });
+  }
+
+  /** Planlayıcı sorununu okunur metne çevirir. */
+  autoValueIssueText(issue: RuleIssue): string {
+    const t = (key: string, params?: Record<string, string | number>) =>
+      this.languageService.t('table.detail.autoValue.' + key, params);
+    switch (issue.code) {
+      case 'parse':
+        return t('err.parse', {
+          reason: t('parse.' + issue.detail, { arg: issue.arg }),
+          pos: issue.pos >= 0 ? issue.pos + 1 : 1
+        });
+      case 'unknownField':
+      case 'sequenceRef':
+        return t('err.' + issue.code, { field: issue.detail });
+      case 'cycle':
+        return t('err.cycle', { path: issue.detail.split(DRAFT_COLUMN).join(t('thisColumn')) });
+      default:
+        return t('err.' + issue.code);
+    }
   }
 
   // ─── Kılavuz diyaloğu ───────────────────────────────────────────────────────
@@ -686,12 +966,16 @@ export class TableDetailComponent implements OnDestroy {
   private flattenTree(group: FormGroup, parentName: string | null): TreeNode[] {
     const result: TreeNode[] = [];
     const entityName: string = group.get('entityName')?.value ?? '';
+    const label: string | null = group.get('label')?.value?.trim() || null;
     const columnsArr = group.get('columns') as FormArray;
     const subModelsArr = group.get('subModels') as FormArray;
 
-    const cols = (columnsArr?.value ?? []).filter((c: any) => c.columnName?.trim());
+    // Kurallar tipe göre ayıklanır; image/file'da MB girişi maxLength'e (KB) çevrilir.
+    const cols = (columnsArr?.value ?? [])
+      .filter((c: any) => c.columnName?.trim())
+      .map((c: any) => normalizeColumnRules(c));
 
-    result.push({ entityName, parentName, columns: cols });
+    result.push({ entityName, label, parentName, columns: cols });
 
     // Alt modelleri BFS sırasında ekle (parent her zaman önce)
     for (let i = 0; i < (subModelsArr?.length ?? 0); i++) {
@@ -722,6 +1006,7 @@ export class TableDetailComponent implements OnDestroy {
         // addTable — alt model ise parentTableName gönderilir
         return this.publishedTableService.addTable({
           tableName:       node.entityName,
+          label:           node.label,
           description:     `${node.entityName} dinamik modeli`,
           version:         1,
           parentTableName: node.parentName ?? undefined
@@ -736,23 +1021,7 @@ export class TableDetailComponent implements OnDestroy {
       switchMap(() =>
         from(node.columns).pipe(
           concatMap(col =>
-            this.publishedTableService.addMember(
-              node.entityName,
-              col.columnName,
-              col.dataType,
-              !col.isNullable,
-              col.minLength ?? null,
-              col.maxLength ?? null,
-              col.min ?? null,
-              col.max ?? null,
-              col.regex || null,
-              col.regexMessage || null,
-              col.enumValues || null,
-              col.lookupTargetTable || null,
-              col.lookupDisplayColumn || null,
-              col.label || null,
-              col.description || null
-            ).pipe(
+            this.publishedTableService.addMember(this.memberRequest(node.entityName, col)).pipe(
               switchMap(r =>
                 r.success
                   ? of(r)
@@ -766,6 +1035,70 @@ export class TableDetailComponent implements OnDestroy {
     );
   }
 
+  /**
+   * Kaydetmeden önce tüm ağaçtaki adları yeniden doğrular (kardeş çakışmaları bir ad
+   * değişince diğerlerinde kendiliğinden tazelenmez). Geçersizse hataları görünür
+   * yapar ve kullanıcıya nerede olduğunu söyler — hatalı ad backend'e hiç gitmez.
+   */
+  private ensureFormValid(): boolean {
+    revalidateIdentifiers(this.rootGroup);
+    if (this.rootGroup.valid) return this.ensureAutoValuesValid();
+
+    this.rootGroup.markAllAsTouched();
+    this.submitSuccess = false;
+    this.submitMessage = this.languageService.t('table.detail.formInvalid');
+    // Hata kaydedilmemiş bir alt model taslağındaysa o sekme görünür olsun.
+    if (this.subModels.invalid && this.rootGroup.get('label')!.valid && this.entityNameCtrl.valid) {
+      this.activeTab.set('subModels');
+    }
+    return false;
+  }
+
+  /**
+   * Sütunların otomatik değer kurallarını birlikte denetler (döngü yalnız tüm tabloya
+   * bakınca görünür). Sunucu aynı denetimi yapar; burada yakalamak kullanıcıyı yarım
+   * kalmış bir kayıttan korur — ilk hatalı kolon adıyla birlikte gösterilir.
+   */
+  private ensureAutoValuesValid(): boolean {
+    const plan = buildAutoValuePlan(
+      (this.columns.getRawValue() as TreeColumn[])
+        .filter(c => c.columnName?.trim())
+        .map(c => toAutoValueColumn(normalizeColumnRules(c))));
+    const issue = plan.issues[0];
+    if (!issue) return true;
+
+    this.submitSuccess = false;
+    this.submitMessage = this.languageService.t('table.detail.autoValue.saveBlocked', {
+      name: issue.column,
+      reason: this.autoValueIssueText(issue)
+    });
+    return false;
+  }
+
+  /** Bir sütunu addMember isteğine çevirir (oluşturma ve düzenleme akışları ortak). */
+  private memberRequest(typeName: string, col: TreeColumn): AddMemberRequest {
+    return {
+      typeName,
+      memberName: col.columnName,
+      memberType: col.dataType,
+      isRequired: !col.isNullable,
+      minLength: col.minLength ?? null,
+      maxLength: col.maxLength ?? null,
+      min: col.min ?? null,
+      max: col.max ?? null,
+      regex: col.regex || null,
+      regexMessage: col.regexMessage || null,
+      enumValues: col.enumValues || null,
+      lookupTargetTable: col.lookupTargetTable || null,
+      lookupDisplayColumn: col.lookupDisplayColumn || null,
+      label: col.label || null,
+      description: col.description || null,
+      autoValueTrigger: (col.autoValueTrigger || null) as AutoValueTrigger | null,
+      autoValueExpression: col.autoValueExpression || null,
+      isReadOnly: !!col.isReadOnly
+    };
+  }
+
   // ─── ADIM 1: KAYDET (oluşturma modu) ──────────────────────────────────────
 
   /**
@@ -774,10 +1107,7 @@ export class TableDetailComponent implements OnDestroy {
    * Başarı sonrası isSaved = true olur ve Yayınla butonu aktifleşir.
    */
   onSave(): void {
-    if (this.rootGroup.invalid || this.isSaving || this.isPublishing) {
-      this.rootGroup.markAllAsTouched();
-      return;
-    }
+    if (this.isSaving || this.isPublishing || !this.ensureFormValid()) return;
 
     const nodes = this.flattenTree(this.rootGroup, null);
     if (nodes.length === 0) return;
@@ -844,8 +1174,12 @@ export class TableDetailComponent implements OnDestroy {
     // Düzenleme modu kuralı: kök model adı değiştirilemez (loadForEdit ile aynı).
     this.rootGroup.get('entityName')?.disable({ emitEvent: false });
 
-    // Diff temeli: bu kayıtla birlikte sunucuda oluşan kolonlar.
+    // Diff temeli: bu kayıtla birlikte sunucuda oluşan kolonlar ve etiketler.
     this.originalColumnNames = new Set(savedRoot.columns.map(c => c.columnName));
+    this.originalColumnMeta = new Map(savedRoot.columns.map(c => [
+      c.columnName, { label: (c.label ?? '').trim(), description: (c.description ?? '').trim(), maxLength: c.maxLength ?? null, autoValueKey: autoValueKey(c) }
+    ]));
+    this.originalLabel = savedRoot.label;
 
     // Kaydedilen alt modeller artık taslak değildir; formdan düşürülür ve
     // "Alt Modeller" sekmesindeki kayıtlı listeye geçerler (loadTables).
@@ -868,10 +1202,7 @@ export class TableDetailComponent implements OnDestroy {
    * (addTable + addMember) kaydedilir. Model adı (kök) bu modda değiştirilemez.
    */
   onSaveEdit(): void {
-    if (this.rootGroup.invalid || this.isSaving || this.isPublishing || !this.editTypeName) {
-      this.rootGroup.markAllAsTouched();
-      return;
-    }
+    if (this.isSaving || this.isPublishing || !this.editTypeName || !this.ensureFormValid()) return;
 
     const rootName = this.editTypeName;
     const nodes = this.flattenTree(this.rootGroup, null);
@@ -901,20 +1232,72 @@ export class TableDetailComponent implements OnDestroy {
 
     // 2. Eklenen yeni kolonları kaydet
     addedColumns.forEach(col => ops.push(() =>
-      this.publishedTableService.addMember(
-        rootName, col.columnName, col.dataType, !col.isNullable,
-        col.minLength ?? null, col.maxLength ?? null, col.min ?? null, col.max ?? null,
-        col.regex || null, col.regexMessage || null,
-        col.enumValues || null, col.lookupTargetTable || null, col.lookupDisplayColumn || null,
-        col.label || null, col.description || null
-      ).pipe(
+      this.publishedTableService.addMember(this.memberRequest(rootName, col)).pipe(
         switchMap(r => r.success
           ? of(r)
           : throwError(() => new Error(r.message ?? this.languageService.t('table.detail.columnAddFailed', { name: col.columnName }))))
       )
     ));
 
-    // 3. Bu oturumda eklenen tamamen yeni alt modeller — normal oluşturma akışı
+    // 3. Model etiketi değiştiyse yalnız etiketi yaz
+    const newLabel = rootNode.label ?? '';
+    if (newLabel !== (this.originalLabel ?? '')) {
+      ops.push(() => this.publishedTableService.setTableLabel(rootName, newLabel).pipe(
+        switchMap(r => r.success
+          ? of(r)
+          : throwError(() => new Error(r.message ?? this.languageService.t('table.detail.labelUpdateFailed'))))
+      ));
+    }
+
+    // 4. Kayıtlı kolonların etiket/açıklama değişiklikleri (ad kilitli — tip/kural değişmez)
+    const displayChanged = rootNode.columns.filter(c => {
+      const original = this.originalColumnMeta.get(c.columnName);
+      return !!original
+        && ((c.label ?? '').trim() !== original.label || (c.description ?? '').trim() !== original.description);
+    });
+    displayChanged.forEach(col => ops.push(() =>
+      this.publishedTableService.updateMemberDisplay(
+        rootName, col.columnName, col.label || null, col.description || null
+      ).pipe(
+        switchMap(r => r.success
+          ? of(r)
+          : throwError(() => new Error(r.message ?? this.languageService.t('table.detail.columnDisplayUpdateFailed', { name: col.columnName }))))
+      )
+    ));
+
+    // 5. Kayıtlı image/file kolonlarının boyut sınırı değiştiyse yaz (şema değişmez, yayın gerekmez)
+    const fileLimitChanged = rootNode.columns.filter(c => {
+      const original = this.originalColumnMeta.get(c.columnName);
+      return !!original && isFileType(c.dataType) && (c.maxLength ?? null) !== original.maxLength;
+    });
+    fileLimitChanged.forEach(col => ops.push(() =>
+      this.publishedTableService.setMemberFileLimit(rootName, col.columnName, col.maxLength ?? null).pipe(
+        switchMap(r => r.success
+          ? of(r)
+          : throwError(() => new Error(r.message ?? this.languageService.t('table.detail.fileLimitUpdateFailed', { name: col.columnName }))))
+      )
+    ));
+
+    // 5b. Kayıtlı kolonların otomatik değer kuralı değiştiyse yaz (şema değişmez, yayın gerekmez)
+    const autoValueChanged = rootNode.columns.filter(c => {
+      const original = this.originalColumnMeta.get(c.columnName);
+      return !!original && autoValueKey(c) !== original.autoValueKey;
+    });
+    autoValueChanged.forEach(col => ops.push(() =>
+      this.publishedTableService.setMemberAutoValue({
+        typeName: rootName,
+        memberName: col.columnName,
+        trigger: (col.autoValueTrigger || null) as AutoValueTrigger | null,
+        expression: col.autoValueExpression || null,
+        isReadOnly: !!col.isReadOnly
+      }).pipe(
+        switchMap(r => r.success
+          ? of(r)
+          : throwError(() => new Error(r.message ?? this.languageService.t('table.detail.autoValue.updateFailed', { name: col.columnName }))))
+      )
+    ));
+
+    // 6. Bu oturumda eklenen tamamen yeni alt modeller — normal oluşturma akışı
     newChildNodes.forEach(node => ops.push(() => this.saveNode$(node)));
 
     this.isSaving = true;
@@ -952,7 +1335,12 @@ export class TableDetailComponent implements OnDestroy {
         // ve bu oturumda oluşturulan alt modeller artık "yeni" değildir. Tazelenmezse
         // ikinci "Kaydet" aynı kolonları/alt modelleri yeniden eklemeye çalışır.
         this.originalColumnNames = new Set(rootNode.columns.map(c => c.columnName));
+        this.originalColumnMeta = new Map(rootNode.columns.map(c => [
+          c.columnName, { label: (c.label ?? '').trim(), description: (c.description ?? '').trim(), maxLength: c.maxLength ?? null, autoValueKey: autoValueKey(c) }
+        ]));
+        this.originalLabel = rootNode.label;
         this.subModels.clear({ emitEvent: false });
+        this.recordMetadata.invalidate(rootName);
 
         // Yeni alt modeller kayıtlı listeye geçsin (ve lookup hedefi olabilsin).
         if (newChildNodes.length > 0)

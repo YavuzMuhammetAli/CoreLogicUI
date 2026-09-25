@@ -216,22 +216,8 @@
   cursor: pointer;
 }
 
-/* ── Sütun kural alanları (popup içinde) ──────────────────────────────────── */
-
-.col-rules-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-
-.col-rule-field {
-  flex: 0 0 120px;
-
-  &.col-rule-field--wide {
-    flex: 1 1 200px;
-  }
-}
+/* Yan yana alanlar (etiket|ad, kural alanları) global .field-row + .field-head ile
+   dizilir — bkz. corelogic-design skill'i "Yan yana alanlar". Burada yerel hizalama YOK. */
 
 .checkbox-label {
   display: flex;
@@ -241,24 +227,15 @@
   color: var(--fg-2);
   font-weight: 500;
   cursor: pointer;
-  margin: var(--space-3) 0;
+  margin: 0;
 }
 
-/* ── Etiket + kılavuz düğmesi satırı ──────────────────────────────────────────
-   Alan etiketini solda, "i" kılavuz düğmesini sağda tutar. Küçük ipucu
-   baloncukları (app-help-hint) doğrudan <label> içinde yer alır. */
-
-.label-with-help {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-
-  label {
-    margin: 0;
-  }
+/* Üretilen tanımlayıcılar (tablo/alan adı) kod gibi okunur. */
+.mono-input {
+  font-family: var(--font-mono);
 }
 
+/* Etiket satırındaki düğmeler (.field-head içinde): "↺ Etiketten üret", tip kılavuzu. */
 .help-btn {
   flex-shrink: 0;
   gap: var(--space-1);
@@ -317,6 +294,70 @@
   gap: var(--space-2);
   padding: var(--space-4) var(--space-6) var(--space-5);
   border-top: 1px solid var(--border-soft);
+}
+
+/* ── Sütun popup'ı: otomatik değer bölümü ──────────────────────────────────── */
+
+.auto-value {
+  margin: 0;
+  padding: var(--space-4) 0 0;
+  border: 0;
+  border-top: 1px solid var(--border-soft);
+  min-width: 0;                   // fieldset varsayılan min-content genişliği taşmasın
+}
+
+.auto-value__legend {
+  float: left;                    // legend'ı kenarlık çizgisinden kurtarıp akışa sokar
+  width: 100%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg-2);
+
+  + * { clear: both; }
+}
+
+.auto-value__expr {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  resize: vertical;
+  min-height: 3.5rem;
+}
+
+.auto-value__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.auto-value__chips-label {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  margin-right: var(--space-1);
+}
+
+.auto-value__chip {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--fg-2);
+  border-radius: var(--radius-pill);
+  padding: 2px var(--space-2);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: border-color var(--motion-fast) var(--ease-standard),
+              color var(--motion-fast) var(--ease-standard);
+
+  &:hover { border-color: var(--accent); color: var(--accent); }
+  &:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+}
+
+.auto-value__chip--fn {
+  font-family: var(--font-mono);
 }
 
 /* ── Yükleniyor ────────────────────────────────────────────────────────────── */

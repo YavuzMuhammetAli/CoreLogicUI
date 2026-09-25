@@ -4,6 +4,7 @@ import {
   ReactiveFormsModule,
   FormBuilder,
   FormGroup,
+  ValidatorFn,
   Validators
 } from '@angular/forms';
 import {
@@ -28,6 +29,7 @@ import {
   stepFor
 } from '../model-data/model-data.util';
 import { markDirty } from '../../utils/change-detection';
+import { fileSizeError, isFileType, maxFileSizeValidator } from '../../utils/file-size';
 import { LookupPickerComponent } from '../shared/lookup-picker/lookup-picker.component';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { LookupLabelService } from '../../services/lookup-label.service';
@@ -51,6 +53,8 @@ interface ChildModelState {
   formMessage: string | null;
   formSuccess: boolean | null;
   fileNames: Record<string, string>;
+  /** Boyut sınırı nedeniyle reddedilen dosyaların hata metni (kolon → mesaj). */
+  fileErrors: Record<string, string>;
   /** Genişletilmiş satır ID'leri (alt-alt modeller için) */
   expandedRows: Set<number>;
 }
@@ -211,6 +215,7 @@ export class ModelChildrenComponent implements OnInit {
                 formMessage: null,
                 formSuccess: null,
                 fileNames: {},
+                fileErrors: {},
                 expandedRows: new Set<number>()
               };
 
@@ -295,6 +300,7 @@ export class ModelChildrenComponent implements OnInit {
   openAddForm(state: ChildModelState): void {
     state.editingRow = null;
     state.fileNames = {};
+    state.fileErrors = {};
     state.recordForm = this.buildForm(state, null);
     state.showForm = true;
     state.formMessage = null;
@@ -304,6 +310,7 @@ export class ModelChildrenComponent implements OnInit {
   openEditForm(state: ChildModelState, row: DataRow): void {
     state.editingRow = row;
     state.fileNames = {};
+    state.fileErrors = {};
     state.recordForm = this.buildForm(state, row);
     state.showForm = true;
     state.formMessage = null;
@@ -322,7 +329,9 @@ export class ModelChildrenComponent implements OnInit {
       // Ham ISO tarih değeri doğrudan bağlanırsa datetime-local kutusu onu sessizce
       // atar ve alan BOŞ açılır; kullanıcı dokununca tarayıcı o anki zamanı yazar.
       const existing = row ? (toInputValue(col.dataType, fieldValue(row, col.columnName)) ?? '') : '';
-      const validators = col.isNullable ? [] : [Validators.required];
+      const validators: ValidatorFn[] = col.isNullable ? [] : [Validators.required];
+      // image/file: boyut sınırı (maxLength KB, yoksa platform tavanı)
+      if (isFileType(col.dataType)) validators.push(maxFileSizeValidator(col.dataType, col.maxLength));
       controls[col.columnName] = [existing, validators];
     }
     return this.fb.group(controls);
@@ -393,10 +402,20 @@ export class ModelChildrenComponent implements OnInit {
   }
 
   /** Dosya seçimi → base64'e çevir → form control'e yaz */
-  onFileSelected(event: Event, colName: string, state: ChildModelState): void {
+  onFileSelected(event: Event, col: PublishedColumn, state: ChildModelState): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
+    const colName = col.columnName;
+
+    // Boyut, dosya OKUNMADAN kontrol edilir; aşıyorsa önceki değer korunur.
+    const sizeError = fileSizeError(file, col.dataType, col.maxLength, this.languageService.lang());
+    if (sizeError) {
+      state.fileErrors[colName] = this.languageService.t(sizeError.key, { label: this.colLabel(col), ...sizeError.params });
+      input.value = '';
+      return;
+    }
+    delete state.fileErrors[colName];
 
     state.fileNames[colName] = file.name;
     const reader = new FileReader();

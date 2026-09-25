@@ -1,6 +1,10 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, forwardRef, Input, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy, ChangeDetectorRef, Component, forwardRef, Input, inject,
+  OnChanges, OnDestroy, SimpleChanges, signal
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
+  AbstractControl,
   ReactiveFormsModule,
   FormArray,
   FormBuilder,
@@ -15,6 +19,12 @@ import { DatatypeHelpComponent } from '../shared/datatype-help/datatype-help.com
 import { HelpTopicId } from '../shared/datatype-help/datatype-help.data';
 import { RegexPreset } from '../shared/datatype-help/regex-presets';
 import { markDirty } from '../../utils/change-detection';
+import { Subscription } from 'rxjs';
+import {
+  IdentifierContext, IdentifierKind, LABEL_MAX_LENGTH, IDENTIFIER_MAX_LENGTH, LabelNameSync,
+  identifierErrorMessage, identifierValidator, sanitizeIdentifierInputEvent
+} from '../../utils/identifier';
+import { MIN_FILE_LIMIT_MB, fileLimitMbValidator, isFileType, maxFileMbFor } from '../../utils/file-size';
 
 /** Maksimum model ağacı derinliği (kök = 1). */
 export const MAX_DEPTH = 4;
@@ -25,6 +35,7 @@ export const MAX_DEPTH = 4;
  * `<app-model-node>` kendini özyinelemeli olarak render eder (max 4 derinlik).
  *
  * FormGroup yapısı:
+ *   label        : string  (kullanıcı dostu ad — entityName bundan üretilir)
  *   entityName   : string
  *   columns      : FormArray  (columnName, dataType, isNullable, ...)
  *   subModels    : FormArray  (her eleman yine bu FormGroup yapısında)
@@ -46,13 +57,13 @@ export const MAX_DEPTH = 4;
   styleUrls: ['./model-node.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ModelNodeComponent implements OnInit {
+export class ModelNodeComponent implements OnChanges, OnDestroy {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly languageService = inject(LanguageService);
 
-  /** Dışarıdan gelen FormGroup: entityName + columns + subModels. */
+  /** Dışarıdan gelen FormGroup: label + entityName + columns + subModels. */
   @Input({ required: true }) group!: FormGroup;
 
   /** Kök = 1, max = 4. 4'te "Alt Model Oluştur" butonu gizlenir. */
@@ -68,6 +79,20 @@ export class ModelNodeComponent implements OnInit {
   @Input() availableTables: string[] = [];
 
   readonly MAX_DEPTH = MAX_DEPTH;
+  readonly IDENTIFIER_MAX_LENGTH = IDENTIFIER_MAX_LENGTH;
+  readonly LABEL_MAX_LENGTH = LABEL_MAX_LENGTH;
+
+  // ─── Etiket → ad senkronu ───────────────────────────────────────────────────
+
+  /** Ad kontrolü → senkron. Model adı ve her kolon adı için bir tane. */
+  private readonly syncs = new Map<AbstractControl, LabelNameSync>();
+  /** Kolon değerleri değişince kardeş adların çakışma durumu yeniden hesaplanır. */
+  private columnsSub?: Subscription;
+
+  readonly identifierErrorMessage = identifierErrorMessage;
+  readonly isFileType = isFileType;
+  readonly maxFileMbFor = maxFileMbFor;
+  readonly MIN_FILE_LIMIT_MB = MIN_FILE_LIMIT_MB;
 
   /** Dropdown seçenekleri — value backend'e gönderilen anahtar, label kullanıcıya gösterilen ad. */
   primitiveTypes: { value: string; label: string }[] = [
@@ -116,7 +141,56 @@ export class ModelNodeComponent implements OnInit {
 
   constructor(private fb: FormBuilder, private publishedTableService: PublishedTableService) {}
 
-  ngOnInit(): void {}
+  /**
+   * Alt model listesi `track $index` ile render edildiği için bir düğüm silinince
+   * aynı component örneğine başka bir group gelebilir — senkronlar group'a göre yeniden kurulur.
+   */
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['group']) this.bindSyncs();
+  }
+
+  ngOnDestroy(): void {
+    this.unbindSyncs();
+  }
+
+  private bindSyncs(): void {
+    this.unbindSyncs();
+
+    // Model adı, ağaçtaki diğer modellerin yanında kayıtlı tablolarla da çakışmamalı.
+    this.entityNameCtrl.setValidators([
+      Validators.required,
+      identifierValidator('model', () => ({ taken: this.availableTables }))
+    ]);
+    this.entityNameCtrl.updateValueAndValidity({ emitEvent: false });
+    this.syncs.set(this.entityNameCtrl, new LabelNameSync(
+      this.group.get('label')!, this.entityNameCtrl, 'model', () => ({ taken: this.availableTables })));
+
+    this.columns.controls.forEach(c => this.bindColumnSync(c as FormGroup));
+
+    this.columnsSub = this.columns.valueChanges.subscribe(() =>
+      this.columns.controls.forEach(c => c.get('columnName')!.updateValueAndValidity({ emitEvent: false })));
+  }
+
+  private bindColumnSync(col: FormGroup): void {
+    const nameCtrl = col.get('columnName')!;
+    this.syncs.set(nameCtrl, new LabelNameSync(col.get('label')!, nameCtrl, 'column'));
+  }
+
+  private unbindSyncs(): void {
+    this.syncs.forEach(s => s.unsubscribe());
+    this.syncs.clear();
+    this.columnsSub?.unsubscribe();
+  }
+
+  /** Ad alanına yazılırken Türkçe karakter/boşluk anında temizlenir. */
+  onNameInput(event: Event, control: AbstractControl, kind: IdentifierKind): void {
+    sanitizeIdentifierInputEvent(event, control, kind);
+  }
+
+  /** "↺ Etiketten üret" — elle değiştirilmiş adı etiketten yeniden üretir. */
+  regenerateName(control: AbstractControl): void {
+    this.syncs.get(control)?.regenerate();
+  }
 
   /** Bir kolonun sayısal Min/Max kural alanlarının gösterilip gösterilmeyeceği. */
   isNumericType(dataType: string): boolean {
@@ -198,10 +272,15 @@ export class ModelNodeComponent implements OnInit {
   // ─── Sütun yönetimi ─────────────────────────────────────────────────────────
 
   addColumn(): void {
-    this.columns.push(this.buildColumnGroup());
+    const col = this.buildColumnGroup();
+    this.columns.push(col);
+    this.bindColumnSync(col);
   }
 
   removeColumn(index: number): void {
+    const nameCtrl = this.getColumnGroup(index).get('columnName')!;
+    this.syncs.get(nameCtrl)?.unsubscribe();
+    this.syncs.delete(nameCtrl);
     this.columns.removeAt(index);
   }
 
@@ -209,14 +288,20 @@ export class ModelNodeComponent implements OnInit {
     return this.columns.at(index) as FormGroup;
   }
 
-  /** Boş bir kolon FormGroup'u oluşturur. */
-  static buildColumnGroupStatic(fb: FormBuilder): FormGroup {
+  /**
+   * Boş bir kolon FormGroup'u oluşturur.
+   *
+   * Ad doğrulayıcısı bağlamını (kardeş kolonlar, model adı, üst model) form ağacından
+   * kendisi bulur. Ağaca bağlı olmayan bir taslak için (ör. sütun popup'ı) `extra`
+   * ile bağlam dışarıdan verilir.
+   */
+  static buildColumnGroupStatic(fb: FormBuilder, extra?: () => IdentifierContext): FormGroup {
     return fb.group({
-      columnName:          ['', [Validators.required, Validators.pattern(/^[A-Za-z][A-Za-z0-9_]*$/)]],
+      columnName:          ['', [Validators.required, identifierValidator('column', extra)]],
       dataType:            ['string'],
       isNullable:          [true],
-      // UI metadata: kullanıcı dostu gösterim — opsiyonel
-      label:               [''],
+      // UI metadata: kullanıcı dostu gösterim — ad bundan üretilir, zorunlu
+      label:               ['', [Validators.required, Validators.maxLength(LABEL_MAX_LENGTH)]],
       description:         [''],
       minLength:           [null],
       maxLength:           [null],
@@ -228,6 +313,13 @@ export class ModelNodeComponent implements OnInit {
       enumValues:          [''],
       lookupTargetTable:   [''],
       lookupDisplayColumn: [''],
+      // image/file: boyut sınırı (MB) — yalnız formda; kaydederken maxLength'e (KB) çevrilir
+      // (utils/column-rules.ts#normalizeColumnRules).
+      maxFileSizeMb:       [null, fileLimitMbValidator],
+      // Otomatik değer kuralı (utils/auto-value): '' = kural yok
+      autoValueTrigger:    [''],
+      autoValueExpression: [''],
+      isReadOnly:          [false],
     });
   }
 
@@ -252,13 +344,14 @@ export class ModelNodeComponent implements OnInit {
     return this.subModels.at(index) as FormGroup;
   }
 
-  /** Boş bir model düğümü FormGroup'u oluşturur (entityName + columns + subModels). */
-  static buildModelGroupStatic(fb: FormBuilder, initialEntityName = 'YeniModel'): FormGroup {
+  /**
+   * Boş bir model düğümü FormGroup'u oluşturur (label + entityName + columns + subModels).
+   * Ad boş başlar; kullanıcı etiketi yazdıkça üretilir.
+   */
+  static buildModelGroupStatic(fb: FormBuilder): FormGroup {
     const group = fb.group({
-      entityName: [
-        initialEntityName,
-        [Validators.required, Validators.pattern(/^[A-Z][A-Za-z0-9]*$/)]
-      ],
+      label:      ['', [Validators.required, Validators.maxLength(LABEL_MAX_LENGTH)]],
+      entityName: ['', [Validators.required, identifierValidator('model')]],
       columns:   fb.array([]),
       subModels: fb.array([]),
     });
@@ -270,7 +363,7 @@ export class ModelNodeComponent implements OnInit {
   }
 
   private buildModelGroup(): FormGroup {
-    return ModelNodeComponent.buildModelGroupStatic(this.fb, 'AltModel');
+    return ModelNodeComponent.buildModelGroupStatic(this.fb);
   }
 
   // ─── Yardımcılar ────────────────────────────────────────────────────────────

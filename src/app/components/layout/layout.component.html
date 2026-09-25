@@ -153,11 +153,11 @@
             class="nav-item"
             [routerLink]="['/models', t.typeName]"
             routerLinkActive="active"
-            [attr.aria-label]="'layout.tableAria' | t:{ name: t.typeName }">
+            [attr.aria-label]="'layout.tableAria' | t:{ name: t.label || t.typeName }">
             <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
             </svg>
-            {{ t.typeName }}
+            {{ t.label || t.typeName }}
           </a>
         } @empty {
           <span class="nav-empty-hint">{{ 'layout.noAccessibleTables' | t }}</span>

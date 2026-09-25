@@ -295,7 +295,7 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
     samples: [
       sample('image', 1, 'urun-4512.jpg', true),
       sample('image', 2, 'urun-4512.pdf', false),
-      sample('image', 3, '(8 MB PNG)', false)
+      sample('image', 3, '(60 MB PNG)', false)
     ],
     notesKey: 'help.type.image.notes'
   },

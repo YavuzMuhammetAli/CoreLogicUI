@@ -34,27 +34,56 @@
 
   <div [formGroup]="group">
 
-    <!-- Model adı -->
-    <div class="field">
-      <label [attr.for]="'entity-' + depth">
-        {{ 'model.node.modelNameLabel' | t }} <span class="req">*</span>
-      </label>
-      <input
-        [id]="'entity-' + depth"
-        type="text"
-        formControlName="entityName"
-        [attr.placeholder]="'model.node.modelNamePlaceholder' | t"
-        required
-        [attr.aria-invalid]="entityNameCtrl.touched && entityNameCtrl.invalid"
-        aria-describedby="entity-help">
-      <span id="entity-help" class="field-help">
-        {{ 'model.node.modelNameHelp' | t:{ example: 'OrderItem' } }}
-      </span>
-      @if (entityNameCtrl.touched && entityNameCtrl.hasError('required')) {
-        <span class="field-error" role="alert">{{ 'model.node.modelNameRequired' | t }}</span>
-      } @else if (entityNameCtrl.touched && entityNameCtrl.hasError('pattern')) {
-        <span class="field-error" role="alert">{{ 'model.node.modelNamePattern' | t }}</span>
-      }
+    <!-- Model etiketi | model adı — yan yana (.field-row) -->
+    <div class="field-row">
+      <!-- Model etiketi — kullanıcı bunu yazar, model adı bundan üretilir -->
+      <div class="field">
+        <label [attr.for]="'entity-label-' + depth">
+          {{ 'model.node.modelLabelLabel' | t }} <span class="req">*</span>
+        </label>
+        <input
+          [id]="'entity-label-' + depth"
+          type="text"
+          class="input"
+          formControlName="label"
+          [attr.maxlength]="LABEL_MAX_LENGTH"
+          [attr.placeholder]="'model.node.modelLabelPlaceholder' | t"
+          required
+          [attr.aria-invalid]="group.get('label')!.touched && group.get('label')!.invalid">
+        @if (group.get('label')!.touched && group.get('label')!.hasError('required')) {
+          <span class="field-error" role="alert">{{ 'table.detail.labelRequired' | t }}</span>
+        }
+      </div>
+  
+      <!-- Model adı — etiketten üretilir, elle değiştirilebilir -->
+      <div class="field">
+        <div class="field-head">
+          <label [attr.for]="'entity-' + depth">
+            {{ 'table.detail.tableNameLabel' | t }} <span class="req">*</span>
+          </label>
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm help-btn"
+            (click)="regenerateName(entityNameCtrl)" [attr.aria-label]="'table.detail.regenerateFromLabel' | t" [attr.title]="'table.detail.regenerateFromLabel' | t">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+          </button>
+        </div>
+        <input
+          [id]="'entity-' + depth"
+          type="text"
+          class="input"
+          formControlName="entityName"
+          [attr.maxlength]="IDENTIFIER_MAX_LENGTH"
+          (input)="onNameInput($event, entityNameCtrl, 'model')"
+          [attr.placeholder]="'model.node.modelNamePlaceholder' | t"
+          required
+          [attr.aria-invalid]="entityNameCtrl.touched && entityNameCtrl.invalid"
+          [attr.aria-describedby]="'entity-help-' + depth">
+        <span [id]="'entity-help-' + depth" class="field-help">{{ 'table.detail.tableNameHelp' | t }}</span>
+        @if (entityNameCtrl.touched && identifierErrorMessage(entityNameCtrl); as err) {
+          <span class="field-error" role="alert">{{ err.key | t:err.params }}</span>
+        }
+      </div>
     </div>
 
     <!-- Sütunlar bölümü -->
@@ -76,121 +105,130 @@
           @for (col of columns.controls; track $index) {
             <div class="column-row" [formGroupName]="$index">
 
-              <!-- Sütun adı -->
-              <div class="field col-name-field">
-                <label [attr.for]="'col-name-' + depth + '-' + $index">
-                  {{ 'model.node.nameLabel' | t }} <span class="req">*</span>
-                  <app-help-hint [text]="'help.hint.columnName' | t" />
-                </label>
-                <input
-                  [id]="'col-name-' + depth + '-' + $index"
-                  type="text"
-                  formControlName="columnName"
-                  [attr.placeholder]="'model.node.namePlaceholder' | t"
-                  required
-                  [attr.aria-invalid]="getColumnGroup($index).get('columnName')!.touched && getColumnGroup($index).get('columnName')!.invalid">
-                @if (getColumnGroup($index).get('columnName')!.touched && getColumnGroup($index).get('columnName')!.hasError('required')) {
-                  <span class="field-error" role="alert">{{ 'model.node.nameRequired' | t }}</span>
-                } @else if (getColumnGroup($index).get('columnName')!.touched && getColumnGroup($index).get('columnName')!.hasError('pattern')) {
-                  <span class="field-error" role="alert">{{ 'model.node.namePattern' | t }}</span>
-                }
-              </div>
-
-              <!-- Etiket (opsiyonel) — UI'da Ad yerine gösterilecek insan-dostu isim -->
-              <div class="field col-label-field">
-                <label [attr.for]="'col-label-' + depth + '-' + $index">
-                  {{ 'model.node.labelLabel' | t }}
-                  <app-help-hint [text]="'help.hint.label' | t" />
-                </label>
-                <input
-                  [id]="'col-label-' + depth + '-' + $index"
-                  type="text"
-                  class="input"
-                  formControlName="label"
-                  [attr.placeholder]="'model.node.labelPlaceholder' | t">
-                <span class="field-help">{{ 'model.node.labelHelp' | t }}</span>
-              </div>
-
-              <!-- Açıklama (opsiyonel) — detay sayfasında "i" baloncuğunda gösterilir -->
-              <div class="field col-description-field">
-                <label [attr.for]="'col-description-' + depth + '-' + $index">
-                  {{ 'model.node.descriptionLabel' | t }}
-                  <app-help-hint [text]="'help.hint.description' | t" />
-                </label>
-                <input
-                  [id]="'col-description-' + depth + '-' + $index"
-                  type="text"
-                  class="input"
-                  formControlName="description"
-                  [attr.placeholder]="'model.node.descriptionPlaceholder' | t">
-              </div>
-
-              <!-- Veri tipi -->
-              <div class="field col-type-field">
-                <div class="label-with-help">
-                  <label [attr.for]="'col-type-' + depth + '-' + $index">{{ 'model.node.typeLabel' | t }}</label>
-                  <button
-                    type="button"
-                    class="btn btn-ghost btn-sm help-btn"
-                    (click)="openTypeHelp($index)"
-                    [attr.aria-label]="'help.openTypeHelp' | t">
-                    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
-                    </svg>
-                    {{ 'help.openTypeHelp' | t }}
-                  </button>
-                </div>
-                <select [id]="'col-type-' + depth + '-' + $index" formControlName="dataType">
-                  <optgroup [label]="'model.node.primitiveGroup' | t">
-                    @for (type of primitiveTypes; track type.value) {
-                      <option [value]="type.value">{{ type.label }}</option>
-                    }
-                  </optgroup>
-                  <optgroup [label]="'model.node.referenceGroup' | t">
-                    @for (type of referenceTypes; track type.value) {
-                      <option [value]="type.value">{{ type.label }}</option>
-                    }
-                  </optgroup>
-                </select>
-              </div>
-
-              <!-- Nullable -->
-              <div class="col-nullable-field">
-                <label class="checkbox-label" [attr.for]="'col-null-' + depth + '-' + $index">
+              <!-- Etiket | Alan adı -->
+              <div class="field-row">
+                <!-- Etiket (zorunlu) — kullanıcı bunu yazar, alan adı bundan üretilir -->
+                <div class="field col-label-field">
+                  <label [attr.for]="'col-label-' + depth + '-' + $index">
+                    {{ 'model.node.labelLabel' | t }} <span class="req">*</span>
+                    <app-help-hint [text]="'help.hint.label' | t" />
+                  </label>
                   <input
-                    [id]="'col-null-' + depth + '-' + $index"
-                    type="checkbox"
-                    formControlName="isNullable">
-                  {{ 'model.node.nullableLabel' | t }}
-                  <app-help-hint [text]="'help.hint.nullable' | t" />
-                </label>
+                    [id]="'col-label-' + depth + '-' + $index"
+                    type="text"
+                    class="input"
+                    formControlName="label"
+                    [attr.maxlength]="LABEL_MAX_LENGTH"
+                    required
+                    [attr.aria-invalid]="col.get('label')!.touched && col.get('label')!.invalid"
+                    [attr.placeholder]="'model.node.labelPlaceholder' | t">
+                  @if (col.get('label')!.touched && col.get('label')!.hasError('required')) {
+                    <span class="field-error" role="alert">{{ 'table.detail.labelRequired' | t }}</span>
+                  }
+                </div>
+  
+                <!-- Alan adı — etiketten üretilir, elle değiştirilebilir -->
+                <div class="field col-name-field">
+                  <div class="field-head">
+                    <label [attr.for]="'col-name-' + depth + '-' + $index">
+                      {{ 'table.detail.fieldNameLabel' | t }} <span class="req">*</span>
+                      <app-help-hint [text]="'help.hint.columnName' | t" />
+                    </label>
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-sm help-btn"
+                      (click)="regenerateName(col.get('columnName')!)" [attr.aria-label]="'table.detail.regenerateFromLabel' | t" [attr.title]="'table.detail.regenerateFromLabel' | t">
+                      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+                    </button>
+                  </div>
+                  <input
+                    [id]="'col-name-' + depth + '-' + $index"
+                    type="text"
+                    class="input"
+                    formControlName="columnName"
+                    [attr.maxlength]="IDENTIFIER_MAX_LENGTH"
+                    (input)="onNameInput($event, col.get('columnName')!, 'column')"
+                    [attr.placeholder]="'model.node.namePlaceholder' | t"
+                    required
+                    [attr.aria-invalid]="col.get('columnName')!.touched && col.get('columnName')!.invalid">
+                  @if (col.get('columnName')!.touched && identifierErrorMessage(col.get('columnName')); as err) {
+                    <span class="field-error" role="alert">{{ err.key | t:err.params }}</span>
+                  }
+                </div>
+              </div>
+
+              <!-- Açıklama | Veri tipi -->
+              <div class="field-row">
+                <!-- Açıklama (opsiyonel) — detay sayfasında "i" baloncuğunda gösterilir -->
+                <div class="field col-description-field">
+                  <label [attr.for]="'col-description-' + depth + '-' + $index">
+                    {{ 'model.node.descriptionLabel' | t }}
+                    <app-help-hint [text]="'help.hint.description' | t" />
+                  </label>
+                  <input
+                    [id]="'col-description-' + depth + '-' + $index"
+                    type="text"
+                    class="input"
+                    formControlName="description"
+                    [attr.placeholder]="'model.node.descriptionPlaceholder' | t">
+                </div>
+  
+                <!-- Veri tipi -->
+                <div class="field col-type-field">
+                  <div class="field-head">
+                    <label [attr.for]="'col-type-' + depth + '-' + $index">{{ 'model.node.typeLabel' | t }}</label>
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-sm help-btn"
+                      (click)="openTypeHelp($index)"
+                      [attr.aria-label]="'help.openTypeHelp' | t">
+                      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+                      </svg>
+                      {{ 'help.openTypeHelp' | t }}
+                    </button>
+                  </div>
+                  <select [id]="'col-type-' + depth + '-' + $index" formControlName="dataType"
+                          (change)="col.get('maxFileSizeMb')!.updateValueAndValidity()">
+                    <optgroup [label]="'model.node.primitiveGroup' | t">
+                      @for (type of primitiveTypes; track type.value) {
+                        <option [value]="type.value">{{ type.label }}</option>
+                      }
+                    </optgroup>
+                    <optgroup [label]="'model.node.referenceGroup' | t">
+                      @for (type of referenceTypes; track type.value) {
+                        <option [value]="type.value">{{ type.label }}</option>
+                      }
+                    </optgroup>
+                  </select>
+                </div>
               </div>
 
               <!-- String'e özel: MinLength, MaxLength, Regex -->
               @if (getColumnGroup($index).get('dataType')!.value === 'string') {
-                <div class="col-rules-row">
-                  <div class="field col-rule-field">
+                <div class="field-row">
+                  <div class="field">
                     <label [attr.for]="'col-minlen-' + depth + '-' + $index">
                       {{ 'model.node.minLength' | t }}
                       <app-help-hint [text]="'help.hint.minLength' | t" />
                     </label>
                     <input [id]="'col-minlen-' + depth + '-' + $index" type="number" class="input" formControlName="minLength" placeholder="0" min="0">
                   </div>
-                  <div class="field col-rule-field">
+                  <div class="field">
                     <label [attr.for]="'col-maxlen-' + depth + '-' + $index">
                       {{ 'model.node.maxLength' | t }}
                       <app-help-hint [text]="'help.hint.maxLength' | t" />
                     </label>
                     <input [id]="'col-maxlen-' + depth + '-' + $index" type="number" class="input" formControlName="maxLength" placeholder="255" min="0">
                   </div>
-                  <div class="field col-rule-field col-rule-field--wide">
+                  <div class="field">
                     <label [attr.for]="'col-regex-' + depth + '-' + $index">
                       {{ 'model.node.regexPattern' | t }}
                       <app-help-hint [text]="'help.hint.regex' | t" />
                     </label>
                     <input [id]="'col-regex-' + depth + '-' + $index" type="text" class="input" formControlName="regex" [attr.placeholder]="'model.node.regexPatternPlaceholder' | t">
                   </div>
-                  <div class="field col-rule-field col-rule-field--wide">
+                  <div class="field">
                     <label [attr.for]="'col-regexmsg-' + depth + '-' + $index">
                       {{ 'model.node.regexMessage' | t }}
                       <app-help-hint [text]="'help.hint.regexMessage' | t" />
@@ -202,15 +240,15 @@
 
               <!-- Sayısal tiplere özel: Min, Max -->
               @if (isNumericType(getColumnGroup($index).get('dataType')!.value)) {
-                <div class="col-rules-row">
-                  <div class="field col-rule-field">
+                <div class="field-row">
+                  <div class="field">
                     <label [attr.for]="'col-min-' + depth + '-' + $index">
                       {{ 'model.node.minValue' | t }}
                       <app-help-hint [text]="'help.hint.min' | t" />
                     </label>
                     <input [id]="'col-min-' + depth + '-' + $index" type="number" class="input" formControlName="min" [attr.placeholder]="'model.node.minValuePlaceholder' | t">
                   </div>
-                  <div class="field col-rule-field">
+                  <div class="field">
                     <label [attr.for]="'col-max-' + depth + '-' + $index">
                       {{ 'model.node.maxValue' | t }}
                       <app-help-hint [text]="'help.hint.max' | t" />
@@ -222,8 +260,8 @@
 
               <!-- Enum'a özel: izinli değerler -->
               @if (getColumnGroup($index).get('dataType')!.value === 'enum') {
-                <div class="col-rules-row">
-                  <div class="field col-rule-field col-rule-field--wide">
+                <div class="field-row">
+                  <div class="field field--full">
                     <label [attr.for]="'col-enumvalues-' + depth + '-' + $index">
                       {{ 'model.node.allowedValues' | t }}
                       <app-help-hint [text]="'help.hint.enumValues' | t" />
@@ -241,8 +279,8 @@
 
               <!-- Lookup'a özel: hedef model + gösterilecek kolon -->
               @if (getColumnGroup($index).get('dataType')!.value === 'lookup') {
-                <div class="col-rules-row">
-                  <div class="field col-rule-field">
+                <div class="field-row">
+                  <div class="field">
                     <label [attr.for]="'col-lookuptarget-' + depth + '-' + $index">
                       {{ 'model.node.lookupTarget' | t }}
                       <app-help-hint [text]="'help.hint.lookupTarget' | t" />
@@ -257,7 +295,7 @@
                       }
                     </select>
                   </div>
-                  <div class="field col-rule-field">
+                  <div class="field">
                     <label [attr.for]="'col-lookupdisplay-' + depth + '-' + $index">
                       {{ 'model.node.lookupDisplayColumn' | t }}
                       <app-help-hint [text]="'help.hint.lookupDisplayColumn' | t" />
@@ -274,16 +312,57 @@
                 </div>
               }
 
-              <!-- Sütun sil -->
-              <button
-                type="button"
-                class="btn btn-ghost btn-sm col-remove-btn"
-                (click)="removeColumn($index)"
-                [attr.aria-label]="'model.node.removeColumnAria' | t:{ index: $index + 1 }">
-                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
-              </button>
+              <!-- Image/File'a özel: dosya boyutu sınırı -->
+              @if (isFileType(getColumnGroup($index).get('dataType')!.value)) {
+                <div class="field-row">
+                  <div class="field">
+                    <label [attr.for]="'col-maxfile-' + depth + '-' + $index">
+                      {{ 'table.detail.maxFileSize' | t }}
+                      <app-help-hint [text]="'help.hint.maxFileSize' | t:{ max: maxFileMbFor(getColumnGroup($index).get('dataType')!.value) }" />
+                    </label>
+                    <input
+                      [id]="'col-maxfile-' + depth + '-' + $index"
+                      type="number"
+                      class="input"
+                      formControlName="maxFileSizeMb"
+                      step="0.1"
+                      [attr.min]="MIN_FILE_LIMIT_MB"
+                      [attr.max]="maxFileMbFor(getColumnGroup($index).get('dataType')!.value)"
+                      [attr.placeholder]="maxFileMbFor(getColumnGroup($index).get('dataType')!.value)"
+                      [attr.aria-invalid]="col.get('maxFileSizeMb')!.invalid">
+                    @if (col.get('maxFileSizeMb')!.invalid) {
+                      <span class="field-error" role="alert">
+                        {{ 'table.detail.maxFileSizeRange' | t:{ min: MIN_FILE_LIMIT_MB, max: maxFileMbFor(getColumnGroup($index).get('dataType')!.value) } }}
+                      </span>
+                    } @else {
+                      <span class="field-help">{{ 'table.detail.maxFileSizeHelp' | t:{ max: maxFileMbFor(getColumnGroup($index).get('dataType')!.value) } }}</span>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- Alt satır: solda Nullable, en sağda Sil -->
+              <div class="col-row-footer">
+                <label class="checkbox-label" [attr.for]="'col-null-' + depth + '-' + $index">
+                  <input
+                    [id]="'col-null-' + depth + '-' + $index"
+                    type="checkbox"
+                    formControlName="isNullable">
+                  {{ 'model.node.nullableLabel' | t }}
+                  <app-help-hint [text]="'help.hint.nullable' | t" />
+                </label>
+
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm col-remove-btn"
+                  (click)="removeColumn($index)"
+                  [attr.aria-label]="'model.node.removeColumnAria' | t:{ index: $index + 1 }">
+                  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                  </svg>
+                  {{ 'table.detail.delete' | t }}
+                </button>
+              </div>
 
             </div>
           }

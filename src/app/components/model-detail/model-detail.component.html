@@ -195,6 +195,10 @@
                       <span class="info-bubble__tip" role="tooltip">{{ col.description }}</span>
                     </span>
                   }
+                  @if (autoValueRule(col); as rule) {
+                    <span class="auto-value-tag" [title]="rule.expression"
+                      [attr.aria-label]="'model.detail.autoValue.badgeAria' | t:{ expression: rule.expression }">ƒx</span>
+                  }
                   <span class="col-type-tag">{{ col.dataType }}</span>
                 </label>
 
@@ -222,8 +226,12 @@
                 } @else if (inputTypeFor(col.dataType) === 'file') {
                   <input [id]="'edit-' + col.columnName" type="file"
                     [disabled]="isColumnLocked(col)"
-                    (change)="onEditFileSelected($event, col.columnName)"
+                    [attr.accept]="col.dataType === 'image' ? 'image/*' : null"
+                    (change)="onEditFileSelected($event, col)"
                     style="display:block;margin-bottom:var(--space-2)">
+                  @if (fileErrors[col.columnName]; as fileErr) {
+                    <span class="field-error" role="alert">{{ fileErr }}</span>
+                  }
                   @if (getEditControl(col.columnName).value) {
                     @if (isImage(getEditControl(col.columnName).value)) {
                       <img [src]="imageSrc(getEditControl(col.columnName).value)" [attr.alt]="'model.detail.preview' | t"
@@ -246,6 +254,11 @@
                     [attr.required]="!col.isNullable || null"
                     [attr.aria-invalid]="getEditControl(col.columnName).touched && getEditControl(col.columnName).invalid"
                     [attr.aria-describedby]="parentFieldError(col) ? 'edit-err-' + col.columnName : null">
+                }
+
+                <!-- SEQ: numara kayıt anında sunucuda verilir -->
+                @if (isAutoValuePending(col)) {
+                  <span class="field-help">{{ 'model.detail.autoValue.pending' | t }}</span>
                 }
 
                 <!-- Şema kurallarından (regex/uzunluk/aralık) türetilen istemci doğrulaması -->

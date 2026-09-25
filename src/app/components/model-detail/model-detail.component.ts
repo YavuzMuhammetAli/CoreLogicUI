@@ -53,6 +53,9 @@ import {
   stepFor
 } from '../model-data/model-data.util';
 import { markDirty } from '../../utils/change-detection';
+import { AutoValueFormBinding } from '../../utils/auto-value/auto-value-form';
+import { AutoValueRule, buildAutoValuePlan } from '../../utils/auto-value/auto-value';
+import { fileSizeError, formatFileSize } from '../../utils/file-size';
 
 type DataRow = Record<string, unknown>;
 
@@ -164,6 +167,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   editMsg: string | null = null;
   editOk: boolean | null = null;
   private editFileNames: Record<string, string> = {};
+  /** Seçilip boyut sınırı nedeniyle reddedilen dosyaların hata metni (kolon → mesaj). */
+  fileErrors: Record<string, string> = {};
 
   // Alt modeller (sekmeler)
   childModelNames: string[] = [];
@@ -174,6 +179,12 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
   /** Üst modelin şema kuralları (regex/uzunluk/aralık) — istemci doğrulaması için. */
   private parentRules = new Map<string, PublishedColumnSchema>();
+
+  /**
+   * Üst forma bağlı otomatik değer kuralları. Form her yeniden kurulduğunda (kurallar
+   * gelince, akış sonrası) eskisi bırakılıp yenisi bağlanır.
+   */
+  private autoValues: AutoValueFormBinding | null = null;
 
   /** Toplu kayıt sonrası kaydedilemeyenlerin listesi (satırlar ekranda KALIR, bu yalnızca özet) */
   childSaveErrors: string[] = [];
@@ -219,6 +230,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
+    this.autoValues?.stop();
   }
 
   // ─── Util delegasyonları ─────────────────────────────────────────────────────
@@ -285,6 +297,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.editMsg = null;
     this.editOk = null;
     this.editFileNames = {};
+    this.fileErrors = {};
     this.childModelNames = [];
     this.activeTab = '';
     this.allModels = [];
@@ -292,6 +305,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.loadingChildren = false;
     this.childSaveErrors = [];
     this.parentRules = new Map();
+    this.autoValues?.stop();
+    this.autoValues = null;
     this.closeRecordDialog();
     this.visibleParentColumnNames = null;
     this.wfState = null;
@@ -517,6 +532,61 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return validatorsFor(col, this.parentRules.get(col.columnName));
   }
 
+  // ─── Otomatik değer ─────────────────────────────────────────────────────────
+
+  /** Kolonların otomatik değer kurallarını (şemadan) yeni kurulmuş forma bağlar. */
+  private bindAutoValues(isNew: boolean): void {
+    this.autoValues?.stop();
+    this.autoValues = null;
+    if (!this.editForm) return;
+
+    const plan = buildAutoValuePlan(this.parentColumns.map(col => {
+      const rule = this.parentRules.get(col.columnName);
+      return {
+        name: col.columnName,
+        dataType: col.dataType,
+        autoValueTrigger: rule?.autoValueTrigger,
+        autoValueExpression: rule?.autoValueExpression,
+        isReadOnly: rule?.isReadOnly
+      };
+    }));
+    if (plan.rules.length === 0) return;
+    this.autoValues = new AutoValueFormBinding(this.editForm, plan, isNew).start();
+  }
+
+  /** Kolonun otomatik değer kuralı — etiketteki ƒx işareti için. */
+  autoValueRule(col: PublishedColumn): AutoValueRule | undefined {
+    return this.autoValues?.rule(col.columnName);
+  }
+
+  /** Numarası kayıtta verilecek alan (SEQ) — "Kaydedince atanır" ipucu. */
+  isAutoValuePending(col: PublishedColumn): boolean {
+    return !!this.autoValues?.isPending(col.columnName) && !this.getEditControl(col.columnName)?.value;
+  }
+
+  /**
+   * Kayıttan sonra sunucunun hesapladığı değerleri (SEQ numarası, kaydederken çalışan
+   * ve salt okunur kurallar) forma yansıtır. Kural yoksa istek atılmaz.
+   * openEditMode mesajı sıfırladığı için kayıt sonucu mesajı korunur.
+   */
+  private reloadAfterAutoValues(): void {
+    if (!this.autoValues || this.recordId <= 0) return;
+    const typeName = this.typeName;
+    const id = this.recordId;
+
+    this.publishedModel.get(typeName, id).pipe(markDirty(this.cdr)).subscribe({
+      next: res => {
+        if (typeName !== this.typeName || id !== this.recordId || !res.success || !res.data) return;
+        const { editMsg, editOk } = this;
+        this.record = res.data as DataRow;
+        this.openEditMode();
+        this.editMsg = editMsg;
+        this.editOk = editOk;
+      },
+      error: () => { /* okunamazsa formdaki (istemci) değerler kalır */ }
+    });
+  }
+
   /** Mevcut kayıt ile düzenleme formunu oluştur */
   openEditMode(): void {
     if (!this.model || !this.record) return;
@@ -529,6 +599,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
         controls[col.columnName] = [v, this.parentValidators(col)];
       }
       this.editForm = this.fb.group(controls);
+      this.bindAutoValues(false);
       // Form kurallar gelince YENİDEN kuruluyor; kilit her kurulumda uygulanmalı,
       // yoksa ikinci kurulum disabled durumunu siler.
       this.applyWorkflowLock();
@@ -538,24 +609,30 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.editMsg = null;
     this.editOk = null;
     this.editFileNames = {};
+    this.fileErrors = {};
     this.showEditForm = true;
   }
 
   /** Yeni kayıt modu için boş form oluştur */
   private buildNewForm(): void {
     const build = () => {
-      const previous = this.editForm?.value ?? {};
+      // getRawValue: salt okunur (disabled) otomatik alanların değeri de taşınsın
+      const previous = this.editForm?.getRawValue() ?? {};
       const controls: Record<string, unknown> = {};
       for (const col of this.parentColumns) {
         controls[col.columnName] = [previous[col.columnName] ?? '', this.parentValidators(col)];
       }
       this.editForm = this.fb.group(controls);
+      // Açılış kuralları yalnız BOŞ alanlara yazar — kurallar gelip form yeniden
+      // kurulduğunda kullanıcının o ana dek yazdıkları ezilmez.
+      this.bindAutoValues(true);
     };
     build();
     this.loadParentRules(build);
     this.editMsg = null;
     this.editOk = null;
     this.editFileNames = {};
+    this.fileErrors = {};
     this.showEditForm = true;
   }
 
@@ -577,7 +654,18 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     if (c.errors['maxlength']) return this.languageService.t('model.detail.fieldMaxLength', { label, max: rule?.maxLength ?? 0 });
     if (c.errors['min']) return this.languageService.t('model.detail.fieldMin', { label, min: rule?.min ?? 0 });
     if (c.errors['max']) return this.languageService.t('model.detail.fieldMax', { label, max: rule?.max ?? 0 });
+    if (c.errors['maxFileSize']) return this.fileSizeErrorText(label, c.errors['maxFileSize']);
     return null;
+  }
+
+  /** Validator'ın `maxFileSize` hatasını okunur metne çevirir. */
+  private fileSizeErrorText(label: string, err: { limitKb: number; actualBytes: number }): string {
+    const lang = this.languageService.lang();
+    return this.languageService.t('model.detail.fieldMaxFileSize', {
+      label,
+      actual: formatFileSize(err.actualBytes, lang),
+      limit: formatFileSize(err.limitKb * 1024, lang)
+    });
   }
 
   /**
@@ -593,6 +681,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.editLoading = true;
     this.editMsg = null;
     this.editOk = null;
+    // "Kaydedilirken" kuralları — sunucu da yeniden hesaplar; bu yalnız anında gösterim.
+    this.autoValues?.runSave();
 
     if (this.isNew) {
       // Yeni kayıt: ana kayıt + tüm bekleyen alt ağaç TEK istekte, TEK transaction'da.
@@ -646,7 +736,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   private switchToEditMode(newId: number): void {
     this.isNew = false;
     this.recordId = newId;
-    this.record = { ...(this.editForm?.value ?? {}), ID: newId } as DataRow;
+    this.record = { ...(this.editForm?.getRawValue() ?? {}), ID: newId } as DataRow;
     this.location.replaceState(`/models/${this.typeName}/${newId}`);
   }
 
@@ -681,9 +771,22 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  onEditFileSelected(event: Event, colName: string): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
+  onEditFileSelected(event: Event, col: PublishedColumn): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
     if (!file) return;
+    const colName = col.columnName;
+
+    // Boyut, dosya OKUNMADAN kontrol edilir; aşıyorsa önceki değer korunur.
+    const sizeError = fileSizeError(
+      file, col.dataType, this.parentRules.get(colName)?.maxLength ?? col.maxLength, this.languageService.lang());
+    if (sizeError) {
+      this.fileErrors[colName] = this.languageService.t(sizeError.key, { label: this.colLabel(col), ...sizeError.params });
+      input.value = '';
+      return;
+    }
+    delete this.fileErrors[colName];
+
     this.editFileNames[colName] = file.name;
     const reader = new FileReader();
     reader.onload = () => {
@@ -1221,7 +1324,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
    * @param existingRootId Doluysa kök yeniden EKLENMEZ (mevcut kayda alt kayıt ekleme).
    */
   private saveTree(existingRootId: number | null): void {
-    const rootNode = createStagedNode(this.typeName, this.editForm?.value ?? {});
+    // getRawValue: salt okunur (disabled) otomatik alanlar da gitsin; `.value` onları atar.
+    const rootNode = createStagedNode(this.typeName, this.editForm?.getRawValue() ?? {});
     for (const [childTypeName, state] of this.tabStates) {
       if (state.staged.length > 0) rootNode.children.set(childTypeName, state.staged);
     }
@@ -1355,8 +1459,12 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     for (const col of this.parentColumns) {
       const control = form.get(col.columnName);
       if (!control) continue;
-      if (locked.has(col.columnName)) control.disable({ emitEvent: false });
-      else if (control.disabled) control.enable({ emitEvent: false });
+      // Salt okunur otomatik alanlar kilitten bağımsız olarak hep kapalı kalır.
+      if (locked.has(col.columnName) || this.autoValues?.isReadOnly(col.columnName)) {
+        control.disable({ emitEvent: false });
+      } else if (control.disabled) {
+        control.enable({ emitEvent: false });
+      }
     }
   }
 
@@ -1430,12 +1538,15 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.pendingStart = null;
 
     if (ok && code && this.recordId > 0) {
-      this.startWorkflow(code);
-    } else if (ok && !this.wfState && this.recordId > 0) {
+      this.startWorkflow(code);            // sonrasında kayıt zaten yeniden okunur
+      return;
+    }
+    if (ok && !this.wfState && this.recordId > 0) {
       // Yeni kayıt az önce oluştu: artık kaydedilmiş kaydın durumu (başlatılabilir
       // akışlar) okunabilir.
       this.loadWorkflowState();
     }
+    if (ok) this.reloadAfterAutoValues();
   }
 
   private startWorkflow(code: string): void {
@@ -1475,6 +1586,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     }
 
     const values = buildRecordValues(state.editableColumns, this.editForm.getRawValue(), this.parentColumns);
+    // Adım kolonu olmayan hesaplanan alanlar gönderilmez; sunucu onları kendisi hesaplar.
 
     this.taskService.saveRecord({
       entityType: this.typeName,
@@ -1489,6 +1601,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
         if (res.success) {
           this.record = { ...this.record, ...values };
           this.editForm?.markAsPristine();
+          this.reloadAfterAutoValues();
         }
       },
       error: err => {

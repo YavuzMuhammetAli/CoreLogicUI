@@ -86,36 +86,20 @@
   gap: var(--space-2);
 }
 
+/* Bir sütun kartı: alanlar global .field-row satırlarında (Etiket | Alan Adı,
+   Açıklama | Tip, kural alanları), en altta Nullable + Sil. Hizalama global
+   sınıflardan gelir — bkz. corelogic-design skill'i "Yan yana alanlar". */
 .column-row {
-  display: grid;
-  grid-template-columns: 1fr 140px auto auto;
-  gap: var(--space-2);
-  align-items: end;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   padding: var(--space-3);
   background: var(--surface);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
 }
 
-.col-type-field select {
-  min-height: 42px;
-}
-
-/* ── Etiket + kılavuz düğmesi satırı ──────────────────────────────────────────
-   Etiket solda, "i" kılavuz düğmesi sağda. Küçük ipucu baloncukları
-   (app-help-hint) doğrudan <label> içinde durur. */
-
-.label-with-help {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-
-  label {
-    margin: 0;
-  }
-}
-
+/* Etiket satırındaki düğmeler (.field-head içinde): "↺ Etiketten üret", tip kılavuzu. */
 .help-btn {
   flex-shrink: 0;
   gap: var(--space-1);
@@ -126,34 +110,26 @@
   }
 }
 
-.col-nullable-field {
-  padding-bottom: var(--space-1);
+/* Solda Nullable, en sağda Sil. */
+.col-row-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-soft);
+}
+
+.checkbox-label {
+  margin: 0;
 }
 
 .col-remove-btn {
   color: var(--muted);
-  padding: 0 var(--space-2);
-  min-height: 42px;
 
   &:hover {
     color: var(--danger);
     background: var(--danger-bg);
-  }
-}
-
-/* Kural alanları — string/sayısal tiplere özel */
-.col-rules-row {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.col-rule-field {
-  flex: 0 0 120px;
-
-  &.col-rule-field--wide {
-    flex: 1 1 200px;
   }
 }
 

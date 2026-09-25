@@ -83,6 +83,16 @@ export class RecordMetadataService {
     return cached;
   }
 
+  /**
+   * Bir tipin şema kurallarını önbellekten düşürür. Tasarımcı kolon kuralı (ör. otomatik
+   * değer) kaydettikten sonra çağırır; aksi halde açık oturumdaki formlar eski kuralı
+   * sayfa yenilenene kadar kullanmaya devam ederdi.
+   */
+  invalidate(typeName: string): void {
+    this.rulesCache.delete(typeName);
+    this.metaCache.delete(typeName);
+  }
+
   /** Bu tipin doğrudan alt model adları. */
   childTypeNames$(typeName: string): Observable<string[]> {
     let cached = this.childCache.get(typeName);

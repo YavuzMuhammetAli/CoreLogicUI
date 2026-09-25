@@ -114,21 +114,7 @@
 }
 
 /* ── Form alanları (ilişki popup'ı) ───────────────────────────────────────── */
-
-.col-rules-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-
-.col-rule-field {
-  flex: 0 0 120px;
-
-  &.col-rule-field--wide {
-    flex: 1 1 200px;
-  }
-}
+/* Yan yana alanlar global .field-row ile dizilir (src/styles.scss). */
 
 .checkbox-label {
   display: flex;
@@ -141,17 +127,7 @@
   margin: var(--space-3) 0;
 }
 
-.label-with-help {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-
-  label {
-    margin: 0;
-  }
-}
-
+/* Etiket + düğme satırı global .field-head'dir (src/styles.scss). */
 .help-btn {
   flex-shrink: 0;
   gap: var(--space-1);

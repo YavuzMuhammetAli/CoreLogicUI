@@ -16,7 +16,7 @@
         }
 
         <div class="field">
-          <div class="label-with-help">
+          <div class="field-head">
             <label for="rel-type">
               {{ 'relationship.fieldType' | t }}
               <app-help-hint placement="below" [text]="'help.hint.relType' | t" />
@@ -92,9 +92,9 @@
           }
         </div>
 
-        <div class="col-rules-row">
+        <div class="field-row">
           @if (!draftIsManyToMany) {
-            <div class="field col-rule-field">
+            <div class="field">
               <label for="rel-fk">
                 {{ 'relationship.fieldForeignKey' | t }}
                 <app-help-hint placement="below" [text]="'help.hint.relForeignKey' | t" />
@@ -103,7 +103,7 @@
               <span class="field-help">{{ 'relationship.fieldForeignKeyHelp' | t }}</span>
             </div>
           } @else {
-            <div class="field col-rule-field">
+            <div class="field">
               <label for="rel-join">
                 {{ 'relationship.fieldJoinTable' | t }}
                 <app-help-hint placement="below" [text]="'help.hint.relJoinTable' | t" />
@@ -113,7 +113,7 @@
             </div>
           }
 
-          <div class="field col-rule-field">
+          <div class="field">
             <label for="rel-order">
               {{ 'relationship.fieldOrder' | t }}
               <app-help-hint placement="below" [text]="'help.hint.relOrder' | t" />

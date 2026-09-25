@@ -142,7 +142,10 @@ CoreLogicUI-master/
         │   ├── change-detection.ts              # markDirty(cdr) — OnPush'ta asenkron veri sonrası CD tetikler
         │   ├── cron-builder.ts                  # Saf: sıklık seçimi ↔ cron ifadesi + sonraki koşu önizlemesi (spec'li)
         │   ├── ai-import.mapper.ts              # Saf: AI önerisi → servis payload'ı (düzleştirme/doğrulama/ad→ID, spec'li)
-        │   └── locale-format.ts                 # Aktif dile göre sayı/tarih biçimlendirme (sabit 'tr-TR' KULLANMA)
+        │   ├── identifier.ts                    # Model/alan adı: etiket → ad üretimi (Türkçe harf), ad doğrulayıcıları, LabelNameSync (spec'li)
+        │   ├── locale-format.ts                 # Aktif dile göre sayı/tarih biçimlendirme (sabit 'tr-TR' KULLANMA)
+        │   └── auto-value/                      # Otomatik değer: formül dili (expression.ts), planlayıcı (auto-value.ts),
+        │                                        #   form bağlayıcısı (auto-value-form.ts) + backend'le ORTAK vektörler (spec'li)
         ├── guards/
         │   ├── auth.guard.ts                  # JWT varlığını kontrol eder
         │   ├── admin.guard.ts                  # Yalnızca admin — PermissionService.ensureLoaded() + isAdmin()
@@ -273,6 +276,7 @@ Tüm servisler `@Injectable({ providedIn: 'root' })`, `inject(HttpClient)` (veya
 | `AuditLogService` | `/AuditLog` — filtrelenmiş denetim kayıtları (admin-only) |
 | `UserAdminService` | `/User` — getall/create/update/setActive/resetPassword/setAdmin/delete (admin-only) |
 | `RelationshipService` | `/publish/models/{id}/relationships` (GET/POST/PUT/DELETE), `/validate-graph`, `/preview` |
+| `PublishedTableService` (otomatik değer) | `addMember` (+ `autoValueTrigger/autoValueExpression/isReadOnly`), `setMemberAutoValue` (JSON gövde) — `addMember` artık options nesnesi alır |
 | `ParameterService` | `/Parameter` — `backup/schedule`, `backup/history`, `backup/run`, `mail`, `mail/test`, `mail/templates/{kind}` (+ `/preview`, `/test`), `subscription/*` (admin-only) |
 | `AiService` | `/Ai` — `conversations`, `chat` (SSE), `proposals/{id}/status`, `usage` (admin-only) |
 | `AiImportService` | Kendi ucu YOK — AI önerilerini `PublishedTableService`/`RelationshipService`/`ReportService`/`DashboardService` üzerinden aktarır |
@@ -332,8 +336,8 @@ tasarım sistemi kullanır (artık açık/koyu tema desteği dahil). Detaylar i�
 ### Global Sınıflar (styles.scss'te tanımlı, Bootstrap değil)
 - Butonlar: `.btn` + `.btn-primary/-secondary/-danger/-ghost/-sm`
 - Kart: `.panel` / `.panel-head` / `.panel-body` / `.panel-actions`
-- Form: `.field` / `.input` / `.field-error` / `.field-help` / `.checkbox-label`
-- Tablo: `.data-table` / `.td-actions`
+- Form: `.field` / `.input` / `.field-error` / `.field-help` / `.checkbox-label` / `.field-row` / `.field-head` / `.field--full` (yan yana alanlar)
+- Tablo: `.data-table` / `.td-actions` / `.td-muted`
 - Etiket: `.badge` (+ `-success/-warn/-danger/-meta`), `.eyebrow`
 - Bildirim: `.alert` (+ `-success/-danger/-warn/-info`)
 - Yardımcı: `.spinner`, `.empty-state`, `.stack`, `.flow`, `.cluster`, `.sr-only`
@@ -535,6 +539,56 @@ Akış **`manual`** tetiklenir: formu oluşturan kişi ya yalnız **Kaydet**'e b
   bitince aynı kayıt için yeni bir onUpdate akışı başlardı.
 - Görevlinin kaydı açabilmesi için modelde **Read** izni gerekir (görev tabanlı okuma izni yok).
 
+## Otomatik Değer Atama
+
+Kolon popup'ındaki (`/build/:typeName`) **Otomatik Değer** bölümünde bir alana formül bağlanır;
+alan kendiliğinden dolar. Kural `PublishedTableMember.AutoValueTrigger/AutoValueExpression`
+(+ zaten var olan `IsReadOnly`) olarak durur — tenant migrasyonu **`021`** (ayrıca
+`AutoValueSequence` sayaç tablosu). Şema değişmez, yeniden yayın gerekmez.
+
+| Tetik | İstemci (anında) | Sunucu — yeni kayıt | Sunucu — güncelleme |
+|---|---|---|---|
+| `create` Form açıldığında | yeni formda, alan boşsa | salt okunursa hep, değilse boşsa | dokunulmaz |
+| `change` Alan değiştiğinde | formüldeki alan değişince (zincirleme) | salt okunursa hep, değilse boşsa | salt okunursa yeniden hesaplanır |
+| `save` Kaydedilirken | kaydetmeden hemen önce | hesaplanır | hesaplanır |
+
+**Sözdizimi (Excel benzeri):** alan `[Ad]`, metin `'…'`, `+ - * / %`, `&` (birleştirme),
+`= != < <= > >=`, `AND OR NOT`; fonksiyonlar `IF COALESCE MIN MAX ROUND ABS CONCAT UPPER LOWER
+TRIM LEFT RIGHT LEN TODAY NOW FORMAT_DATE ADD_DAYS SEQ`. Boş alan aritmetikte 0 sayılır; formüldeki
+alanların **hepsi** boşsa sonuç boştur; sıfıra bölme vb. hata → alan boş kalır.
+
+**Sıra numarası:** `TODAY('ddMMyyyy') & '-' & SEQ(3, TODAY('ddMMyyyy'))` → `25092026-001`
+(popup'taki "Tarih + sıra no" düğmesi). `SEQ(genişlik, kapsam)` numarayı **yalnız sunucu**, kaydı
+ekleyen transaction içinde verir (`MERGE … HOLDLOCK`) — geri alınan kayıt numara yakmaz. Bu yüzden
+SEQ yalnız `create` ile kullanılır, her zaman salt okunurdur ve başka formül SEQ kolonuna bakamaz.
+Formda "Kaydedince atanır" görünür; kayıttan sonra form sunucudan yeniden okunur.
+
+**İki implementasyon, tek davranış.** Formül istemcide (`utils/auto-value/expression.ts`) ve
+sunucuda (`Business/Concrete/Dynamic/AutoValue/AutoValueExpression.cs`) ayrı yazılmıştır ve
+**bit düzeyinde aynı sonucu** vermelidir. `auto-value.vectors.json` iki depoda birebir kopyadır
+(`Tests/Business.Tests/AutoValue/`); iki taraf da onu koşar. Davranış değiştiren her düzenleme
+iki dosyaya birlikte yapılır ve vektör eklenir. Elle eşitlenen tuzaklar: yuvarlama `Math.Round`
+değil `roundAway` (1.005 → 1.01), sayı → metin en kısa gidiş-dönüş + üstel yazım açılır,
+`-0` → `0`, `\d` yerine `[0-9]`, `trim` yalnız ASCII boşluk + NBSP.
+
+- **Salt okunur** hedefler formda `disable` edilir → kaydeden yollar `getRawValue()` kullanır
+  (`.value` onları atar). Sunucu bu kolonları istemci payload'ından kopyalamaz
+  (`IAutoValueApplier.ProtectedColumns`) — tarayıcıdan değer basmak işe yaramaz.
+- **İş akışı kilidi:** görevli yalnız adım kolonlarını gönderir; bağımlı hesaplanan alanları
+  `WorkflowRecordWriter` sunucuda yeniden yazar.
+- **`TODAY()/NOW()`** sunucuda "Turkey Standard Time" ile hesaplanır (`AutoValueClock`) —
+  tenant saat dilimi ayarı yok; UTC'de koşan sunucu gece yarısından sonra farklı gün üretmesin.
+- **Doğrulama:** `addMember` yalnız kolonun kendi kuralını denetler (kolonlar tek tek eklenir,
+  formül henüz eklenmemiş kolona bakabilir); bilinmeyen alan/döngü tasarımcıda (kaydetmeden
+  önce tüm tablo) ve `POST /Published/setMemberAutoValue`'da denetlenir. Çalışma anında hatalı
+  kural kaydı engellemez, yalnız çalışmaz.
+- Tasarımcı kural kaydedince `RecordMetadataService.invalidate(typeName)` — aksi halde açık
+  oturumdaki formlar eski kuralı kullanırdı.
+
+> Kapsam dışı: alt kayıtlara referans (`SUM([Kalemler.Tutar])`), başka modelin kolonları,
+> AI önerilerinde otomatik değer. `PublishedModelManager.Update` hâlâ `DynamicEntityValidator`'ı
+> çağırmıyor (önceden var olan boşluk).
+
 ## Yapay Zeka Modülü (G4)
 
 `/ai` (adminGuard) — kullanıcı işini düz metinle anlatır, Claude karşılığında **model
@@ -712,6 +766,8 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
 - **Onay diyaloğu** — native `confirm()` KULLANMA; `shared/confirm-dialog` component'ini bağla (tasarım sistemi + tema + i18n uyumlu, test edilebilir)
 - **Locale-duyarlı biçimlendirme** — sayı/tarih için `Intl.*Format`'ı sabit `'tr-TR'` ile kurma; `utils/locale-format.ts` üzerinden aktif dile göre al
 - **Ardışık paneller** — `.panel`'in kendi `margin`'i YOK; birden çok panel render eden konteyneri `.flow` ile sarmala, yoksa kartlar yapışık görünür. Panelleri `grid/flex` + `gap` ile dizen konteynerlerde (`.widget-grid`, `.kpi-strip`, `.model-grid`, `.plan-grid`) kullanma
+- **Yan yana form alanları** — yalnızca global `.field-row` (+ düğmeli etiket için `.field-head`, tam satır için `.field--full`). Etiket satırları sabit yükseklikte olduğundan input'lar hizalı kalır. Component SCSS'inde yerel satır sınıfı (`flex: 0 0 120px`, `align-items: end`) YAZMA — detay: `corelogic-design` skill'i "Yan yana alanlar"
+- **Tablo hücreleri** — `<td>`'ye `display` değiştiren sınıf (`muted-hint`, `cluster`, `stack`…) VERME: hücre tablo hücresi olmaktan çıkar, komşusuyla tek hücreye birleşir (düğmeler alt satıra düşer). Soluk metin için `.td-muted`, aksiyonlar için `<td class="td-actions">` (sağa yaslı)
 - **Sayfa başlığı** — her ekranın üstünde tek satır: `.page-header` içinde `<span class="eyebrow">` + sayfanın/modelin adı, sağda aksiyonlar. Büyük `h1` başlık ve açıklama paragrafı KULLANILMAZ (`.page-title`/`.page-subtitle` kaldırıldı)
 - **Türkçe kod yorumları** — backend ile tutarlı; UI metinleri çeviri sistemi üzerinden gelir
 
