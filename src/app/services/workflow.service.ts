@@ -33,6 +33,17 @@ export class WorkflowService {
       .pipe(tap(() => this.invalidateListCache()));
   }
 
+  /**
+   * Yayınlanmış sürümden aynı Code'la düzenlenebilir taslak açar; taslağın ID'sini
+   * döner. O Code için taslak zaten varsa sunucu yenisini üretmez, onu döner.
+   * Taslak yayınlanınca bir sonraki sürüm olur (v2, v3…).
+   */
+  newVersion(id: number): Observable<DataResponseModel<number>> {
+    return this.http.post<DataResponseModel<number>>(
+      `${this.baseUrl}/new-version`, null, { params: new HttpParams().set('id', id) })
+      .pipe(tap(() => this.invalidateListCache()));
+  }
+
   list(): Observable<ListResponseModel<WorkflowDefinition>> {
     return this.http.get<ListResponseModel<WorkflowDefinition>>(`${this.baseUrl}/list`);
   }

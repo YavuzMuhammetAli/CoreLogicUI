@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { WorkflowService } from '../../services/workflow.service';
 import { WorkflowDefinition } from '../../models/workflow.model';
 import { LanguageService } from '../../services/language.service';
@@ -30,6 +30,7 @@ export class WorkflowListComponent implements OnInit {
   private readonly languageService = inject(LanguageService);
   private readonly notification = inject(NotificationService);
   private readonly permissionService = inject(PermissionService);
+  private readonly router = inject(Router);
 
   workflows: WorkflowDefinition[] = [];
   loading = false;
@@ -57,7 +58,18 @@ export class WorkflowListComponent implements OnInit {
       next: res => {
         this.loading = false;
         if (res.success) {
-          this.workflows = res.data ?? [];
+          const all = res.data ?? [];
+
+          // Taslağın hangi sürüm olacağını göstermek için Code başına en yüksek
+          // yayın numarası — arşiv satırları gizlenmeden ÖNCE hesaplanır.
+          this.maxVersionByCode = new Map();
+          for (const w of all) {
+            this.maxVersionByCode.set(w.code, Math.max(this.maxVersionByCode.get(w.code) ?? 0, w.version));
+          }
+
+          // Arşivlenmiş sürümler listede tutulmaz; her yayında liste büyürdü.
+          // Geçmiş /workflows/versions/:code ekranında.
+          this.workflows = all.filter(w => w.status !== 'Archived');
         } else {
           this.loadError = res.message ?? this.languageService.t('workflow.list.loadFailed');
         }
@@ -87,6 +99,45 @@ export class WorkflowListComponent implements OnInit {
         this.notification.warn(err?.error?.message ?? this.languageService.t('workflow.list.serverError'));
       }
     });
+  }
+
+  /**
+   * Yayınlanmış akıştan düzenlenebilir taslak açar ve tasarımcıya götürür.
+   * Açık taslak varsa sunucu onu döndüğü için çift tıklama çift taslak üretmez.
+   */
+  startNewVersion(workflow: WorkflowDefinition): void {
+    this.busyId = workflow.id;
+
+    this.workflowService.newVersion(workflow.id).pipe(markDirty(this.cdr)).subscribe({
+      next: res => {
+        this.busyId = null;
+        if (res.success && res.data) {
+          this.router.navigate(['/workflows', res.data, 'edit']);
+        } else {
+          this.notification.warn(res.message ?? this.languageService.t('workflow.list.loadFailed'));
+        }
+      },
+      error: err => {
+        this.busyId = null;
+        this.notification.warn(err?.error?.message ?? this.languageService.t('workflow.list.serverError'));
+      }
+    });
+  }
+
+  /** Code başına en yüksek yayın numarası (arşiv dahil). */
+  private maxVersionByCode = new Map<string, number>();
+
+  /** Sürüm sütunu: yayınlanmışta "v2", yeni sürüm taslağında "v3 taslak". */
+  versionLabel(workflow: WorkflowDefinition): string {
+    if (workflow.version > 0) return 'v' + workflow.version;
+
+    const next = (this.maxVersionByCode.get(workflow.code) ?? 0) + 1;
+    return this.languageService.t('workflow.list.draftVersion', { n: next });
+  }
+
+  /** O Code için açık taslak varsa "Yeni Sürüm" yerine taslağın "Düzenle"si yeterli. */
+  hasDraft(code: string): boolean {
+    return this.workflows.some(w => w.code === code && w.status === 'Draft');
   }
 
   askDelete(workflow: WorkflowDefinition): void {

@@ -40,6 +40,8 @@ export const WORKFLOW_I18N: Translations = {
     en: 'The workflow {name} will be deactivated. Running processes continue on their own versions.'
   },
   'workflow.list.disabledBadge': { tr: 'Kapalı', en: 'Disabled' },
+  'workflow.list.newVersion': { tr: 'Yeni Sürüm', en: 'New Version' },
+  'workflow.list.draftVersion': { tr: 'v{n} taslak', en: 'v{n} draft' },
 
   // ── workflow-build ────────────────────────────────────────────────────────
   'workflow.build.titleNew': { tr: 'Yeni İş Akışı', en: 'New Workflow' },
@@ -252,6 +254,7 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.versions.colVersion': { tr: 'Sürüm', en: 'Version' },
   'workflow.versions.colStatus': { tr: 'Durum', en: 'Status' },
   'workflow.versions.colCreated': { tr: 'Oluşturma', en: 'Created' },
+  'workflow.versions.view': { tr: 'Görüntüle', en: 'View' },
   'workflow.versions.empty': { tr: 'Bu akışın sürüm geçmişi yok.', en: 'This workflow has no version history.' },
   'workflow.versions.hint': {
     tr: 'Yayınlanan her sürüm değişmezdir; çalışan süreçler başladıkları sürümde devam eder.',

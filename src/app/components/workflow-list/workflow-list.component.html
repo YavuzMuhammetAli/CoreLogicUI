@@ -66,7 +66,7 @@
                     {{ 'workflow.status.' + workflow.status | t }}
                   </span>
                 </td>
-                <td>{{ workflow.version > 0 ? 'v' + workflow.version : '—' }}</td>
+                <td>{{ versionLabel(workflow) }}</td>
                 <td>{{ workflow.runningInstanceCount || '—' }}</td>
                 <td>
                   <div class="td-actions" (click)="$event.stopPropagation()">
@@ -79,6 +79,17 @@
                               (click)="publish(workflow)">
                         {{ 'workflow.list.publish' | t }}
                       </button>
+                    } @else if (workflow.status === 'Published') {
+                      <a [routerLink]="['/workflows', workflow.id, 'edit']" class="btn btn-ghost btn-sm">
+                        {{ 'workflow.versions.view' | t }}
+                      </a>
+                      @if (!hasDraft(workflow.code)) {
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                [disabled]="busyId === workflow.id"
+                                (click)="startNewVersion(workflow)">
+                          {{ 'workflow.list.newVersion' | t }}
+                        </button>
+                      }
                     }
                     <button type="button" class="btn btn-ghost btn-sm wf-danger"
                             [disabled]="busyId === workflow.id"
