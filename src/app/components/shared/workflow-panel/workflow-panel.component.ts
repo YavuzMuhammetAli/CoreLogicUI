@@ -2,10 +2,8 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject, 
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { WorkflowInstanceService } from '../../../services/workflow-task.service';
-import { WorkflowService } from '../../../services/workflow.service';
-import { WorkflowDefinition, WorkflowInstance } from '../../../models/workflow.model';
+import { WorkflowInstance } from '../../../models/workflow.model';
 import { LanguageService } from '../../../services/language.service';
-import { NotificationService } from '../../../services/notification.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { markDirty } from '../../../utils/change-detection';
 import { formatDate } from '../../../utils/locale-format';
@@ -13,9 +11,10 @@ import { formatDate } from '../../../utils/locale-format';
 /**
  * Kayıt detayındaki "Süreç" paneli — akışı iş verisine bağlayan yer.
  *
- * Manuel başlatılabilen akışlar burada listelenir; otomatik tetiklenenler
- * (onCreate/onUpdate) buton olarak SUNULMAZ, çünkü onları elle başlatmak
- * çift süreç yaratma girişimidir ve sunucu zaten reddeder.
+ * Yalnızca süreç GEÇMİŞİNİ gösterir. Başlatma ve adım butonları kaydın
+ * başlığında, Kaydet'in yanındadır (model-detail) — orada kayıt kaydedilip
+ * aynı tıkta başlatılabiliyor ve sıradan kullanıcı da görebiliyor (buradaki
+ * eski liste admin'e özel tanım ucuna dayanıyordu).
  *
  * Panel workflow modülü kurulu olmayan tenant'larda sessizce gizlenir: kayıt
  * ekranı her zaman çalışmalı, akış opsiyonel bir yetenek.
@@ -34,22 +33,16 @@ export class WorkflowPanelComponent implements OnInit {
 
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly instanceService = inject(WorkflowInstanceService);
-  private readonly workflowService = inject(WorkflowService);
   private readonly languageService = inject(LanguageService);
-  private readonly notification = inject(NotificationService);
 
   instances: WorkflowInstance[] = [];
-  /** Bu model için elle başlatılabilir yayınlı akışlar. */
-  manualWorkflows: WorkflowDefinition[] = [];
 
   loading = false;
-  starting = false;
   /** Modül kurulu değil ya da yetki yok — panel hiç gösterilmez. */
   unavailable = false;
 
   ngOnInit(): void {
     this.load();
-    this.loadManualWorkflows();
   }
 
   load(): void {
@@ -70,51 +63,6 @@ export class WorkflowPanelComponent implements OnInit {
           this.unavailable = true;
         }
       });
-  }
-
-  /**
-   * Elle başlatma seçenekleri. Liste ucu admin'e kapalı olduğu için normal
-   * kullanıcıda hata döner — bu bir sorun değil, yalnızca buton gösterilmez.
-   */
-  private loadManualWorkflows(): void {
-    this.workflowService.listCached().pipe(markDirty(this.cdr)).subscribe({
-      next: res => {
-        this.manualWorkflows = (res.data ?? []).filter(w =>
-          w.modelName === this.entityType() &&
-          w.status === 'Published' &&
-          w.isEnabled &&
-          w.triggerEvent === 'manual');
-      },
-      error: () => { this.manualWorkflows = []; }
-    });
-  }
-
-  get hasRunning(): boolean {
-    return this.instances.some(i => i.status === 'Running');
-  }
-
-  start(code: string): void {
-    this.starting = true;
-
-    this.instanceService.start({
-      entityType: this.entityType(),
-      entityId: this.entityId(),
-      code
-    }).pipe(markDirty(this.cdr)).subscribe({
-      next: res => {
-        this.starting = false;
-        if (res.success) {
-          this.notification.success(this.languageService.t('workflow.panel.startSuccess'));
-          this.load();
-        } else {
-          this.notification.warn(res.message ?? '');
-        }
-      },
-      error: err => {
-        this.starting = false;
-        this.notification.warn(err?.error?.message ?? this.languageService.t('workflow.instance.serverError'));
-      }
-    });
   }
 
   when(value: string | null | undefined): string {

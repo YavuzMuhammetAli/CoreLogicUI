@@ -9,7 +9,8 @@ import { Translations } from './translations.model';
  *   components/my-tasks           → task.list.*
  *   components/task-detail        → task.detail.*
  *   shared/task-decision-form     → task.detail.* (karar formu, görev + kayıt detayı)
- *   shared/record-tasks           → task.record.*
+ *   model-detail (form tabanlı)   → workflow.record.* (başlat / adım butonları, kilit)
+ *   shared/task-action-dialog     → task.detail.* + workflow.record.*
  *   ortak sözlükler               → workflow.status.*, workflow.trigger.*,
  *                                   workflow.assign.*, workflow.timeout.*,
  *                                   workflow.event.*
@@ -161,7 +162,35 @@ export const WORKFLOW_I18N: Translations = {
     tr: 'Bu adım açıkken iş kaydının listede görünecek durumu.',
     en: 'The status shown on the record in lists while this step is open.'
   },
-  'workflow.build.formFields': { tr: 'Form alanları', en: 'Form fields' },
+  'workflow.build.recordFields': { tr: 'Kayıt alanları', en: 'Record fields' },
+  'workflow.build.recordFieldsHelp': {
+    tr: 'Bu adımın görevlisinin formda dolduracağı alanlar. Süreç sürerken kayıt kilitlenir; görevli yalnız bu alanları düzenleyebilir.',
+    en: 'Fields the assignee of this step fills on the form. While the process runs the record is locked; the assignee can edit only these fields.'
+  },
+  'workflow.build.recordFieldsNoModel': {
+    tr: 'Kayıt alanı seçmek için önce akışın modelini seçin.',
+    en: 'Select the workflow model first to choose record fields.'
+  },
+  'workflow.build.noRecordFields': {
+    tr: 'Kayıt alanı yok — görevli kayıtta hiçbir alanı değiştiremez, yalnızca ilerletir.',
+    en: 'No record fields — the assignee cannot change any field on the record, only advance it.'
+  },
+  'workflow.build.addRecordField': { tr: 'Kayıt Alanı Ekle', en: 'Add Record Field' },
+  'workflow.build.recordFieldColumn': { tr: 'Kolon', en: 'Column' },
+  'workflow.build.selectColumn': { tr: 'Kolon seçin', en: 'Select a column' },
+  'workflow.build.sectionButtons': { tr: 'Kayıt ekranındaki butonlar', en: 'Buttons on the record screen' },
+  'workflow.build.buttonsHelp': {
+    tr: 'Görevli bu butonları kaydın Kaydet butonunun yanında görür. Boş bırakılırsa adım adı kullanılır.',
+    en: 'The assignee sees these buttons next to the record\'s Save button. If left empty, the step name is used.'
+  },
+  'workflow.build.approveLabel': { tr: 'İlerletme butonu', en: 'Advance button' },
+  'workflow.build.rejectLabel': { tr: 'Red butonu', en: 'Reject button' },
+  'workflow.build.allowReject': { tr: 'Bu adımda reddetmeye izin ver', en: 'Allow rejecting at this step' },
+  'workflow.build.rejectDisabled': {
+    tr: 'Bu adımda reddetme kapalı.',
+    en: 'Rejecting is disabled at this step.'
+  },
+  'workflow.build.formFields': { tr: 'Ek karar alanları', en: 'Extra decision fields' },
   'workflow.build.addField': { tr: 'Alan Ekle', en: 'Add Field' },
   'workflow.build.fieldName': { tr: 'Alan adı', en: 'Field name' },
   'workflow.build.fieldType': { tr: 'Tip', en: 'Type' },
@@ -239,10 +268,40 @@ export const WORKFLOW_I18N: Translations = {
     en: 'The step {name} will be skipped and the process moves on. This is NOT an approval and appears separately in the audit log.'
   },
   'task.detail.selectOption': { tr: 'Seçiniz', en: 'Select' },
+  'task.detail.completeOnRecord': {
+    tr: 'Bu adım kayıttaki alanların doldurulmasını istiyor; ilerletme kaydın ekranından yapılır.',
+    en: 'This step requires fields on the record to be filled; advance it from the record screen.'
+  },
 
-  // ── record-tasks (kayıt detayındaki karar paneli) ─────────────────────────
-  'task.record.eyebrow': { tr: 'Onayınızı bekliyor', en: 'Awaiting your decision' },
-  'task.record.openTask': { tr: 'Görev detayı', en: 'Task details' },
+  // ── Kayıt ekranı: form tabanlı akış (başlat, adım butonları, kilit) ───────
+  'workflow.record.startNamed': { tr: '{name} Başlat', en: 'Start {name}' },
+  'workflow.record.inProcess': { tr: 'Onay sürecinde', en: 'In approval' },
+  'workflow.record.currentStep': { tr: '{workflow} · Adım: {step}', en: '{workflow} · Step: {step}' },
+  'workflow.record.locked': {
+    tr: 'Kayıt kilitli — sırası gelen kişi kendi alanlarını doldurup ilerletecek.',
+    en: 'The record is locked — the current assignee will fill in their fields and advance it.'
+  },
+  'workflow.record.yourTurn': {
+    tr: 'Sıra sizde — vurgulu alanları doldurup adım butonuyla ilerletin.',
+    en: 'Your turn — fill in the highlighted fields and advance with the step button.'
+  },
+  'workflow.record.adminBypass': {
+    tr: 'Yönetici olarak kilitli kaydı düzenliyorsunuz.',
+    en: 'You are editing a locked record as an administrator.'
+  },
+  'workflow.record.savedButStartFailed': {
+    tr: 'Kayıt kaydedildi ancak süreç başlatılamadı: {message}',
+    en: 'The record was saved but the process could not be started: {message}'
+  },
+  'workflow.record.requiredForStep': {
+    tr: 'Bu adımı ilerletmek için şu alanlar doldurulmalı: {fields}',
+    en: 'These fields must be filled to advance this step: {fields}'
+  },
+  'workflow.record.stepDone': { tr: 'Adım tamamlandı.', en: 'Step completed.' },
+  'workflow.record.unsavedDiscarded': {
+    tr: 'Formdaki kaydedilmemiş değişiklikler bu işlemle kaydedilmez.',
+    en: 'Unsaved changes on the form are not saved by this action.'
+  },
 
   // ── workflow-instance (süreç detayı) ──────────────────────────────────────
   'workflow.instance.title': { tr: 'Süreç Detayı', en: 'Process Detail' },

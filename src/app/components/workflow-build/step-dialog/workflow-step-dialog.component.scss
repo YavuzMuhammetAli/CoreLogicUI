@@ -139,6 +139,11 @@
   align-items: center;
 }
 
+// Kayıt alanı satırı: kolon seçici · zorunlu · sil.
+.field-table-row--record {
+  grid-template-columns: minmax(0, 1fr) auto 36px;
+}
+
 .field-table-head {
   font-size: var(--text-xs);
   font-weight: 600;

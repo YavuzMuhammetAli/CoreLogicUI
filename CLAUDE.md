@@ -108,8 +108,8 @@ CoreLogicUI-master/
         │       ├── record-form-dialog/     # İç içe kayıt ekleme/düzenleme pop-up'ı (model-detail kullanır)
         │       ├── model-autocomplete/     # Model adı seçimi (combobox, klavye + ARIA) — ilişki hedefi seçiminde
         │       ├── entity-graph/           # Entity ilişki grafiği (inline SVG; geometri entity-graph.layout.ts'te, saf + test edilebilir)
-        │       ├── task-decision-form/     # Görev karar formu (adım alanları + açıklama + Onayla/Reddet, ara onay diyaloğu YOK) — görev detayı + kayıt detayı
-        │       ├── record-tasks/           # Kayıt detayında "Onayınızı bekliyor" — /WorkflowTask/my süzülür, karar kaydın altından verilir
+        │       ├── task-decision-form/     # Görev karar formu (ek alanlar + açıklama + Onayla/Reddet, ara onay diyaloğu YOK) — görev detayı; şema yardımcıları task-form.util.ts
+        │       ├── task-action-dialog/     # Kayıt ekranındaki adım butonunun diyaloğu (ek karar alanları / red açıklaması)
         │       └── notification-bell/      # Topbar zili — okunmamış rozeti (30 sn poll) + bildirim listesi (/UserNotification)
         ├── services/
         │   ├── auth.service.ts               # /Auth login/register, JWT → localStorage
@@ -467,6 +467,33 @@ abonelik `isCurrent` ile işaretlenir. Satın alma önce `IPaymentGateway.Charge
 kaydını değiştirmekten ibaret olacak (`Plan`'da henüz parasal alan yok, o yüzden UI fiyat göstermez).
 `ChangePlan` iki yolu ayırır: aynı planda Trial/PastDue → satır yerinde `Active`'e çekilir
 (deneme dönüşümü), farklı plan → eskisi `Cancelled`, yenisi `Active` (aktif tek abonelik kuralı).
+
+## Form Tabanlı İş Akışı
+
+Bir akış bir modele (forma) bağlanır; kayıt ekranında (`/models/:type/:id`) yürür.
+Akış **`manual`** tetiklenir: formu oluşturan kişi ya yalnız **Kaydet**'e basar ya da
+**"{Akış} Başlat"** ile kaydedip başlatır. Sonra sırası gelen kişi, Kaydet'in yanında
+**adımın adını taşıyan butonu** görür, kendi alanlarını doldurup ilerletir.
+
+- **Adımın kayıt alanları** (`form.recordFields: [{column, isRequired}]`) tasarımcıdaki adım
+  pop-up'ında seçilir; buton etiketleri (`approveLabel`/`rejectLabel`) ve `allowReject` da
+  orada. Ayarlar görev açılırken `WorkflowTask.FormSchemaJson`'a kopyalanır — **migration yok**.
+  Serbest `form.fields` hâlâ var ("Ek karar alanları"): değerleri kayda değil süreç bağlamına gider.
+- **Kilit:** tanımı kayıt alanı kullanan bir akış koşarken kayıt kilitlidir. Yalnız bekleyen
+  görevin sahibi, yalnız o adımın kolonlarını düzenler; admin aşar. Kayıt alanı kullanmayan
+  eski akışlar kilitlemez. Tek karar noktası backend `IWorkflowRecordGate` —
+  `PublishedModelManager.Update/Delete/AddTree` ve `/WorkflowInstance/recordState` aynı kapıdan
+  geçer. Alt model satırları üst kaydın kilidini miras alır.
+- **Atomik onay:** `POST /WorkflowTask/complete`'e `recordValuesJson` eklendi; alan yazımı + görev
+  kapanışı + akış ilerlemesi tek `TransactionScope`'ta (ReadCommitted). Kapsam içinde iki bağlantı
+  aynı anda açık tutulmamalı ve master'a yazılmamalı (bildirim kuyruğu `Suppress` ile yazılır).
+- **Ara kaydetme:** kilitli kayıtta görevlinin Kaydet'i `POST /WorkflowTask/saveRecord`'a gider
+  (yetki görev atamasından; yalnız adım kolonları, yalnız gönderilen anahtarlar).
+- **Başlatma yetkisi:** admin, model Update izni **ya da kaydın sahibi** (`CreatedBy`).
+  Sıradan kullanıcı akışları `GET /WorkflowInstance/startable` ile görür (`/Workflow/list` admin-only).
+- Akışın kendi yazımları `WorkflowTriggerSuppression` ile outbox üretmez — aksi halde süreç
+  bitince aynı kayıt için yeni bir onUpdate akışı başlardı.
+- Görevlinin kaydı açabilmesi için modelde **Read** izni gerekir (görev tabanlı okuma izni yok).
 
 ## Yapay Zeka Modülü (G4)
 

@@ -58,6 +58,13 @@
       </div>
     </form>
 
+    @if (!isClosed && approveOnRecord) {
+      <div class="alert alert-info decision-error" role="status">
+        {{ 'task.detail.completeOnRecord' | t }}
+        <a [routerLink]="['/models', task().entityType, task().entityId]">{{ 'task.detail.openRecord' | t }}</a>
+      </div>
+    }
+
     @if (submitError(); as error) {
       <div class="alert alert-danger decision-error" role="alert">{{ error }}</div>
     }
@@ -66,14 +73,18 @@
   <!-- Karar çubuğu — panelin altında, kenardan ayrık ve üst çizgiyle ayrılmış. -->
   @if (!isClosed) {
     <div class="decision-actions">
-      <button type="button" class="btn btn-danger" [disabled]="!!saving()" (click)="decide('reject')">
-        @if (saving() === 'reject') { <span class="spinner btn-spinner" aria-hidden="true"></span> }
-        {{ 'task.detail.reject' | t }}
-      </button>
-      <button type="button" class="btn btn-primary" [disabled]="!!saving()" (click)="decide('approve')">
-        @if (saving() === 'approve') { <span class="spinner btn-spinner" aria-hidden="true"></span> }
-        {{ 'task.detail.approve' | t }}
-      </button>
+      @if (schema.allowReject) {
+        <button type="button" class="btn btn-danger" [disabled]="!!saving()" (click)="decide('reject')">
+          @if (saving() === 'reject') { <span class="spinner btn-spinner" aria-hidden="true"></span> }
+          {{ schema.rejectLabel || ('task.detail.reject' | t) }}
+        </button>
+      }
+      @if (!approveOnRecord) {
+        <button type="button" class="btn btn-primary" [disabled]="!!saving()" (click)="decide('approve')">
+          @if (saving() === 'approve') { <span class="spinner btn-spinner" aria-hidden="true"></span> }
+          {{ schema.approveLabel || ('task.detail.approve' | t) }}
+        </button>
+      }
     </div>
   }
 </div>

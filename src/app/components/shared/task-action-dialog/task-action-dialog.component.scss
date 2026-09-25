@@ -1,0 +1,39 @@
+// confirm-dialog ile aynı modal kalıbı — iki diyalog yan yana açılmaz ama aynı görünmeli.
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  z-index: 1000;
+}
+
+.dialog-panel {
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--elev-high);
+}
+
+.req {
+  color: var(--danger);
+}
+
+.alert {
+  margin-top: var(--space-4);
+}
+
+/* `.panel-actions` global kuralı `.panel-head` içine yuvalanmış (styles.scss); burada
+   `.panel-body`'nin kardeşi olduğu için padding'i component verir (confirm-dialog ile aynı). */
+.dialog-panel .panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6) var(--space-5);
+  border-top: 1px solid var(--border-soft);
+}

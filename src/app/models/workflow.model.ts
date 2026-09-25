@@ -162,6 +162,72 @@ export interface CompleteTaskRequest {
   decision: 'approve' | 'reject';
   comment?: string | null;
   formDataJson?: string | null;
+  /**
+   * Adımın KAYIT alanlarına yazılacak değerler (kolon → değer JSON nesnesi).
+   * Yalnız onayda ve yalnız adımın kolonları yazılır; onayla aynı transaction'da.
+   */
+  recordValuesJson?: string | null;
+}
+
+/** Görevlinin adım alanlarını, adımı ilerletmeden kaydetmesi. */
+export interface SaveTaskRecordRequest {
+  entityType: string;
+  entityId: number;
+  recordValuesJson: string;
+}
+
+// ── Kayıt ekranının süreç durumu (GET /WorkflowInstance/recordState) ─────────
+
+/** Elle başlatılabilen akış — kayıt ekranındaki "{Akış} Başlat" butonu. */
+export interface StartableWorkflow {
+  code: string;
+  name: string;
+}
+
+export interface RecordField {
+  column: string;
+  isRequired: boolean;
+}
+
+/** Kullanıcının kayıttaki bekleyen görevi — Kaydet'in yanındaki adım butonu. */
+export interface MyRecordTask {
+  taskId: number;
+  stepKey: string;
+  branchKey?: string | null;
+  stepName: string;
+  approveLabel?: string | null;
+  rejectLabel?: string | null;
+  canReject: boolean;
+  recordFields: RecordField[];
+  /** Serbest karar alanları var mı — varsa buton önce diyalog açar. */
+  hasExtraFields: boolean;
+  formSchemaJson?: string | null;
+  dueAt?: string | null;
+  isOverdue: boolean;
+}
+
+export interface RunningWorkflow {
+  instanceId: number;
+  definitionName: string;
+  currentStepKey?: string | null;
+  currentStepName?: string | null;
+  /** Süreç bir üst kayıtta koşuyor (alt satır ekranı). */
+  onParentRecord: boolean;
+}
+
+export interface RecordWorkflowState {
+  /** Kayıt form tabanlı bir akışın içinde — alanlar kilitli. */
+  isLocked: boolean;
+  /** Kullanıcı kilidi aşabilir (admin). */
+  canBypass: boolean;
+  /** Kilitli ve kullanıcı hiçbir alanı düzenleyemiyor. */
+  lockedForMe: boolean;
+  running?: RunningWorkflow | null;
+  /** Kilitliyken kullanıcının düzenleyebildiği kolonlar. */
+  editableColumns: string[];
+  myTasks: MyRecordTask[];
+  /** Koşan süreç varken boş. */
+  startable: StartableWorkflow[];
 }
 
 // ── Tanım grafiği (DefinitionJson'ın tipli hali) ─────────────────────────────
@@ -192,8 +258,21 @@ export interface WorkflowFormField {
   enumValues?: string | null;
 }
 
+/**
+ * Adım formu. Görev açılırken görevin `formSchemaJson`'ına KOPYALANIR; eski
+ * kopyalarda yeni alanlar yoktur (allowReject yoksa true sayılır).
+ */
 export interface WorkflowForm {
+  /** Serbest karar alanları — değerleri kayda DEĞİL, süreç bağlamına yazılır. */
   fields: WorkflowFormField[];
+  /** Görevlinin bu adımda dolduracağı KAYIT kolonları (akış sürerken kayıt kilitli). */
+  recordFields?: RecordField[];
+  /** İlerletme butonunun metni; boşsa adım adı. */
+  approveLabel?: string | null;
+  /** Red butonunun metni; boşsa "Reddet". */
+  rejectLabel?: string | null;
+  /** Bu adımda reddetmeye izin var mı; yoksa true. */
+  allowReject?: boolean;
 }
 
 export type WorkflowStepType = 'approval' | 'parallel';

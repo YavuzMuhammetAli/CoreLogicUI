@@ -104,10 +104,14 @@
           </div>
           <div class="field">
             <label for="wf-step-reject">{{ 'workflow.build.onReject' | t }}</label>
-            <select id="wf-step-reject" class="input" formControlName="onReject">
-              <option value="">{{ 'workflow.build.terminalRejected' | t }}</option>
-              @for (key of targetKeys; track key) { <option [value]="key">{{ key }}</option> }
-            </select>
+            @if (isParallel || allowReject) {
+              <select id="wf-step-reject" class="input" formControlName="onReject">
+                <option value="">{{ 'workflow.build.terminalRejected' | t }}</option>
+                @for (key of targetKeys; track key) { <option [value]="key">{{ key }}</option> }
+              </select>
+            } @else {
+              <p class="field-help">{{ 'workflow.build.rejectDisabled' | t }}</p>
+            }
           </div>
         </div>
       </section>
@@ -207,6 +211,78 @@
               </div>
             }
           </div>
+        </section>
+      }
+
+      <!-- ── Kayıt alanları: görevlinin bu adımda dolduracağı model kolonları ── -->
+      @if (!isParallel) {
+        <section class="step-section">
+          <div class="section-head">
+            <span class="eyebrow">{{ 'workflow.build.recordFields' | t }}</span>
+            @if (!readonly() && columns().length > recordFields.length) {
+              <button type="button" class="btn btn-secondary btn-sm" (click)="addRecordField()">
+                {{ 'workflow.build.addRecordField' | t }}
+              </button>
+            }
+          </div>
+          <p class="field-help">{{ 'workflow.build.recordFieldsHelp' | t }}</p>
+
+          @if (columns().length === 0) {
+            <p class="field-help">{{ 'workflow.build.recordFieldsNoModel' | t }}</p>
+          } @else if (recordFields.length === 0) {
+            <p class="field-help">{{ 'workflow.build.noRecordFields' | t }}</p>
+          } @else {
+            <div class="field-table" formArrayName="recordFields">
+              @for (recordControl of recordFields.controls; track $index; let r = $index) {
+                <div class="field-table-row field-table-row--record" [formGroupName]="r">
+                  <select class="input" formControlName="column"
+                          [attr.aria-invalid]="invalid('recordFields.' + r + '.column')"
+                          [attr.aria-label]="'workflow.build.recordFieldColumn' | t">
+                    <option value="">{{ 'workflow.build.selectColumn' | t }}</option>
+                    @for (column of columnsFor(r); track column.columnName) {
+                      <option [value]="column.columnName">{{ columnLabel(column) }} · {{ column.dataType }}</option>
+                    }
+                  </select>
+                  <label class="checkbox-label field-required">
+                    <input type="checkbox" formControlName="isRequired" />
+                    <span class="field-required-text">{{ 'workflow.build.fieldRequired' | t }}</span>
+                  </label>
+                  @if (!readonly()) {
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="removeRecordField(r)"
+                            [attr.aria-label]="'common.delete' | t">✕</button>
+                  } @else {
+                    <span></span>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </section>
+
+        <!-- ── Kayıt ekranındaki butonlar ────────────────────────────────── -->
+        <section class="step-section">
+          <span class="eyebrow">{{ 'workflow.build.sectionButtons' | t }}</span>
+          <p class="field-help">{{ 'workflow.build.buttonsHelp' | t }}</p>
+          <div class="dialog-grid dialog-grid--2">
+            <div class="field">
+              <label for="wf-step-approve-label">{{ 'workflow.build.approveLabel' | t }}</label>
+              <input id="wf-step-approve-label" class="input" type="text" maxlength="50"
+                     formControlName="approveLabel"
+                     [attr.placeholder]="group().get('name')?.value || ('workflow.build.stepName' | t)" />
+            </div>
+            @if (allowReject) {
+              <div class="field">
+                <label for="wf-step-reject-label">{{ 'workflow.build.rejectLabel' | t }}</label>
+                <input id="wf-step-reject-label" class="input" type="text" maxlength="50"
+                       formControlName="rejectLabel"
+                       [attr.placeholder]="'task.detail.reject' | t" />
+              </div>
+            }
+          </div>
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="allowReject" />
+            <span>{{ 'workflow.build.allowReject' | t }}</span>
+          </label>
         </section>
       }
 

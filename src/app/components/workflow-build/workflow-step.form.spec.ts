@@ -59,6 +59,32 @@ describe('workflow-step.form', () => {
     expect((source.get('branches') as FormArray).length).toBe(0);
   });
 
+  it('kayıt alanları ve buton ayarları kopyada korunur', () => {
+    const step = {
+      ...approvalStep,
+      form: {
+        fields: [],
+        recordFields: [{ column: 'Tutar', isRequired: true }, { column: 'Aciklama', isRequired: false }],
+        approveLabel: 'Onaya Gönder',
+        rejectLabel: null,
+        allowReject: false
+      }
+    } as WorkflowStep;
+
+    const source = newStepGroup(fb, 'mudur', step);
+    const clone = cloneStepGroup(fb, source);
+
+    expect(clone.getRawValue()).toEqual(source.getRawValue());
+    expect((clone.get('recordFields') as FormArray).length).toBe(2);
+    expect(clone.value.recordFields[0]).toEqual({ column: 'Tutar', isRequired: true });
+    expect(clone.value.approveLabel).toBe('Onaya Gönder');
+    expect(clone.value.allowReject).toBeFalse();
+  });
+
+  it('eski tanımda red izni varsayılan olarak açık', () => {
+    expect(newStepGroup(fb, 'yonetici', approvalStep).value.allowReject).toBeTrue();
+  });
+
   it('kopya devre dışı kaynaktan da değerleri alır (salt-okunur görüntüleme)', () => {
     const source = newStepGroup(fb, 'yonetici', approvalStep);
     source.disable();

@@ -4,7 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { WorkflowService } from '../../services/workflow.service';
-import { PublishedModelService } from '../../services/published-model.service';
+import { PublishedColumn, PublishedModelService } from '../../services/published-model.service';
 import { RoleAdminService } from '../../services/role-admin.service';
 import { UserAdminService } from '../../services/user-admin.service';
 import {
@@ -110,6 +110,8 @@ export class WorkflowBuildComponent implements OnInit {
 
   models: string[] = [];
   modelColumns: string[] = [];
+  /** Kolonların tam meta verisi — adım pop-up'ındaki kayıt alanı seçicisi etiket/tip gösterir. */
+  modelColumnMeta: PublishedColumn[] = [];
   roles: Role[] = [];
   users: AppUser[] = [];
 
@@ -332,9 +334,10 @@ export class WorkflowBuildComponent implements OnInit {
     this.publishedModelService.getModels().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         const model = (res.data ?? []).find(m => m.typeName === modelName);
-        this.modelColumns = (model?.columns ?? []).map(c => c.columnName);
+        this.modelColumnMeta = model?.columns ?? [];
+        this.modelColumns = this.modelColumnMeta.map(c => c.columnName);
       },
-      error: () => { this.modelColumns = []; }
+      error: () => { this.modelColumns = []; this.modelColumnMeta = []; }
     });
   }
 
@@ -507,23 +510,41 @@ export class WorkflowBuildComponent implements OnInit {
         };
       }
 
+      const recordFields = (step['recordFields'] ?? []) as Array<Record<string, unknown>>;
+      const approveLabel = String(step['approveLabel'] ?? '').trim();
+      const allowReject = step['allowReject'] !== false;
+      const rejectLabel = allowReject ? String(step['rejectLabel'] ?? '').trim() : '';
+
+      // Form, serbest alan YA DA kayıt alanı/buton ayarı varsa üretilir; aksi halde
+      // null kalır ve görev şeması kopyası da boş olur (eski davranış).
+      const hasForm = fields.length > 0 || recordFields.length > 0
+        || !!approveLabel || !!rejectLabel || !allowReject;
+
       return {
         key,
         type: 'approval' as const,
         name: String(step['name'] ?? ''),
         assignment: buildAssignment(step),
         sla: buildSla(step),
-        form: fields.length > 0 ? {
+        form: hasForm ? {
           fields: fields.map(field => ({
             name: String(field['name'] ?? ''),
             dataType: String(field['dataType'] ?? 'string'),
             label: String(field['label'] ?? '') || null,
             isRequired: !!field['isRequired'],
             enumValues: String(field['enumValues'] ?? '') || null
-          }))
+          })),
+          recordFields: recordFields.map(field => ({
+            column: String(field['column'] ?? ''),
+            isRequired: !!field['isRequired']
+          })),
+          approveLabel: approveLabel || null,
+          rejectLabel: rejectLabel || null,
+          allowReject
         } : null,
         onApprove: approveTarget,
-        onReject: rejectTarget,
+        // Red kapalıyken hedef gönderilmez — doğrulayıcı ölü kenarı reddediyor.
+        onReject: allowReject ? rejectTarget : null,
         x: step['x'] as number | null,
         y: step['y'] as number | null
       };

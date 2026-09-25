@@ -48,7 +48,8 @@
           {{ 'model.detail.backToList' | t }}
         </a>
 
-        @if (!isNew && permission.can(typeName, 'delete')) {
+        <!-- Onay sürecindeki kaydı yalnız admin silebilir (sunucu da reddediyor). -->
+        @if (!isNew && permission.can(typeName, 'delete') && !recordLockedForUser) {
           <button
             type="button"
             class="btn btn-danger btn-sm"
@@ -84,7 +85,7 @@
                 @if (totalStagedCount > 0) { {{ 'model.detail.saveAllCount' | t:{ count: totalStagedCount + 1 } }} } @else { {{ 'model.detail.save' | t }} }
               }
             </button>
-          } @else if (!isNew && permission.can(typeName, 'update')) {
+          } @else if (!isNew && canSaveRecord) {
             <button
               type="button"
               class="btn btn-primary btn-sm"
@@ -105,12 +106,72 @@
             </button>
           }
         }
+
+        <!-- "{Akış} Başlat": kaydeder (gerekiyorsa) ve akışı başlatır. -->
+        @for (workflow of startableWorkflows; track workflow.code) {
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            (click)="onStartWorkflow(workflow.code)"
+            [disabled]="!!wfBusy || editLoading">
+            @if (wfBusy === 'start:' + workflow.code) { <span class="spinner" aria-hidden="true"></span> }
+            {{ 'workflow.record.startNamed' | t:{ name: workflow.name } }}
+          </button>
+        }
+
+        <!-- Sırası gelen kişinin adım butonları — Kaydet'in yanında, adımın adıyla. -->
+        @for (task of myStepTasks; track task.taskId) {
+          @if (task.canReject) {
+            <button
+              type="button"
+              class="btn btn-danger btn-sm"
+              (click)="onStepAction(task, 'reject')"
+              [disabled]="!!wfBusy || editLoading">
+              @if (wfBusy === 'reject:' + task.taskId) { <span class="spinner" aria-hidden="true"></span> }
+              {{ rejectLabelOf(task) }}
+            </button>
+          }
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            (click)="onStepAction(task, 'approve')"
+            [disabled]="!!wfBusy || editLoading"
+            [attr.title]="task.isOverdue ? ('task.list.overdue' | t) : null">
+            @if (wfBusy === 'approve:' + task.taskId) {
+              <span class="spinner" aria-hidden="true"></span>
+            } @else {
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            }
+            {{ approveLabelOf(task) }}
+          </button>
+        }
       </div>
     </div>
 
     <!-- ── Form (her zaman düzenlenebilir) ──────────────────────────────── -->
     @if (editForm) {
       <div class="panel-body">
+        @if (wfState?.running; as running) {
+          <div class="workflow-strip" [class.workflow-strip--locked]="wfState?.isLocked" role="status">
+            <span class="badge badge-warn">{{ 'workflow.record.inProcess' | t }}</span>
+            <span class="workflow-strip__text">
+              {{ 'workflow.record.currentStep' | t:{ workflow: running.definitionName, step: running.currentStepName || running.currentStepKey || '—' } }}
+            </span>
+            @if (wfState?.isLocked) {
+              <span class="workflow-strip__note">
+                @if (wfState?.canBypass) {
+                  {{ 'workflow.record.adminBypass' | t }}
+                } @else if (myStepTasks.length > 0) {
+                  {{ 'workflow.record.yourTurn' | t }}
+                } @else {
+                  {{ 'workflow.record.locked' | t }}
+                }
+              </span>
+            }
+          </div>
+        }
         @if (editMsg) {
           <div
             class="alert"
@@ -124,7 +185,7 @@
         <form [formGroup]="editForm" (ngSubmit)="submitEdit()" novalidate>
           <div class="edit-fields-grid">
             @for (col of visibleParentColumns; track col.columnName) {
-              <div class="field">
+              <div class="field" [class.field--step]="isStepColumn(col)">
                 <label [attr.for]="'edit-' + col.columnName">
                   {{ colLabel(col) }}
                   @if (!col.isNullable) { <span style="color:var(--danger)">*</span> }
@@ -160,6 +221,7 @@
                   </label>
                 } @else if (inputTypeFor(col.dataType) === 'file') {
                   <input [id]="'edit-' + col.columnName" type="file"
+                    [disabled]="isColumnLocked(col)"
                     (change)="onEditFileSelected($event, col.columnName)"
                     style="display:block;margin-bottom:var(--space-2)">
                   @if (getEditControl(col.columnName).value) {
@@ -279,7 +341,7 @@
                       [attr.aria-label]="'model.detail.searchAria' | t:{ name }">
                   </div>
                   <div class="tab-toolbar-actions">
-                    @if (selectedCount(state) > 0 && permission.can(name, 'delete')) {
+                    @if (selectedCount(state) > 0 && canChild(name, 'delete')) {
                       <button type="button" class="btn btn-danger btn-sm" (click)="openBulkDelete(state)">
                         <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                           <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -303,7 +365,7 @@
                         {{ 'model.detail.refresh' | t }}
                       </button>
                     }
-                    @if (permission.can(name, 'create')) {
+                    @if (canChild(name, 'create')) {
                       <button
                         type="button"
                         class="btn btn-primary btn-sm"
@@ -430,7 +492,7 @@
                     <div class="empty-icon" aria-hidden="true">📋</div>
                     <h3>{{ 'model.detail.noChildRecordTitle' | t:{ name } }}</h3>
                     <p>{{ 'model.detail.noChildRecordMessage' | t:{ name } }}</p>
-                    @if (permission.can(name, 'create')) {
+                    @if (canChild(name, 'create')) {
                       <button type="button" class="btn btn-primary" (click)="openChildAdd(state)">{{ 'model.data.addFirstRecord' | t }}</button>
                     }
                   </div>
@@ -442,7 +504,7 @@
                     <table class="data-table" [attr.aria-label]="'model.detail.tabPanelAria' | t:{ name }">
                       <thead>
                         <tr>
-                          @if (permission.can(name, 'delete')) {
+                          @if (canChild(name, 'delete')) {
                             <th scope="col" class="select-col">
                               <input
                                 type="checkbox"
@@ -473,14 +535,14 @@
                       <tbody>
                         @for (row of getDisplayRows(state); track $index) {
                           <tr
-                            [class.clickable-row]="permission.can(name, 'update')"
+                            [class.clickable-row]="canChild(name, 'update')"
                             [class.row-selected]="isRowSelected(state, row)"
-                            [attr.tabindex]="permission.can(name, 'update') ? 0 : null"
-                            [attr.role]="permission.can(name, 'update') ? 'button' : null"
-                            [attr.aria-label]="permission.can(name, 'update') ? ('model.detail.editRowAria' | t) : null"
-                            (click)="permission.can(name, 'update') && openSavedEdit(state, row)"
-                            (keydown.enter)="permission.can(name, 'update') && openSavedEdit(state, row)">
-                            @if (permission.can(name, 'delete')) {
+                            [attr.tabindex]="canChild(name, 'update') ? 0 : null"
+                            [attr.role]="canChild(name, 'update') ? 'button' : null"
+                            [attr.aria-label]="canChild(name, 'update') ? ('model.detail.editRowAria' | t) : null"
+                            (click)="canChild(name, 'update') && openSavedEdit(state, row)"
+                            (keydown.enter)="canChild(name, 'update') && openSavedEdit(state, row)">
+                            @if (canChild(name, 'delete')) {
                               <td class="select-cell" (click)="$event.stopPropagation()">
                                 <input
                                   type="checkbox"
@@ -559,16 +621,26 @@
   H: Süreç paneli — yalnızca KAYITLI kayıtlarda. Yeni kayıtta henüz ID yok ve
   bir sürece bağlanamaz. Panel, workflow modülü kurulu değilse kendini gizler.
 
-  Üstündeki "Onayınızı bekliyor" paneli, bu kayıtta kullanıcıya atanmış bekleyen
-  görev varsa kararın buradan verilmesini sağlar; karar sonrası süreç paneli
-  tazelenir ki yeni adım/durum hemen görünsün.
+  Yalnızca süreç GEÇMİŞİ. Başlatma ve adım kararları kaydın başlığında, Kaydet'in
+  yanındaki butonlardan verilir; sonrasında bu panel tazelenir (refreshAfterWorkflow).
 -->
 @if (!isNew && recordId > 0 && typeName) {
   <div class="record-workflow">
-    <app-record-tasks [entityType]="typeName" [entityId]="recordId" (decided)="wfPanel.load()" />
     <app-workflow-panel #wfPanel [entityType]="typeName" [entityId]="recordId" />
   </div>
 }
+
+<!-- ══ ADIM EYLEM DİYALOĞU (ek karar alanları / red açıklaması) ══════════════ -->
+<app-task-action-dialog
+  [open]="!!actionDialog"
+  [decision]="actionDialog?.decision ?? 'approve'"
+  [actionLabel]="actionDialogLabel"
+  [schemaJson]="actionDialog?.task?.formSchemaJson"
+  [busy]="!!wfBusy"
+  [error]="actionDialog?.error ?? null"
+  [discardsChanges]="actionDialog?.decision === 'reject' && !!editForm?.dirty"
+  (confirmed)="onActionConfirmed($event)"
+  (cancelled)="closeActionDialog()" />
 
 <!-- ══ TOPLU SİLME / KALDIRMA ONAYI ═══════════════════════════════════════════ -->
 <app-confirm-dialog

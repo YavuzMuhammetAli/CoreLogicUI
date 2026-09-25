@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -21,7 +21,11 @@ import { RecordFormDialogComponent } from '../shared/record-form-dialog/record-f
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { LookupPickerComponent } from '../shared/lookup-picker/lookup-picker.component';
 import { WorkflowPanelComponent } from '../shared/workflow-panel/workflow-panel.component';
-import { RecordTasksComponent } from '../shared/record-tasks/record-tasks.component';
+import { TaskActionDialogComponent, TaskActionResult } from '../shared/task-action-dialog/task-action-dialog.component';
+import { WorkflowInstanceService, WorkflowTaskService } from '../../services/workflow-task.service';
+import { NotificationService } from '../../services/notification.service';
+import { MyRecordTask, RecordWorkflowState, StartableWorkflow } from '../../models/workflow.model';
+import { buildRecordValues, lockedColumns, missingRequired } from './workflow-lock.util';
 import { LookupLabelService } from '../../services/lookup-label.service';
 import {
   StagedNode,
@@ -99,7 +103,7 @@ interface TabState {
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, ColumnVisibilityComponent,
     TranslatePipe, RecordFormDialogComponent, ConfirmDialogComponent, LookupPickerComponent,
-    WorkflowPanelComponent, RecordTasksComponent
+    WorkflowPanelComponent, TaskActionDialogComponent
   ],
   templateUrl: './model-detail.component.html',
   styleUrls: ['./model-detail.component.scss'],
@@ -115,6 +119,29 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   private readonly lookupLabels = inject(LookupLabelService);
   /** Adres çubuğunu sayfa yeniden yüklemeden güncellemek için (yeni → düzenleme geçişi). */
   private readonly location = inject(Location);
+  private readonly taskService = inject(WorkflowTaskService);
+  private readonly instanceService = inject(WorkflowInstanceService);
+  private readonly notification = inject(NotificationService);
+
+  /** Kaydın altındaki süreç geçmişi paneli — adım/başlatma sonrası tazelenir. */
+  @ViewChild('wfPanel') private wfPanel?: WorkflowPanelComponent;
+
+  // ─── Form tabanlı iş akışı ──────────────────────────────────────────────────
+  //
+  // Kaydedilmiş kayıtta sunucunun kilit kararı (recordState) tutulur: süreç
+  // sürerken yalnız sırası gelen kişi, yalnız kendi adımının kolonlarını
+  // düzenler. Kilit sunucuda da uygulanır; buradaki yalnızca ekrana yansıması.
+
+  /** Kaydın süreç durumu; yeni kayıtta ya da modül kurulu değilse null. */
+  wfState: RecordWorkflowState | null = null;
+  /** Yeni kayıtta elle başlatılabilen akışlar (kayıtlıda wfState.startable). */
+  private newStartable: StartableWorkflow[] = [];
+  /** Süren akış işlemi — basılan butonda spinner: 'start:{code}' | 'approve:{id}' | 'reject:{id}'. */
+  wfBusy: string | null = null;
+  /** Kaydet başarıyla bitince başlatılacak akış kodu ("{Akış} Başlat"). */
+  private pendingStart: string | null = null;
+  /** Adım eylem diyaloğu (ek karar alanları / red açıklaması). */
+  actionDialog: { task: MyRecordTask; decision: 'approve' | 'reject'; error: string | null } | null = null;
 
   typeName = '';
   recordId = 0;
@@ -267,6 +294,11 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.parentRules = new Map();
     this.closeRecordDialog();
     this.visibleParentColumnNames = null;
+    this.wfState = null;
+    this.newStartable = [];
+    this.wfBusy = null;
+    this.pendingStart = null;
+    this.actionDialog = null;
   }
 
   // ─── Veri yükleme ───────────────────────────────────────────────────────────
@@ -287,6 +319,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
             this.buildNewForm();
             // Şema mevcutsa alt sekmeleri de yükle (server'dan veri çekmeden)
             this.loadChildrenForNew();
+            this.loadStartable();
           } else {
             this.recordError = this.languageService.t('model.detail.modelNotFound', { typeName: this.typeName });
           }
@@ -317,6 +350,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
           this.record = record.data as DataRow;
           // Kayıt geldi — doğrudan düzenleme formunu aç (salt-okunur modu yoktur)
           this.openEditMode();
+          this.loadWorkflowState();
         } else if (record.success && !record.data) {
           // Assembly yüklü değil — bir kez retry
           this.retryWithAssembly();
@@ -410,7 +444,10 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   get visibleParentColumns(): PublishedColumn[] {
     if (!this.visibleParentColumnNames) return this.parentColumns;
     const visible = new Set(this.visibleParentColumnNames);
-    return this.parentColumns.filter(c => !c.isNullable || visible.has(c.columnName));
+    // Adımın doldurulacak kolonları da her zaman görünür: admin detay görünümünden
+    // gizlemiş olsa bile görevli o alanı doldurmadan adımı ilerletemez.
+    return this.parentColumns.filter(c =>
+      !c.isNullable || visible.has(c.columnName) || this.isStepColumn(c));
   }
 
   /** Kolon görünürlüğü popover'ı için kolon listesi — zorunlu alanlar gizlenemez */
@@ -492,6 +529,9 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
         controls[col.columnName] = [v, this.parentValidators(col)];
       }
       this.editForm = this.fb.group(controls);
+      // Form kurallar gelince YENİDEN kuruluyor; kilit her kurulumda uygulanmalı,
+      // yoksa ikinci kurulum disabled durumunu siler.
+      this.applyWorkflowLock();
     };
     build();                          // kurallar gelene kadar form kullanılabilir kalsın
     this.loadParentRules(build);      // kurallar gelince doğrulayıcılarla yeniden kurulur
@@ -540,11 +580,16 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return null;
   }
 
-  submitEdit(): void {
+  /**
+   * Kaydeder. `startCode` verilirse ("{Akış} Başlat") kayıt TAM başarıyla
+   * yazıldıktan sonra o akış başlatılır; kayıt hatasında süreç başlamaz.
+   */
+  submitEdit(startCode?: string): void {
     if (!this.editForm || this.editForm.invalid || this.editLoading) {
       this.editForm?.markAllAsTouched();
       return;
     }
+    this.pendingStart = startCode ?? null;
     this.editLoading = true;
     this.editMsg = null;
     this.editOk = null;
@@ -554,8 +599,14 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       // Kök henüz yok → existingRootId null; sunucu ID'leri kendisi üretip döndürür.
       this.saveTree(null);
     } else {
+      if (this.recordLockedForUser) {
+        // Onay sürecindeki kayıt: yalnız adımın kolonları, görev yetkisiyle yazılır.
+        this.saveStepFields();
+        return;
+      }
+
       // Mevcut kaydı güncelle — sayfada kal, başarı mesajı göster
-      const jsonData: DataRow = { ...sanitizePayload(this.parentColumns, this.editForm.value), ID: this.recordId };
+      const jsonData: DataRow = { ...sanitizePayload(this.parentColumns, this.editForm.getRawValue()), ID: this.recordId };
       this.publishedModel.update(this.typeName, jsonData).pipe(markDirty(this.cdr)).subscribe({
         next: res => {
           this.editOk = res.success;
@@ -566,14 +617,17 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
           }
           // Bekleyen alt kayıt varsa aynı "Kaydet" onları da gönderir. Kök zaten var:
           // existingRootId ile geçilir, böylece ana kayıt İKİNCİ KEZ OLUŞTURULMAZ.
-          if (this.totalStagedCount > 0) {
+          if (this.totalStagedCount > 0 && res.success) {
             this.saveTree(this.recordId);
           } else {
             this.editLoading = false;
+            if (res.success) this.editForm?.markAsPristine();
+            this.afterSave(res.success);
           }
         },
         error: err => {
           this.editLoading = false;
+          this.pendingStart = null;
           this.editOk = false;
           const e = err as { error?: { message?: string }; message?: string };
           this.editMsg = e?.error?.message ?? e?.message ?? this.languageService.t('model.detail.updateFailed');
@@ -1225,6 +1279,9 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
         if (rootId && this.isNew) this.switchToEditMode(rootId);
       }
 
+      if (allOk) this.editForm?.markAsPristine();
+      this.afterSave(allOk && !this.isNew);
+
       // Yazılan satırlar bekleyen listesinden düşer; yazılamayanlar HATASIYLA KALIR —
       // kullanıcı düzeltip tekrar deneyebilsin diye asla sessizce silinmezler.
       for (const [, state] of this.tabStates) {
@@ -1256,6 +1313,318 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       );
     });
   }
+  // ─── Form tabanlı iş akışı ──────────────────────────────────────────────────
+
+  /** Yeni kayıtta başlatılabilir akışlar; modül kurulu değilse sessizce boş. */
+  private loadStartable(): void {
+    const typeName = this.typeName;
+    this.instanceService.startable(typeName).pipe(markDirty(this.cdr)).subscribe({
+      next: res => {
+        if (typeName === this.typeName) this.newStartable = res.success ? res.data ?? [] : [];
+      },
+      error: () => { this.newStartable = []; }
+    });
+  }
+
+  /** Kaydın süreç durumu (kilit, adım butonları, başlatılabilir akışlar). */
+  private loadWorkflowState(): void {
+    const typeName = this.typeName;
+    const id = this.recordId;
+    if (!id) return;
+
+    this.instanceService.recordState(typeName, id).pipe(markDirty(this.cdr)).subscribe({
+      next: res => {
+        if (typeName !== this.typeName || id !== this.recordId) return;
+        this.wfState = res.success ? res.data : null;
+        this.applyWorkflowLock();
+      },
+      // Modül kurulu değil / yetki yok: akış opsiyonel, kayıt ekranı normal çalışır.
+      error: () => {
+        this.wfState = null;
+        this.applyWorkflowLock();
+      }
+    });
+  }
+
+  /** Sunucunun kilit kararını forma uygular (kilitli kolonlar disabled). */
+  private applyWorkflowLock(): void {
+    const form = this.editForm;
+    if (!form) return;
+
+    const locked = lockedColumns(this.parentColumns, this.wfState);
+    for (const col of this.parentColumns) {
+      const control = form.get(col.columnName);
+      if (!control) continue;
+      if (locked.has(col.columnName)) control.disable({ emitEvent: false });
+      else if (control.disabled) control.enable({ emitEvent: false });
+    }
+  }
+
+  /** Başlıktaki "{Akış} Başlat" butonları — yeni kayıtta startable, kayıtlıda sunucu durumu. */
+  get startableWorkflows(): StartableWorkflow[] {
+    return this.isNew ? this.newStartable : this.wfState?.startable ?? [];
+  }
+
+  /** Kullanıcının bu kayıtta bekleyen adımları — Kaydet'in yanındaki butonlar. */
+  get myStepTasks(): MyRecordTask[] {
+    return this.wfState?.myTasks ?? [];
+  }
+
+  /** Kayıt süreçte ve kullanıcı kilidi aşamıyor (admin değil). */
+  get recordLockedForUser(): boolean {
+    return !!this.wfState?.isLocked && !this.wfState.canBypass;
+  }
+
+  /** Başlıktaki Kaydet görünür mü — kilitliyken yalnız admin ya da adım kolonu olan görevli. */
+  get canSaveRecord(): boolean {
+    if (!this.editForm) return false;
+    if (this.isNew) return this.permission.can(this.typeName, 'create');
+    if (this.wfState?.isLocked) return this.wfState.canBypass || this.wfState.editableColumns.length > 0;
+    return this.permission.can(this.typeName, 'update');
+  }
+
+  /** Alt model sekmelerinde ekle/düzenle/sil — kilitli kayıtta yalnız admin. */
+  canChild(typeName: string, action: 'create' | 'update' | 'delete'): boolean {
+    return this.permission.can(typeName, action) && !this.recordLockedForUser;
+  }
+
+  /** Kolon, kullanıcının bekleyen adımlarından birinin kayıt alanı mı (vurgu + görünürlük). */
+  isStepColumn(col: PublishedColumn): boolean {
+    const name = col.columnName.toLowerCase();
+    return this.myStepTasks.some(t => t.recordFields.some(f => f.column.toLowerCase() === name));
+  }
+
+  /** Alan kilitli mi — form kontrolü olmayan dosya girişi için. */
+  isColumnLocked(col: PublishedColumn): boolean {
+    return !!this.editForm?.get(col.columnName)?.disabled;
+  }
+
+  approveLabelOf(task: MyRecordTask): string {
+    return task.approveLabel?.trim() || task.stepName;
+  }
+
+  rejectLabelOf(task: MyRecordTask): string {
+    return task.rejectLabel?.trim() || this.languageService.t('task.detail.reject');
+  }
+
+  /** "{Akış} Başlat": gerekiyorsa önce kaydeder, sonra başlatır. */
+  onStartWorkflow(code: string): void {
+    if (this.wfBusy || this.editLoading) return;
+
+    // Yeni kayıt önce oluşturulmalı; değişmiş kayıt önce kaydedilmeli (süreç
+    // kaydın SON halini görmeli). Güncelleme yetkisi olmayan kayıt sahibi
+    // kaydedemez ama başlatabilir — sunucu sahipliği ayrıca denetliyor.
+    const mustSave = this.isNew
+      || (this.canSaveRecord && (!!this.editForm?.dirty || this.totalStagedCount > 0));
+
+    if (mustSave) {
+      this.submitEdit(code);
+    } else {
+      this.startWorkflow(code);
+    }
+  }
+
+  /** Kayıt işlemi bitti; bekleyen "{Akış} Başlat" varsa şimdi başlatılır. */
+  private afterSave(ok: boolean): void {
+    const code = this.pendingStart;
+    this.pendingStart = null;
+
+    if (ok && code && this.recordId > 0) {
+      this.startWorkflow(code);
+    } else if (ok && !this.wfState && this.recordId > 0) {
+      // Yeni kayıt az önce oluştu: artık kaydedilmiş kaydın durumu (başlatılabilir
+      // akışlar) okunabilir.
+      this.loadWorkflowState();
+    }
+  }
+
+  private startWorkflow(code: string): void {
+    this.wfBusy = 'start:' + code;
+
+    this.instanceService.start({ entityType: this.typeName, entityId: this.recordId, code })
+      .pipe(markDirty(this.cdr)).subscribe({
+        next: res => {
+          this.wfBusy = null;
+          if (res.success) {
+            this.notification.success(res.message || this.languageService.t('workflow.panel.startSuccess'));
+            this.refreshAfterWorkflow();
+          } else {
+            // Kayıt kaydedildi, süreç başlamadı — buton görünür kalır, tekrar denenebilir.
+            this.notification.warn(this.languageService.t('workflow.record.savedButStartFailed', {
+              message: res.message ?? ''
+            }));
+            this.loadWorkflowState();
+          }
+        },
+        error: err => {
+          this.wfBusy = null;
+          this.notification.warn(this.languageService.t('workflow.record.savedButStartFailed', {
+            message: this.errMsg(err)
+          }));
+          this.loadWorkflowState();
+        }
+      });
+  }
+
+  /** Onay sürecindeki kayıtta Kaydet: yalnız adım kolonları, adım ilerlemeden. */
+  private saveStepFields(): void {
+    const state = this.wfState;
+    if (!this.editForm || !state) {
+      this.editLoading = false;
+      return;
+    }
+
+    const values = buildRecordValues(state.editableColumns, this.editForm.getRawValue(), this.parentColumns);
+
+    this.taskService.saveRecord({
+      entityType: this.typeName,
+      entityId: this.recordId,
+      recordValuesJson: JSON.stringify(values)
+    }).pipe(markDirty(this.cdr)).subscribe({
+      next: res => {
+        this.editLoading = false;
+        this.pendingStart = null;
+        this.editOk = res.success;
+        this.editMsg = res.message;
+        if (res.success) {
+          this.record = { ...this.record, ...values };
+          this.editForm?.markAsPristine();
+        }
+      },
+      error: err => {
+        this.editLoading = false;
+        this.pendingStart = null;
+        this.editOk = false;
+        this.editMsg = this.errMsg(err);
+      }
+    });
+  }
+
+  /**
+   * Adım butonu. İlerletmede önce adımın zorunlu kayıt alanları ve formun geçerliliği
+   * denetlenir; ek karar alanı yoksa ARA DİYALOG OLMADAN gönderilir. Red her zaman
+   * diyalog açar (açıklama yazılabilsin, kaydedilmemiş değişiklik uyarısı görünsün).
+   */
+  onStepAction(task: MyRecordTask, decision: 'approve' | 'reject'): void {
+    if (this.wfBusy || this.editLoading) return;
+
+    if (decision === 'approve') {
+      const raw = (this.editForm?.getRawValue() ?? {}) as DataRow;
+      const missing = missingRequired(task.recordFields, raw, this.parentColumns);
+
+      if (missing.length > 0) {
+        for (const name of missing) {
+          const control = this.editForm?.get(name);
+          control?.setErrors({ ...(control.errors ?? {}), required: true });
+          control?.markAsTouched();
+        }
+        const labels = missing.map(name => {
+          const col = this.parentColumns.find(c => c.columnName === name);
+          return col ? this.colLabel(col) : name;
+        });
+        this.editOk = false;
+        this.editMsg = this.languageService.t('workflow.record.requiredForStep', { fields: labels.join(', ') });
+        return;
+      }
+
+      if (this.editForm?.invalid) {
+        this.editForm.markAllAsTouched();
+        return;
+      }
+
+      if (!task.hasExtraFields) {
+        this.completeStep(task, 'approve', { comment: null, formDataJson: null });
+        return;
+      }
+    }
+
+    this.actionDialog = { task, decision, error: null };
+  }
+
+  onActionConfirmed(result: TaskActionResult): void {
+    if (this.actionDialog) this.completeStep(this.actionDialog.task, this.actionDialog.decision, result);
+  }
+
+  closeActionDialog(): void {
+    if (!this.wfBusy) this.actionDialog = null;
+  }
+
+  /** Diyalog başlığı/butonu — adımın ilgili etiketi. */
+  get actionDialogLabel(): string {
+    const dialog = this.actionDialog;
+    if (!dialog) return '';
+    return dialog.decision === 'approve' ? this.approveLabelOf(dialog.task) : this.rejectLabelOf(dialog.task);
+  }
+
+  /** Görevi kapatır; ilerletmede adımın kayıt alanları AYNI istekte (tek transaction) gider. */
+  private completeStep(task: MyRecordTask, decision: 'approve' | 'reject', extra: TaskActionResult): void {
+    this.wfBusy = decision + ':' + task.taskId;
+    this.editMsg = null;
+
+    // Red kayda yazmaz (sunucu da yazmıyor) — değer göndermek yanıltıcı olurdu.
+    const recordValuesJson = decision === 'approve' && task.recordFields.length > 0
+      ? JSON.stringify(buildRecordValues(
+          task.recordFields.map(f => f.column),
+          (this.editForm?.getRawValue() ?? {}) as DataRow,
+          this.parentColumns))
+      : null;
+
+    this.taskService.complete({
+      taskId: task.taskId,
+      decision,
+      comment: extra.comment,
+      formDataJson: extra.formDataJson,
+      recordValuesJson
+    }).pipe(markDirty(this.cdr)).subscribe({
+      next: res => {
+        this.wfBusy = null;
+        if (res.success) {
+          this.actionDialog = null;
+          this.notification.success(res.message || this.languageService.t('workflow.record.stepDone'));
+          this.refreshAfterWorkflow();
+        } else {
+          this.showStepError(res.message ?? this.languageService.t('task.detail.submitFailed'));
+        }
+      },
+      error: err => {
+        this.wfBusy = null;
+        this.showStepError(this.errMsg(err));
+      }
+    });
+  }
+
+  private showStepError(message: string): void {
+    if (this.actionDialog) {
+      this.actionDialog = { ...this.actionDialog, error: message };
+    } else {
+      this.editOk = false;
+      this.editMsg = message;
+    }
+  }
+
+  /**
+   * Başlatma/adım sonrası: kayıt (akış ve alanlar değişti), süreç durumu ve geçmiş
+   * paneli yeniden okunur. Form kayıttan yeniden kurulur; kilit yeni duruma göre uygulanır.
+   */
+  private refreshAfterWorkflow(): void {
+    const typeName = this.typeName;
+    const id = this.recordId;
+
+    this.loadWorkflowState();
+    this.wfPanel?.load();
+
+    this.publishedModel.get(typeName, id).pipe(markDirty(this.cdr)).subscribe({
+      next: res => {
+        if (typeName !== this.typeName || id !== this.recordId) return;
+        if (res.success && res.data) {
+          this.record = res.data as DataRow;
+          this.openEditMode();
+        }
+      },
+      error: () => { /* kayıt okunamazsa mevcut form kalır; durum yine tazelendi */ }
+    });
+  }
+
   /** Bir tipin kolonları (payload temizliği için). */
   private columnsOf(typeName: string): PublishedColumn[] {
     return this.allModels.find(m => m.typeName === typeName)?.columns ?? [];

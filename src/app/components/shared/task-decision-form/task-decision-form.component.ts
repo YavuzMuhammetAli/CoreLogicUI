@@ -1,12 +1,14 @@
 import {
   ChangeDetectionStrategy, Component, OnChanges, SimpleChanges, inject, input, output, signal
 } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { WorkflowTaskService } from '../../../services/workflow-task.service';
 import { WorkflowFormField, WorkflowTask } from '../../../models/workflow.model';
 import { LanguageService } from '../../../services/language.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { inputTypeFor, stepFor, parseEnumValues } from '../../model-data/model-data.util';
+import { TaskSchema, buildTaskForm, parseTaskSchema, readTaskForm } from './task-form.util';
 
 /**
  * Görev karar formu — adım formu + açıklama + Onayla/Reddet.
@@ -27,7 +29,7 @@ import { inputTypeFor, stepFor, parseEnumValues } from '../../model-data/model-d
 @Component({
   selector: 'app-task-decision-form',
   standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
   templateUrl: './task-decision-form.component.html',
   styleUrl: './task-decision-form.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -51,6 +53,7 @@ export class TaskDecisionFormComponent implements OnChanges {
   readonly parseEnumValues = parseEnumValues;
 
   fields: WorkflowFormField[] = [];
+  schema: TaskSchema = parseTaskSchema(null);
   form: FormGroup = this.fb.group({ comment: [''] });
 
   /** Gönderilmekte olan karar — basılan butonda spinner göstermek için. */
@@ -59,6 +62,15 @@ export class TaskDecisionFormComponent implements OnChanges {
 
   get isClosed(): boolean {
     return this.task().status !== 'Pending';
+  }
+
+  /**
+   * Adım KAYIT alanı istiyorsa onay kayıt ekranından verilir: alanlar orada,
+   * formun kendisinde doldurulur ve onayla aynı transaction'da yazılır. Burada
+   * onaylamak zorunlu alanları boş bırakıp sunucudan hata almak olurdu.
+   */
+  get approveOnRecord(): boolean {
+    return this.schema.recordFields.length > 0;
   }
 
   /** Yönetici "Atla" işlemi gerekçeyi bu alandan okur. */
@@ -72,45 +84,21 @@ export class TaskDecisionFormComponent implements OnChanges {
    */
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['task']) {
-      this.fields = this.parseSchema(this.task().formSchemaJson);
+      this.schema = parseTaskSchema(this.task().formSchemaJson);
+      this.fields = this.schema.fields;
       this.buildForm();
       this.submitError.set(null);
     }
   }
 
-  private parseSchema(json: string | null | undefined): WorkflowFormField[] {
-    if (!json?.trim()) return [];
-    try {
-      const parsed = JSON.parse(json) as { fields?: WorkflowFormField[] };
-      return parsed.fields ?? [];
-    } catch {
-      // Bozuk şema formu kilitlememeli; yalnızca açıklama alanıyla devam edilir.
-      return [];
-    }
-  }
-
   private buildForm(): void {
-    const controls: Record<string, unknown> = { comment: [''] };
-
-    for (const field of this.fields) {
-      const validators = field.isRequired ? [Validators.required] : [];
-      if (field.maxLength && field.maxLength > 0) {
-        validators.push(Validators.maxLength(field.maxLength));
-      }
-      controls[field.name] = [this.defaultValueFor(field), validators];
-    }
-
-    this.form = this.fb.group(controls);
+    this.form = buildTaskForm(this.fb, this.fields);
 
     if (this.isClosed) {
       // Kapalı görevde form salt-okunur: geçmiş karar görünsün ama değiştirilemesin.
       this.patchExistingValues();
       this.form.disable();
     }
-  }
-
-  private defaultValueFor(field: WorkflowFormField): unknown {
-    return inputTypeFor(field.dataType) === 'checkbox' ? false : '';
   }
 
   private patchExistingValues(): void {
@@ -145,14 +133,13 @@ export class TaskDecisionFormComponent implements OnChanges {
     this.saving.set(decision);
     this.submitError.set(null);
 
-    const { comment, ...formValues } = this.form.getRawValue() as Record<string, unknown>;
+    const { comment, formDataJson } = readTaskForm(this.form, this.fields);
 
     this.taskService.complete({
       taskId: this.task().id,
       decision,
-      comment: (comment as string) || null,
-      // Form alanı yoksa null gönderilir; sunucu boş şemada doğrulama yapmıyor.
-      formDataJson: this.fields.length > 0 ? JSON.stringify(formValues) : null
+      comment,
+      formDataJson
     }).subscribe({
       next: res => {
         this.saving.set(null);

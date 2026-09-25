@@ -6,17 +6,6 @@
   <div class="panel">
     <div class="panel-head">
       <h2 class="panel-title">{{ 'workflow.panel.title' | t }}</h2>
-      @if (manualWorkflows.length > 0 && !hasRunning) {
-        <div class="panel-actions">
-          @for (workflow of manualWorkflows; track workflow.id) {
-            <button type="button" class="btn btn-secondary btn-sm"
-                    [disabled]="starting"
-                    (click)="start(workflow.code)">
-              {{ 'workflow.panel.start' | t }}: {{ workflow.name }}
-            </button>
-          }
-        </div>
-      }
     </div>
 
     <div class="panel-body">

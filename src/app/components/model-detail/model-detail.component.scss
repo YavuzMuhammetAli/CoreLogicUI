@@ -426,9 +426,54 @@ tr.row-selected td {
   }
 }
 
-// Görev karar paneli + Süreç paneli — kayıt içeriğinin altında.
+// Süreç geçmişi paneli — kayıt içeriğinin altında.
 .record-workflow {
   margin-top: var(--space-6);
 
   app-workflow-panel { display: block; }
+}
+
+// ─── Form tabanlı iş akışı ──────────────────────────────────────────────────
+
+// Başlıktaki aksiyonlar adım butonlarıyla çoğalabilir; dar ekranda alt satıra kaysın.
+.record-panel-head .panel-actions {
+  flex-wrap: wrap;
+}
+
+// Formun üstündeki süreç şeridi: hangi akış, hangi adım, kayıt kilitli mi.
+.workflow-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-warm);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+}
+
+.workflow-strip--locked {
+  border-left: 3px solid var(--warn);
+}
+
+.workflow-strip__text {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.workflow-strip__note {
+  color: var(--muted);
+}
+
+// Sırası gelen kişinin dolduracağı alanlar — kilitli formda gözle bulunabilsin.
+.field--step {
+  position: relative;
+  padding: var(--space-2) var(--space-3);
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-3));
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--accent) 6%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent);
 }

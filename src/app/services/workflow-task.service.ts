@@ -7,6 +7,9 @@ import { DataResponseModel } from '../models/dataResponseModel';
 import {
   CompleteTaskRequest,
   ReassignTaskRequest,
+  RecordWorkflowState,
+  SaveTaskRecordRequest,
+  StartableWorkflow,
   StartWorkflowRequest,
   WorkflowChain,
   WorkflowInstance,
@@ -52,6 +55,14 @@ export class WorkflowTaskService {
   }
 
   /**
+   * Görevlinin adım alanlarını, adımı ilerletmeden kaydeder. Yetki görev
+   * atamasından gelir (model güncelleme izni gerekmez); yalnız adım kolonları yazılır.
+   */
+  saveRecord(request: SaveTaskRecordRequest): Observable<ResponseModel> {
+    return this.http.post<ResponseModel>(`${this.baseUrl}/saveRecord`, request);
+  }
+
+  /**
    * Adımı atlar ve akışı ilerletir (admin).
    * Tamamlamadan ayrı uç: audit'te "onaylandı" ile "atlandı" ayırt edilebilmeli.
    */
@@ -82,6 +93,20 @@ export class WorkflowInstanceService {
   /** Elle süreç başlatır. Yetki: kayıt üzerinde güncelleme izni (sunucuda denetlenir). */
   start(request: StartWorkflowRequest): Observable<DataResponseModel<number>> {
     return this.http.post<DataResponseModel<number>>(`${this.baseUrl}/start`, request);
+  }
+
+  /** Yeni kayıt ekranı: modelde elle başlatılabilen akışlar ("{Akış} Başlat" butonları). */
+  startable(entityType: string): Observable<ListResponseModel<StartableWorkflow>> {
+    return this.http.get<ListResponseModel<StartableWorkflow>>(`${this.baseUrl}/startable`, {
+      params: new HttpParams().set('entityType', entityType)
+    });
+  }
+
+  /** Kayıt ekranının süreç durumu: kilit, adım butonları, başlatılabilir akışlar. */
+  recordState(entityType: string, entityId: number): Observable<DataResponseModel<RecordWorkflowState>> {
+    return this.http.get<DataResponseModel<RecordWorkflowState>>(`${this.baseUrl}/recordState`, {
+      params: new HttpParams().set('entityType', entityType).set('entityId', entityId)
+    });
   }
 
   /** Zaman çizelgesi ve görevleriyle birlikte tek süreç. */

@@ -10,8 +10,9 @@ import {
 } from '../../../models/workflow.model';
 import { Role } from '../../../models/role';
 import { AppUser } from '../../../models/appUser';
+import { PublishedColumn } from '../../../services/published-model.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
-import { newBranchGroup, newFieldGroup } from '../workflow-step.form';
+import { newBranchGroup, newFieldGroup, newRecordFieldGroup } from '../workflow-step.form';
 
 /** Form alanı tipi seçenekleri — model kolon tipleriyle aynı sözlükten dar bir alt küme. */
 const FORM_FIELD_TYPES = ['string', 'int', 'decimal', 'boolean', 'datetime', 'dateonly', 'enum'] as const;
@@ -44,6 +45,8 @@ export class WorkflowStepDialogComponent implements OnInit {
   readonly stepKeys = input<string[]>([]);
   /** Düzenlenen adımın ana formdaki özgün anahtarı; yeni adımda boş. */
   readonly originalKey = input('');
+  /** Akışın bağlı olduğu modelin kolonları — kayıt alanı seçicisi. Model seçilmemişse boş. */
+  readonly columns = input<PublishedColumn[]>([]);
 
   readonly saved = output<FormGroup>();
   readonly cancelled = output<void>();
@@ -62,6 +65,14 @@ export class WorkflowStepDialogComponent implements OnInit {
 
   get fields(): FormArray {
     return this.group().get('fields') as FormArray;
+  }
+
+  get recordFields(): FormArray {
+    return this.group().get('recordFields') as FormArray;
+  }
+
+  get allowReject(): boolean {
+    return this.group().get('allowReject')?.value !== false;
   }
 
   get branches(): FormArray {
@@ -105,6 +116,36 @@ export class WorkflowStepDialogComponent implements OnInit {
 
   removeField(index: number): void {
     this.fields.removeAt(index);
+  }
+
+  // ── Kayıt alanları ────────────────────────────────────────────────────────
+
+  addRecordField(): void {
+    this.recordFields.push(newRecordFieldGroup(this.fb));
+  }
+
+  removeRecordField(index: number): void {
+    this.recordFields.removeAt(index);
+  }
+
+  /**
+   * Satırın seçicisinde gösterilecek kolonlar: başka satırlarda seçilmiş olanlar
+   * gizlenir (aynı kolon iki kez seçilemez), satırın kendi değeri kalır.
+   */
+  columnsFor(index: number): PublishedColumn[] {
+    const taken = new Set(
+      this.recordFields.controls
+        .filter((_, i) => i !== index)
+        .map(c => String(c.value.column ?? '').toLowerCase()));
+
+    return this.columns().filter(c => !taken.has(c.columnName.toLowerCase()));
+  }
+
+  /** Kolon seçicideki metin: "Etiket (KolonAdı)" ya da yalnız kolon adı. */
+  columnLabel(column: PublishedColumn): string {
+    return column.label && column.label !== column.columnName
+      ? `${column.label} (${column.columnName})`
+      : column.columnName;
   }
 
   // ── Kapatma ───────────────────────────────────────────────────────────────

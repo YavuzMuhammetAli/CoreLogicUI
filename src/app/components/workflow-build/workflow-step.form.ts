@@ -1,5 +1,6 @@
 import { AbstractControl, FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import {
+  RecordField,
   WorkflowAssignment,
   WorkflowBranch,
   WorkflowSla,
@@ -66,6 +67,17 @@ export function newFieldGroup(fb: FormBuilder, field?: StepFieldValue): FormGrou
   });
 }
 
+/**
+ * Adımın kayıt alanı: görevlinin bu adımda dolduracağı model kolonu. Akış
+ * sürerken kayıt kilitlenir; yalnız bu kolonlar görevliye açılır.
+ */
+export function newRecordFieldGroup(fb: FormBuilder, field?: RecordField): FormGroup {
+  return fb.group({
+    column: [field?.column ?? '', Validators.required],
+    isRequired: [field?.isRequired ?? false]
+  });
+}
+
 export function newBranchGroup(fb: FormBuilder, branch?: Partial<WorkflowBranch>): FormGroup {
   return fb.group({
     key: [branch?.key ?? '', [Validators.required, Validators.pattern(KEY_PATTERN)]],
@@ -104,16 +116,26 @@ export function newStepGroup(
     onApprove: [step?.onApprove ?? step?.onComplete ?? ''],
     onReject: [step?.onReject ?? step?.onAnyReject ?? ''],
     statusLabel: [statusLabel],
+    // Kayıt ekranındaki butonlar. Boş etiket = adım adı / "Reddet".
+    approveLabel: [step?.form?.approveLabel ?? ''],
+    rejectLabel: [step?.form?.rejectLabel ?? ''],
+    allowReject: [step?.form?.allowReject ?? true],
     // Canvas konumu. Formda görünmez; yalnız canvas yazar ve buildGraph okur.
     x: [step?.x ?? null],
     y: [step?.y ?? null],
     fields: fb.array([]),
+    recordFields: fb.array([]),
     branches: fb.array([])
   });
 
   const fields = group.get('fields') as FormArray;
   for (const field of step?.form?.fields ?? []) {
     fields.push(newFieldGroup(fb, field));
+  }
+
+  const recordFields = group.get('recordFields') as FormArray;
+  for (const field of step?.form?.recordFields ?? []) {
+    recordFields.push(newRecordFieldGroup(fb, field));
   }
 
   const branches = group.get('branches') as FormArray;
@@ -140,6 +162,11 @@ export function cloneStepGroup(fb: FormBuilder, source: AbstractControl): FormGr
     fields.push(newFieldGroup(fb, field));
   }
 
+  const recordFields = clone.get('recordFields') as FormArray;
+  for (const field of (raw['recordFields'] ?? []) as RecordField[]) {
+    recordFields.push(newRecordFieldGroup(fb, field));
+  }
+
   const branches = clone.get('branches') as FormArray;
   for (const branch of (raw['branches'] ?? []) as Array<Record<string, unknown>>) {
     // Dal değerleri form şeklinde (düz atama/SLA alanları); grup şekline geri çevrilir.
@@ -148,7 +175,9 @@ export function cloneStepGroup(fb: FormBuilder, source: AbstractControl): FormGr
     branches.push(group);
   }
 
-  const { fields: _f, branches: _b, ...scalars } = raw;
+  // Diziler patchValue'ya verilmez: patchValue FormArray'e eleman EKLEMEZ, var
+  // olanları sırayla ezerdi — yukarıda zaten tek tek kuruldular.
+  const { fields: _f, recordFields: _r, branches: _b, ...scalars } = raw;
   clone.patchValue(scalars);
   return clone;
 }
