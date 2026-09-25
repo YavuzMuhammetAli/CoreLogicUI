@@ -238,10 +238,14 @@
           <div formArrayName="aggregates" class="stack">
             @for (group of aggregatesArray.controls; track $index; let i = $index) {
               <div [formGroupName]="i" class="row-fields">
+                <!-- Yalnız sayısal kolonlar: SUM/AVG backend'de sayısal olmayan alanı
+                     reddediyor; liste filtrelenmezse hata ancak Kaydet'te görülüyordu. -->
                 <select formControlName="field">
                   <option value="">{{ 'report.build.countNoFieldNeeded' | t }}</option>
                   @for (col of availableColumns; track col.columnName) {
-                    <option [value]="col.columnName">{{ col.columnName }}</option>
+                    @if (isNumericColumn(col.columnName)) {
+                      <option [value]="col.columnName">{{ col.columnName }}</option>
+                    }
                   }
                 </select>
                 <select formControlName="function">
