@@ -1,19 +1,37 @@
 <div class="page-header">
-  <span class="eyebrow">{{ (isNew ? 'workflow.build.titleNew' : 'workflow.build.titleEdit') | t }}</span>
+  <span class="eyebrow">
+    {{ (isNew ? 'workflow.build.titleNew' : readonlyMode() ? 'workflow.build.titleView' : 'workflow.build.titleEdit') | t }}
+    @if (readonlyVersion) {
+      · v{{ readonlyVersion }}
+    } @else if (draftNextVersion) {
+      · {{ 'workflow.build.draftOfVersion' | t: { n: draftNextVersion } }}
+    }
+  </span>
   <div class="cluster">
     <a routerLink="/workflows" class="btn btn-ghost btn-sm">{{ 'common.cancel' | t }}</a>
-    <button type="button" class="btn btn-secondary btn-sm" [disabled]="saving" (click)="validate()">
-      {{ 'workflow.build.validationTitle' | t }}
-    </button>
-    <button type="button" class="btn btn-secondary" [disabled]="saving" (click)="onSubmit(false)">
-      {{ 'workflow.build.save' | t }}
-    </button>
-    <button type="button" class="btn btn-primary" [disabled]="saving" (click)="onSubmit(true)">
-      {{ 'workflow.build.saveAndPublish' | t }}
-    </button>
+    @if (readonlyMode()) {
+      <button type="button" class="btn btn-primary" [disabled]="saving" (click)="startNewVersion()">
+        {{ 'workflow.build.newVersion' | t }}
+      </button>
+    } @else {
+      <button type="button" class="btn btn-secondary btn-sm" [disabled]="saving" (click)="validate()">
+        {{ 'workflow.build.validationTitle' | t }}
+      </button>
+      <button type="button" class="btn btn-secondary" [disabled]="saving" (click)="onSubmit(false)">
+        {{ 'workflow.build.save' | t }}
+      </button>
+      <button type="button" class="btn btn-primary" [disabled]="saving" (click)="onSubmit(true)">
+        {{ 'workflow.build.saveAndPublish' | t }}
+      </button>
+    }
   </div>
 </div>
 
+@if (readonlyVersion) {
+  <div class="alert alert-info" role="status">
+    {{ 'workflow.build.publishedReadonlyHint' | t: { n: readonlyVersion } }}
+  </div>
+}
 @if (loadError) {
   <div class="alert alert-danger" role="alert">{{ loadError }}</div>
 }
@@ -31,7 +49,7 @@
 
 <form [formGroup]="form" class="flow">
   <div class="panel">
-    <div class="panel-body">
+    <div class="panel-body stack">
       <div class="form-grid">
         <div class="field">
           <label for="wf-name">{{ 'workflow.build.name' | t }}</label>
@@ -39,8 +57,9 @@
         </div>
         <div class="field">
           <label for="wf-code">{{ 'workflow.build.code' | t }}</label>
-          <input id="wf-code" class="input" type="text" formControlName="code" [readonly]="!isNew" />
-          <span class="field-help">{{ 'workflow.build.codeHelp' | t }}</span>
+          <input id="wf-code" class="input input-mono" type="text" formControlName="code" [readonly]="!isNew"
+                 aria-describedby="wf-code-help" />
+          <span id="wf-code-help" class="field-help">{{ 'workflow.build.codeHelp' | t }}</span>
         </div>
         <div class="field">
           <label for="wf-model">{{ 'workflow.build.model' | t }}</label>
@@ -57,11 +76,13 @@
         </div>
       </div>
 
-      <label class="checkbox-label">
-        <input type="checkbox" formControlName="isEnabled" />
-        {{ 'workflow.build.isEnabled' | t }}
-      </label>
-      <span class="field-help">{{ 'workflow.build.isEnabledHelp' | t }}</span>
+      <div class="field">
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="isEnabled" aria-describedby="wf-enabled-help" />
+          {{ 'workflow.build.isEnabled' | t }}
+        </label>
+        <span id="wf-enabled-help" class="field-help">{{ 'workflow.build.isEnabledHelp' | t }}</span>
+      </div>
     </div>
   </div>
 
@@ -96,244 +117,147 @@
     </div>
 
     @if (activeTab() === 'steps') {
-      <div class="tab-panel" role="tabpanel">
+      <div class="tab-panel stack" role="tabpanel">
         <div class="tab-toolbar">
-          <button type="button" class="btn btn-secondary btn-sm" (click)="addStep()">
-            {{ 'workflow.build.addStep' | t }}
-          </button>
+          <span class="field-help">{{ (readonlyMode() ? 'workflow.build.stepsHintReadonly' : 'workflow.build.stepsHint') | t }}</span>
+          @if (!readonlyMode()) {
+            <button type="button" class="btn btn-secondary btn-sm" (click)="openNewStep()">
+              {{ 'workflow.build.addStep' | t }}
+            </button>
+          }
         </div>
 
         @if (stepsArray.length === 0) {
           <div class="empty-state"><p>{{ 'workflow.build.noSteps' | t }}</p></div>
-        }
-
-        <div formArrayName="steps" class="stack">
-          @for (stepControl of stepsArray.controls; track $index; let i = $index) {
-            <div class="step-card" [formGroupName]="i">
-              <div class="step-head">
-                <span class="step-order">{{ i + 1 }}</span>
-                <input class="input step-name" type="text" formControlName="name"
-                       [attr.placeholder]="'workflow.build.stepName' | t" />
-                <input class="input step-key" type="text" formControlName="key"
-                       [attr.placeholder]="'workflow.build.stepKey' | t" />
-                <button type="button" class="btn btn-ghost btn-sm" (click)="removeStep(i)"
-                        [attr.aria-label]="'workflow.build.removeStep' | t">✕</button>
-              </div>
-
-              <div class="form-grid">
-                <div class="field">
-                  <label>{{ 'workflow.build.stepType' | t }}</label>
-                  <select class="input" formControlName="type" (change)="onStepTypeChange(i)">
-                    <option value="approval">{{ 'workflow.build.typeApproval' | t }}</option>
-                    <option value="parallel">{{ 'workflow.build.typeParallel' | t }}</option>
-                  </select>
-                </div>
-
-                @if (stepControl.value.type === 'parallel') {
-                  <div class="field">
-                    <label>{{ 'workflow.build.joinMode' | t }}</label>
-                    <select class="input" formControlName="mode">
-                      @for (option of joinModeOptions; track option.value) {
-                        <option [value]="option.value">{{ option.labelKey | t }}</option>
+        } @else {
+          <div class="table-wrapper">
+            <table class="data-table step-table">
+              <thead>
+                <tr>
+                  <th class="col-order">#</th>
+                  <th>{{ 'workflow.build.stepName' | t }}</th>
+                  <th>{{ 'workflow.build.stepKey' | t }}</th>
+                  <th>{{ 'workflow.build.stepType' | t }}</th>
+                  <th>{{ 'workflow.build.colAssignment' | t }}</th>
+                  <th>{{ 'workflow.build.onApprove' | t }}</th>
+                  <th>{{ 'workflow.build.onReject' | t }}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (stepControl of stepsArray.controls; track stepControl; let i = $index) {
+                  <tr class="clickable-row" tabindex="0"
+                      [class.is-selected]="selectedStepKey() === stepControl.value.key"
+                      (click)="openStep(i)" (keydown.enter)="openStep(i)">
+                    <td class="col-order"><span class="step-order">{{ i + 1 }}</span></td>
+                    <td>
+                      {{ stepControl.value.name || '—' }}
+                      @if (form.getRawValue().startStep === stepControl.value.key) {
+                        <span class="badge badge-meta">{{ 'workflow.build.startBadge' | t }}</span>
                       }
-                    </select>
-                    <span class="field-help">{{ 'workflow.build.joinModeHelp' | t }}</span>
-                  </div>
-                } @else {
-                  <div class="field">
-                    <label>{{ 'workflow.build.assignMode' | t }}</label>
-                    <select class="input" formControlName="assignMode">
-                      @for (option of assignmentModeOptions; track option.value) {
-                        <option [value]="option.value">{{ option.labelKey | t }}</option>
-                      }
-                    </select>
-                  </div>
-
-                  @if (stepControl.value.assignMode === 'role') {
-                    <div class="field">
-                      <label>{{ 'workflow.build.assignRole' | t }}</label>
-                      <select class="input" formControlName="roleId">
-                        <option [ngValue]="null">{{ 'workflow.build.selectRole' | t }}</option>
-                        @for (role of roles; track role.id) {
-                          <option [ngValue]="role.id">{{ role.name }}</option>
-                        }
-                      </select>
-                    </div>
-                  }
-                }
-
-                <div class="field">
-                  <label>{{ 'workflow.build.statusLabel' | t }}</label>
-                  <input class="input" type="text" formControlName="statusLabel" />
-                  <span class="field-help">{{ 'workflow.build.statusLabelHelp' | t }}</span>
-                </div>
-
-                <div class="field">
-                  <label>{{ 'workflow.build.dueHours' | t }}</label>
-                  <input class="input" type="number" min="1" formControlName="dueHours" />
-                </div>
-                <div class="field">
-                  <label>{{ 'workflow.build.escalateHours' | t }}</label>
-                  <input class="input" type="number" min="1" formControlName="escalateAfterHours" />
-                </div>
-                <div class="field">
-                  <label>{{ 'workflow.build.onTimeout' | t }}</label>
-                  <select class="input" formControlName="onTimeout">
-                    @for (option of timeoutPolicyOptions; track option.value) {
-                      <option [value]="option.value">{{ option.labelKey | t }}</option>
-                    }
-                  </select>
-                </div>
-
-                <div class="field">
-                  <label>{{ 'workflow.build.onApprove' | t }}</label>
-                  <select class="input" formControlName="onApprove">
-                    <option value="">{{ 'workflow.build.terminalCompleted' | t }}</option>
-                    @for (key of stepKeys; track key) {
-                      @if (key !== stepControl.value.key) { <option [value]="key">{{ key }}</option> }
-                    }
-                  </select>
-                </div>
-                <div class="field">
-                  <label>{{ 'workflow.build.onReject' | t }}</label>
-                  <select class="input" formControlName="onReject">
-                    <option value="">{{ 'workflow.build.terminalRejected' | t }}</option>
-                    @for (key of stepKeys; track key) {
-                      @if (key !== stepControl.value.key) { <option [value]="key">{{ key }}</option> }
-                    }
-                  </select>
-                </div>
-              </div>
-
-              @if (stepControl.value.type === 'parallel') {
-                <div class="sub-section">
-                  <div class="sub-head">
-                    <span class="eyebrow">{{ 'workflow.build.branches' | t }}</span>
-                    <button type="button" class="btn btn-ghost btn-sm" (click)="addBranch(i)">
-                      {{ 'workflow.build.addBranch' | t }}
-                    </button>
-                  </div>
-                  <p class="field-help">{{ 'workflow.build.branchesHelp' | t }}</p>
-
-                  <div formArrayName="branches" class="stack">
-                    @for (branchControl of stepBranches(i).controls; track $index; let b = $index) {
-                      <div class="branch-row" [formGroupName]="b">
-                        <input class="input branch-key" type="text" formControlName="key"
-                               [attr.placeholder]="'workflow.build.branchKey' | t" />
-                        <input class="input" type="text" formControlName="name"
-                               [attr.placeholder]="'workflow.build.branchName' | t" />
-                        <select class="input" formControlName="assignMode">
-                          @for (option of assignmentModeOptions; track option.value) {
-                            <option [value]="option.value">{{ option.labelKey | t }}</option>
-                          }
-                        </select>
-                        @if (branchControl.value.assignMode === 'role') {
-                          <select class="input" formControlName="roleId">
-                            <option [ngValue]="null">{{ 'workflow.build.selectRole' | t }}</option>
-                            @for (role of roles; track role.id) {
-                              <option [ngValue]="role.id">{{ role.name }}</option>
-                            }
-                          </select>
-                        }
-                        <input class="input branch-hours" type="number" min="1" formControlName="dueHours"
-                               [attr.placeholder]="'workflow.build.dueHours' | t" />
+                    </td>
+                    <td><code class="step-key-code">{{ stepControl.value.key }}</code></td>
+                    <td>
+                      {{ (stepControl.value.type === 'parallel' ? 'workflow.build.typeParallel' : 'workflow.build.typeApproval') | t }}
+                    </td>
+                    <td>{{ assignmentSummary(stepControl) }}</td>
+                    <td>{{ targetLabel(stepControl.value.onApprove, 'approve') }}</td>
+                    <td>{{ targetLabel(stepControl.value.onReject, 'reject') }}</td>
+                    <td class="td-actions">
+                      @if (!readonlyMode()) {
                         <button type="button" class="btn btn-ghost btn-sm"
-                                (click)="removeBranch(i, b)">✕</button>
-                      </div>
-                    }
-                  </div>
-                </div>
-              }
-
-              <div class="sub-section">
-                <div class="sub-head">
-                  <span class="eyebrow">{{ 'workflow.build.formFields' | t }}</span>
-                  <button type="button" class="btn btn-ghost btn-sm" (click)="addField(i)">
-                    {{ 'workflow.build.addField' | t }}
-                  </button>
-                </div>
-
-                <div formArrayName="fields" class="stack">
-                  @for (fieldControl of stepFields(i).controls; track $index; let j = $index) {
-                    <div class="field-row" [formGroupName]="j">
-                      <input class="input" type="text" formControlName="name"
-                             [attr.placeholder]="'workflow.build.fieldName' | t" />
-                      <input class="input" type="text" formControlName="label"
-                             [attr.placeholder]="'workflow.build.fieldLabel' | t" />
-                      <select class="input" formControlName="dataType">
-                        @for (type of fieldTypes; track type) { <option [value]="type">{{ type }}</option> }
-                      </select>
-                      @if (fieldControl.value.dataType === 'enum') {
-                        <input class="input" type="text" formControlName="enumValues"
-                               [attr.placeholder]="'workflow.build.fieldEnumValues' | t" />
+                                (click)="$event.stopPropagation(); removeStep(i)"
+                                (keydown.enter)="$event.stopPropagation()"
+                                [attr.aria-label]="'workflow.build.removeStep' | t">✕</button>
                       }
-                      <label class="checkbox-label">
-                        <input type="checkbox" formControlName="isRequired" />
-                        {{ 'workflow.build.fieldRequired' | t }}
-                      </label>
-                      <button type="button" class="btn btn-ghost btn-sm" (click)="removeField(i, j)">✕</button>
-                    </div>
-                  }
-                </div>
-              </div>
-            </div>
-          }
-        </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
       </div>
     }
 
     @if (activeTab() === 'canvas') {
-      <div class="tab-panel" role="tabpanel">
+      <div class="tab-panel stack" role="tabpanel">
+        @if (!readonlyMode()) {
+          <div class="tab-toolbar tab-toolbar--end">
+            <button type="button" class="btn btn-secondary btn-sm" (click)="openNewStep()">
+              {{ 'workflow.build.addStep' | t }}
+            </button>
+          </div>
+        }
         <app-workflow-canvas
           [graph]="previewGraph()"
           [selectedKey]="selectedStepKey()"
+          [readonly]="readonlyMode()"
           (nodeMoved)="onNodeMoved($event)"
           (edgeCreated)="onEdgeCreated($event)"
-          (nodeSelected)="onNodeSelected($event)" />
+          (nodeSelected)="onNodeSelected($event)"
+          (nodeOpened)="openStepByKey($event)" />
       </div>
     }
 
     @if (activeTab() === 'trigger') {
-      <div class="tab-panel" role="tabpanel">
-        <div class="field">
-          <label for="wf-trigger">{{ 'workflow.build.triggerEvent' | t }}</label>
-          <select id="wf-trigger" class="input" formControlName="triggerEvent">
-            @for (option of triggerEventOptions; track option.value) {
-              <option [value]="option.value">{{ option.labelKey | t }}</option>
+      <div class="tab-panel stack" role="tabpanel">
+        <div class="form-grid form-grid--single">
+          <div class="field">
+            <label for="wf-trigger">{{ 'workflow.build.triggerEvent' | t }}</label>
+            <select id="wf-trigger" class="input" formControlName="triggerEvent">
+              @for (option of triggerEventOptions; track option.value) {
+                <option [value]="option.value">{{ option.labelKey | t }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <section class="conditions-section">
+          <div class="tab-toolbar">
+            <span class="eyebrow">{{ 'workflow.build.conditions' | t }}</span>
+            @if (!readonlyMode()) {
+              <button type="button" class="btn btn-secondary btn-sm" (click)="addCondition()">
+                {{ 'workflow.build.addCondition' | t }}
+              </button>
             }
-          </select>
-        </div>
+          </div>
+          <p class="field-help">{{ 'workflow.build.conditionsHelp' | t }}</p>
 
-        <div class="tab-toolbar">
-          <span class="eyebrow">{{ 'workflow.build.conditions' | t }}</span>
-          <button type="button" class="btn btn-secondary btn-sm" (click)="addCondition()">
-            {{ 'workflow.build.addCondition' | t }}
-          </button>
-        </div>
-        <p class="field-help">{{ 'workflow.build.conditionsHelp' | t }}</p>
-
-        @if (conditionsArray.length === 0) {
-          <div class="empty-state"><p>{{ 'workflow.build.noConditions' | t }}</p></div>
-        }
-
-        <div formArrayName="conditions" class="stack">
-          @for (conditionControl of conditionsArray.controls; track $index; let i = $index) {
-            <div class="field-row" [formGroupName]="i">
-              <select class="input" formControlName="field">
-                <option value="">{{ 'workflow.build.conditionField' | t }}</option>
-                @for (column of modelColumns; track column) { <option [value]="column">{{ column }}</option> }
-              </select>
-              <select class="input" formControlName="operator">
-                @for (operator of operators; track operator.value) {
-                  <option [value]="operator.value">{{ operator.labelKey | t }}</option>
-                }
-              </select>
-              <input class="input" type="text" formControlName="value"
-                     [attr.placeholder]="'workflow.build.conditionValue' | t" />
-              <button type="button" class="btn btn-ghost btn-sm" (click)="removeCondition(i)">✕</button>
+          @if (conditionsArray.length === 0) {
+            <div class="empty-state"><p>{{ 'workflow.build.noConditions' | t }}</p></div>
+          } @else {
+            <div formArrayName="conditions" class="condition-list">
+              <div class="condition-row condition-head" aria-hidden="true">
+                <span>{{ 'workflow.build.conditionField' | t }}</span>
+                <span>{{ 'workflow.build.conditionOperator' | t }}</span>
+                <span>{{ 'workflow.build.conditionValue' | t }}</span>
+                <span></span>
+              </div>
+              @for (conditionControl of conditionsArray.controls; track conditionControl; let i = $index) {
+                <div class="condition-row" [formGroupName]="i">
+                  <select class="input" formControlName="field" [attr.aria-label]="'workflow.build.conditionField' | t">
+                    <option value="">{{ 'workflow.build.conditionField' | t }}</option>
+                    @for (column of modelColumns; track column) { <option [value]="column">{{ column }}</option> }
+                  </select>
+                  <select class="input" formControlName="operator" [attr.aria-label]="'workflow.build.conditionOperator' | t">
+                    @for (operator of operators; track operator.value) {
+                      <option [value]="operator.value">{{ operator.labelKey | t }}</option>
+                    }
+                  </select>
+                  <input class="input" type="text" formControlName="value"
+                         [attr.aria-label]="'workflow.build.conditionValue' | t" />
+                  @if (!readonlyMode()) {
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="removeCondition(i)"
+                            [attr.aria-label]="'common.delete' | t">✕</button>
+                  } @else {
+                    <span></span>
+                  }
+                </div>
+              }
             </div>
           }
-        </div>
+        </section>
       </div>
     }
 
@@ -344,3 +268,16 @@
     }
   </div>
 </form>
+
+@if (stepDialog(); as dialog) {
+  <app-workflow-step-dialog
+    [group]="dialog.group"
+    [isNew]="dialog.index === null"
+    [readonly]="readonlyMode()"
+    [roles]="roles"
+    [users]="users"
+    [stepKeys]="stepKeys"
+    [originalKey]="dialog.originalKey"
+    (saved)="onStepSaved($event)"
+    (cancelled)="closeStepDialog()" />
+}

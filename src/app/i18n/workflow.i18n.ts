@@ -46,12 +46,48 @@ export const WORKFLOW_I18N: Translations = {
   // ── workflow-build ────────────────────────────────────────────────────────
   'workflow.build.titleNew': { tr: 'Yeni İş Akışı', en: 'New Workflow' },
   'workflow.build.titleEdit': { tr: 'Akışı Düzenle', en: 'Edit Workflow' },
+  'workflow.build.titleView': { tr: 'Akışı Görüntüle', en: 'View Workflow' },
+  'workflow.build.newVersion': { tr: 'Yeni Sürüm Oluştur', en: 'Create New Version' },
+  'workflow.build.draftOfVersion': { tr: 'v{n} taslağı', en: 'v{n} draft' },
+  'workflow.build.publishedReadonlyHint': {
+    tr: 'Bu sürüm (v{n}) yayınlandı ve değiştirilemez. Düzenlemek için yeni sürüm oluşturun; yayınladığınızda sonraki sürüm olur, çalışan süreçler kendi sürümleriyle devam eder.',
+    en: 'This version (v{n}) is published and cannot be changed. Create a new version to edit it; once published it becomes the next version, and running processes continue on their own versions.'
+  },
+  'workflow.build.stepDialogNew': { tr: 'Yeni Adım', en: 'New Step' },
+  'workflow.build.stepDialogEdit': { tr: 'Adımı Düzenle', en: 'Edit Step' },
+  'workflow.build.stepDialogView': { tr: 'Adım Ayrıntısı', en: 'Step Details' },
+  'workflow.build.sectionGeneral': { tr: 'Genel', en: 'General' },
+  'workflow.build.sectionTransitions': { tr: 'Geçişler', en: 'Transitions' },
+  'workflow.build.sectionSla': { tr: 'Süre (SLA)', en: 'Deadline (SLA)' },
+  'workflow.build.stepKeyHelp': {
+    tr: 'Harfle başlamalı; harf, rakam ve alt çizgi içerebilir.',
+    en: 'Must start with a letter; may contain letters, digits and underscores.'
+  },
+  'workflow.build.noFields': {
+    tr: 'Bu adımda onaycıdan ek bilgi istenmiyor.',
+    en: 'This step does not ask the approver for extra input.'
+  },
+  'workflow.build.stepsHint': {
+    tr: 'Düzenlemek için bir adıma tıklayın.',
+    en: 'Click a step to edit it.'
+  },
+  'workflow.build.stepInvalid': {
+    tr: 'Kırmızı işaretli alanları doldurun.',
+    en: 'Fill in the fields marked in red.'
+  },
+  'workflow.build.stepsHintReadonly': {
+    tr: 'Ayrıntılarını görmek için bir adıma tıklayın.',
+    en: 'Click a step to see its details.'
+  },
+  'workflow.build.colAssignment': { tr: 'Atanan', en: 'Assignee' },
+  'workflow.build.branchCount': { tr: '{n} dal', en: '{n} branches' },
+  'workflow.build.startBadge': { tr: 'Başlangıç', en: 'Start' },
   'workflow.build.tabSteps': { tr: 'Adımlar', en: 'Steps' },
   'workflow.build.tabCanvas': { tr: 'Tasarım', en: 'Design' },
   'workflow.build.tabTrigger': { tr: 'Tetikleyici', en: 'Trigger' },
   'workflow.canvas.hint': {
-    tr: 'Adımı gövdesinden sürükleyerek taşıyın. Bağlantı için alt kenardaki yeşil (onay) ya da kırmızı (red) noktadan hedef adıma sürükleyin.',
-    en: 'Drag a step by its body to move it. To connect, drag from the green (approve) or red (reject) dot at the bottom edge onto the target step.'
+    tr: 'Ayrıntıları düzenlemek için adıma çift tıklayın. Adımı gövdesinden sürükleyerek taşıyın. Bağlantı için alt kenardaki yeşil (onay) ya da kırmızı (red) noktadan hedef adıma sürükleyin. Yakınlaşmak için Ctrl + tekerlek, kaydırmak için boş zemini sürükleyin.',
+    en: 'Double-click a step to edit its details. Drag a step by its body to move it. To connect, drag from the green (approve) or red (reject) dot at the bottom edge onto the target step. Ctrl + wheel to zoom, drag the empty background to pan.'
   },
   'workflow.canvas.portApprove': { tr: 'Onay bağlantısı çiz', en: 'Draw approve connection' },
   'workflow.canvas.portReject': { tr: 'Red bağlantısı çiz', en: 'Draw reject connection' },
@@ -144,10 +180,6 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.build.saveFailed': { tr: 'Akış kaydedilemedi.', en: 'Workflow could not be saved.' },
   'workflow.build.loadFailed': { tr: 'Akış yüklenemedi.', en: 'Workflow could not be loaded.' },
   'workflow.build.serverError': { tr: 'Sunucuya ulaşılamadı.', en: 'Could not reach the server.' },
-  'workflow.build.publishedNotEditable': {
-    tr: 'Yayınlanmış sürüm düzenlenemez.',
-    en: 'A published version cannot be edited.'
-  },
   'workflow.build.previewEmpty': { tr: 'Önizleme için en az bir adım ekleyin.', en: 'Add at least one step to preview.' },
   'workflow.build.previewAria': { tr: 'Akış şeması', en: 'Workflow diagram' },
 

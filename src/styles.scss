@@ -302,6 +302,10 @@ p { margin: 0; }
 .field {
   display: grid;
   gap: var(--space-2);
+  /* Grid hücresinde komşu alan (ör. altında yardım metni olan) satırı
+     uzattığında .field'ın iç satırları gerilmesin: gerilirse label ile input
+     arası açılır ve aynı satırdaki input'lar farklı hizada durur. */
+  align-content: start;
 
   label {
     color: var(--fg-2);

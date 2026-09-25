@@ -57,14 +57,14 @@ export const TIMEOUT_POLICY_OPTIONS: ReadonlyArray<{ value: WorkflowTimeoutPolic
 
 /** Tetikleme koşulu operatörleri — rapor filtresiyle AYNI küme (bilinçli). */
 export const WORKFLOW_OPERATORS: ReadonlyArray<{ value: string; labelKey: string }> = [
-  { value: 'eq',         labelKey: 'report.build.opEq' },
-  { value: 'ne',         labelKey: 'report.build.opNe' },
-  { value: 'gt',         labelKey: 'report.build.opGt' },
-  { value: 'ge',         labelKey: 'report.build.opGe' },
-  { value: 'lt',         labelKey: 'report.build.opLt' },
-  { value: 'le',         labelKey: 'report.build.opLe' },
-  { value: 'contains',   labelKey: 'report.build.opContains' },
-  { value: 'startswith', labelKey: 'report.build.opStartsWith' }
+  { value: 'eq',         labelKey: 'report.operator.eq' },
+  { value: 'ne',         labelKey: 'report.operator.ne' },
+  { value: 'gt',         labelKey: 'report.operator.gt' },
+  { value: 'ge',         labelKey: 'report.operator.ge' },
+  { value: 'lt',         labelKey: 'report.operator.lt' },
+  { value: 'le',         labelKey: 'report.operator.le' },
+  { value: 'contains',   labelKey: 'report.operator.contains' },
+  { value: 'startswith', labelKey: 'report.operator.startswith' }
 ];
 
 // ── Sunucu DTO'ları ─────────────────────────────────────────────────────────

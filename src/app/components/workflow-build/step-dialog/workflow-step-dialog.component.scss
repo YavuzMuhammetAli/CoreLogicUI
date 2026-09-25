@@ -1,0 +1,234 @@
+/* ── Adım pop-up'ı ────────────────────────────────────────────────────────────
+   Kabuk record-form-dialog ile aynı: host kutu üretmez, overlay fixed,
+   eylem çubuğu panelin altına yapışık. */
+
+:host {
+  display: contents;
+}
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.dialog-panel {
+  width: 100%;
+  max-width: 820px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--elev-high);
+}
+
+.dialog-panel .panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+// Gövde kayar, başlık ve eylem çubuğu sabit kalır.
+.step-dialog-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: grid;
+  gap: var(--space-6);
+}
+
+.dialog-panel .panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6) var(--space-5);
+  border-top: 1px solid var(--border-soft);
+  background: var(--surface);
+}
+
+// ── Bölümler ───────────────────────────────────────────────────────────────
+
+.step-section {
+  display: grid;
+  gap: var(--space-3);
+
+  & + & {
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--border-soft);
+  }
+
+  .field-help { margin: 0; }
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/*
+ * Alan ızgarası. align-items: start ŞART — yardım metni olan bir alan satırı
+ * uzattığında komşuları gerilmesin, tüm input'lar aynı çizgide dursun.
+ */
+.dialog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.dialog-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dialog-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.input-mono {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-sm);
+}
+
+// ── Dal kartları ───────────────────────────────────────────────────────────
+
+.branch-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.branch-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 10px);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  background: var(--surface-warm);
+}
+
+.branch-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.branch-index {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+// ── Form alanı tablosu — sabit sütunlar, satırlar alt alta hizalı ─────────
+
+.field-table {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.field-table-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) minmax(0, 1fr) auto 36px;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.field-table-head {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+
+  // "Zorunlu" sütunu onay kutusuyla aynı eksende.
+  > :nth-child(4) { text-align: center; }
+}
+
+// Kaydet denendiğinde boş kalan zorunlu alanlar görünür olsun — tablo
+// satırlarında alan altı hata metni için yer yok.
+.input.ng-invalid.ng-touched {
+  border-color: var(--danger);
+}
+
+// Görüntüleme modu: metin kutuları da seçim kutuları gibi kilitli görünsün;
+// yoksa beyaz input düzenlenebilir sanılıyor.
+.input:disabled {
+  background: var(--surface-warm);
+  color: var(--fg-2);
+  cursor: default;
+  opacity: 1;
+}
+
+.dialog-error {
+  margin-right: auto;
+  align-self: center;
+  font-size: var(--text-sm);
+  color: var(--danger);
+}
+
+// Enum değerleri satırın altında tam genişlikte.
+.field-enum {
+  grid-column: 1 / -1;
+}
+
+// .checkbox-label global değil — her bileşen kendi tanımlıyor (table-detail ile aynı).
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+  cursor: pointer;
+}
+
+.field-required {
+  white-space: nowrap;
+  justify-content: center;
+}
+
+// Başlık satırı zaten "Zorunlu" diyor; geniş ekranda tekrar yazılmaz.
+.field-required-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .dialog-overlay { padding: var(--space-2); }
+
+  .dialog-grid,
+  .dialog-grid--2,
+  .dialog-grid--3 {
+    grid-template-columns: 1fr;
+  }
+
+  .field-table-head { display: none; }
+
+  .field-table-row {
+    grid-template-columns: 1fr auto;
+    padding-bottom: var(--space-3);
+    border-bottom: 1px dashed var(--border);
+
+    > .input { grid-column: 1 / -1; }
+  }
+
+  .field-required-text {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    clip: auto;
+    overflow: visible;
+    white-space: nowrap;
+  }
+}
