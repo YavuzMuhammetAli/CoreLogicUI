@@ -179,9 +179,13 @@ export class PublishedModelService {
     return this.http.get<DataResponseModel<Record<string, unknown>>>(`${this.baseUrl}/get`, { params });
   }
 
-  /** Yeni kayıt ekler */
-  add(typeName: string, jsonData: Record<string, unknown>): Observable<ResponseModel> {
-    return this.http.post<ResponseModel>(`${this.baseUrl}/add`, { typeName, jsonData });
+  /**
+   * Yeni kayıt ekler ve OLUŞAN KAYDIN ID'sini döndürür (`data`).
+   * ID dönmeseydi çağıran eklediği kaydı bulmak için ayrı bir sorgu atmak zorunda kalırdı;
+   * unique kısıt olmadığı için de doğru kaydı bulma garantisi olmazdı.
+   */
+  add(typeName: string, jsonData: Record<string, unknown>): Observable<DataResponseModel<number>> {
+    return this.http.post<DataResponseModel<number>>(`${this.baseUrl}/add`, { typeName, jsonData });
   }
 
   /**
