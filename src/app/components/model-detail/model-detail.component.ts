@@ -21,6 +21,7 @@ import { RecordFormDialogComponent } from '../shared/record-form-dialog/record-f
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { LookupPickerComponent } from '../shared/lookup-picker/lookup-picker.component';
 import { WorkflowPanelComponent } from '../shared/workflow-panel/workflow-panel.component';
+import { RecordTasksComponent } from '../shared/record-tasks/record-tasks.component';
 import { LookupLabelService } from '../../services/lookup-label.service';
 import {
   StagedNode,
@@ -98,7 +99,7 @@ interface TabState {
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, ColumnVisibilityComponent,
     TranslatePipe, RecordFormDialogComponent, ConfirmDialogComponent, LookupPickerComponent,
-    WorkflowPanelComponent
+    WorkflowPanelComponent, RecordTasksComponent
   ],
   templateUrl: './model-detail.component.html',
   styleUrls: ['./model-detail.component.scss'],

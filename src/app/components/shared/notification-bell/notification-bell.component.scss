@@ -1,0 +1,189 @@
+:host {
+  position: relative;
+  display: inline-flex;
+}
+
+/* ---- Zil butonu + rozet ---- */
+.bell-btn {
+  position: relative;
+}
+
+.bell-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translate(35%, -35%);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--danger);
+  color: #fff;
+  font: 600 11px / 18px var(--font-body);
+  text-align: center;
+  // Rozet topbar zemininden ayrışsın (açık/koyu temada).
+  box-shadow: 0 0 0 2px var(--surface);
+  pointer-events: none;
+}
+
+/* ---- Açılır panel (profil dropdown'uyla aynı yüzey) ---- */
+.bell-panel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: 360px;
+  max-width: calc(100vw - var(--space-8));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elev-high);
+  z-index: 200;
+  overflow: hidden;
+  animation: bell-in var(--motion-fast) var(--ease-standard);
+}
+
+@keyframes bell-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bell-panel { animation: none; }
+}
+
+.bell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.bell-title {
+  font: 700 var(--text-sm) / 1.3 var(--font-body);
+  color: var(--fg);
+}
+
+.bell-body {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.bell-state {
+  margin: 0;
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.bell-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li + li {
+    border-top: 1px solid var(--border-soft);
+  }
+}
+
+.bell-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-standard);
+
+  &:hover { background: var(--surface-warm); }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring) inset;
+  }
+
+  &.is-unread .bell-message {
+    font-weight: 600;
+    color: var(--fg);
+  }
+}
+
+.bell-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &.tone-info    { background: var(--meta-bg);    color: var(--accent); }
+  &.tone-warn    { background: var(--warn-bg);    color: var(--warn); }
+  &.tone-danger  { background: var(--danger-bg);  color: var(--danger); }
+  &.tone-success { background: var(--success-bg); color: var(--success); }
+}
+
+.bell-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bell-message {
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+
+.bell-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.bell-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.bell-foot {
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--border-soft);
+  text-align: center;
+}
+
+.bell-foot-link {
+  font-size: var(--text-sm);
+  color: var(--accent);
+  text-decoration: none;
+
+  &:hover { text-decoration: underline; }
+}
+
+/* Dar ekranda panel ekranın sağ kenarına hizalanır, taşmaz. */
+@media (max-width: 768px) {
+  .bell-panel {
+    position: fixed;
+    top: calc(var(--topbar-h) + var(--space-2));
+    right: var(--space-4);
+    left: var(--space-4);
+    width: auto;
+    max-width: none;
+  }
+}

@@ -16,6 +16,7 @@ import { DATATYPE_HELP_I18N } from './datatype-help.i18n';
 import { PARAMETER_I18N } from './parameter.i18n';
 import { AI_I18N } from './ai.i18n';
 import { WORKFLOW_I18N } from './workflow.i18n';
+import { NOTIFICATION_I18N } from './notification.i18n';
 
 /**
  * Tüm özellik bazlı çeviri sözlüklerinin birleşimi. Yeni bir ekran çevrildiğinde
@@ -39,7 +40,8 @@ export const TRANSLATIONS: Translations = {
   ...DATATYPE_HELP_I18N,
   ...PARAMETER_I18N,
   ...AI_I18N,
-  ...WORKFLOW_I18N
+  ...WORKFLOW_I18N,
+  ...NOTIFICATION_I18N
 };
 
 export type { TranslationEntry, Translations } from './translations.model';

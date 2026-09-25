@@ -107,7 +107,10 @@ CoreLogicUI-master/
         │       ├── lookup-picker/          # Lookup kolonu için sayfalı/aranabilir kayıt seçici
         │       ├── record-form-dialog/     # İç içe kayıt ekleme/düzenleme pop-up'ı (model-detail kullanır)
         │       ├── model-autocomplete/     # Model adı seçimi (combobox, klavye + ARIA) — ilişki hedefi seçiminde
-        │       └── entity-graph/           # Entity ilişki grafiği (inline SVG; geometri entity-graph.layout.ts'te, saf + test edilebilir)
+        │       ├── entity-graph/           # Entity ilişki grafiği (inline SVG; geometri entity-graph.layout.ts'te, saf + test edilebilir)
+        │       ├── task-decision-form/     # Görev karar formu (adım alanları + açıklama + Onayla/Reddet, ara onay diyaloğu YOK) — görev detayı + kayıt detayı
+        │       ├── record-tasks/           # Kayıt detayında "Onayınızı bekliyor" — /WorkflowTask/my süzülür, karar kaydın altından verilir
+        │       └── notification-bell/      # Topbar zili — okunmamış rozeti (30 sn poll) + bildirim listesi (/UserNotification)
         ├── services/
         │   ├── auth.service.ts               # /Auth login/register, JWT → localStorage
         │   ├── published-table.service.ts    # /Published addTable, addMember + soft-delete/restore
@@ -132,7 +135,8 @@ CoreLogicUI-master/
         │   ├── lookup-label.service.ts          # Lookup id → etiket çözümleme (önbellekli)
         │   ├── record-metadata.service.ts       # Kayıt formu meta verisi (kolon kuralları/şema)
         │   ├── theme.service.ts                 # Açık/koyu tema tercihini yönetir (localStorage)
-        │   └── notification.service.ts          # Global toast/uyarı bildirimleri (guard'lar dahil)
+        │   ├── notification.service.ts          # Global toast/uyarı bildirimleri (guard'lar dahil)
+        │   └── user-notification.service.ts     # /UserNotification — kalıcı uygulama içi bildirimler (zil); toast DEĞİL
         ├── utils/
         │   ├── change-detection.ts              # markDirty(cdr) — OnPush'ta asenkron veri sonrası CD tetikler
         │   ├── cron-builder.ts                  # Saf: sıklık seçimi ↔ cron ifadesi + sonraki koşu önizlemesi (spec'li)
@@ -161,6 +165,7 @@ CoreLogicUI-master/
         │   ├── relationship.i18n.ts           # Model ilişkileri sekmesi, ilişki popup'ı, önizleme
         │   ├── parameter.i18n.ts              # Parametreler ekranı (yedekleme · e-posta · abonelik)
         │   ├── ai.i18n.ts                     # Yapay Zeka asistanı (sohbet, öneri kartları, durumlar)
+        │   ├── notification.i18n.ts           # Topbar bildirim zili (notification.kind.* = backend WorkflowNotifyKinds)
         │   └── shared.i18n.ts                 # Paylaşılan diyalog metinleri
         ├── pipes/
         │   └── translate.pipe.ts              # TranslatePipe — şablonlarda `{{ 'key' | t }}` şeklinde kullanılır
@@ -274,6 +279,7 @@ Tüm servisler `@Injectable({ providedIn: 'root' })`, `inject(HttpClient)` (veya
 | `ModelUsageService` | HTTP yok — model kullanım özeti: hangi raporlar/dashboardlar bu modeli kullanıyor |
 | `ThemeService` | HTTP yok — açık/koyu tema tercihi, `localStorage` |
 | `NotificationService` | HTTP yok — global toast/uyarı, guard'lar dahil kullanılır |
+| `UserNotificationService` | `/UserNotification` — `my`, `unreadCount`, `markRead`, `markAllRead` (kullanıcı kendi bildirimleri; satırları backend `InAppNotificationChannel` yazar, tablo tenant migrasyonu `018`) |
 
 > `ModelRegistryService` kaldırıldı — model kaydı artık backend'deki `PublishedModelService`
 > üzerinden yönetiliyor, ayrı bir localStorage tabanlı kayıt yok.

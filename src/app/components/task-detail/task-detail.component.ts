@@ -1,13 +1,8 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { WorkflowTaskService, WorkflowInstanceService } from '../../services/workflow-task.service';
-import {
-  WorkflowEvent,
-  WorkflowFormField,
-  WorkflowTask
-} from '../../models/workflow.model';
+import { WorkflowEvent, WorkflowTask } from '../../models/workflow.model';
 import { LanguageService } from '../../services/language.service';
 import { NotificationService } from '../../services/notification.service';
 import { PermissionService } from '../../services/permission.service';
@@ -15,32 +10,27 @@ import { RoleAdminService } from '../../services/role-admin.service';
 import { Role } from '../../models/role';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
+import { TaskDecisionFormComponent } from '../shared/task-decision-form/task-decision-form.component';
 import { markDirty } from '../../utils/change-detection';
-import { inputTypeFor, stepFor, parseEnumValues } from '../model-data/model-data.util';
 import { formatDate } from '../../utils/locale-format';
 
 /**
  * Görev detayı — onay/red ekranı.
  *
- * Dinamik form YENİDEN YAZILMADI: adım şeması `dataType` sözlüğünü model
- * kolonlarıyla paylaştığı için (CoreLogicTypeMap) `inputTypeFor`, `stepFor` ve
- * `parseEnumValues` yardımcıları olduğu gibi kullanılıyor; şablondaki tip
- * merdiveni de record-form-dialog'dan alındı.
- *
- * Form şeması TANIMDAN değil GÖREVDEN okunur — görev açıldığı andaki formu
- * gösterir, tanım o sırada yeni bir sürüme geçmiş olabilir.
+ * Karar formu (adım alanları + açıklama + Onayla/Reddet) `shared/task-decision-form`
+ * bileşeninde durur; aynı form kayıt detayında da kullanılır. Bu ekran görev
+ * künyesini, yönetici işlemlerini ve süreç geçmişini ekler.
  */
 @Component({
   selector: 'app-task-detail',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe, ConfirmDialogComponent],
+  imports: [CommonModule, RouterLink, TranslatePipe, ConfirmDialogComponent, TaskDecisionFormComponent],
   templateUrl: './task-detail.component.html',
   styleUrl: './task-detail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TaskDetailComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
-  private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly taskService = inject(WorkflowTaskService);
@@ -50,24 +40,16 @@ export class TaskDetailComponent implements OnInit {
   private readonly permissionService = inject(PermissionService);
   private readonly roleService = inject(RoleAdminService);
 
-  // Şablonun çağırabilmesi için saf yardımcılar alan olarak bağlanıyor
-  // (record-form-dialog ile aynı desen).
-  readonly inputTypeFor = inputTypeFor;
-  readonly stepFor = stepFor;
-  readonly parseEnumValues = parseEnumValues;
+  /** Yönetici "Atla" işlemi gerekçeyi karar formunun açıklama alanından okur. */
+  @ViewChild(TaskDecisionFormComponent) private decisionForm?: TaskDecisionFormComponent;
 
   task: WorkflowTask | null = null;
-  fields: WorkflowFormField[] = [];
   timeline: WorkflowEvent[] = [];
-  form: FormGroup = this.fb.group({});
 
   loading = false;
-  saving = false;
   loadError: string | null = null;
-  submitError: string | null = null;
-
-  /** confirm-dialog'u açan bekleyen karar. */
-  pendingDecision: 'approve' | 'reject' | null = null;
+  /** Yönetici işlemlerinin hatası (karar hatası formun kendisinde gösterilir). */
+  adminError: string | null = null;
 
   // ── Yönetici işlemleri (Faz 4) ────────────────────────────────────────────
   /** Atlama, onaydan AYRI tutulur: audit'te ayırt edilebilmeli. */
@@ -109,8 +91,6 @@ export class TaskDetailComponent implements OnInit {
         }
 
         this.task = res.data;
-        this.fields = this.parseSchema(res.data.formSchemaJson);
-        this.buildForm();
         this.loadTimeline(res.data.instanceId);
       },
       error: err => {
@@ -131,117 +111,10 @@ export class TaskDetailComponent implements OnInit {
     });
   }
 
-  private parseSchema(json: string | null | undefined): WorkflowFormField[] {
-    if (!json?.trim()) return [];
-    try {
-      const parsed = JSON.parse(json) as { fields?: WorkflowFormField[] };
-      return parsed.fields ?? [];
-    } catch {
-      // Bozuk şema formu kilitlememeli; yalnızca açıklama alanıyla devam edilir.
-      return [];
-    }
-  }
-
-  private buildForm(): void {
-    const controls: Record<string, unknown> = { comment: [''] };
-
-    for (const field of this.fields) {
-      const validators = field.isRequired ? [Validators.required] : [];
-      if (field.maxLength && field.maxLength > 0) {
-        validators.push(Validators.maxLength(field.maxLength));
-      }
-      controls[field.name] = [this.defaultValueFor(field), validators];
-    }
-
-    this.form = this.fb.group(controls);
-
-    if (this.isClosed) {
-      // Kapalı görevde form salt-okunur: geçmiş karar görünsün ama değiştirilemesin.
-      this.patchExistingValues();
-      this.form.disable();
-    }
-  }
-
-  private defaultValueFor(field: WorkflowFormField): unknown {
-    return inputTypeFor(field.dataType) === 'checkbox' ? false : '';
-  }
-
-  private patchExistingValues(): void {
-    if (!this.task?.formDataJson) {
-      this.form.patchValue({ comment: this.task?.comment ?? '' }, { emitEvent: false });
-      return;
-    }
-
-    try {
-      const values = JSON.parse(this.task.formDataJson) as Record<string, unknown>;
-      this.form.patchValue({ ...values, comment: this.task.comment ?? '' }, { emitEvent: false });
-    } catch {
-      this.form.patchValue({ comment: this.task.comment ?? '' }, { emitEvent: false });
-    }
-  }
-
-  fieldLabel(field: WorkflowFormField): string {
-    return field.label?.trim() || field.name;
-  }
-
-  askDecision(decision: 'approve' | 'reject'): void {
-    // Onayda form doğrulaması şart; REDDE değil — bir talebi reddetmek için
-    // zorunlu alanları doldurmak zorunda bırakmak anlamsız olurdu.
-    if (decision === 'approve' && this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-    this.pendingDecision = decision;
-  }
-
-  cancelDecision(): void {
-    this.pendingDecision = null;
-  }
-
-  confirmDecision(): void {
-    const decision = this.pendingDecision;
-    const task = this.task;
-    this.pendingDecision = null;
-
-    if (!decision || !task) return;
-
-    this.saving = true;
-    this.submitError = null;
-
-    const { comment, ...formValues } = this.form.getRawValue() as Record<string, unknown>;
-
-    this.taskService.complete({
-      taskId: task.id,
-      decision,
-      comment: (comment as string) || null,
-      // Form alanı yoksa null gönderilir; sunucu boş şemada doğrulama yapmıyor.
-      formDataJson: this.fields.length > 0 ? JSON.stringify(formValues) : null
-    }).pipe(markDirty(this.cdr)).subscribe({
-      next: res => {
-        this.saving = false;
-        if (res.success) {
-          this.notification.success(res.message ?? '');
-          this.router.navigate(['/tasks']);
-        } else {
-          this.submitError = res.message ?? this.languageService.t('task.detail.submitFailed');
-        }
-      },
-      error: err => {
-        this.saving = false;
-        this.submitError = err?.error?.message ?? this.languageService.t('task.detail.serverError');
-      }
-    });
-  }
-
-  get confirmTitle(): string {
-    return this.languageService.t(
-      this.pendingDecision === 'reject' ? 'task.detail.rejectConfirmTitle' : 'task.detail.approveConfirmTitle');
-  }
-
-  get confirmMessage(): string {
-    return this.languageService.t(
-      this.pendingDecision === 'reject' ? 'task.detail.rejectConfirm' : 'task.detail.approveConfirm',
-      { name: this.task?.name ?? '' });
+  /** Karar sunucuda kabul edildi — ortak form bildirir, ekran listeye döner. */
+  onCompleted(message: string): void {
+    this.notification.success(message);
+    this.router.navigate(['/tasks']);
   }
 
   eventLabel(event: WorkflowEvent): string {
@@ -277,7 +150,8 @@ export class TaskDetailComponent implements OnInit {
     if (!task) return;
 
     this.skipping = true;
-    this.taskService.skip(task.id, this.form.get('comment')?.value || null)
+    this.adminError = null;
+    this.taskService.skip(task.id, this.decisionForm?.commentValue ?? null)
       .pipe(markDirty(this.cdr)).subscribe({
         next: res => {
           this.skipping = false;
@@ -285,12 +159,12 @@ export class TaskDetailComponent implements OnInit {
             this.notification.success(res.message ?? '');
             this.router.navigate(['/tasks']);
           } else {
-            this.submitError = res.message ?? '';
+            this.adminError = res.message ?? '';
           }
         },
         error: err => {
           this.skipping = false;
-          this.submitError = err?.error?.message ?? this.languageService.t('task.detail.serverError');
+          this.adminError = err?.error?.message ?? this.languageService.t('task.detail.serverError');
         }
       });
   }
@@ -305,6 +179,7 @@ export class TaskDetailComponent implements OnInit {
     if (!task || !this.reassignRoleId) return;
 
     this.reassigning = true;
+    this.adminError = null;
     this.taskService.reassign({ taskId: task.id, roleId: this.reassignRoleId })
       .pipe(markDirty(this.cdr)).subscribe({
         next: res => {
@@ -314,30 +189,17 @@ export class TaskDetailComponent implements OnInit {
             this.reassignRoleId = null;
             this.load(task.id);
           } else {
-            this.submitError = res.message ?? '';
+            this.adminError = res.message ?? '';
           }
         },
         error: err => {
           this.reassigning = false;
-          this.submitError = err?.error?.message ?? this.languageService.t('task.detail.serverError');
+          this.adminError = err?.error?.message ?? this.languageService.t('task.detail.serverError');
         }
       });
   }
 
   get skipMessage(): string {
     return this.languageService.t('task.detail.skipConfirm', { name: this.task?.name ?? '' });
-  }
-
-  errorFor(field: WorkflowFormField): string | null {
-    const control = this.form.get(field.name);
-    if (!control || !control.touched || control.valid) return null;
-
-    if (control.hasError('required')) {
-      return this.languageService.t('common.required');
-    }
-    if (control.hasError('maxlength')) {
-      return this.languageService.t('task.detail.tooLong', { max: String(field.maxLength ?? '') });
-    }
-    return null;
   }
 }

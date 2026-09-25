@@ -1,0 +1,56 @@
+// .flow içindeki margin'in işlemesi için blok seviyesinde host.
+:host {
+  display: block;
+}
+
+.decision-title {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.req {
+  color: var(--danger);
+  margin-left: 2px;
+}
+
+// Alan tipini gösteren küçük etiket (record-form-dialog ile aynı görünüm).
+.col-type-tag {
+  margin-left: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.decision-error {
+  margin-top: var(--space-4);
+}
+
+// Karar çubuğu. Global .panel-actions yalnızca .panel-head içinde stillendiği
+// için panelin altında kullanılınca butonlar kenara yapışıyordu; burada kendi
+// iç boşluğu ve ayırıcı çizgisi olan bir alt bant kullanılıyor.
+.decision-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--border-soft);
+  background: var(--surface-warm);
+}
+
+// Buton içindeki spinner: yazı boyutuna uysun ve buton rengini alsın.
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border-color: currentColor;
+  border-top-color: transparent;
+}
+
+@media (max-width: 768px) {
+  .decision-actions {
+    padding: var(--space-4);
+
+    .btn { flex: 1 1 0; }
+  }
+}

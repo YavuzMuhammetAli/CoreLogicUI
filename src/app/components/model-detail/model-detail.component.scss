@@ -425,3 +425,10 @@ tr.row-selected td {
     flex-direction: column;
   }
 }
+
+// Görev karar paneli + Süreç paneli — kayıt içeriğinin altında.
+.record-workflow {
+  margin-top: var(--space-6);
+
+  app-workflow-panel { display: block; }
+}

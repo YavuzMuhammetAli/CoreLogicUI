@@ -8,6 +8,8 @@ import { Translations } from './translations.model';
  *   components/workflow-build     → workflow.build.*
  *   components/my-tasks           → task.list.*
  *   components/task-detail        → task.detail.*
+ *   shared/task-decision-form     → task.detail.* (karar formu, görev + kayıt detayı)
+ *   shared/record-tasks           → task.record.*
  *   ortak sözlükler               → workflow.status.*, workflow.trigger.*,
  *                                   workflow.assign.*, workflow.timeout.*,
  *                                   workflow.event.*
@@ -216,16 +218,6 @@ export const WORKFLOW_I18N: Translations = {
   'task.detail.comment': { tr: 'Açıklama', en: 'Comment' },
   'task.detail.approve': { tr: 'Onayla', en: 'Approve' },
   'task.detail.reject': { tr: 'Reddet', en: 'Reject' },
-  'task.detail.approveConfirmTitle': { tr: 'Görevi onayla', en: 'Approve task' },
-  'task.detail.approveConfirm': {
-    tr: '{name} adımı onaylanacak ve süreç bir sonraki adıma geçecek.',
-    en: 'The step {name} will be approved and the process moves to the next step.'
-  },
-  'task.detail.rejectConfirmTitle': { tr: 'Görevi reddet', en: 'Reject task' },
-  'task.detail.rejectConfirm': {
-    tr: '{name} adımı reddedilecek. Bu işlem geri alınamaz.',
-    en: 'The step {name} will be rejected. This action cannot be undone.'
-  },
   'task.detail.timeline': { tr: 'Süreç geçmişi', en: 'Process history' },
   'task.detail.alreadyClosed': { tr: 'Bu görev sonuçlandırılmış.', en: 'This task has been resolved.' },
   'task.detail.decision': { tr: 'Karar', en: 'Decision' },
@@ -247,6 +239,10 @@ export const WORKFLOW_I18N: Translations = {
     en: 'The step {name} will be skipped and the process moves on. This is NOT an approval and appears separately in the audit log.'
   },
   'task.detail.selectOption': { tr: 'Seçiniz', en: 'Select' },
+
+  // ── record-tasks (kayıt detayındaki karar paneli) ─────────────────────────
+  'task.record.eyebrow': { tr: 'Onayınızı bekliyor', en: 'Awaiting your decision' },
+  'task.record.openTask': { tr: 'Görev detayı', en: 'Task details' },
 
   // ── workflow-instance (süreç detayı) ──────────────────────────────────────
   'workflow.instance.title': { tr: 'Süreç Detayı', en: 'Process Detail' },

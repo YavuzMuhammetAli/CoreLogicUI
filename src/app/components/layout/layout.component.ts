@@ -13,6 +13,7 @@ import { LanguageService } from '../../services/language.service';
 import { DashboardService } from '../../services/dashboard.service';
 import { DashboardDefinition } from '../../models/dashboard.model';
 import { WorkflowTaskService } from '../../services/workflow-task.service';
+import { NotificationBellComponent } from '../shared/notification-bell/notification-bell.component';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { markDirty } from '../../utils/change-detection';
 import { signal } from '@angular/core';
@@ -20,7 +21,7 @@ import { signal } from '@angular/core';
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, NotificationBellComponent],
   templateUrl: './layout.component.html',
   styleUrls: ['./layout.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

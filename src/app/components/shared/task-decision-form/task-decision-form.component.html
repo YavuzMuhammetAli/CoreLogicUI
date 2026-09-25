@@ -1,0 +1,79 @@
+<!--
+  Kimlikler görev ID'siyle öneklenir: kayıt detayında birden çok görev formu
+  aynı sayfada durabilir ve label/for eşleşmesi karışmamalı.
+-->
+@let prefix = 'wf-' + task().id + '-';
+
+<div class="panel">
+  <!-- Başlık yuvaları: kayıt detayı üstüne etiket, sağa görev künyesi yerleştirir. -->
+  <div class="panel-head">
+    <div class="decision-title">
+      <ng-content select="[decisionEyebrow]" />
+      <h2 class="panel-title">{{ heading() ?? ('task.detail.form' | t) }}</h2>
+    </div>
+    <ng-content select="[decisionMeta]" />
+  </div>
+
+  <div class="panel-body">
+    <form [formGroup]="form" class="stack" (ngSubmit)="decide('approve')">
+      @for (field of fields; track field.name) {
+        <div class="field">
+          <label [attr.for]="prefix + field.name">
+            {{ fieldLabel(field) }}
+            @if (field.isRequired) { <span class="req">*</span> }
+            <span class="col-type-tag">{{ field.dataType }}</span>
+          </label>
+
+          @if (field.dataType === 'enum') {
+            <select class="input" [id]="prefix + field.name" [formControlName]="field.name">
+              <option value="">{{ 'task.detail.selectOption' | t }}</option>
+              @for (option of parseEnumValues(field.enumValues); track option) {
+                <option [value]="option">{{ option }}</option>
+              }
+            </select>
+          } @else if (inputTypeFor(field.dataType) === 'checkbox') {
+            <label class="checkbox-label">
+              <input type="checkbox" [id]="prefix + field.name" [formControlName]="field.name" />
+              {{ fieldLabel(field) }}
+            </label>
+          } @else {
+            <input class="input"
+                   [id]="prefix + field.name"
+                   [type]="inputTypeFor(field.dataType)"
+                   [attr.step]="stepFor(field.dataType)"
+                   [formControlName]="field.name"
+                   [attr.aria-invalid]="!!errorFor(field)"
+                   [attr.aria-describedby]="errorFor(field) ? prefix + 'err-' + field.name : null" />
+          }
+
+          @if (errorFor(field); as fieldError) {
+            <span [id]="prefix + 'err-' + field.name" class="field-error" role="alert">{{ fieldError }}</span>
+          }
+        </div>
+      }
+
+      <div class="field">
+        <label [attr.for]="prefix + 'comment'">{{ 'task.detail.comment' | t }}</label>
+        <textarea [id]="prefix + 'comment'" class="input" rows="3" formControlName="comment"></textarea>
+      </div>
+    </form>
+
+    @if (submitError(); as error) {
+      <div class="alert alert-danger decision-error" role="alert">{{ error }}</div>
+    }
+  </div>
+
+  <!-- Karar çubuğu — panelin altında, kenardan ayrık ve üst çizgiyle ayrılmış. -->
+  @if (!isClosed) {
+    <div class="decision-actions">
+      <button type="button" class="btn btn-danger" [disabled]="!!saving()" (click)="decide('reject')">
+        @if (saving() === 'reject') { <span class="spinner btn-spinner" aria-hidden="true"></span> }
+        {{ 'task.detail.reject' | t }}
+      </button>
+      <button type="button" class="btn btn-primary" [disabled]="!!saving()" (click)="decide('approve')">
+        @if (saving() === 'approve') { <span class="spinner btn-spinner" aria-hidden="true"></span> }
+        {{ 'task.detail.approve' | t }}
+      </button>
+    </div>
+  }
+</div>

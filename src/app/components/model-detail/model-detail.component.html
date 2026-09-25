@@ -558,9 +558,16 @@
 <!--
   H: Süreç paneli — yalnızca KAYITLI kayıtlarda. Yeni kayıtta henüz ID yok ve
   bir sürece bağlanamaz. Panel, workflow modülü kurulu değilse kendini gizler.
+
+  Üstündeki "Onayınızı bekliyor" paneli, bu kayıtta kullanıcıya atanmış bekleyen
+  görev varsa kararın buradan verilmesini sağlar; karar sonrası süreç paneli
+  tazelenir ki yeni adım/durum hemen görünsün.
 -->
 @if (!isNew && recordId > 0 && typeName) {
-  <app-workflow-panel [entityType]="typeName" [entityId]="recordId" />
+  <div class="record-workflow">
+    <app-record-tasks [entityType]="typeName" [entityId]="recordId" (decided)="wfPanel.load()" />
+    <app-workflow-panel #wfPanel [entityType]="typeName" [entityId]="recordId" />
+  </div>
 }
 
 <!-- ══ TOPLU SİLME / KALDIRMA ONAYI ═══════════════════════════════════════════ -->

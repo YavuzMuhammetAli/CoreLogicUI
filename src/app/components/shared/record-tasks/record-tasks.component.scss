@@ -1,0 +1,34 @@
+:host {
+  display: block;
+}
+
+// Karar panelleri ile altındaki Süreç paneli arasında nefes payı. Görev yoksa
+// bu blok hiç çizilmediği için boşluk da oluşmaz.
+.record-tasks {
+  margin-bottom: var(--space-6);
+}
+
+// Görev künyesi — başlığın sağında akış adı, vade ve detay linki.
+.task-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--muted);
+
+  .badge {
+    margin-left: var(--space-1);
+  }
+}
+
+.task-meta-item {
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .task-meta {
+    justify-content: flex-start;
+  }
+}

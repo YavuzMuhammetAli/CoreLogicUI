@@ -23,18 +23,6 @@
   }
 }
 
-.req {
-  color: var(--danger);
-  margin-left: 2px;
-}
-
-// Alan tipini gösteren küçük etiket (record-form-dialog ile aynı görünüm).
-.col-type-tag {
-  margin-left: var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--muted);
-}
-
 // Süreç geçmişi — sol kenarda dikey çizgi, her olay bir nokta.
 .timeline {
   list-style: none;
@@ -100,4 +88,8 @@
 .wf-skip {
   color: var(--warn);
   margin-left: auto;
+}
+
+.admin-error {
+  margin-top: var(--space-4);
 }

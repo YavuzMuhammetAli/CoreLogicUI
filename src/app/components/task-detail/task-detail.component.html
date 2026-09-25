@@ -66,70 +66,8 @@
       <div class="alert alert-info" role="status">{{ 'task.detail.alreadyClosed' | t }}</div>
     }
 
-    <div class="panel">
-      <div class="panel-head">
-        <h2 class="panel-title">{{ 'task.detail.form' | t }}</h2>
-      </div>
-      <div class="panel-body">
-        <form [formGroup]="form" class="stack">
-          @for (field of fields; track field.name) {
-            <div class="field">
-              <label [attr.for]="'wf-' + field.name">
-                {{ fieldLabel(field) }}
-                @if (field.isRequired) { <span class="req">*</span> }
-                <span class="col-type-tag">{{ field.dataType }}</span>
-              </label>
-
-              @if (field.dataType === 'enum') {
-                <select class="input" [id]="'wf-' + field.name" [formControlName]="field.name">
-                  <option value="">{{ 'task.detail.selectOption' | t }}</option>
-                  @for (option of parseEnumValues(field.enumValues); track option) {
-                    <option [value]="option">{{ option }}</option>
-                  }
-                </select>
-              } @else if (inputTypeFor(field.dataType) === 'checkbox') {
-                <label class="checkbox-label">
-                  <input type="checkbox" [id]="'wf-' + field.name" [formControlName]="field.name" />
-                  {{ fieldLabel(field) }}
-                </label>
-              } @else {
-                <input class="input"
-                       [id]="'wf-' + field.name"
-                       [type]="inputTypeFor(field.dataType)"
-                       [attr.step]="stepFor(field.dataType)"
-                       [formControlName]="field.name"
-                       [attr.aria-invalid]="!!errorFor(field)"
-                       [attr.aria-describedby]="errorFor(field) ? 'wf-err-' + field.name : null" />
-              }
-
-              @if (errorFor(field); as fieldError) {
-                <span [id]="'wf-err-' + field.name" class="field-error" role="alert">{{ fieldError }}</span>
-              }
-            </div>
-          }
-
-          <div class="field">
-            <label for="wf-comment">{{ 'task.detail.comment' | t }}</label>
-            <textarea id="wf-comment" class="input" rows="3" formControlName="comment"></textarea>
-          </div>
-        </form>
-
-        @if (submitError) {
-          <div class="alert alert-danger" role="alert">{{ submitError }}</div>
-        }
-      </div>
-
-      @if (!isClosed) {
-        <div class="panel-actions">
-          <button type="button" class="btn btn-danger" [disabled]="saving" (click)="askDecision('reject')">
-            {{ 'task.detail.reject' | t }}
-          </button>
-          <button type="button" class="btn btn-primary" [disabled]="saving" (click)="askDecision('approve')">
-            {{ 'task.detail.approve' | t }}
-          </button>
-        </div>
-      }
-    </div>
+    <!-- Karar formu — kayıt detayındaki "Onayınızı bekliyor" paneliyle ortak. -->
+    <app-task-decision-form [task]="t" (completed)="onCompleted($event)" />
 
     <!--
       Yönetici işlemleri. Atlama, ONAYDAN AYRI bir uç: audit'te "müdür onayladı"
@@ -160,6 +98,10 @@
               {{ 'task.detail.skip' | t }}
             </button>
           </div>
+
+          @if (adminError) {
+            <div class="alert alert-danger admin-error" role="alert">{{ adminError }}</div>
+          }
         </div>
       </div>
     }
@@ -185,14 +127,6 @@
     }
   </div>
 }
-
-<app-confirm-dialog
-  [open]="!!pendingDecision"
-  [title]="confirmTitle"
-  [message]="confirmMessage"
-  [busy]="saving"
-  (confirmed)="confirmDecision()"
-  (cancelled)="cancelDecision()" />
 
 <app-confirm-dialog
   [open]="pendingSkip"
