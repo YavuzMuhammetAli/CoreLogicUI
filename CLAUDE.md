@@ -175,7 +175,7 @@ CoreLogicUI-master/
         │   └── translate.pipe.ts              # TranslatePipe — şablonlarda `{{ 'key' | t }}` şeklinde kullanılır
         ├── environments/
         │   ├── environment.ts                  # apiBaseUrl: 'https://localhost:7254'
-        │   └── environment.prod.ts             # apiBaseUrl: 'http://localhost:5245' (henüz gerçek prod URL değil)
+        │   └── environment.prod.ts             # apiBaseUrl: '/api' — göreli, nginx aynı origin'den backend'e iletir
         └── models/
             ├── responseModel.ts                # ResponseModel { success, message }
             ├── responseModelList.ts            # ListResponseModel<T> extends ResponseModel { data }
@@ -736,6 +736,21 @@ npm test                        # Karma/Jasmine testleri
 > `npm run serve:ssr:CoreLogicUI` script'i hâlâ `package.json`'da var ama artık sadece
 > "SSR kaldirildi — artik kullanilmiyor" yazdırıp çıkıyor — gerçek bir SSR sunucusu çalıştırmaz.
 
+### Dağıtım (Ubuntu sunucu)
+
+Sunucu kurulumu backend reposundaki `deploy/` klasöründedir (adım adım rehber:
+`deploy/README.md`). Docker Compose dört servis kaldırır: `mssql` (2025 Express,
+`Turkish_CI_AS`), `backend`, `web` (nginx + iki SPA) ve tek seferlik `mssql-init`. Erişim
+Tailscale üzerinden HTTPS ile olur. Üç repo sunucuda yan yana durur
+(`~/corelogic/{CoreLogic,CoreLogicUI,CoreLogicPlatformConsole}`), güncelleme `deploy/update.sh` ile yapılır.
+
+- **Tek origin:** `/` Tenant UI, `/console/` Platform Console (`--base-href /console/`),
+  `/api/platform/` olduğu gibi, `/api/` ise önek soyularak backend'e gider
+  (`/api/Auth/login` → `/Auth/login`).
+- Production build `fileReplacements` ile `environment.prod.ts`'i kullanır (`apiBaseUrl: '/api'`).
+  `ng serve` development yapılandırmasıyla `environment.ts`'te kalır.
+- Yeni bir backend controller'ı için nginx'te bir şey yapmak gerekmez: `/api/` altındaki her yol iletilir.
+
 ### Yeni Component Ekleme
 ```bash
 ng generate component components/<ad>
@@ -773,7 +788,7 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
 
 ## Bilinen Eksikler ve TODO'lar
 
-1. **`environment.prod.ts` API URL'si** — hâlâ `http://localhost:5245` (gerçek prod URL değil), deployment'ta güncellenmeli
+1. **Yedekler aynı diskte** — sunucu kurulumunda yedekler `corelogic_mssql-backup` volume'ünde, yani veriyle aynı diskte duruyor; dışarı kopyalama elle yapılıyor (bkz. backend `deploy/README.md` → Yedekler)
 2. **Unit test kapsamı düşük** — kapsam `i18n/translations.spec.ts`, `shared/entity-graph/entity-graph.layout.spec.ts`, `utils/cron-builder.spec.ts` ve `utils/ai-import.mapper.spec.ts` ile genişletildi, ancak servis/component'lerin büyük kısmı hâlâ test edilmiyor
 3. **SSR bağımlılık kalıntısı** — `package.json`'da `@angular/ssr`/`express`/`@types/express` hâlâ duruyor; SSR fiilen kaldırıldığı için temizlenebilir ama `isPlatformBrowser` guard'ları kasıtlı korunuyor (bkz. `angular-standalone-component` skill)
 4. **Kalan native `confirm()` çağrıları** — `model-children`, `model-data`, `model-detail`, `role-detail`, `role-list` içinde 5 çağrı hâlâ native; `ConfirmDialogComponent`'e taşınmalı
