@@ -81,12 +81,42 @@ export interface WorkflowDefinition {
   triggerConditionJson?: string | null;
   isEnabled: boolean;
   createdOn: string;
+  /**
+   * Satırın son yazılma damgası. Düzenleme bu sürümle başlar ve güncellemede
+   * `expectedLastModifiedOn` olarak geri gönderilir (iyimser kilit). Metin olarak
+   * saklanır — tarihe çevirmek hassasiyeti milisaniyeye düşürür.
+   */
+  lastModifiedOn?: string;
+  /** Güncelleme isteğinde: istemcinin düzenlemeye başladığı sürüm. Boşsa denetim yok. */
+  expectedLastModifiedOn?: string | null;
   runningInstanceCount: number;
+}
+
+/** error: yayını engeller (taslak yine kaydedilir) · warning: yalnız dikkat çeker. */
+export type WorkflowIssueSeverity = 'error' | 'warning';
+
+/**
+ * Yapılandırılmış doğrulama bulgusu. `code` çeviri anahtarıdır
+ * (`workflow.issue.{code}`); `message` sunucunun Türkçe yedek metni.
+ */
+export interface WorkflowIssue {
+  code: string;
+  severity: WorkflowIssueSeverity;
+  message: string;
+  stepKey?: string | null;
+  branchKey?: string | null;
+  /** approve | reject | complete | anyReject */
+  port?: string | null;
+  field?: string | null;
+  args: Record<string, string>;
 }
 
 export interface WorkflowValidationResult {
   isValid: boolean;
+  /** Hataların düz metni (eski sözleşme). */
   errors: string[];
+  /** Hatalar + uyarılar, düğüme/porta bağlanabilir biçimde. */
+  issues?: WorkflowIssue[];
 }
 
 export interface WorkflowEvent {

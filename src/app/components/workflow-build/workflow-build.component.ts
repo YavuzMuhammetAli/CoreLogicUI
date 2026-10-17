@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
@@ -76,6 +76,7 @@ export class WorkflowBuildComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly location = inject(Location);
   private readonly workflowService = inject(WorkflowService);
   private readonly publishedModelService = inject(PublishedModelService);
   private readonly roleService = inject(RoleAdminService);
@@ -610,6 +611,16 @@ export class WorkflowBuildComponent implements OnInit {
         }
 
         const newId = this.editingId ?? (res as { data?: number }).data ?? 0;
+
+        // Yeni akış artık kayıtlı: ekran düzenleme moduna geçer. Aksi halde yayın
+        // düşüp kullanıcı tekrar bastığında define() yeniden çağrılır ve aynı
+        // kodla ikinci bir taslak açılmaya çalışılırdı (taslak artık eksikleriyle
+        // de kaydedildiği için bu yol gerçekten koşuyor).
+        if (!this.editingId && newId) {
+          this.editingId = newId;
+          this.isNew = false;
+          this.location.replaceState(`/workflows/${newId}/edit`);
+        }
 
         if (publish && newId) {
           this.publishThen(newId);

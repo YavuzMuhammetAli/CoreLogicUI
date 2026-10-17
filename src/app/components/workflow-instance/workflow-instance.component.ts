@@ -62,6 +62,18 @@ export class WorkflowInstanceComponent implements OnInit {
     return this.isAdmin && this.instance?.status === 'Running';
   }
 
+  /**
+   * Geri dönüş: yönetici akış listesine, diğerleri sürecin kaydına (yoksa
+   * Görevlerim'e). Akış listesi adminGuard'lı — oraya yönlendirilen sıradan
+   * kullanıcı /login'e atılırdı.
+   */
+  get backLink(): unknown[] {
+    if (this.isAdmin) return ['/workflows'];
+    return this.instance
+      ? ['/models', this.instance.entityType, this.instance.entityId]
+      : ['/tasks'];
+  }
+
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (!id) {

@@ -217,9 +217,12 @@ export const routes: Routes = [
           import('./components/deleted-workflows/deleted-workflows.component').then(m => m.DeletedWorkflowsComponent)
       },
       // "instances" ve "versions" da sabit segment — ":id"'den ÖNCE gelmeli.
+      // Süreç detayı adminGuard'sız: başlatan, görevli ve kaydı okuyabilen de
+      // görür (kayıttaki Süreç paneli ve görev detayı buraya bağlanıyor). Yetki
+      // backend'de IWorkflowAccessPolicy ile verilir; yönetici işlemleri ekranda
+      // isAdmin ile gizlenir.
       {
         path: 'workflows/instances/:id',
-        canActivate: [adminGuard],
         loadComponent: () =>
           import('./components/workflow-instance/workflow-instance.component').then(m => m.WorkflowInstanceComponent)
       },

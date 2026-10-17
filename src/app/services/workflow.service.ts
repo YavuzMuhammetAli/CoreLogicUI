@@ -21,15 +21,22 @@ export class WorkflowService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/Workflow`;
 
-  /** Yeni taslak tanım oluşturur; oluşan kaydın ID'sini döner. */
+  /**
+   * Yeni taslak tanım oluşturur; oluşan kaydın ID'sini döner. Doğrulama eksikleri
+   * kaydı engellemez (mesaj sorun sayısını söyler), yalnız yayını engeller.
+   */
   define(workflow: Partial<WorkflowDefinition>): Observable<DataResponseModel<number>> {
     return this.http.post<DataResponseModel<number>>(`${this.baseUrl}/define`, workflow)
       .pipe(tap(() => this.invalidateListCache()));
   }
 
-  /** Yalnızca Draft durumundaki tanımı günceller. */
-  update(workflow: Partial<WorkflowDefinition>): Observable<ResponseModel> {
-    return this.http.post<ResponseModel>(`${this.baseUrl}/update`, workflow)
+  /**
+   * Yalnızca Draft durumundaki tanımı günceller; `data` satırın yeni
+   * `lastModifiedOn` damgasıdır — sonraki güncellemede `expectedLastModifiedOn`
+   * olarak gönderilir. Damga bayatsa sunucu çakışma hatası döner.
+   */
+  update(workflow: Partial<WorkflowDefinition>): Observable<DataResponseModel<string>> {
+    return this.http.post<DataResponseModel<string>>(`${this.baseUrl}/update`, workflow)
       .pipe(tap(() => this.invalidateListCache()));
   }
 

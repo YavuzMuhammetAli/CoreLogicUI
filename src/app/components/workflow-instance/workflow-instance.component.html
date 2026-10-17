@@ -1,7 +1,7 @@
 <div class="page-header">
   <span class="eyebrow">{{ 'workflow.instance.title' | t }}</span>
   <div class="cluster">
-    <a routerLink="/workflows" class="btn btn-ghost btn-sm">{{ 'workflow.instance.back' | t }}</a>
+    <a [routerLink]="backLink" class="btn btn-ghost btn-sm">{{ 'workflow.instance.back' | t }}</a>
     @if (isAdmin) {
       <button type="button" class="btn btn-secondary btn-sm" [disabled]="verifying" (click)="verifyChain()">
         {{ 'workflow.instance.verifyChain' | t }}
