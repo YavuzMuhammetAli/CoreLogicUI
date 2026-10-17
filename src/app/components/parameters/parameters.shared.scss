@@ -106,7 +106,8 @@
 
 .plan-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  /* min(…, 100%): telefonda kart 260px'ten dar kabı taşırmasın */
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
   gap: var(--space-4);
 }
 
@@ -191,4 +192,12 @@
   .status-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Yedek geçmişi: başarısız yedeğin nedeni satırın altında, kesilmeden */
+.backup-error-row td {
+  white-space: normal;
+  max-width: none;
+  padding-top: 0;
+  overflow-wrap: anywhere;
 }

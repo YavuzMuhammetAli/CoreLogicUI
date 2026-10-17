@@ -23,7 +23,10 @@
 .dialog-panel {
   width: 100%;
   max-width: 860px;
-  max-height: 92vh;
+  max-height: calc(100vh - 2 * var(--space-4));
+  /* dvh = görünen alan; vh mobilde tarayıcı çubuklarını da sayar ve alttaki düğmeler kesilir */
+  max-height: calc(100dvh - 2 * var(--space-4));
+  overscroll-behavior: contain;
   overflow-y: auto;
   box-shadow: var(--elev-high);
 }
@@ -37,12 +40,20 @@
   position: sticky;
   bottom: 0;
   background: var(--surface);
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    padding: var(--space-4);
+  }
 }
 
 .record-dialog-title-wrap {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  /* Uzun alt başlıkta da kapatma düğmesi aynı satırda kalsın (dar ekranda başlık sarılır) */
+  flex: 1 1 0;
+  min-width: 0;
   min-width: 0;
 }
 
@@ -228,9 +239,23 @@ tr.row-selected td {
 
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 
+/* Satır hatası okunabilmeli: global td kuralı (nowrap + ellipsis) mesajı keserdi */
+.record-error-row td {
+  white-space: normal;
+  max-width: none;
+}
+
 @media (max-width: 768px) {
   .record-fields {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .record-fields .field label {
+    overflow-wrap: anywhere;
+  }
+
+  .dialog-panel .panel-head {
+    flex-wrap: nowrap;
   }
 
   .dialog-overlay {

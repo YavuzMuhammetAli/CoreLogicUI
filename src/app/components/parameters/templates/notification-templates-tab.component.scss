@@ -194,6 +194,11 @@
   display: block;
   width: 100%;
   height: 640px;
+
+  /* Telefonda tüm ekranı kaplayıp sayfa kaydırmasını yutmasın */
+  @media (max-width: 768px) {
+    height: min(640px, 70dvh);
+  }
   border: 0;
   background: #ffffff;
 }

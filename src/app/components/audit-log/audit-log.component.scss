@@ -1,6 +1,11 @@
 :host {
   display: block;
   padding: var(--space-6);
+
+  /* Dar ekranda boşluğu .page-content zaten veriyor — çift boşluk içeriği daraltıyordu */
+  @media (max-width: 768px) {
+    padding: 0;
+  }
 }
 
 /* Ardışık paneller arasına dikey boşluk (.panel'in kendi margin'i yok).
@@ -9,84 +14,7 @@
   margin-top: var(--space-6);
 }
 
-/* ---- Sayfalama ---- */
-.table-footer {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-5);
-  border-top: 1px solid var(--border-soft);
-  background: var(--surface-warm);
-
-  .eyebrow { flex: 1 1 auto; white-space: nowrap; }
-}
-
-.pagination {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.page-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 32px;
-  height: 32px;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--fg-2);
-  border-radius: var(--radius);
-  font-size: var(--text-sm);
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
-
-  &:hover:not(:disabled):not(.page-btn--active) {
-    background: var(--surface-warm);
-    color: var(--fg);
-    border-color: var(--accent);
-  }
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  &--active {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
-    font-weight: 600;
-    cursor: default;
-  }
-}
-
-.page-ellipsis {
-  padding: 0 2px;
-  color: var(--muted);
-  font-size: var(--text-sm);
-  user-select: none;
-}
-
-.page-size-selector {
-  select {
-    height: 32px;
-    padding: 0 var(--space-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--surface);
-    color: var(--fg-2);
-    font-size: var(--text-sm);
-    cursor: pointer;
-
-    &:focus {
-      outline: 2px solid var(--accent);
-      outline-offset: 1px;
-    }
-  }
-}
+/* Sayfalama ve .table-footer: global (styles.scss) */
 
 /* Genişletilmiş satırdaki eski/yeni değer karşılaştırma alanı */
 .audit-detail {
@@ -116,8 +44,20 @@
   }
 }
 
+/* Detay hücresi tablo hücresi kurallarını (nowrap + 260px) almasın */
+.data-table td.audit-detail-cell {
+  max-width: none;
+  white-space: normal;
+}
+
 @media (max-width: 768px) {
+  /* Tablo telefonda ~900px genişliğinde ve yatay kayıyor; detay o genişliğe yayılınca
+     her satırı okumak için yana kaydırmak gerekiyordu. Görünen alana sabitlenir. */
   .audit-detail {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    position: sticky;
+    left: 0;
+    width: calc(100vw - 2 * var(--space-4) - 2px);
+    box-sizing: border-box;
   }
 }

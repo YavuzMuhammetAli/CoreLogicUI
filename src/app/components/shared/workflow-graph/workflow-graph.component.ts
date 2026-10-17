@@ -27,5 +27,12 @@ export class WorkflowGraphComponent {
   readonly nodes = computed(() => this.layout().nodes);
   readonly edges = computed(() => this.layout().edges);
   readonly viewBox = computed(() => this.layout().viewBox);
+
+  /**
+   * SVG'nin doğal genişliği (viewBox'tan). Genişlik verilmezse SVG kabın %100'üne
+   * küçülür: telefonda 13px'lik düğüm yazısı ~5px'e iner ve okunmaz. Doğal genişlikle
+   * çizilen şema sığmazsa .graph-scroll içinde yatay kayar.
+   */
+  readonly naturalWidth = computed(() => Number(this.viewBox().split(/\s+/)[2]) || null);
   readonly isEmpty = computed(() => this.layout().nodes.length === 0);
 }

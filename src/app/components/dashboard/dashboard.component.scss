@@ -11,16 +11,36 @@
   grid-auto-rows: minmax(64px, auto);
   gap: var(--space-6);
 
+  /* Dar ekranda kayıtlı 12 kolonluk konumlar uygulanmaz (satır içi stil — bu yüzden
+     !important): widget'lar tasarım sırasıyla (bkz. load) akar.
+     ≤900 (yatay telefon/tablet): iki sütun, geniş widget (w > 6) tam satır.
+     ≤768 (dikey telefon): grafik ve tablolar tam satır, KPI'lar yan yana ikişer. */
   @media (max-width: 900px) {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+
+    .widget {
+      grid-column: span 1 !important;
+      grid-row: auto !important;
+    }
+
+    .widget--wide {
+      grid-column: 1 / -1 !important;
+    }
   }
 
   @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-
-    .widget {
+    .widget:not(.widget--kpi) {
       grid-column: 1 / -1 !important;
-      grid-row: auto !important;
+    }
+
+    /* Tablo widget'ının satır içi max-height'ı telefonda ~160px'lik bir kutu bırakıyordu */
+    .widget {
+      max-height: none !important;
+    }
+
+    .table-scroll {
+      max-height: 60dvh;
     }
   }
 }
@@ -33,6 +53,11 @@
   min-height: 220px;
   min-width: 0;
   overflow: hidden;
+
+  /* KPI kartı içeriği kadar: 4 KPI × 220px, ilk grafiğe ulaşmadan ekranlarca kaydırma demekti */
+  &.widget--kpi {
+    min-height: auto;
+  }
   animation: fade-rise 280ms var(--ease-out-strong, ease-out) both;
 
   @for $i from 1 through 12 {

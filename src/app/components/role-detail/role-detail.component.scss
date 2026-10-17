@@ -64,24 +64,31 @@
 /* Rol adı düzenleme satırı */
 .rename-row {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   align-items: center;
   margin-bottom: var(--space-2);
 
+  /* min-width: 0 + sarılma: dar ekranda düğmeler kesilmek yerine alt satıra iner */
   .input {
-    flex: 1;
+    flex: 1 1 200px;
+    min-width: 0;
   }
 }
 
 /* Üye ekleme satırı */
 .add-member-row {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   align-items: center;
   margin-bottom: var(--space-4);
 
+  /* Select en uzun seçeneği ("Ad Soyad — e-posta") kadar genişlemek ister; min-width: 0
+     olmadan "Kullanıcı Ekle" düğmesini panelin dışına itiyordu. */
   select.input {
-    flex: 1;
+    flex: 1 1 200px;
+    min-width: 0;
   }
 }
 
@@ -93,6 +100,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  /* Telefonda tam adres görünmeli — kesik e-postanın title'ını okumanın yolu yok */
+  @media (max-width: 768px) {
+    max-width: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }
 
 /* Kaydet butonu alt çubuğu */
@@ -196,45 +210,8 @@
   flex-wrap: wrap;
   gap: var(--space-3);
   padding-top: var(--space-3);
-}
 
-.pagination {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin-left: auto;
-}
-
-.page-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 32px;
-  height: 32px;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--fg-2);
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-size: var(--text-sm);
-
-  &:hover:not(:disabled):not(.page-btn--active) {
-    background: var(--surface-warm);
-    color: var(--fg);
-    border-color: var(--accent);
-  }
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  &--active {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
-  }
+  .pagination { margin-left: auto; }
 }
 
 /* ── İzin Verilen Modeller: model listesi (master) ── */
@@ -250,6 +227,7 @@
 
 .model-perm-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
@@ -269,6 +247,8 @@
 }
 
 .model-perm-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-weight: 500;
   font-family: var(--font-mono);
   font-size: var(--text-sm);

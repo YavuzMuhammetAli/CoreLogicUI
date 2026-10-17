@@ -126,6 +126,7 @@ export const WORKFLOW_I18N: Translations = {
   },
   'workflow.build.startStep': { tr: 'Başlangıç adımı', en: 'Start step' },
   'workflow.build.addStep': { tr: 'Adım Ekle', en: 'Add Step' },
+  'workflow.build.canvasMobileNotice': { tr: 'Tuval geniş ekranda daha rahat kullanılır. Telefonda adımları "Adımlar" sekmesinden ekleyip düzenleyebilir, bağlantıları adım penceresindeki onay/red seçimleriyle kurabilirsiniz.', en: 'The canvas works best on a wider screen. On a phone you can add and edit steps from the "Steps" tab and set connections with the approve/reject choices in the step dialog.' },
   'workflow.build.removeStep': { tr: 'Adımı kaldır', en: 'Remove step' },
   'workflow.build.stepKey': { tr: 'Anahtar', en: 'Key' },
   'workflow.build.stepName': { tr: 'Adım adı', en: 'Step name' },

@@ -141,8 +141,9 @@ export class ModelAutocompleteComponent {
   }
 
   /** Dışarı tıklanınca listeyi kapat (column-visibility popover'ıyla aynı desen). */
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
+  /** pointerdown: iOS Safari boş alana dokunmada click üretmeyebilir, liste açık kalırdı. */
+  @HostListener('document:pointerdown', ['$event'])
+  onDocumentClick(event: PointerEvent): void {
     if (!this.isOpen()) return;
     if (!this.host.nativeElement.contains(event.target as Node)) {
       this.isOpen.set(false);

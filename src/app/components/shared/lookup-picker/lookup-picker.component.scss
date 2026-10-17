@@ -25,6 +25,14 @@
   width: 20px;
   height: 20px;
   padding: 0;
+
+  /* Görünüm 20px kalır, dokunma alanı ~32px — parmakla ıskalanmasın */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+  }
+
   border: 0;
   border-radius: var(--radius-pill);
   background: transparent;
@@ -73,6 +81,12 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   transition: background var(--motion-fast) var(--ease-standard);
+
+  /* Dar ekranda uzun etiket kesilmesin: dokunmatikte title'ı görmenin yolu yok */
+  @media (max-width: 768px) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 
   &:hover,
   &--active { background: var(--surface-warm); }

@@ -24,7 +24,9 @@
 
 @if (!loading() && !loadError()) {
   @if (hasTasks()) {
-    <div class="panel">
+    <!-- Geniş ekran: tablo. Telefonda gizlenir — "Aç" 6. sütunda kalıp ekran dışına
+         düşüyordu; onun yerine aşağıdaki kart listesi gösterilir. -->
+    <div class="panel tasks-table">
       <div class="table-wrapper">
         <table class="data-table">
           <thead>
@@ -40,7 +42,7 @@
           <tbody>
             @for (task of tasks(); track task.id) {
               <tr>
-                <td>{{ task.name }}</td>
+                <td><a class="row-link" [routerLink]="['/tasks', task.id]">{{ task.name }}</a></td>
                 <td>{{ task.workflowName }}</td>
                 <td>{{ task.entityType }} #{{ task.entityId }}</td>
                 <td>{{ assigneeLabel(task) }}</td>
@@ -63,6 +65,38 @@
         </table>
       </div>
     </div>
+
+    <!-- Telefon: kart listesi — önce görev ve vade, sonra akış/kayıt, en altta tam genişlikte "Aç" -->
+    <ul class="task-cards">
+      @for (task of tasks(); track task.id) {
+        <li class="panel task-card">
+          <a class="task-card-title" [routerLink]="['/tasks', task.id]">{{ task.name }}</a>
+          <div class="task-card-due">
+            <span>{{ dueLabel(task) }}</span>
+            @if (task.isOverdue) {
+              <span class="badge badge-danger">{{ 'task.list.overdue' | t }}</span>
+            }
+          </div>
+          <dl class="task-card-meta">
+            <div>
+              <dt>{{ 'task.list.colWorkflow' | t }}</dt>
+              <dd>{{ task.workflowName }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'task.list.colRecord' | t }}</dt>
+              <dd>{{ task.entityType }} #{{ task.entityId }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'task.list.colAssigned' | t }}</dt>
+              <dd>{{ assigneeLabel(task) }}</dd>
+            </div>
+          </dl>
+          <a [routerLink]="['/tasks', task.id]" class="btn btn-primary task-card-open">
+            {{ 'task.list.open' | t }}
+          </a>
+        </li>
+      }
+    </ul>
   } @else {
     <div class="panel">
       <div class="empty-state">

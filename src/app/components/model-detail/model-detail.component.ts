@@ -21,6 +21,7 @@ import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.
 import { LookupPickerComponent } from '../shared/lookup-picker/lookup-picker.component';
 import { WorkflowPanelComponent } from '../shared/workflow-panel/workflow-panel.component';
 import { TaskActionDialogComponent, TaskActionResult } from '../shared/task-action-dialog/task-action-dialog.component';
+import { HelpHintComponent } from '../shared/help-hint/help-hint.component';
 import { WorkflowInstanceService, WorkflowTaskService } from '../../services/workflow-task.service';
 import { NotificationService } from '../../services/notification.service';
 import { MyRecordTask, RecordWorkflowState, StartableWorkflow } from '../../models/workflow.model';
@@ -105,7 +106,7 @@ interface TabState {
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, ColumnVisibilityComponent,
     TranslatePipe, RecordFormDialogComponent, ConfirmDialogComponent, LookupPickerComponent,
-    WorkflowPanelComponent, TaskActionDialogComponent
+    WorkflowPanelComponent, TaskActionDialogComponent, HelpHintComponent
   ],
   templateUrl: './model-detail.component.html',
   styleUrls: ['./model-detail.component.scss'],
@@ -798,6 +799,16 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
   setTab(name: string): void {
     this.activeTab = name;
+  }
+
+  /** Dar ekranda sekme çubuğu yatay kayar (kaydırma çubuğu gizli): seçilen sekme yarım görünmesin. */
+  revealTab(event: Event): void {
+    (event.currentTarget as HTMLElement | null)?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  }
+
+  /** Sıradaki adımlardan biri süresini aştıysa şeritte "Gecikmiş" rozeti gösterilir. */
+  get hasOverdueStep(): boolean {
+    return this.myStepTasks.some(task => task.isOverdue);
   }
 
   tabState(name: string): TabState | undefined {

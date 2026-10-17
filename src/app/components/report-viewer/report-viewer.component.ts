@@ -203,6 +203,7 @@ export class ReportViewerComponent implements OnInit {
     link.href = url;
     link.download = filename;
     link.click();
-    window.URL.revokeObjectURL(url);
+    // Hemen iptal edilirse Android Chrome indirmeyi başlatamadan URL'yi kaybedebilir.
+    setTimeout(() => window.URL.revokeObjectURL(url), 1000);
   }
 }

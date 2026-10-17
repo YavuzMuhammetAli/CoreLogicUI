@@ -84,7 +84,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
           for (const r of listRes.data ?? []) reportNames.set(r.id, r.name);
         }
 
-        this.widgetViews.set(dash.widgets.map(item => ({
+        // Tasarımdaki sıraya (önce satır, sonra sütun) diz. Masaüstünde konum zaten
+        // grid-column/row ile verilir; ama dar ekranda widget'lar alt alta DOM sırasıyla
+        // akar ve dizi, raporların tasarımcıda işaretlenme sırasıdır — sürükleme onu
+        // değiştirmez. Sıralanmasaydı en üstteki KPI'lar telefonda en alta düşebilirdi.
+        const ordered = [...dash.widgets].sort((a, b) =>
+          a.widget.y - b.widget.y || a.widget.x - b.widget.x);
+
+        this.widgetViews.set(ordered.map(item => ({
           result: item,
           reportName: reportNames.get(item.widget.reportDefinitionId)
             ?? this.languageService.t('dashboard.view.reportFallbackName', { id: item.widget.reportDefinitionId })

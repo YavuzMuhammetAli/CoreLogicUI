@@ -183,6 +183,14 @@ export function buildChartOptions(
     { breakpoint: 768, options: { chart: { height: 260 }, legend: { fontSize: '11px' } } }
   ];
 
+  /**
+   * Eksenli grafiklerde (çizgi/alan/çubuk) yakınlaştırma ve araç çubuğu kapalı.
+   * ApexCharts'ta zoom varsayılan AÇIK ve dokunmatikte 10px'lik sürüklemeyi zoom sayar:
+   * sayfayı kaydırmak için grafiğe değen parmak grafiği 1-2 noktaya yakınlaştırıyordu,
+   * geri dönüş de küçük bir ikondan ibaretti.
+   */
+  const noZoom = { zoom: { enabled: false }, toolbar: { show: false } };
+
   const shared = {
     legend: { show: true, position: 'bottom' as const, labels: { colors: tokens.fg2 } },
     tooltip: { theme: themeMode, y: { formatter: (val: number) => fmtNum(locale, val) } },
@@ -205,6 +213,11 @@ export function buildChartOptions(
         apexType: chartType,
         isEmpty: false,
         chart: { type: chartType, height: 360, animations: { enabled: false } },
+        // Dar ekranda çok kategorili legend pastayı ezmesin: yükseklik sınırlı, kendi içinde kayar.
+        responsive: [
+          base[0],
+          { breakpoint: 768, options: { chart: { height: 320 }, legend: { fontSize: '11px', height: 64 } } }
+        ],
         series,
         labels: categories,
         colors,
@@ -282,7 +295,7 @@ export function buildChartOptions(
         ...shared,
         apexType: chartType,
         isEmpty: false,
-        chart: { type: chartType, height: 360, animations: { enabled: false } },
+        chart: { type: chartType, height: 360, animations: { enabled: false }, ...noZoom },
         series,
         colors,
         stroke: { curve: 'smooth', width: 3 },
@@ -308,12 +321,23 @@ export function buildChartOptions(
     default: {
       const series = valueCols.map(col => ({ name: col.name, data: plotRows.map(r => toNumber(r[col.name])) }));
       const colors = cyclePalette(palette, series.length);
+      // Yatay çubukta her kategori bir satır: sabit yükseklikte 50 kategori ~4px'lik çubuklar
+      // demekti. Yükseklik kategori sayısıyla büyür; dar ekranda y etiketleri daraltılır.
+      const horizontal = chartType === 'bar';
+      const barHeight = (min: number) => horizontal ? Math.max(min, categories.length * 24 + 60) : min;
       return {
         ...empty,
         ...shared,
         apexType: 'bar',
         isEmpty: false,
-        chart: { type: 'bar', height: 360, animations: { enabled: false } },
+        chart: { type: 'bar', height: barHeight(360), animations: { enabled: false }, ...noZoom },
+        responsive: [
+          { breakpoint: 900, options: { chart: { height: barHeight(300) }, legend: { position: 'bottom' } } },
+          {
+            breakpoint: 768,
+            options: { chart: { height: barHeight(260) }, legend: { fontSize: '11px' } }
+          }
+        ],
         series,
         colors,
         dataLabels: { enabled: false },
@@ -325,7 +349,8 @@ export function buildChartOptions(
           axisTicks: { color: tokens.border }
         },
         yaxis: {
-          labels: { style: { colors: tokens.muted }, formatter: (val: number) => fmtNum(locale, val) }
+          // Yatay çubukta y ekseni kategori adlarıdır; uzun adlar dar ekranda grafiğin yarısını yemesin.
+          labels: { style: { colors: tokens.muted }, formatter: (val: number) => fmtNum(locale, val), ...(horizontal ? { maxWidth: 120 } : {}) }
         }
       };
     }

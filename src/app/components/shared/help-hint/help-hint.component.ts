@@ -10,6 +10,8 @@ import { ChangeDetectionStrategy, Component, ElementRef, input, OnDestroy, signa
  *
  * Kullanım:
  *   <label>MinLength <app-help-hint [text]="'help.rule.minLength' | t" /></label>
+ *   <app-help-hint variant="formula" glyph="ƒx" [text]="rule.expression" [label]="…" />
+ *     → otomatik değer formülü; dokunmatikte de okunabilsin diye title yerine bu kullanılır.
  *
  * KONUMLANDIRMA: Tooltip `position: fixed` ve koordinatları burada hesaplanır. Sebebi,
  * baloncuğun içinde durduğu kapsayıcıların onu kırpması:
@@ -39,6 +41,15 @@ export class HelpHintComponent implements OnDestroy {
    */
   placement = input<'above' | 'below'>('above');
 
+  /** Baloncukta görünen işaret ("i" ya da otomatik değer için "ƒx"). */
+  glyph = input('i');
+
+  /** `formula`: otomatik değer etiketi (ƒx) görünümü — kayıt formlarında formülü gösterir. */
+  variant = input<'info' | 'formula'>('info');
+
+  /** Ekran okuyucu etiketi; verilmezse tooltip metni okunur. */
+  label = input<string | null>(null);
+
   private readonly bubble = viewChild.required<ElementRef<HTMLElement>>('bubble');
   private readonly tip = viewChild.required<ElementRef<HTMLElement>>('tip');
 
@@ -52,7 +63,11 @@ export class HelpHintComponent implements OnDestroy {
   private readonly GAP = 8;
   private readonly MARGIN = 8;
 
+  /** Balonun kapalıdan açığa geçtiği an — dokunmatikte aynı dokunuşun olaylarını ayırt eder. */
+  private shownAt = 0;
+
   show(): void {
+    if (!this.open()) this.shownAt = performance.now();
     const anchor = this.bubble().nativeElement.getBoundingClientRect();
     // Tooltip `visibility: hidden` ile ölçülebilir durumda (display:none DEĞİL).
     const tip = this.tip().nativeElement.getBoundingClientRect();
@@ -80,6 +95,17 @@ export class HelpHintComponent implements OnDestroy {
     this.unbindViewportListeners();
   }
 
+  /**
+   * Dokunmatikte hover yok: dokunuş önce (emüle edilen) mouseenter/focus ile balonu açar,
+   * click hemen ardından gelir — o click balonu kapatmamalı. İkinci dokunuş kapatır.
+   * Fareli cihazda hover zaten yönettiği için bir şey yapılmaz.
+   */
+  onTap(): void {
+    if (!window.matchMedia('(pointer: coarse)').matches) return;
+    if (!this.open()) this.show();
+    else if (performance.now() - this.shownAt > 400) this.hide();
+  }
+
   ngOnDestroy(): void {
     this.unbindViewportListeners();
   }
@@ -88,7 +114,12 @@ export class HelpHintComponent implements OnDestroy {
   // Konum açılış anında hesaplanır; kaydırma/yeniden boyutlandırma onu bayatlatır.
   // Yeniden hesaplamak yerine gizlemek yeterli — balon zaten hover ömürlü.
 
-  private readonly onViewportChange = () => this.hide();
+  private readonly onViewportChange = () => {
+    // Dokunmatikte baloncuğa odaklanmak açık klavyeyi kapatır (resize) ve sayfayı
+    // kaydırabilir — açılıştan hemen sonraki bu olaylar balonu kapatmasın.
+    if (performance.now() - this.shownAt < 500) return;
+    this.hide();
+  };
 
   /**
    * `scroll` olayı BUBBLE ETMEZ: diyalog panelinin kendi kaydırması `document`'a ulaşmaz.

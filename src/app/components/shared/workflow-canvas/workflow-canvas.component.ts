@@ -293,6 +293,8 @@ export class WorkflowCanvasComponent {
     if (!isPlatformBrowser(this.platformId)) return;
     // Sağ tuş menüsü Faz 7'de gelecek; şimdilik tarayıcıya bırakılıyor.
     if (event.button !== 0 && event.button !== 1) return;
+    // Dokunmatikte ikinci parmak panState'i sıfırlayıp görünümü zıplatıyordu.
+    if (!event.isPrimary) return;
 
     event.preventDefault();
 
@@ -301,11 +303,13 @@ export class WorkflowCanvasComponent {
 
     document.addEventListener('pointermove', this.onSurfacePointerMove);
     document.addEventListener('pointerup', this.onSurfacePointerUp);
+    // pointercancel: tarayıcı jesti devralırsa (ör. sistem kaydırması) sürükleme takılı kalmasın.
+    document.addEventListener('pointercancel', this.onSurfacePointerUp);
   }
 
   private readonly onSurfacePointerMove = (event: PointerEvent): void => {
     const state = this.panState;
-    if (!state) return;
+    if (!state || !event.isPrimary) return;
 
     this.camera.set(panBy(
       state.origin,
@@ -318,6 +322,7 @@ export class WorkflowCanvasComponent {
     this.panning.set(false);
     document.removeEventListener('pointermove', this.onSurfacePointerMove);
     document.removeEventListener('pointerup', this.onSurfacePointerUp);
+    document.removeEventListener('pointercancel', this.onSurfacePointerUp);
   };
 
   // ── Düğüm taşıma ──────────────────────────────────────────────────────────
@@ -327,7 +332,7 @@ export class WorkflowCanvasComponent {
   } | null = null;
 
   onNodeDragStart(event: PointerEvent, node: CanvasNode): void {
-    if (!isPlatformBrowser(this.platformId)) return;
+    if (!isPlatformBrowser(this.platformId) || !event.isPrimary) return;
 
     event.preventDefault();
     event.stopPropagation();
@@ -346,12 +351,13 @@ export class WorkflowCanvasComponent {
 
     document.addEventListener('pointermove', this.onNodeDragMove);
     document.addEventListener('pointerup', this.onNodeDragEnd);
+    document.addEventListener('pointercancel', this.onNodeDragEnd);
   }
 
   // Ok fonksiyonu: `this` bağlanır ve removeEventListener referansla çalışır.
   private readonly onNodeDragMove = (event: PointerEvent): void => {
     const state = this.dragState;
-    if (!state) return;
+    if (!state || !event.isPrimary) return;
 
     // Ekran pikseli dünya birimine çevrilir; aksi halde uzaklaşınca düğüm
     // imcin çok gerisinde kalırdı.
@@ -370,6 +376,7 @@ export class WorkflowCanvasComponent {
     this.dragState = null;
     document.removeEventListener('pointermove', this.onNodeDragMove);
     document.removeEventListener('pointerup', this.onNodeDragEnd);
+    document.removeEventListener('pointercancel', this.onNodeDragEnd);
 
     if (!state) return;
 
@@ -380,7 +387,7 @@ export class WorkflowCanvasComponent {
   // ── Bağlantı çizme ────────────────────────────────────────────────────────
 
   onPortDragStart(event: PointerEvent, node: CanvasNode, port: PortKind): void {
-    if (!isPlatformBrowser(this.platformId) || this.locked()) return;
+    if (!isPlatformBrowser(this.platformId) || this.locked() || !event.isPrimary) return;
 
     event.preventDefault();
     event.stopPropagation();
@@ -390,14 +397,23 @@ export class WorkflowCanvasComponent {
 
     document.addEventListener('pointermove', this.onPortDragMove);
     document.addEventListener('pointerup', this.onPortDragEnd);
+    document.addEventListener('pointercancel', this.onPortDragCancel);
   }
 
   private readonly onPortDragMove = (event: PointerEvent): void => {
     const pending = this.pendingEdge();
-    if (!pending) return;
+    if (!pending || !event.isPrimary) return;
 
     const point = this.toWorldPoint(event);
     this.pendingEdge.set({ ...pending, x: point.x, y: point.y });
+  };
+
+  /** İptal edilen jest bağlantı oluşturmaz — yalnız yarım çizgiyi temizler. */
+  private readonly onPortDragCancel = (): void => {
+    this.pendingEdge.set(null);
+    document.removeEventListener('pointermove', this.onPortDragMove);
+    document.removeEventListener('pointerup', this.onPortDragEnd);
+    document.removeEventListener('pointercancel', this.onPortDragCancel);
   };
 
   private readonly onPortDragEnd = (event: PointerEvent): void => {
@@ -405,6 +421,7 @@ export class WorkflowCanvasComponent {
     this.pendingEdge.set(null);
     document.removeEventListener('pointermove', this.onPortDragMove);
     document.removeEventListener('pointerup', this.onPortDragEnd);
+    document.removeEventListener('pointercancel', this.onPortDragCancel);
 
     if (!pending) return;
 

@@ -31,6 +31,13 @@
   // kaynağı olurdu (bkz. workflow-canvas.camera.ts).
   overflow: hidden;
   height: 560px;
+
+  /* Telefonda 560px'lik ve dokunma jestlerini yutan (touch-action: none) tuval ekranı
+     kaplıyor, sayfa kaydırılamıyordu: tuvalin üstü/altında kaydırılacak yer kalsın. */
+  @media (max-width: 768px) {
+    height: min(60dvh, 560px);
+    min-height: 300px;
+  }
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 10px);
   // Noktalı ızgara pencerenin TAMAMINDA. Aralık ve kayma şablondan kamerayla

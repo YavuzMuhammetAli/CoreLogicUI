@@ -182,6 +182,8 @@
 
     @if (activeTab() === 'canvas') {
       <div class="tab-panel stack" role="tabpanel">
+        <!-- Yalnız dar ekranda görünür (bkz. .canvas-mobile-notice) -->
+        <div class="alert alert-info canvas-mobile-notice" role="note">{{ 'workflow.build.canvasMobileNotice' | t }}</div>
         @if (!readonlyMode()) {
           <div class="tab-toolbar tab-toolbar--end">
             <button type="button" class="btn btn-secondary btn-sm" (click)="openNewStep()">

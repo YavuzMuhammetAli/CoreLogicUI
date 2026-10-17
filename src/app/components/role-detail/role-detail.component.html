@@ -338,10 +338,18 @@
                       <nav class="pagination" [attr.aria-label]="'role.detail.paginationAriaLabel' | t">
                         <button class="page-btn" type="button" (click)="goToModelPage(modelPageIndex() - 1)"
                                 [disabled]="modelPageIndex() === 1" [attr.aria-label]="'role.detail.prevPageAriaLabel' | t">‹</button>
+                        @if (modelPages()[0] > 1) {
+                          <button class="page-btn" type="button" (click)="goToModelPage(1)">1</button>
+                          @if (modelPages()[0] > 2) { <span class="page-ellipsis">…</span> }
+                        }
                         @for (p of modelPages(); track p) {
                           <button class="page-btn" [class.page-btn--active]="p === modelPageIndex()"
                                   type="button" (click)="goToModelPage(p)"
                                   [attr.aria-current]="p === modelPageIndex() ? 'page' : null">{{ p }}</button>
+                        }
+                        @if (modelPages()[modelPages().length - 1] < modelTotalPages()) {
+                          @if (modelPages()[modelPages().length - 1] < modelTotalPages() - 1) { <span class="page-ellipsis">…</span> }
+                          <button class="page-btn" type="button" (click)="goToModelPage(modelTotalPages())">{{ modelTotalPages() }}</button>
                         }
                         <button class="page-btn" type="button" (click)="goToModelPage(modelPageIndex() + 1)"
                                 [disabled]="modelPageIndex() === modelTotalPages()" [attr.aria-label]="'role.detail.nextPageAriaLabel' | t">›</button>

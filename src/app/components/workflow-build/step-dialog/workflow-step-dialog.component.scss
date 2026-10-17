@@ -22,7 +22,10 @@
 .dialog-panel {
   width: 100%;
   max-width: 820px;
-  max-height: 92vh;
+  max-height: calc(100vh - 2 * var(--space-4));
+  /* dvh = görünen alan; vh mobilde tarayıcı çubuklarını da sayar ve alttaki düğmeler kesilir */
+  max-height: calc(100dvh - 2 * var(--space-4));
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   box-shadow: var(--elev-high);
@@ -50,6 +53,11 @@
   padding: var(--space-4) var(--space-6) var(--space-5);
   border-top: 1px solid var(--border-soft);
   background: var(--surface);
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    padding: var(--space-4);
+  }
 }
 
 // ── Bölümler ───────────────────────────────────────────────────────────────

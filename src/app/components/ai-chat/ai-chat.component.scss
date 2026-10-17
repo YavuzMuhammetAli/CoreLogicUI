@@ -149,6 +149,7 @@
   p {
     margin: var(--space-2) 0 0;
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 }
 
@@ -222,6 +223,7 @@
   margin: 0;
   font-size: var(--text-sm);
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .ai-card-error {
@@ -255,13 +257,35 @@
   }
 }
 
+/* Telefon: önce sohbet. Sohbet paneli ekran yüksekliğinde kalır — mesajlar kendi içinde
+   kayar, yazma kutusu hep görünür (eskiden sohbet listesinin altında, her yeni yanıtla
+   biraz daha aşağı itiliyordu). Sohbet listesi ve öneriler sohbetin altına iner. */
 @media (max-width: 768px) {
+  :host {
+    padding: 0;
+  }
+
   .ai-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    gap: var(--space-4);
     height: auto;
+    min-height: 0;
+
+    .ai-main {
+      order: -1;
+      height: calc(100dvh - var(--topbar-h) - 120px);
+      min-height: 420px;
+    }
 
     .ai-side {
       max-height: 280px;
+    }
+
+    // Öneri kartları sayfayla birlikte kayar; iç içe ikinci bir kaydırma kutusu olmasın.
+    .ai-side:last-of-type {
+      grid-column: auto;
+      max-height: none;
     }
   }
 }

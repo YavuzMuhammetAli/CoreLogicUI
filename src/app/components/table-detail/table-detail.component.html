@@ -71,6 +71,11 @@
             {{ 'table.detail.publish' | t }}
           }
         </button>
+
+        <!-- Neden kapalı olduğu görünür metin: title dokunmatikte okunamıyor -->
+        @if (!isSaved) {
+          <span class="field-help publish-hint">{{ 'table.detail.publishDisabledHint' | t }}</span>
+        }
       </div>
     </div>
 

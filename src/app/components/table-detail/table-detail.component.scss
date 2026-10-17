@@ -2,6 +2,7 @@
 
 .detail-breadcrumb {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   font-size: var(--text-sm);
@@ -49,10 +50,27 @@
   border-bottom: 2px solid var(--border-soft);
   background: var(--surface-warm);
   padding: 0 var(--space-4);
+  /* Rozetli üç sekme telefona sığmıyor: sarılamayan sekmeler yatay kayar
+     (eskiden .children-panel kırpmadığı için bütün sayfa yana kayıyordu) */
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.publish-hint {
+  flex-basis: 100%;
+  text-align: right;
+
+  @media (max-width: 768px) {
+    text-align: left;
+  }
 }
 
 .tab-btn {
   display: flex;
+  flex-shrink: 0;
+  white-space: nowrap;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
@@ -264,7 +282,10 @@
 .dialog-panel {
   width: 100%;
   max-width: 560px;
-  max-height: 90vh;
+  max-height: calc(100vh - 2 * var(--space-4));
+  /* dvh = görünen alan; vh mobilde tarayıcı çubuklarını da sayar ve alttaki düğmeler kesilir */
+  max-height: calc(100dvh - 2 * var(--space-4));
+  overscroll-behavior: contain;
   overflow-y: auto;
   box-shadow: var(--elev-high);
 }
@@ -294,6 +315,15 @@
   gap: var(--space-2);
   padding: var(--space-4) var(--space-6) var(--space-5);
   border-top: 1px solid var(--border-soft);
+  flex-wrap: wrap;
+  /* Uzun formda Kaydet/İptal görünür kalsın (record-form-dialog ile aynı) */
+  position: sticky;
+  bottom: 0;
+  background: var(--surface);
+
+  @media (max-width: 768px) {
+    padding: var(--space-4);
+  }
 }
 
 /* ── Sütun popup'ı: otomatik değer bölümü ──────────────────────────────────── */

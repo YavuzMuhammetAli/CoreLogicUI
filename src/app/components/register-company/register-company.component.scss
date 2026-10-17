@@ -2,10 +2,16 @@
 
 .regco-page {
   min-height: 100vh;
+  /* Görünen alan: mobilde 100vh adres çubuğunu da sayar, kart aşağı kayardı */
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   background: linear-gradient(135deg, var(--bg) 0%, var(--surface-warm) 100%);
   padding: var(--space-6);
+
+  @media (max-width: 480px) {
+    padding: var(--space-4);
+  }
 }
 
 .regco-card {

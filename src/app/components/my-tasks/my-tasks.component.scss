@@ -2,3 +2,69 @@
 .data-table td .badge {
   margin-left: var(--space-2);
 }
+
+/* ── Telefon: kart listesi (≤640) ───────────────────────────────────────────── */
+
+.task-cards {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: var(--space-3);
+}
+
+.task-card {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.task-card-title {
+  font-weight: 700;
+  color: var(--fg);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.task-card-due {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+}
+
+.task-card-meta {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: var(--text-sm);
+
+  > div {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  dt {
+    flex: 0 0 auto;
+    color: var(--muted);
+  }
+
+  dd {
+    margin: 0;
+    min-width: 0;
+    color: var(--fg-2);
+    overflow-wrap: anywhere;
+  }
+}
+
+.task-card-open {
+  margin-top: var(--space-2);
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .tasks-table { display: none; }
+  .task-cards { display: grid; }
+}

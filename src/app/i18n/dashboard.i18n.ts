@@ -34,6 +34,7 @@ export const DASHBOARD_I18N: Translations = {
   'dashboard.build.layoutSection': { tr: 'Yerleşim', en: 'Layout' },
   'dashboard.build.layoutEmpty': { tr: 'Yerleşimi düzenlemek için yukarıdan rapor ekleyin.', en: 'Add a report from above to edit the layout.' },
   'dashboard.build.layoutHelp': { tr: "Widget başlığından sürükleyip taşıyın; sağ-alt köşedeki tutamaçtan yeniden boyutlandırın.", en: 'Drag from the widget title to move it; resize using the handle at the bottom-right corner.' },
+  'dashboard.build.mobileLayoutNotice': { tr: 'Yerleşimi (konum ve boyut) geniş ekranda düzenleyin. Telefonda widget\'lar bu sırayla alt alta görünür; buradan grafik tipini değiştirebilir ya da widget kaldırabilirsiniz.', en: 'Edit the layout (position and size) on a wider screen. On phones widgets are shown stacked in this order; here you can change the chart type or remove a widget.' },
   'dashboard.build.removeWidgetAria': { tr: "{name} widget'ını kaldır", en: 'Remove {name} widget' },
   'dashboard.build.chartTypeAria': { tr: '{name} için grafik tipi', en: 'Chart type for {name}' },
   'dashboard.build.atLeastOneReport': { tr: 'En az bir rapor eklenmelidir.', en: 'At least one report must be added.' },

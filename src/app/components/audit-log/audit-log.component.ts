@@ -7,6 +7,7 @@ import { AuditLog } from '../../models/auditLog';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { markDirty } from '../../utils/change-detection';
+import { pageWindow } from '../../utils/pagination';
 
 @Component({
   selector: 'app-audit-log',
@@ -52,19 +53,7 @@ export class AuditLogComponent implements OnInit {
   pageRangeEnd = computed(() => Math.min(this.pageIndex() * this.pageSize(), this.total()));
 
   /** Sayfa numarası butonları için en fazla 5'lik kayan pencere (1 ve son sayfa her zaman gösterilir). */
-  visiblePages = computed(() => {
-    const pages = this.totalPages();
-    if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
-
-    const half = 2;
-    let start = Math.max(1, this.pageIndex() - half);
-    let end = Math.min(pages, this.pageIndex() + half);
-
-    if (this.pageIndex() - half < 1) end = Math.min(pages, 5);
-    if (this.pageIndex() + half > pages) start = Math.max(1, pages - 4);
-
-    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
-  });
+  visiblePages = computed(() => pageWindow(this.pageIndex(), this.totalPages()));
 
   ngOnInit(): void {
     this.load();

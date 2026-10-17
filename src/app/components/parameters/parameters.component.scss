@@ -1,6 +1,11 @@
 :host {
   display: block;
   padding: var(--space-6);
+
+  /* Dar ekranda boşluğu .page-content zaten veriyor — çift boşluk içeriği daraltıyordu */
+  @media (max-width: 768px) {
+    padding: 0;
+  }
 }
 
 /* Sekme çubuğu panelin üst kenarına oturur; taşan köşeler kırpılır. */

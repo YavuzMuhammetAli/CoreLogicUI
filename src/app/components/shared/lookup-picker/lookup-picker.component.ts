@@ -134,6 +134,8 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
     // Liste açıkken component yok edilirse dinleyiciler sızmasın.
     window.removeEventListener('scroll', this.reposition, true);
     window.removeEventListener('resize', this.reposition);
+    window.visualViewport?.removeEventListener('resize', this.reposition);
+    window.visualViewport?.removeEventListener('scroll', this.reposition);
   }
 
   // ── ControlValueAccessor ─────────────────────────────────────────────────
@@ -191,6 +193,9 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
     // capture: true — iç scroll konteynerleri de yakalanır (scroll balonlanmaz).
     window.addEventListener('scroll', this.reposition, true);
     window.addEventListener('resize', this.reposition);
+    // Mobilde klavye yalnız GÖRÜNEN alanı (visualViewport) küçültür; window resize gelmez.
+    window.visualViewport?.addEventListener('resize', this.reposition);
+    window.visualViewport?.addEventListener('scroll', this.reposition);
   }
 
   /**
@@ -223,6 +228,8 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
     this.observer?.disconnect();
     window.removeEventListener('scroll', this.reposition, true);
     window.removeEventListener('resize', this.reposition);
+    window.visualViewport?.removeEventListener('resize', this.reposition);
+    window.visualViewport?.removeEventListener('scroll', this.reposition);
     this.onTouched();
   }
 
@@ -231,6 +238,10 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
    *
    * Alta sığmıyorsa yukarı açılır; her iki durumda da yükseklik kalan boşluğa göre
    * kısılır, böylece liste hiçbir zaman ekran dışına taşmaz.
+   *
+   * Sınırlar `visualViewport`'tan alınır: mobilde klavye açılınca `innerHeight` değişmez,
+   * yalnız görünen alan küçülür (ve iOS'ta kayar). innerHeight'a bakılsaydı liste
+   * klavyenin arkasına açılırdı.
    */
   private positionList(): void {
     const input = this.inputEl()?.nativeElement;
@@ -241,8 +252,11 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
     const margin = 8;                       // viewport kenarına bırakılan pay
     const preferred = 260;
 
-    const spaceBelow = window.innerHeight - rect.bottom - gap - margin;
-    const spaceAbove = rect.top - gap - margin;
+    const vv = window.visualViewport;
+    const viewTop = vv?.offsetTop ?? 0;
+    const viewBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+    const spaceBelow = viewBottom - rect.bottom - gap - margin;
+    const spaceAbove = rect.top - viewTop - gap - margin;
 
     // Altta makul yer yoksa ve üstte daha fazlası varsa yukarı aç.
     const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
@@ -379,8 +393,9 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
     });
   }
 
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
+  /** pointerdown: iOS Safari boş alana dokunmada click üretmeyebilir, liste açık kalırdı. */
+  @HostListener('document:pointerdown', ['$event'])
+  onDocumentClick(event: PointerEvent): void {
     if (!this.isOpen()) return;
     if (!this.host.nativeElement.contains(event.target as Node)) this.close();
   }

@@ -156,6 +156,10 @@
         @if (wfState?.running; as running) {
           <div class="workflow-strip" [class.workflow-strip--locked]="wfState?.isLocked" role="status">
             <span class="badge badge-warn">{{ 'workflow.record.inProcess' | t }}</span>
+            <!-- Gecikme eskiden yalnız adım düğmesinin title'ındaydı — dokunmatikte görünmüyordu -->
+            @if (hasOverdueStep) {
+              <span class="badge badge-danger">{{ 'task.list.overdue' | t }}</span>
+            }
             <span class="workflow-strip__text">
               {{ 'workflow.record.currentStep' | t:{ workflow: running.definitionName, step: running.currentStepName || running.currentStepKey || '—' } }}
             </span>
@@ -190,14 +194,12 @@
                   {{ colLabel(col) }}
                   @if (!col.isNullable) { <span style="color:var(--danger)">*</span> }
                   @if (col.description?.trim()) {
-                    <span class="info-bubble" tabindex="0" [attr.aria-label]="'model.detail.fieldDescriptionAria' | t:{ description: col.description ?? '' }">
-                      i
-                      <span class="info-bubble__tip" role="tooltip">{{ col.description }}</span>
-                    </span>
+                    <app-help-hint [text]="col.description ?? ''"
+                      [label]="'model.detail.fieldDescriptionAria' | t:{ description: col.description ?? '' }" />
                   }
                   @if (autoValueRule(col); as rule) {
-                    <span class="auto-value-tag" [title]="rule.expression"
-                      [attr.aria-label]="'model.detail.autoValue.badgeAria' | t:{ expression: rule.expression }">ƒx</span>
+                    <app-help-hint variant="formula" glyph="ƒx" [text]="rule.expression"
+                      [label]="'model.detail.autoValue.badgeAria' | t:{ expression: rule.expression }" />
                   }
                   <span class="col-type-tag">{{ col.dataType }}</span>
                 </label>
@@ -323,7 +325,7 @@
               [class.tab-btn--active]="activeTab === name"
               role="tab"
               [attr.aria-selected]="activeTab === name"
-              (click)="setTab(name)">
+              (click)="setTab(name); revealTab($event)">
               {{ name }}
               @if (tabRowCount(name) > 0) {
                 <span class="tab-badge">{{ tabRowCount(name) }}</span>
@@ -452,11 +454,13 @@
                               (keydown.enter)="openStagedEdit(state, node)"
                               [attr.aria-label]="'model.detail.editRowAria' | t">
                               <td class="select-cell" (click)="$event.stopPropagation()">
-                                <input
-                                  type="checkbox"
-                                  [checked]="isStagedSelected(state, node)"
-                                  (change)="toggleStaged(state, node)"
-                                  [attr.aria-label]="'model.detail.selectRowAria' | t">
+                                <label class="select-hit">
+                                  <input
+                                    type="checkbox"
+                                    [checked]="isStagedSelected(state, node)"
+                                    (change)="toggleStaged(state, node)"
+                                    [attr.aria-label]="'model.detail.selectRowAria' | t">
+                                </label>
                               </td>
                               @for (col of displayCols(state); track col.columnName) {
                                 <td>{{ stagedCell(node, col.columnName) }}</td>
@@ -557,11 +561,13 @@
                             (keydown.enter)="canChild(name, 'update') && openSavedEdit(state, row)">
                             @if (canChild(name, 'delete')) {
                               <td class="select-cell" (click)="$event.stopPropagation()">
-                                <input
-                                  type="checkbox"
-                                  [checked]="isRowSelected(state, row)"
-                                  (change)="toggleRow(state, row)"
-                                  [attr.aria-label]="'model.detail.selectRowAria' | t">
+                                <label class="select-hit">
+                                  <input
+                                    type="checkbox"
+                                    [checked]="isRowSelected(state, row)"
+                                    (change)="toggleRow(state, row)"
+                                    [attr.aria-label]="'model.detail.selectRowAria' | t">
+                                </label>
                               </td>
                             }
                             @for (h of tableHeaders(state); track h.key) {

@@ -143,11 +143,13 @@
                   @if (permissionService.can(typeName, 'delete')) {
                     <!-- Satır routerLink taşıyor: seçim tıklaması detaya gitmemeli -->
                     <td class="select-cell" (click)="$event.stopPropagation()">
-                      <input
-                        type="checkbox"
-                        [checked]="isRowSelected(row)"
-                        (change)="toggleRow(row)"
-                        [attr.aria-label]="'model.data.selectRowAria' | t">
+                      <label class="select-hit">
+                        <input
+                          type="checkbox"
+                          [checked]="isRowSelected(row)"
+                          (change)="toggleRow(row)"
+                          [attr.aria-label]="'model.data.selectRowAria' | t">
+                      </label>
                     </td>
                   }
                   @for (header of tableHeaders; track header.key) {
@@ -258,43 +260,45 @@
             <p>{{ 'model.data.noVersions' | t }}</p>
           </div>
         } @else {
-          <table class="data-table" [attr.aria-label]="'model.data.versionHistory' | t">
-            <thead>
-              <tr>
-                <th scope="col">{{ 'model.data.colVersion' | t }}</th>
-                <th scope="col">{{ 'common.status' | t }}</th>
-                <th scope="col">{{ 'model.data.colNamespace' | t }}</th>
-                <th scope="col">{{ 'model.data.colCreatedOn' | t }}</th>
-                <th scope="col">{{ 'model.data.colAction' | t }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (v of versions(); track v.id) {
+          <div class="table-wrapper">
+            <table class="data-table" [attr.aria-label]="'model.data.versionHistory' | t">
+              <thead>
                 <tr>
-                  <td>v{{ v.version }}</td>
-                  <td>
-                    @if (v.status === 1 || v.status === 'Published') {
-                      <span class="badge badge-success">{{ 'common.active' | t }}</span>
-                    } @else {
-                      <span class="badge badge-warn">{{ 'model.data.archive' | t }}</span>
-                    }
-                  </td>
-                  <td>{{ v.namespace }}</td>
-                  <td>{{ v.createdOn | date:'short' }}</td>
-                  <td class="td-actions">
-                    @if (v.status !== 1 && v.status !== 'Published') {
-                      <button
-                        class="btn btn-ghost btn-sm"
-                        type="button"
-                        (click)="askRollback(v.version)">
-                        {{ 'model.data.rollback' | t }}
-                      </button>
-                    }
-                  </td>
+                  <th scope="col">{{ 'model.data.colVersion' | t }}</th>
+                  <th scope="col">{{ 'common.status' | t }}</th>
+                  <th scope="col">{{ 'model.data.colNamespace' | t }}</th>
+                  <th scope="col">{{ 'model.data.colCreatedOn' | t }}</th>
+                  <th scope="col">{{ 'model.data.colAction' | t }}</th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (v of versions(); track v.id) {
+                  <tr>
+                    <td>v{{ v.version }}</td>
+                    <td>
+                      @if (v.status === 1 || v.status === 'Published') {
+                        <span class="badge badge-success">{{ 'common.active' | t }}</span>
+                      } @else {
+                        <span class="badge badge-warn">{{ 'model.data.archive' | t }}</span>
+                      }
+                    </td>
+                    <td>{{ v.namespace }}</td>
+                    <td>{{ v.createdOn | date:'short' }}</td>
+                    <td class="td-actions">
+                      @if (v.status !== 1 && v.status !== 'Published') {
+                        <button
+                          class="btn btn-ghost btn-sm"
+                          type="button"
+                          (click)="askRollback(v.version)">
+                          {{ 'model.data.rollback' | t }}
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         }
       </div>
     </div>

@@ -3,14 +3,15 @@
 <span
   #bubble
   class="info-bubble"
+  [class.info-bubble--formula]="variant() === 'formula'"
   tabindex="0"
-  [attr.aria-label]="text()"
+  [attr.aria-label]="label() ?? text()"
   (mouseenter)="show()"
   (mouseleave)="hide()"
   (focus)="show()"
   (blur)="hide()"
-  (click)="$event.preventDefault(); $event.stopPropagation()">
-  i
+  (click)="$event.preventDefault(); $event.stopPropagation(); onTap()">
+  {{ glyph() }}
   <!-- `position: fixed` — kırpan kapsayıcılardan kaçar; konum TS'te hesaplanıp
        viewport'a kelepçelenir (bkz. HelpHintComponent doküman yorumu). -->
   <span

@@ -167,16 +167,8 @@
 
 /* ── Form yardımcıları ── */
 
-/* Ad-soyad ve TC-doğum tarihi yan yana */
-.field-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-4);
-
-  @media (max-width: 540px) {
-    grid-template-columns: 1fr;
-  }
-}
+/* Ad-soyad ve TC-doğum tarihi yan yana: global .field-row (styles.scss) — yerel kopya
+   541–768px arasında iki sütunda kalıp uzun etiketle input'u taşırıyordu. */
 
 /* Form alt buton satırı */
 .form-footer {

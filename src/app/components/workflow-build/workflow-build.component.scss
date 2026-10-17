@@ -176,3 +176,13 @@
     > .input { grid-column: 1; }
   }
 }
+
+// Tuval dokunmatikte zor (küçük portlar, çift dokunuşla açma); aynı işler Adımlar
+// sekmesinden ve adım diyaloğundan yapılabildiği için telefonda yalnız yönlendirme notu.
+.canvas-mobile-notice {
+  display: none;
+
+  @media (max-width: 768px) {
+    display: flex;
+  }
+}

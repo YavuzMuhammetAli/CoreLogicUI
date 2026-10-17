@@ -58,8 +58,8 @@
                     <app-help-hint [text]="col.description ?? ''" placement="below" />
                   }
                   @if (autoValueRule(col); as rule) {
-                    <span class="auto-value-tag" [title]="rule.expression"
-                      [attr.aria-label]="'model.detail.autoValue.badgeAria' | t:{ expression: rule.expression }">ƒx</span>
+                    <app-help-hint variant="formula" glyph="ƒx" [text]="rule.expression"
+                      [label]="'model.detail.autoValue.badgeAria' | t:{ expression: rule.expression }" />
                   }
                   <span class="col-type-tag">{{ col.dataType }}</span>
                 </label>
@@ -247,11 +247,13 @@
                               (keydown.enter)="openNestedEdit(tab.typeName, row)"
                               [attr.aria-label]="'record.editRowAria' | t">
                               <td class="select-cell" (click)="$event.stopPropagation()">
-                                <input
-                                  type="checkbox"
-                                  [checked]="isRowSelected(tab.typeName, row)"
-                                  (change)="toggleRow(tab.typeName, row)"
-                                  [attr.aria-label]="'record.selectRowAria' | t">
+                                <label class="select-hit">
+                                  <input
+                                    type="checkbox"
+                                    [checked]="isRowSelected(tab.typeName, row)"
+                                    (change)="toggleRow(tab.typeName, row)"
+                                    [attr.aria-label]="'record.selectRowAria' | t">
+                                </label>
                               </td>
                               @for (c of childColumns(tab.typeName); track c.columnName) {
                                 <td>{{ childCell(row, c.columnName) }}</td>

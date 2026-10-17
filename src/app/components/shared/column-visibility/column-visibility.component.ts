@@ -78,8 +78,9 @@ export class ColumnVisibilityComponent implements OnChanges {
     this.save.emit(this.columns.map(c => c.name).filter(n => this.draft.has(n)));
   }
 
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
+  /** pointerdown: iOS Safari boş alana dokunmada click üretmeyebilir, menü açık kalırdı. */
+  @HostListener('document:pointerdown', ['$event'])
+  onDocumentClick(event: PointerEvent): void {
     if (!this.wrapRef?.nativeElement.contains(event.target as Node)) {
       this.open = false;
     }

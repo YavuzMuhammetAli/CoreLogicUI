@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, inject, OnInit, PLATFORM_ID, signal, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, ElementRef, inject, OnInit, PLATFORM_ID, signal, ViewChild } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -55,6 +55,14 @@ export class DashboardBuildComponent implements OnInit {
 
   reports: ReportDefinition[] = [];
   readonly widgets = signal<EditableWidget[]>([]);
+
+  /**
+   * Telefondaki görünüm sırası (önce satır, sonra sütun) — dashboard ekranı dar ekranda
+   * widget'ları bu sırayla alt alta dizer. Dar ekranda sürükle-bırak tuvali yerine bu
+   * liste gösterilir; yerleşim geniş ekranda düzenlenir.
+   */
+  readonly widgetsInOrder = computed(() =>
+    [...this.widgets()].sort((a, b) => a.y - b.y || a.x - b.x));
 
   loading = false;
   loadError: string | null = null;

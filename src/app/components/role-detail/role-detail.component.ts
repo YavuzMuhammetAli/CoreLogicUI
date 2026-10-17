@@ -15,6 +15,7 @@ import { ModelPermission } from '../../services/permission.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
 import { markDirty } from '../../utils/change-detection';
+import { pageWindow } from '../../utils/pagination';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 
 /** Açılış sayfası dropdown'unda gösterilen sabit hedefler key'i — etiketler LanguageService.t() ile çözülür */
@@ -156,10 +157,8 @@ export class RoleDetailComponent implements OnInit {
     return this.filteredPermRows().slice(start, start + this.modelPageSize);
   });
 
-  /** Sayfa numarası butonları için 1..totalPages dizisi */
-  modelPages = computed(() =>
-    Array.from({ length: this.modelTotalPages() }, (_, i) => i + 1)
-  );
+  /** Sayfa numarası butonları — en fazla 5'lik kayan pencere (ilk/son sayfa şablonda ayrıca) */
+  modelPages = computed(() => pageWindow(this.modelPageIndex(), this.modelTotalPages()));
 
   modelRangeStart = computed(() =>
     this.filteredPermRows().length === 0 ? 0 : (this.modelPageIndex() - 1) * this.modelPageSize + 1

@@ -76,6 +76,35 @@
               <p>{{ 'dashboard.build.layoutEmpty' | t }}</p>
             </div>
           } @else {
+            <!-- Dar ekran: tuval yerine sıralı liste + not (12 kolonluk sürükle-bırak
+                 telefonda kullanılamıyor; sütun hesabı 12'ye göre yapılıyor). -->
+            <div class="layout-mobile">
+              <div class="alert alert-info" role="note">{{ 'dashboard.build.mobileLayoutNotice' | t }}</div>
+              <ol class="layout-mobile-list">
+                @for (widget of widgetsInOrder(); track widget.reportDefinitionId) {
+                  <li class="layout-mobile-item">
+                    <span class="layout-mobile-name">{{ widget.reportName }}</span>
+                    <select
+                      class="input"
+                      [attr.aria-label]="'dashboard.build.chartTypeAria' | t:{ name: widget.reportName }"
+                      (change)="setWidgetChartType(widget.reportDefinitionId, $any($event.target).value)">
+                      @for (ct of chartTypes; track ct.value) {
+                        <option [value]="ct.value" [selected]="widget.chartType === ct.value">{{ ct.labelKey | t }}</option>
+                      }
+                    </select>
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-sm"
+                      (click)="removeWidget(widget.reportDefinitionId)"
+                      [attr.aria-label]="'dashboard.build.removeWidgetAria' | t:{ name: widget.reportName }">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                    </button>
+                  </li>
+                }
+              </ol>
+            </div>
+
+            <div class="layout-desktop">
             <p class="field-help">
               {{ 'dashboard.build.layoutHelp' | t }}
             </p>
@@ -123,6 +152,7 @@
                   ></div>
                 </div>
               }
+            </div>
             </div>
           }
         </div>

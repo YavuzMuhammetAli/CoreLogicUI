@@ -32,19 +32,27 @@
   align-items: flex-start;
   gap: var(--space-1);
   padding: var(--space-2) 0;
+  /* Değer yazısı kartın genişliğine göre ölçeklenir (cqi). Sabit 48px'te telefondaki
+     yarım genişlik KPI'da 8+ haneli sayılar kartın overflow:hidden'ına kesiliyordu. */
+  container-type: inline-size;
 }
 
 .kpi-label {
+  max-width: 100%;
   font-size: var(--text-sm);
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .kpi-value {
+  max-width: 100%;
   font-family: var(--font-display);
-  font-size: var(--text-3xl);
+  font-size: clamp(var(--text-lg), 12cqi, var(--text-3xl));
   font-weight: 800;
+  line-height: 1.1;
   color: var(--fg);
   letter-spacing: var(--tracking-display);
+  overflow-wrap: anywhere;
 }
 
 .kpi-sparkline {

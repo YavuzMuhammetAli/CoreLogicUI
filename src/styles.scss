@@ -58,6 +58,7 @@
   --space-5: 20px;
   --space-6: 24px;
   --space-8: 32px;
+  --space-10: 40px;
   --space-12: 48px;
 
   /* Köşe yuvarlaklığı */
@@ -209,14 +210,18 @@ p { margin: 0; }
   }
 }
 
+/* Hover efektleri yalnız gerçek hover'ı olan cihazlarda: dokunmatikte :hover dokunuştan
+   sonra "yapışık" kalır (düğme kalkık ve renkli durur). */
 .btn-primary {
   background: var(--accent);
   color: var(--accent-on);
   border-color: var(--accent);
 
-  &:hover:not(:disabled) {
-    background: var(--accent-hover);
-    transform: translateY(-1px);
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
   }
 
   &:active:not(:disabled) {
@@ -231,9 +236,11 @@ p { margin: 0; }
   border-color: var(--border);
   box-shadow: var(--elev-ring);
 
-  &:hover:not(:disabled) {
-    border-color: var(--accent);
-    color: var(--accent);
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
   }
 }
 
@@ -242,9 +249,11 @@ p { margin: 0; }
   color: var(--danger);
   border-color: transparent;
 
-  &:hover:not(:disabled) {
-    background: var(--danger-hover-bg);
-    transform: translateY(-1px);
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--danger-hover-bg);
+      transform: translateY(-1px);
+    }
   }
 }
 
@@ -253,9 +262,11 @@ p { margin: 0; }
   color: var(--fg-2);
   border-color: transparent;
 
-  &:hover:not(:disabled) {
-    background: var(--surface-warm);
-    color: var(--fg);
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--surface-warm);
+      color: var(--fg);
+    }
   }
 }
 
@@ -288,8 +299,11 @@ p { margin: 0; }
     color: var(--fg);
   }
 
+  /* Sarılır: dar ekranda düğmeler sığmazsa alt satıra iner. Sarılmasaydı .panel'in
+     overflow:hidden'ı sondaki düğmeleri (ör. model-data'da "Ekle") keserdi. */
   .panel-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-2);
   }
 }
@@ -353,6 +367,17 @@ $field-head-height: 32px;
   .btn {
     flex-shrink: 0;
   }
+
+  /* Dar ekranda uzun etiket + düğme sığmaz: düğme alt satıra iner. Tek sütunda
+     komşu hizası gerekmediği için sabit yükseklik kuralı burada gevşer. */
+  @media (max-width: 640px) {
+    flex-wrap: wrap;
+
+    label {
+      white-space: normal;
+      min-width: 0;
+    }
+  }
 }
 
 /* Yan yana alanlar: iki eşit sütun, dar ekranda tek sütun. Tek başına geniş alan: .field--full.
@@ -376,8 +401,15 @@ $field-head-height: 32px;
     grid-column: 1 / -1;
   }
 
+  /* Tek sütunda hizalanacak komşu yok: uzun etiket alt satıra kırılır. minmax(0, …)
+     şart — 1fr (= minmax(auto, 1fr)) kırılmayan etiketin genişliğine uzar ve input'u
+     panelin dışına iter. */
   @media (max-width: 768px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+
+    > .field > label {
+      white-space: normal;
+    }
   }
 }
 
@@ -428,11 +460,51 @@ textarea {
   resize: vertical;
 }
 
+/* iOS Safari (iPhone'daki Chrome dahil) 16px'ten küçük yazılı alana odaklanınca sayfayı
+   yakınlaştırır ve geri uzaklaştırmaz. Mobilde form alanları 16px. */
+@media (max-width: 768px) {
+  .input,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  select,
+  textarea {
+    font-size: var(--text-base);
+  }
+}
+
 input[type="checkbox"] {
   width: 16px;
   min-height: 16px;
   accent-color: var(--accent);
   cursor: pointer;
+}
+
+/* Etiketli checkbox. Bileşenler ayrıca margin/ağırlık ekleyebilir; temel davranış burada. */
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+  cursor: pointer;
+}
+
+/* Parmakla kullanımda 16px'lik kutu ıskalanır: kutu büyür, etiket satırı dokunma alanı olur. */
+@media (pointer: coarse) {
+  input[type="checkbox"] {
+    width: 20px;
+    min-height: 20px;
+  }
+
+  .checkbox-label {
+    min-height: 40px;
+  }
 }
 
 .field-error {
@@ -514,6 +586,121 @@ input[type="checkbox"] {
   .td-muted {
     color: var(--muted);
   }
+
+  /* Hücredeki ad bağlantısı — satırın asıl hedefi (ör. rapor/dashboard adı). Telefonda
+     tablo yatay kayarken sondaki aksiyon düğmesine gitmeden açılabilsin diye. */
+  .row-link {
+    color: var(--fg);
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover { color: var(--accent); text-decoration: underline; }
+  }
+
+  /* Satır seçim kutusunu saran etiket: hücrenin tamamı dokunma alanı olur. Hücre
+     tıklamayı durdurduğu (satır detaya gitmesin diye) için kutu ıskalanınca hiçbir şey olmuyordu. */
+  .select-hit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    margin: calc(-1 * var(--space-2)) 0;
+    cursor: pointer;
+  }
+}
+
+/* ---- Sayfalama ----
+   Pencere hesabı: utils/pagination.ts (pageWindow). Eskiden dört bileşende kopyaydı ve
+   hiçbiri sarılmıyordu — telefonda son sayfa ve "›" düğmesi ekrandan taşıyordu. */
+
+/* Tablonun altındaki sayım + sayfalama + sayfa başına seçici çubuğu */
+.table-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--border-soft);
+  background: var(--surface-warm);
+
+  .eyebrow { flex: 1 1 auto; white-space: nowrap; }
+
+  @media (max-width: 640px) {
+    padding: var(--space-3) var(--space-4);
+  }
+}
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--fg-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+  @media (hover: hover) {
+    &:hover:not(:disabled):not(.page-btn--active) {
+      background: var(--surface-warm);
+      color: var(--fg);
+      border-color: var(--accent);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &--active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    font-weight: 600;
+    cursor: default;
+  }
+}
+
+.page-ellipsis {
+  padding: 0 2px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  user-select: none;
+}
+
+.page-size-selector select {
+  width: auto;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 var(--space-6) 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface);
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  cursor: pointer;
+
+  &:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  @media (max-width: 768px) {
+    font-size: var(--text-base);
+  }
 }
 
 /* ---- Eyebrow (üst etiket) ---- */
@@ -550,24 +737,13 @@ input[type="checkbox"] {
   &.badge-meta    { color: var(--meta);    background: var(--meta-bg); }
 }
 
-/* ---- Otomatik değer işareti (ƒx) — kayıt formlarında alan etiketinin yanında ----
-   Formül `title` ile gösterilir; hem üst form hem alt kayıt pop-up'ı kullanır. */
-.auto-value-tag {
-  display: inline-block;
-  margin-left: var(--space-1);
-  padding: 0 var(--space-1);
-  border-radius: var(--radius-sm);
-  font: italic 600 10px / 1.6 var(--font-mono);
-  color: var(--accent);
-  background: var(--meta-bg);
-  cursor: help;
-}
-
 /* ---- Durum mesajı kutusu ---- */
 .alert {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
+  /* Sunucu hataları uzun, boşluksuz parçalar (URL, kısıt adı) taşıyabilir */
+  overflow-wrap: anywhere;
   padding: var(--space-4);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
@@ -615,6 +791,10 @@ input[type="checkbox"] {
   padding: var(--space-12);
   text-align: center;
   color: var(--muted);
+
+  @media (max-width: 768px) {
+    padding: var(--space-8) var(--space-4);
+  }
 
   .empty-icon {
     font-size: 40px;

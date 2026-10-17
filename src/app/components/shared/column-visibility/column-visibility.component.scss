@@ -19,6 +19,26 @@
   z-index: 200;
   display: flex;
   flex-direction: column;
+
+  /* Dar ekranda alttan açılan sayfa: düğme ekranın solunda kaldığı için right:0'lık
+     kutu sola, ekran dışına açılıyor; .panel'in overflow:hidden'ı da altını kesiyordu.
+     position:fixed her ikisinden de kurtulur. */
+  @media (max-width: 640px) {
+    position: fixed;
+    top: auto;
+    left: var(--space-4);
+    right: var(--space-4);
+    bottom: var(--space-4);
+    min-width: 0;
+    max-width: none;
+    max-height: 70dvh;
+    z-index: 300;
+
+    .col-vis-list {
+      flex: 1 1 auto;
+      max-height: none;
+    }
+  }
 }
 
 .col-vis-header {
@@ -63,7 +83,7 @@
 
 .col-vis-required {
   margin-left: auto;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 

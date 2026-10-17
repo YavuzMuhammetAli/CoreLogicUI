@@ -25,6 +25,14 @@
   width: 20px;
   height: 20px;
   padding: 0;
+
+  /* Görünüm 20px kalır, dokunma alanı ~32px — parmakla ıskalanmasın */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+  }
+
   border: 0;
   border-radius: var(--radius-pill);
   background: transparent;
@@ -50,7 +58,8 @@
   top: calc(100% + var(--space-1));
   left: 0;
   right: 0;
-  max-height: 220px;
+  /* Klavye açıkken görünen alan küçülür; liste klavyenin arkasına taşmasın */
+  max-height: min(220px, 35dvh);
   margin: 0;
   padding: var(--space-1);
   overflow-y: auto;

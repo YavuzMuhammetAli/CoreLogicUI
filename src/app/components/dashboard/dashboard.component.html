@@ -23,6 +23,8 @@
       @for (item of widgetViews(); track $index) {
         <div
           class="panel widget"
+          [class.widget--kpi]="item.result.widget.chartType === 'kpi'"
+          [class.widget--wide]="item.result.widget.w > 6"
           [style.grid-column]="(item.result.widget.x + 1) + ' / span ' + item.result.widget.w"
           [style.grid-row]="(item.result.widget.y + 1) + ' / span ' + item.result.widget.h"
           [style.max-height.px]="item.result.widget.chartType === 'table' ? tableMaxHeight(item.result.widget) : null"

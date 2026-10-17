@@ -17,6 +17,7 @@
 }
 
 .instance-link {
+  overflow-wrap: anywhere;
   font-weight: 500;
   color: var(--fg);
   text-decoration: none;
@@ -31,6 +32,7 @@
 }
 
 .instance-step {
+  overflow-wrap: anywhere;
   font-family: var(--font-mono, monospace);
   font-size: var(--text-xs);
   color: var(--fg-2);

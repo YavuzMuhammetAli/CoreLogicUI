@@ -24,6 +24,15 @@
   font-family: Georgia, serif;
   cursor: help;
   vertical-align: middle;
+  position: relative;
+
+  /* Görünüm 15px kalır, dokunma alanı ~33px. Baloncuk çoğu yerde <label> içinde: alan
+     küçük kalırsa ıskalanan dokunuş etiketi tetikler, input'a odaklanıp klavye açılır. */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -9px;
+  }
 
   &:hover,
   &:focus-visible {
@@ -35,6 +44,18 @@
     outline: var(--focus-ring);
     outline-offset: 2px;
   }
+}
+
+/* Otomatik değer işareti (ƒx) — kayıt formlarında alan etiketinin yanında; formül tooltip'te */
+.info-bubble--formula {
+  width: auto;
+  height: auto;
+  padding: 0 var(--space-1);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--meta-bg);
+  color: var(--accent);
+  font: italic 600 10px / 1.6 var(--font-mono);
 }
 
 /* Tooltip kutusu.

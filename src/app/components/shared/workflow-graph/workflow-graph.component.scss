@@ -6,8 +6,9 @@
 }
 
 .workflow-graph {
-  width: 100%;
-  min-width: 320px;
+  /* Genişlik viewBox'tan (naturalWidth) gelir; kabı en az doldurur, sığmazsa kayar. */
+  display: block;
+  min-width: 100%;
   height: auto;
 }
 

@@ -193,7 +193,7 @@
 
         <form [formGroup]="testForm" (ngSubmit)="sendTest()">
           <div class="cluster" style="margin-top: var(--space-4); align-items: flex-start">
-            <div class="field" style="min-width: 260px">
+            <div class="field" style="flex: 1 1 260px; min-width: 0">
               <label for="testTo">{{ 'parameter.mail.testTo' | t }} <span class="req">*</span></label>
               <input
                 id="testTo"

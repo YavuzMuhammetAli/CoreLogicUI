@@ -10,7 +10,7 @@
 
 .kpi-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
   gap: var(--space-4);
 }
 
@@ -22,6 +22,9 @@
   padding: var(--space-4);
   box-shadow: var(--elev-raised);
   border-radius: var(--radius-lg);
+  min-width: 0;
+  /* Değer yazısı kutu genişliğine göre ölçeklenir — telefonda iki kutu yan yana ~150px */
+  container-type: inline-size;
   animation: fade-rise 240ms var(--ease-out-strong, ease-out) both;
 
   @for $i from 1 through 8 {
@@ -37,12 +40,41 @@
 .kpi-tile-label {
   font-size: var(--text-sm);
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .kpi-tile-value {
   font-family: var(--font-display);
-  font-size: var(--text-2xl);
+  font-size: clamp(var(--text-lg), 14cqi, var(--text-2xl));
   font-weight: 800;
+  line-height: 1.15;
   color: var(--fg);
+  overflow-wrap: anywhere;
 }
 
+/* Tablo raporu sayfalaması — sayım solda, sayfa başı seçici ve gezinme düğmeleri sağda;
+   .cluster sayesinde dar ekranda alt satıra sarılır. */
+.table-pager {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border-soft);
+  background: var(--surface-warm);
+}
+
+.pager-info {
+  flex: 1 1 auto;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.pager-size {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+
+  select {
+    width: auto;
+    min-height: 32px;
+  }
+}

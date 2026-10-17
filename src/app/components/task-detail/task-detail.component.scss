@@ -56,6 +56,7 @@
 }
 
 .timeline-step {
+  overflow-wrap: anywhere;
   font-family: var(--font-mono, monospace);
   font-size: var(--text-xs);
   color: var(--fg-2);

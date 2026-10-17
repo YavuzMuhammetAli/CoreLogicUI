@@ -21,6 +21,7 @@ import {
   downloadFile
 } from './model-data.util';
 import { markDirty } from '../../utils/change-detection';
+import { pageWindow } from '../../utils/pagination';
 
 type DataRow = Record<string, unknown>;
 
@@ -270,17 +271,7 @@ export class ModelDataComponent implements OnInit {
    * Sayfa değiştikçe pencere ortanır (ilk/son sayfa ile ellipsis gösterilir).
    */
   get visiblePages(): number[] {
-    const pages = this.totalPages;
-    if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
-
-    const half = 2;
-    let start = Math.max(1, this.pageIndex - half);
-    let end   = Math.min(pages, this.pageIndex + half);
-
-    if (this.pageIndex - half < 1) end   = Math.min(pages, 5);
-    if (this.pageIndex + half > pages) start = Math.max(1, pages - 4);
-
-    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+    return pageWindow(this.pageIndex, this.totalPages);
   }
 
   goToPage(p: number): void {
