@@ -21,7 +21,7 @@ function graph(steps: WorkflowStep[], startStep = steps[0]?.key ?? ''): Workflow
 }
 
 function node(key: string, x: number, y: number, width = NODE_WIDTH, height = NODE_HEIGHT): CanvasNode {
-  return { key, label: key, x, y, width, height, isStart: false, isParallel: false, branchLabels: [], ports: [] };
+  return { key, label: key, x, y, width, height, isStart: false, isParallel: false, branchLabels: [], ports: [], pinned: true };
 }
 
 describe('resolveNodePositions', () => {
@@ -164,6 +164,7 @@ describe('edgeAt', () => {
     from: 'a',
     to: 'b',
     port: 'approve',
+    exitPort: 'approve',
     geometry: edgeGeometry(source, target)
   };
 
@@ -193,6 +194,7 @@ describe('edgeAt', () => {
       key: 'a->c:reject',
       to: 'c',
       port: 'reject',
+      exitPort: 'reject',
       isRejection: true,
       geometry: edgeGeometry(source, farTarget)
     };

@@ -1,6 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { WorkflowGraph } from '../../../models/workflow.model';
 import { WorkflowDesignDoc, emptyDoc, serializeDoc } from './workflow-design.doc';
+import { DesignSelection, EMPTY_SELECTION, pruneSelection } from './workflow-selection';
 import {
   DesignHistory,
   canRedo,
@@ -44,13 +45,14 @@ export class WorkflowDesignerStore {
   /** Yayınlanmış/arşiv sürüm salt-okunur açılır. */
   readonly readonly = signal(false);
 
-  /** Seçili adım — canvas ve adım listesi aynı seçimi gösterir. */
-  readonly selectedKey = signal<string | null>(null);
+  /** Seçim — canvas ve adım listesi aynı seçimi gösterir. */
+  readonly selection = signal<DesignSelection>(EMPTY_SELECTION);
 
-  /** Belgeyi yükler; geçmiş ve "kaydedilmemiş" bayrağı sıfırlanır. */
+  /** Belgeyi yükler; geçmiş, seçim ve "kaydedilmemiş" bayrağı sıfırlanır. */
   load(doc: WorkflowDesignDoc): void {
     this.history.set(createHistory(doc));
     this.savedSnapshot.set(serializeDoc(doc));
+    this.selection.set(EMPTY_SELECTION);
   }
 
   /**
@@ -62,16 +64,24 @@ export class WorkflowDesignerStore {
     if (this.readonly()) return;
     const current = this.history();
     this.history.set(record(current, command(current.present), reason, now));
+    this.pruneSelection();
   }
 
   undo(): void {
     if (this.readonly()) return;
     this.history.update(undo);
+    this.pruneSelection();
   }
 
   redo(): void {
     if (this.readonly()) return;
     this.history.update(redo);
+    this.pruneSelection();
+  }
+
+  /** Belgede artık olmayan adımlar seçimden düşer (silme, geri alma). */
+  private pruneSelection(): void {
+    this.selection.update(selection => pruneSelection(selection, this.doc()));
   }
 
   /** Başarılı kayıttan sonra: mevcut belge artık "kaydedilmiş" sayılır. */

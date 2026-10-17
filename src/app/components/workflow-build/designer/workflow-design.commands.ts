@@ -113,14 +113,47 @@ export function connect(doc: WorkflowDesignDoc, from: string, port: ExitPort, to
 
 /** Düğümün konumunu yazar (tam piksele yuvarlanır). */
 export function moveStep(doc: WorkflowDesignDoc, key: string, x: number, y: number): WorkflowDesignDoc {
-  const step = findStep(doc, key);
-  if (!step) return doc;
+  return moveSteps(doc, [{ key, x, y }]);
+}
 
-  const rx = Math.round(x);
-  const ry = Math.round(y);
-  if (step.x === rx && step.y === ry) return doc;
+/**
+ * Birden çok düğümün konumunu TEK değişiklikte yazar — çoklu sürükleme ve
+ * "ilk elle taşımada tüm konumları sabitle" tek geri al adımı olsun.
+ */
+export function moveSteps(
+  doc: WorkflowDesignDoc, moves: ReadonlyArray<{ key: string; x: number; y: number }>
+): WorkflowDesignDoc {
+  let changed = false;
 
-  return replaceStep(doc, step, { ...step, x: rx, y: ry });
+  const steps = doc.graph.steps.map(step => {
+    const move = moves.find(m => sameKey(m.key, step.key));
+    if (!move) return step;
+
+    const x = Math.round(move.x);
+    const y = Math.round(move.y);
+    if (step.x === x && step.y === y) return step;
+
+    changed = true;
+    return { ...step, x, y };
+  });
+
+  return changed ? { ...doc, graph: { ...doc.graph, steps } } : doc;
+}
+
+/** Birden çok adımı siler (her biri removeStep kurallarıyla). */
+export function removeSteps(doc: WorkflowDesignDoc, keys: ReadonlyArray<string>): WorkflowDesignDoc {
+  return keys.reduce((current, key) => removeStep(current, key), doc);
+}
+
+/** Çıkışın bağlantısını kaldırır — akış o çıkışta biter (terminale düşer). */
+export function disconnect(doc: WorkflowDesignDoc, from: string, port: ExitPort): WorkflowDesignDoc {
+  const source = findStep(doc, from);
+  if (!source) return doc;
+
+  const exit = exitsOf(source).find(e => e.port === port);
+  if (!exit?.target) return doc;
+
+  return replaceStep(doc, source, setExit(source, port, null));
 }
 
 /**

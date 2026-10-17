@@ -93,10 +93,34 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.build.tabCanvas': { tr: 'Tasarım', en: 'Design' },
   'workflow.build.tabTrigger': { tr: 'Tetikleyici', en: 'Trigger' },
   'workflow.canvas.hint': {
-    tr: 'Ayrıntıları düzenlemek için adıma çift tıklayın. Adımı gövdesinden sürükleyerek taşıyın. Bağlantı için alt kenardaki yeşil (onay) ya da kırmızı (red) noktadan hedef adıma sürükleyin; bağlantısı olmayan çıkışta süreç biter (yeşil uç: tamamlanır, kırmızı uç: reddedilir). Yakınlaşmak için Ctrl + tekerlek, kaydırmak için boş zemini sürükleyin.',
-    en: 'Double-click a step to edit its details. Drag a step by its body to move it. To connect, drag from the green (approve) or red (reject) dot at the bottom edge onto the target step; an exit without a connection ends the process (green end: completed, red end: rejected). Ctrl + wheel to zoom, drag the empty background to pan.'
+    tr: 'Çift tık: adımı düzenle · Tıkla: seç (Shift ile çoklu, Shift + sürükle: çerçeve) · Sürükle: taşı (Alt: ızgarasız) · Alt kenardaki yeşil/kırmızı noktadan hedefe sürükle: bağla; bağlantısız çıkışta süreç biter · Delete: sil · Ctrl+Z/Y: geri al/yinele · Ctrl+C/V/D: kopyala/yapıştır/çoğalt · Sağ tık: menü · Ctrl + tekerlek: yakınlaş.',
+    en: 'Double-click: edit step · Click: select (Shift for multiple, Shift + drag: box) · Drag: move (Alt: no grid) · Drag from the green/red dot at the bottom onto a step: connect; an unconnected exit ends the process · Delete: remove · Ctrl+Z/Y: undo/redo · Ctrl+C/V/D: copy/paste/duplicate · Right-click: menu · Ctrl + wheel: zoom.'
   },
   'workflow.canvas.start': { tr: 'Başlangıç', en: 'Start' },
+  'workflow.canvas.aria': {
+    tr: 'Akış şeması. Ok tuşları seçili adımları iter, Delete siler, Enter ayrıntıyı açar.',
+    en: 'Workflow diagram. Arrow keys nudge the selected steps, Delete removes, Enter opens details.'
+  },
+  'workflow.canvas.menu.edit': { tr: 'Düzenle', en: 'Edit' },
+  'workflow.canvas.menu.details': { tr: 'Ayrıntılar', en: 'Details' },
+  'workflow.canvas.menu.setStart': { tr: 'Başlangıç adımı yap', en: 'Make start step' },
+  'workflow.canvas.menu.duplicate': { tr: 'Çoğalt', en: 'Duplicate' },
+  'workflow.canvas.menu.delete': { tr: 'Sil', en: 'Delete' },
+  'workflow.canvas.menu.deleteEdge': { tr: 'Bağlantıyı kaldır', en: 'Remove connection' },
+  'workflow.canvas.menu.addStep': { tr: 'Buraya adım ekle', en: 'Add step here' },
+  'workflow.canvas.menu.selectAll': { tr: 'Tümünü seç', en: 'Select all' },
+  'workflow.build.undo': { tr: 'Geri al (Ctrl+Z)', en: 'Undo (Ctrl+Z)' },
+  'workflow.build.redo': { tr: 'Yinele (Ctrl+Y)', en: 'Redo (Ctrl+Y)' },
+  'workflow.build.unsaved': { tr: 'Kaydedilmemiş değişiklik var', en: 'Unsaved changes' },
+  'workflow.build.stepsDeleted': {
+    tr: '{n} adım silindi. Geri almak için Ctrl+Z.',
+    en: '{n} step(s) deleted. Press Ctrl+Z to undo.'
+  },
+  'workflow.build.edgeRemoved': {
+    tr: 'Bağlantı kaldırıldı; bu çıkışta süreç artık biter. Geri almak için Ctrl+Z.',
+    en: 'Connection removed; the process now ends at this exit. Press Ctrl+Z to undo.'
+  },
+  'workflow.build.pasted': { tr: '{n} adım yapıştırıldı.', en: '{n} step(s) pasted.' },
   'workflow.canvas.portApprove': { tr: 'Onay bağlantısı çiz', en: 'Draw approve connection' },
   'workflow.canvas.portReject': { tr: 'Red bağlantısı çiz', en: 'Draw reject connection' },
   'workflow.canvas.hintReadonly': {

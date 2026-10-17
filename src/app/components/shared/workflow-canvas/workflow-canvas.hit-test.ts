@@ -40,6 +40,8 @@ export interface CanvasNode {
    * red) port olarak çizilmez: oraya çizilen bağlantı kayıtta sessizce kaybolurdu.
    */
   ports: CanvasPort[];
+  /** Konumu tanımda (ya da sürüklenirken) belli mi; değilse otomatik yerleşimden geliyor. */
+  pinned: boolean;
 }
 
 /** İki düğüm arasındaki bağlantı. */
@@ -51,6 +53,8 @@ export interface CanvasEdge {
   from: string;
   to: string;
   port: PortKind;
+  /** Kaynağın gerçek çıkışı (approve/reject/complete/anyReject) — kenar kimliği. */
+  exitPort: ExitPort;
   geometry: EdgeGeometry;
 }
 
@@ -95,7 +99,8 @@ export function resolveNodePositions(
       isStart: eq(step.key, graph.startStep),
       isParallel: step.type === 'parallel',
       branchLabels: branchLabelsOf(step),
-      ports: portsOf(step, size.width)
+      ports: portsOf(step, size.width),
+      pinned
     };
 
     return { node, pinned };

@@ -1,19 +1,23 @@
 import {
-  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, PLATFORM_ID,
-  computed, effect, inject, input, output, signal, untracked, viewChild
+  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, Injector, PLATFORM_ID,
+  afterNextRender, computed, effect, inject, input, output, signal, untracked, viewChild
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { WorkflowGraph } from '../../../models/workflow.model';
+import { ExitPort } from '../../../utils/workflow/workflow-exits';
 import { layoutWorkflow } from '../workflow-graph/workflow-graph.layout';
 import { EdgeRequest, routeOrthogonal } from '../workflow-graph/workflow-edge.geometry';
 import {
   CanvasEdge, CanvasNode, CanvasPort, PortKind,
-  nodeAt, resolveNodePositions
+  edgeAt, nodeAt, nodesInRect, resolveNodePositions
 } from './workflow-canvas.hit-test';
 import {
   Camera, IDENTITY_CAMERA, Point, ViewportRect, ZOOM_STEP,
   boundsOf, fitToView, gridStyle, panBy, screenToWorld, zoomAt, zoomAtCenter
 } from './workflow-canvas.camera';
+import {
+  clampToWindow, dragPositions, exceedsThreshold, normalizedRect, nudgeDelta, snapValue
+} from './workflow-canvas.interaction';
 import { LanguageService } from '../../../services/language.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 
@@ -49,22 +53,87 @@ export interface CanvasStart {
   path: string;
 }
 
+/** Seçili kenarın kimliği: kaynak adım + çıkış portu. */
+export interface CanvasEdgeRef {
+  from: string;
+  port: ExitPort;
+}
+
+export interface CanvasSelection {
+  nodes: string[];
+  edge: CanvasEdgeRef | null;
+}
+
+/** Sağ tık menüsünden tasarım ekranına giden, belgeyi ilgilendiren işlemler. */
+export type CanvasMenuAction =
+  | { type: 'open'; key: string }
+  | { type: 'setStart'; key: string }
+  | { type: 'duplicate' }
+  | { type: 'delete' }
+  | { type: 'addStep'; at: Point }
+  | { type: 'selectAll' };
+
+interface MenuItem {
+  id: string;
+  labelKey: string;
+  danger?: boolean;
+  run: () => void;
+}
+
+interface MenuState {
+  /** Ekran (client) koordinatı — menü `position: fixed` ile açılır. */
+  x: number;
+  y: number;
+  items: MenuItem[];
+}
+
+/** Süren işaretçi jesti. Aynı anda yalnız biri olabilir. */
+type Gesture =
+  | {
+      kind: 'node';
+      key: string;
+      startX: number;
+      startY: number;
+      additive: boolean;
+      /** Birlikte taşınan düğümlerin başlangıç konumları. */
+      origins: Map<string, Point>;
+      moved: boolean;
+    }
+  | {
+      kind: 'surface';
+      startX: number;
+      startY: number;
+      origin: Camera;
+      /** Basılan yerdeki kenar — sürüklenmezse seçilir. */
+      edge: CanvasEdge | null;
+      moved: boolean;
+    }
+  | {
+      kind: 'lasso';
+      start: Point;
+      additive: boolean;
+    };
+
 /**
  * Sürükle-bırak akış tasarımcısı.
  *
  * Projede CDK, drag-drop ya da diyagram kütüphanesi YOK; her şey native Pointer
  * Events ile yazıldı — dashboard-build'in sürükleme desenindeki yaklaşım.
  *
- * Dört etkileşim var:
- *   1) DÜĞÜM TAŞIMA   — gövdeden sürükle. Konum tanıma yazılır (step.x/y).
- *   2) BAĞLANTI ÇİZME — çıkış portundan sürükleyip hedef düğümde bırak.
- *   3) KAYDIRMA       — boş zeminde ya da orta tuşla sürükle.
- *   4) YAKINLAŞTIRMA  — Ctrl/Cmd + tekerlek (imce altındaki nokta sabit kalır).
+ * Etkileşimler:
+ *   - SEÇİM        — düğüme ya da kenara tıkla; Shift/Ctrl ile ekle/çıkar;
+ *                    Shift + boş zemini sürükle = çerçeve (lasso) seçimi.
+ *   - TAŞIMA       — seçili düğüm(ler)i gövdeden sürükle; 20 px ızgaraya
+ *                    yapışır, Alt basılıyken serbest.
+ *   - BAĞLANTI     — çıkış portundan sürükleyip hedef düğümde bırak.
+ *   - KAYDIRMA     — boş zemini ya da orta tuşla sürükle; tekerlek.
+ *   - YAKINLAŞTIRMA— Ctrl/Cmd + tekerlek (imlecin altındaki nokta sabit kalır).
+ *   - SAĞ TIK      — düğüm/kenar/zemin menüsü.
+ * Klavye kısayollarını tasarım ekranı dinler ve buradaki yöntemleri çağırır.
  *
  * Kamera tek bir CSS transform'dur (`.canvas-world`); dünya koordinatları hiç
- * değişmez, dolayısıyla `layoutWorkflow()` ve `step.x/y` bugünkü anlamını korur.
- * Geometri, kamera ve isabet testi saf modüllerde (bkz. kardeş dosyalar) —
- * bu component yalnızca sinyal, DOM dinleyicisi ve output tutar.
+ * değişmez. Geometri, kamera, isabet testi ve etkileşim kuralları saf
+ * modüllerde — bu component yalnızca sinyal, DOM dinleyicisi ve output tutar.
  */
 @Component({
   selector: 'app-workflow-canvas',
@@ -76,32 +145,35 @@ export interface CanvasStart {
 })
 export class WorkflowCanvasComponent {
   readonly graph = input<WorkflowGraph | null>(null);
-  readonly selectedKey = input<string | null>(null);
+  readonly selectedNodes = input<string[]>([]);
+  readonly selectedEdge = input<CanvasEdgeRef | null>(null);
   /**
-   * Salt-okunur mod: taşıma ve bağlantı kapalı, yakınlaştırma/kaydırma/seçim
-   * açık. Yayınlanmış akışın şemasını göstermek ve (Faz 9) çalışan süreci
-   * izlemek için. Alan adı `locked`, çünkü `readonly` bir sınıf üyesi adı
-   * olarak kullanılamıyor.
+   * Salt-okunur mod: taşıma, bağlantı ve düzenleyen menü maddeleri kapalı;
+   * yakınlaştırma/kaydırma/seçim açık. Alan adı `locked`, çünkü `readonly` bir
+   * sınıf üyesi adı olarak kullanılamıyor.
    */
   readonly locked = input(false, { alias: 'readonly' });
 
-  /** Düğüm taşındı — (key, x, y). Konum tanıma yazılmalı. */
-  readonly nodeMoved = output<{ key: string; x: number; y: number }>();
+  /**
+   * Düğümler taşındı — konumlar tanıma TEK değişiklikte yazılmalı. İlk elle
+   * taşımada konumu otomatik yerleşimden gelen diğer düğümler de eklenir
+   * (bkz. pinAll): sonraki eklemelerde yerleşim değişince "zıplamasınlar".
+   */
+  readonly nodesMoved = output<Array<{ key: string; x: number; y: number }>>();
   /** Bağlantı kuruldu — kaynak adımın ilgili çıkışı güncellenmeli. */
   readonly edgeCreated = output<{ from: string; to: string; port: PortKind }>();
-  readonly nodeSelected = output<string>();
+  readonly selectionChange = output<CanvasSelection>();
   /** Düğüme çift tıklandı — adım ayrıntı pop-up'ı açılmalı (salt-okunurda da). */
   readonly nodeOpened = output<string>();
-  /**
-   * "Otomatik düzenle" — tüm adımların elle verilmiş konumu silinmeli ki
-   * otomatik yerleşim devreye girsin. Elle yerleşim kendiliğinden ezilmez;
-   * yalnızca kullanıcı isteyince.
-   */
+  /** "Otomatik düzenle" — elle verilmiş konumlar silinmeli. */
   readonly layoutReset = output<void>();
+  readonly menuAction = output<CanvasMenuAction>();
 
   private readonly platformId = inject(PLATFORM_ID);
   private readonly languageService = inject(LanguageService);
+  private readonly injector = inject(Injector);
   private readonly viewportRef = viewChild<ElementRef<HTMLElement>>('viewport');
+  private readonly menuRef = viewChild<ElementRef<HTMLElement>>('menu');
 
   /**
    * Sürükleme sırasında konumlar burada tutulur ve her pointer olayında
@@ -112,6 +184,11 @@ export class WorkflowCanvasComponent {
 
   /** Bağlantı çizilirken imcin bulunduğu nokta — geçici çizgi için. */
   readonly pendingEdge = signal<{ from: string; port: PortKind; x: number; y: number } | null>(null);
+
+  /** Lasso çerçevesi (dünya koordinatı); çizilmiyorken null. */
+  readonly lasso = signal<{ x: number; y: number; width: number; height: number } | null>(null);
+
+  readonly menu = signal<MenuState | null>(null);
 
   readonly camera = signal<Camera>(IDENTITY_CAMERA);
   readonly zoomPercent = computed(() => Math.round(this.camera().zoom * 100));
@@ -135,6 +212,9 @@ export class WorkflowCanvasComponent {
 
   private readonly nodesByKey = computed(() =>
     new Map(this.nodes().map(node => [node.key.toLowerCase(), node])));
+
+  private readonly selectedSet = computed(() =>
+    new Set(this.selectedNodes().map(key => key.toLowerCase())));
 
   /**
    * Kenarlar düğüm konumlarından türetilir; sürüklerken canlı takip eder.
@@ -167,6 +247,7 @@ export class WorkflowCanvasComponent {
           from: source.key,
           to: port.target,
           port: port.kind,
+          exitPort: port.port,
           request: { source, target, sourceOffsetX: port.offset }
         });
       }
@@ -179,9 +260,8 @@ export class WorkflowCanvasComponent {
 
   /**
    * Akışın bittiği çıkışlar: düğümün altında kısa bir çizgi ve uç işareti
-   * (onay/tamamlanma yeşil, red kırmızı). Eskiden hiç çizilmiyordu ve hangi
-   * çıkışın süreci bitirdiği şemadan okunamıyordu. Hedefi silinmiş (bulunamayan)
-   * çıkış da burada değil, doğrulama panelinde görünür.
+   * (onay/tamamlanma yeşil, red kırmızı). Hedefi silinmiş (bulunamayan) çıkış
+   * burada değil, doğrulama panelinde görünür.
    */
   readonly stubs = computed<CanvasStub[]>(() =>
     this.nodes().flatMap(node => node.ports
@@ -267,7 +347,7 @@ export class WorkflowCanvasComponent {
     effect(() => {
       this.graph();
       untracked(() => {
-        if (!this.dragState) this.liveOffsets.set({});
+        if (this.gesture?.kind !== 'node') this.liveOffsets.set({});
       });
     }, { allowSignalWrites: true });
 
@@ -299,17 +379,15 @@ export class WorkflowCanvasComponent {
   /**
    * Tekerlek: Ctrl/Cmd ile imce merkezli yakınlaştırma, düz tekerlekle kaydırma.
    * Trackpad pinch hareketi de tarayıcıda `ctrlKey` ile geldiği için aynı yoldan
-   * geçer.
-   *
-   * Dinleyici şablondan bağlanıyor; `wheel` yalnızca window/document/body'ye
-   * eklendiğinde varsayılan olarak passive olur, sıradan bir div'de değil —
-   * dolayısıyla `preventDefault()` burada çalışır.
+   * geçer. Dinleyici şablondan bağlanıyor; sıradan bir div'de `wheel` passive
+   * değildir, `preventDefault()` çalışır.
    */
   onWheel(event: WheelEvent): void {
     const rect = this.viewportRect();
     if (!rect) return;
 
     event.preventDefault();
+    this.closeMenu();
 
     if (event.ctrlKey || event.metaKey) {
       const factor = event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP;
@@ -365,6 +443,13 @@ export class WorkflowCanvasComponent {
     }, 32, 1, 'start'));
   }
 
+  /** Viewport merkezinin dünya koordinatı — klavyeyle eklenen adım için konum. */
+  viewportCenter(): Point | null {
+    const rect = this.viewportRect();
+    if (!rect) return null;
+    return screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2, rect, this.camera());
+  }
+
   private viewportRect(): ViewportRect | null {
     const element = this.viewportRef()?.nativeElement;
     if (!element) return null;
@@ -373,12 +458,10 @@ export class WorkflowCanvasComponent {
     return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
   }
 
-  /** Ekran koordinatını dünya koordinatına çevirir. */
-  private toWorldPoint(event: PointerEvent): Point {
+  private toWorld(clientX: number, clientY: number): Point {
     const rect = this.viewportRect();
-    if (!rect) return { x: event.clientX, y: event.clientY };
-
-    return screenToWorld(event.clientX, event.clientY, rect, this.camera());
+    if (!rect) return { x: clientX, y: clientY };
+    return screenToWorld(clientX, clientY, rect, this.camera());
   }
 
   // ── Kare başına tek güncelleme ────────────────────────────────────────────
@@ -412,59 +495,42 @@ export class WorkflowCanvasComponent {
     pending?.();
   }
 
-  // ── Zemin kaydırma ────────────────────────────────────────────────────────
+  // ── Seçim yardımcıları ────────────────────────────────────────────────────
 
-  private panState: { startX: number; startY: number; origin: Camera } | null = null;
-  readonly panning = signal(false);
-
-  /**
-   * Boş zeminde ya da orta tuşla sürükleme kamerayı kaydırır. Düğüm ve port
-   * kendi `pointerdown`'larında `stopPropagation()` çağırdığı için buraya
-   * yalnızca gerçekten boş zemine yapılan basışlar düşer.
-   */
-  onSurfacePointerDown(event: PointerEvent): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-    // Sağ tuş tarayıcıya bırakılır (sağ tık menüsü sonraki adımda).
-    if (event.button !== 0 && event.button !== 1) return;
-    // Dokunmatikte ikinci parmak panState'i sıfırlayıp görünümü zıplatıyordu.
-    if (!event.isPrimary) return;
-
-    event.preventDefault();
-
-    this.panState = { startX: event.clientX, startY: event.clientY, origin: this.camera() };
-    this.panning.set(true);
-
-    document.addEventListener('pointermove', this.onSurfacePointerMove);
-    document.addEventListener('pointerup', this.onSurfacePointerUp);
-    // pointercancel: tarayıcı jesti devralırsa (ör. sistem kaydırması) sürükleme takılı kalmasın.
-    document.addEventListener('pointercancel', this.onSurfacePointerUp);
+  isSelected(node: CanvasNode): boolean {
+    return this.selectedSet().has(node.key.toLowerCase());
   }
 
-  private readonly onSurfacePointerMove = (event: PointerEvent): void => {
-    const state = this.panState;
-    if (!state || !event.isPrimary) return;
+  isEdgeSelected(edge: CanvasEdge): boolean {
+    const selected = this.selectedEdge();
+    return !!selected
+      && selected.port === edge.exitPort
+      && selected.from.toLowerCase() === edge.from.toLowerCase();
+  }
 
-    const { clientX, clientY } = event;
-    this.scheduleFrame(() => this.camera.set(panBy(
-      state.origin, clientX - state.startX, clientY - state.startY)));
-  };
+  private emitSelection(nodes: string[], edge: CanvasEdgeRef | null = null): void {
+    this.selectionChange.emit({ nodes, edge });
+  }
 
-  private readonly onSurfacePointerUp = (): void => {
-    this.flushFrame();
-    this.panState = null;
-    this.panning.set(false);
-    document.removeEventListener('pointermove', this.onSurfacePointerMove);
-    document.removeEventListener('pointerup', this.onSurfacePointerUp);
-    document.removeEventListener('pointercancel', this.onSurfacePointerUp);
-  };
+  /**
+   * Düğüm seçimi: ek tuşla eklenir/çıkarılır; ek tuşsuz basışta düğüm zaten
+   * seçiliyse seçim korunur (birlikte sürüklensin diye), değilse yalnız o seçilir.
+   */
+  private selectionAfterPress(key: string, additive: boolean): string[] {
+    const current = this.selectedNodes();
+    const isSelected = this.selectedSet().has(key.toLowerCase());
 
-  // ── Düğüm taşıma ──────────────────────────────────────────────────────────
+    if (additive) {
+      return isSelected
+        ? current.filter(k => k.toLowerCase() !== key.toLowerCase())
+        : [...current, key];
+    }
+    return isSelected ? current : [key];
+  }
 
-  private dragState: {
-    key: string; startX: number; startY: number; originX: number; originY: number;
-  } | null = null;
+  // ── Düğüm: seçim + taşıma ─────────────────────────────────────────────────
 
-  onNodeDragStart(event: PointerEvent, node: CanvasNode): void {
+  onNodePointerDown(event: PointerEvent, node: CanvasNode): void {
     if (!isPlatformBrowser(this.platformId) || !event.isPrimary) return;
     // Yalnız sol tuş: sağ/orta tuş düğümü sürüklemeye başlıyor ve menü açıldığı
     // için pointerup hiç gelmeyince düğüm imleci izlemeye devam ediyordu.
@@ -472,55 +538,198 @@ export class WorkflowCanvasComponent {
 
     event.preventDefault();
     event.stopPropagation();
+    this.closeMenu();
+    this.focusViewport();
 
-    this.nodeSelected.emit(node.key);
-    // Salt-okunur modda seçim çalışır, taşıma çalışmaz.
-    if (this.locked()) return;
+    const additive = event.shiftKey || event.ctrlKey || event.metaKey;
+    const selection = this.selectionAfterPress(node.key, additive);
+    this.emitSelection(selection);
 
-    this.dragState = {
-      key: node.key,
-      startX: event.clientX,
-      startY: event.clientY,
-      originX: node.x,
-      originY: node.y
+    // Salt-okunurda seçim çalışır, taşıma çalışmaz. Ek tuşla seçimden çıkarılan
+    // düğüm de taşınmaz.
+    if (this.locked() || !selection.some(k => k.toLowerCase() === node.key.toLowerCase())) return;
+
+    const byKey = this.nodesByKey();
+    const origins = new Map<string, Point>();
+    for (const key of selection) {
+      const selected = byKey.get(key.toLowerCase());
+      if (selected) origins.set(selected.key, { x: selected.x, y: selected.y });
+    }
+
+    this.gesture = {
+      kind: 'node', key: node.key, startX: event.clientX, startY: event.clientY,
+      additive, origins, moved: false
     };
-
-    document.addEventListener('pointermove', this.onNodeDragMove);
-    document.addEventListener('pointerup', this.onNodeDragEnd);
-    document.addEventListener('pointercancel', this.onNodeDragEnd);
+    this.attach(this.onGestureMove, this.onGestureEnd);
   }
 
-  // Ok fonksiyonu: `this` bağlanır ve removeEventListener referansla çalışır.
-  private readonly onNodeDragMove = (event: PointerEvent): void => {
-    const state = this.dragState;
-    if (!state || !event.isPrimary) return;
+  /** Düğüm çift tıklaması: ayrıntı pop-up'ı. */
+  onNodeDoubleClick(node: CanvasNode): void {
+    this.nodeOpened.emit(node.key);
+  }
 
-    // Ekran pikseli dünya birimine çevrilir; aksi halde uzaklaşınca düğüm
-    // imcin çok gerisinde kalırdı.
+  // ── Zemin: kaydırma, kenar seçimi, lasso ──────────────────────────────────
+
+  onSurfacePointerDown(event: PointerEvent): void {
+    if (!isPlatformBrowser(this.platformId) || !event.isPrimary) return;
+    // Sağ tuş menüdür (contextmenu olayı); burada yalnız sol ve orta tuş.
+    if (event.button !== 0 && event.button !== 1) return;
+
+    event.preventDefault();
+    this.closeMenu();
+    this.focusViewport();
+
+    const world = this.toWorld(event.clientX, event.clientY);
+
+    // Shift + sol tuş: çerçeveyle seçim.
+    if (event.button === 0 && event.shiftKey) {
+      this.gesture = { kind: 'lasso', start: world, additive: true };
+      this.lasso.set({ x: world.x, y: world.y, width: 0, height: 0 });
+      this.attach(this.onGestureMove, this.onGestureEnd);
+      return;
+    }
+
+    this.gesture = {
+      kind: 'surface',
+      startX: event.clientX,
+      startY: event.clientY,
+      origin: this.camera(),
+      edge: event.button === 0 ? edgeAt(this.edges(), world, this.camera().zoom) : null,
+      moved: false
+    };
+    this.attach(this.onGestureMove, this.onGestureEnd);
+  }
+
+  private gesture: Gesture | null = null;
+  readonly panning = signal(false);
+
+  private readonly onGestureMove = (event: PointerEvent): void => {
+    const gesture = this.gesture;
+    if (!gesture || !event.isPrimary) return;
+
+    const { clientX, clientY, altKey } = event;
+
+    if (gesture.kind === 'lasso') {
+      const point = this.toWorld(clientX, clientY);
+      this.scheduleFrame(() => this.lasso.set(normalizedRect(gesture.start, point)));
+      return;
+    }
+
+    const dx = clientX - gesture.startX;
+    const dy = clientY - gesture.startY;
+    if (!gesture.moved && !exceedsThreshold(dx, dy)) return;
+
+    if (gesture.kind === 'surface') {
+      if (!gesture.moved) this.panning.set(true);
+      gesture.moved = true;
+      this.scheduleFrame(() => this.camera.set(panBy(gesture.origin, dx, dy)));
+      return;
+    }
+
+    gesture.moved = true;
     const zoom = this.camera().zoom;
-
-    // Negatif konuma izin verilmez; düğüm canvas'ın dışına kaçarsa geri
-    // getirmenin tek yolu tanımı elle düzenlemek olurdu.
-    const x = Math.max(0, state.originX + (event.clientX - state.startX) / zoom);
-    const y = Math.max(0, state.originY + (event.clientY - state.startY) / zoom);
-
-    this.scheduleFrame(() =>
-      this.liveOffsets.update(current => ({ ...current, [state.key]: { x, y } })));
+    // Alt basılıyken ızgaraya yapışma kapalı (ince ayar).
+    const positions = dragPositions(gesture.origins, dx, dy, zoom, !altKey);
+    this.scheduleFrame(() => this.liveOffsets.update(current => {
+      const next = { ...current };
+      for (const [key, point] of positions) next[key] = point;
+      return next;
+    }));
   };
 
-  private readonly onNodeDragEnd = (): void => {
+  private readonly onGestureEnd = (event: PointerEvent): void => {
     this.flushFrame();
-    const state = this.dragState;
-    this.dragState = null;
-    document.removeEventListener('pointermove', this.onNodeDragMove);
-    document.removeEventListener('pointerup', this.onNodeDragEnd);
-    document.removeEventListener('pointercancel', this.onNodeDragEnd);
+    const gesture = this.gesture;
+    this.gesture = null;
+    this.detach(this.onGestureMove, this.onGestureEnd);
+    this.panning.set(false);
 
-    if (!state) return;
+    if (!gesture) return;
 
-    const position = this.liveOffsets()[state.key];
-    if (position) this.nodeMoved.emit({ key: state.key, ...position });
+    if (gesture.kind === 'lasso') {
+      const rect = this.lasso();
+      this.lasso.set(null);
+      if (!rect) return;
+
+      const hits = nodesInRect(this.nodes(),
+        { x: rect.x, y: rect.y }, { x: rect.x + rect.width, y: rect.y + rect.height });
+      const merged = gesture.additive
+        ? [...this.selectedNodes(), ...hits.map(n => n.key)
+            .filter(key => !this.selectedSet().has(key.toLowerCase()))]
+        : hits.map(n => n.key);
+      this.emitSelection(merged);
+      return;
+    }
+
+    if (gesture.kind === 'surface') {
+      if (gesture.moved || event.type === 'pointercancel') return;
+      // Sürüklenmeden bırakılan zemin tıklaması: kenar varsa onu seç, yoksa seçimi temizle.
+      if (gesture.edge) {
+        this.emitSelection([], { from: gesture.edge.from, port: gesture.edge.exitPort });
+      } else {
+        this.emitSelection([]);
+      }
+      return;
+    }
+
+    // Düğüm jesti.
+    if (!gesture.moved) {
+      // Ek tuşsuz tıklama çoklu seçimi tek düğüme indirir (sürükleme başlamadıysa).
+      if (!gesture.additive && this.selectedNodes().length > 1) this.emitSelection([gesture.key]);
+      return;
+    }
+    if (event.type === 'pointercancel') {
+      this.liveOffsets.set({});
+      return;
+    }
+
+    const live = this.liveOffsets();
+    const moved = [...gesture.origins.keys()]
+      .map(key => ({ key, ...(live[key] ?? gesture.origins.get(key)!) }));
+    this.nodesMoved.emit(this.pinAll(moved));
   };
+
+  /**
+   * Taşınan düğümlere, konumu otomatik yerleşimden gelen DİĞER düğümlerin
+   * mevcut konumlarını ekler. İlk elle taşımadan sonra tanım tamamen "elle
+   * yerleşim"e geçer: sonradan adım eklenince otomatik yerleşim değişse de
+   * kullanıcının yerleştirmediği kutular zıplamaz.
+   */
+  private pinAll(moves: Array<{ key: string; x: number; y: number }>): Array<{ key: string; x: number; y: number }> {
+    const movedKeys = new Set(moves.map(m => m.key.toLowerCase()));
+    const unpinned = this.nodes()
+      .filter(node => !node.pinned && !movedKeys.has(node.key.toLowerCase()))
+      .map(node => ({ key: node.key, x: node.x, y: node.y }));
+
+    return [...moves, ...unpinned];
+  }
+
+  /** Seçili düğümleri ok tuşuyla iter (Shift: ızgara adımı). */
+  nudge(direction: 'left' | 'right' | 'up' | 'down', large: boolean): void {
+    if (this.locked()) return;
+
+    const selected = this.nodes().filter(node => this.selectedSet().has(node.key.toLowerCase()));
+    if (selected.length === 0) return;
+
+    const delta = nudgeDelta(direction, large);
+    const moves = selected.map(node => ({
+      key: node.key,
+      x: Math.max(0, large ? snapValue(node.x + delta.x, true) : node.x + delta.x),
+      y: Math.max(0, large ? snapValue(node.y + delta.y, true) : node.y + delta.y)
+    }));
+
+    // Yeni konum canlı ofsete de yazılır: değişiklik algılama sonraki kareye
+    // ertelendiği için (eventCoalescing) aynı karede gelen ikinci basış `graph`
+    // girdisini hâlâ eski görür ve itmeler birikmek yerine üst üste yazılırdı.
+    // Tanım güncellenince ofsetler zaten bırakılır (bkz. constructor).
+    this.liveOffsets.update(current => {
+      const next = { ...current };
+      for (const move of moves) next[move.key] = { x: move.x, y: move.y };
+      return next;
+    });
+
+    this.nodesMoved.emit(this.pinAll(moves));
+  }
 
   // ── Bağlantı çizme ────────────────────────────────────────────────────────
 
@@ -530,45 +739,33 @@ export class WorkflowCanvasComponent {
 
     event.preventDefault();
     event.stopPropagation();
+    this.closeMenu();
 
-    const point = this.toWorldPoint(event);
+    const point = this.toWorld(event.clientX, event.clientY);
     this.pendingEdge.set({ from: node.key, port: port.kind, x: point.x, y: point.y });
-
-    document.addEventListener('pointermove', this.onPortDragMove);
-    document.addEventListener('pointerup', this.onPortDragEnd);
-    document.addEventListener('pointercancel', this.onPortDragCancel);
+    this.attach(this.onPortDragMove, this.onPortDragEnd);
   }
 
   private readonly onPortDragMove = (event: PointerEvent): void => {
     if (!this.pendingEdge() || !event.isPrimary) return;
 
-    const point = this.toWorldPoint(event);
+    const point = this.toWorld(event.clientX, event.clientY);
     this.scheduleFrame(() => {
       const pending = this.pendingEdge();
       if (pending) this.pendingEdge.set({ ...pending, x: point.x, y: point.y });
     });
   };
 
-  /** İptal edilen jest bağlantı oluşturmaz — yalnız yarım çizgiyi temizler. */
-  private readonly onPortDragCancel = (): void => {
-    this.flushFrame();
-    this.pendingEdge.set(null);
-    document.removeEventListener('pointermove', this.onPortDragMove);
-    document.removeEventListener('pointerup', this.onPortDragEnd);
-    document.removeEventListener('pointercancel', this.onPortDragCancel);
-  };
-
   private readonly onPortDragEnd = (event: PointerEvent): void => {
     this.flushFrame();
     const pending = this.pendingEdge();
     this.pendingEdge.set(null);
-    document.removeEventListener('pointermove', this.onPortDragMove);
-    document.removeEventListener('pointerup', this.onPortDragEnd);
-    document.removeEventListener('pointercancel', this.onPortDragCancel);
+    this.detach(this.onPortDragMove, this.onPortDragEnd);
 
-    if (!pending) return;
+    // İptal edilen jest bağlantı oluşturmaz — yalnız yarım çizgiyi temizler.
+    if (!pending || event.type === 'pointercancel') return;
 
-    const target = nodeAt(this.nodes(), this.toWorldPoint(event));
+    const target = nodeAt(this.nodes(), this.toWorld(event.clientX, event.clientY));
     // Kendine bağlantı yok sayılır: sonsuz döngü kurmanın en kolay yolu bu
     // ve kullanıcının bunu isteyerek yaptığı bir senaryo yok.
     if (!target || target.key.toLowerCase() === pending.from.toLowerCase()) return;
@@ -576,27 +773,153 @@ export class WorkflowCanvasComponent {
     this.edgeCreated.emit({ from: pending.from, to: target.key, port: pending.port });
   };
 
+  // ── Sağ tık menüsü ────────────────────────────────────────────────────────
+
+  /**
+   * Düğüm, kenar ya da zemin için bağlama duyarlı menü. Menü viewport'un
+   * KARDEŞİ olarak `position: fixed` ile çizilir: dönüştürülmüş (transform)
+   * bir atanın içindeki fixed eleman ekrana değil o ataya göre konumlanırdı.
+   */
+  onContextMenu(event: MouseEvent): void {
+    event.preventDefault();
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    const world = this.toWorld(event.clientX, event.clientY);
+    const node = nodeAt(this.nodes(), world);
+    const editable = !this.locked();
+    const items: MenuItem[] = [];
+
+    if (node) {
+      if (!this.selectedSet().has(node.key.toLowerCase())) this.emitSelection([node.key]);
+
+      items.push({
+        id: 'open', labelKey: editable ? 'workflow.canvas.menu.edit' : 'workflow.canvas.menu.details',
+        run: () => this.menuAction.emit({ type: 'open', key: node.key })
+      });
+      if (editable) {
+        if (!node.isStart) {
+          items.push({
+            id: 'start', labelKey: 'workflow.canvas.menu.setStart',
+            run: () => this.menuAction.emit({ type: 'setStart', key: node.key })
+          });
+        }
+        items.push({
+          id: 'duplicate', labelKey: 'workflow.canvas.menu.duplicate',
+          run: () => this.menuAction.emit({ type: 'duplicate' })
+        });
+        items.push({
+          id: 'delete', labelKey: 'workflow.canvas.menu.delete', danger: true,
+          run: () => this.menuAction.emit({ type: 'delete' })
+        });
+      }
+    } else {
+      const edge = edgeAt(this.edges(), world, this.camera().zoom);
+      if (edge) {
+        this.emitSelection([], { from: edge.from, port: edge.exitPort });
+        if (editable) {
+          items.push({
+            id: 'deleteEdge', labelKey: 'workflow.canvas.menu.deleteEdge', danger: true,
+            run: () => this.menuAction.emit({ type: 'delete' })
+          });
+        }
+      } else {
+        if (editable) {
+          items.push({
+            id: 'add', labelKey: 'workflow.canvas.menu.addStep',
+            run: () => this.menuAction.emit({ type: 'addStep', at: world })
+          });
+          items.push({
+            id: 'arrange', labelKey: 'workflow.canvas.autoLayout',
+            run: () => this.autoArrange()
+          });
+        }
+        items.push({ id: 'fit', labelKey: 'workflow.canvas.fit', run: () => this.fitToScreen() });
+        items.push({
+          id: 'all', labelKey: 'workflow.canvas.menu.selectAll',
+          run: () => this.menuAction.emit({ type: 'selectAll' })
+        });
+      }
+    }
+
+    if (items.length === 0) {
+      this.closeMenu();
+      return;
+    }
+
+    this.menu.set({ x: event.clientX, y: event.clientY, items });
+    document.addEventListener('pointerdown', this.onOutsidePointerDown, true);
+    afterNextRender(() => this.placeMenu(), { injector: this.injector });
+  }
+
+  /**
+   * Menü çizildikten sonra ölçülür ve pencereye sığdırılır: ekranın alt/sağ
+   * kenarına yakın sağ tıkta menü pencereden taşıyordu (telefonda tümüyle).
+   * İlk madde odaklanır — klavyeyle Tab/Enter ve Escape çalışsın.
+   */
+  private placeMenu(): void {
+    const menu = this.menu();
+    const element = this.menuRef()?.nativeElement;
+    if (!menu || !element) return;
+
+    const placed = clampToWindow(
+      { x: menu.x, y: menu.y },
+      { width: element.offsetWidth, height: element.offsetHeight },
+      { width: window.innerWidth, height: window.innerHeight });
+    if (placed.x !== menu.x || placed.y !== menu.y) this.menu.set({ ...menu, ...placed });
+
+    element.querySelector<HTMLElement>('.canvas-menu-item')?.focus({ preventScroll: true });
+  }
+
+  runMenuItem(item: MenuItem): void {
+    this.closeMenu();
+    item.run();
+  }
+
+  closeMenu(): void {
+    if (!this.menu()) return;
+    this.menu.set(null);
+    if (isPlatformBrowser(this.platformId)) {
+      document.removeEventListener('pointerdown', this.onOutsidePointerDown, true);
+    }
+  }
+
+  /** Menü dışına basış menüyü kapatır (menü maddesine basış kapatmaz). */
+  private readonly onOutsidePointerDown = (event: PointerEvent): void => {
+    const target = event.target as Element | null;
+    if (target?.closest?.('.canvas-menu')) return;
+    this.closeMenu();
+  };
+
+  // ── Dinleyici yönetimi ────────────────────────────────────────────────────
+
+  private attach(move: (e: PointerEvent) => void, end: (e: PointerEvent) => void): void {
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', end);
+    // pointercancel: tarayıcı jesti devralırsa (sistem kaydırması) jest takılı kalmasın.
+    document.addEventListener('pointercancel', end);
+  }
+
+  private detach(move: (e: PointerEvent) => void, end: (e: PointerEvent) => void): void {
+    document.removeEventListener('pointermove', move);
+    document.removeEventListener('pointerup', end);
+    document.removeEventListener('pointercancel', end);
+  }
+
+  /** Klavye kısayolları tuval odaktayken de çalışsın diye viewport odaklanır. */
+  private focusViewport(): void {
+    this.viewportRef()?.nativeElement.focus({ preventScroll: true });
+  }
+
   /** Bileşen kapanırken yarım kalan jestlerin document dinleyicilerini söker. */
   private detachAll(): void {
     if (this.frameRequest) cancelAnimationFrame(this.frameRequest);
     this.frameRequest = 0;
     this.frameJob = null;
+    this.gesture = null;
     if (!isPlatformBrowser(this.platformId)) return;
 
-    document.removeEventListener('pointermove', this.onSurfacePointerMove);
-    document.removeEventListener('pointerup', this.onSurfacePointerUp);
-    document.removeEventListener('pointercancel', this.onSurfacePointerUp);
-    document.removeEventListener('pointermove', this.onNodeDragMove);
-    document.removeEventListener('pointerup', this.onNodeDragEnd);
-    document.removeEventListener('pointercancel', this.onNodeDragEnd);
-    document.removeEventListener('pointermove', this.onPortDragMove);
-    document.removeEventListener('pointerup', this.onPortDragEnd);
-    document.removeEventListener('pointercancel', this.onPortDragCancel);
-  }
-
-  // ── Yardımcılar ───────────────────────────────────────────────────────────
-
-  isSelected(node: CanvasNode): boolean {
-    return (this.selectedKey() ?? '').toLowerCase() === node.key.toLowerCase();
+    this.detach(this.onGestureMove, this.onGestureEnd);
+    this.detach(this.onPortDragMove, this.onPortDragEnd);
+    document.removeEventListener('pointerdown', this.onOutsidePointerDown, true);
   }
 }

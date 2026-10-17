@@ -1,5 +1,6 @@
 import {
-  ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, computed, inject, signal
+  ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, OnInit,
+  computed, inject, signal, viewChild
 } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -26,22 +27,30 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
 import { markDirty } from '../../utils/change-detection';
 import { exitForKind, exitsOf, sameKey } from '../../utils/workflow/workflow-exits';
 import { WorkflowGraphComponent } from '../shared/workflow-graph/workflow-graph.component';
-import { WorkflowCanvasComponent } from '../shared/workflow-canvas/workflow-canvas.component';
+import {
+  CanvasMenuAction, CanvasSelection, WorkflowCanvasComponent
+} from '../shared/workflow-canvas/workflow-canvas.component';
+import {
+  commandFor, isActivationTarget, isTypingTarget
+} from '../shared/workflow-canvas/workflow-canvas.keymap';
 import { StepDialogResult, WorkflowStepDialogComponent } from './step-dialog/workflow-step-dialog.component';
 import { WorkflowDesignerStore } from './designer/workflow-designer.store';
 import { docFromDefinition, docToPayload, emptyDoc } from './designer/workflow-design.doc';
 import {
   clearPositions,
   connect,
+  disconnect,
   findStep,
-  moveStep,
-  removeStep,
+  moveSteps,
+  removeSteps,
   setConditions,
   setMeta,
   setStart,
   suggestKey,
   upsertStep
 } from './designer/workflow-design.commands';
+import { DesignClipboard, copySteps, pasteSteps } from './designer/workflow-clipboard';
+import { isNodeSelected, selectNodes } from './designer/workflow-selection';
 
 type TabId = 'steps' | 'canvas' | 'trigger' | 'preview';
 
@@ -50,12 +59,15 @@ interface StepDialogState {
   step: WorkflowStep | null;
   statusLabel: string;
   newKey: string;
+  /** Sağ tık "Buraya adım ekle": yeni adım bu konuma yerleşir. */
+  at?: { x: number; y: number } | null;
 }
 
 /** Adımlar sekmesindeki bir satır — şablonda metot çağrısı yapılmasın diye önceden hesaplanır. */
 interface StepRow {
   key: string;
   name: string;
+  selected: boolean;
   isStart: boolean;
   typeKey: string;
   assignment: string;
@@ -119,8 +131,11 @@ export class WorkflowBuildComponent implements OnInit {
    */
   readonly readonlyMode = this.store.readonly;
 
-  /** Canvas'ta seçili adım — liste satırı da vurgulanır. */
-  readonly selectedStepKey = this.store.selectedKey;
+  /** Tasarım tuvali — klavye kısayolları görünüm komutlarını (sığdır, it) ona iletir. */
+  private readonly canvas = viewChild(WorkflowCanvasComponent);
+
+  /** Sayfa içi pano (kopyala/yapıştır). */
+  private clipboard: DesignClipboard | null = null;
 
   /** Canvas ve önizleme grafiği; adım yoksa boş durum gösterilir. */
   readonly previewGraph = computed<WorkflowGraph | null>(() => {
@@ -139,6 +154,7 @@ export class WorkflowBuildComponent implements OnInit {
     // Dil değişince satır metinleri (atama özeti, terminal etiketleri) yenilensin.
     this.languageService.lang();
     const graph = this.store.graph();
+    const selection = this.store.selection();
     const roles = this.roles();
     const users = this.users();
 
@@ -147,6 +163,7 @@ export class WorkflowBuildComponent implements OnInit {
       return {
         key: step.key,
         name: step.name,
+        selected: isNodeSelected(selection, step.key),
         isStart: sameKey(graph.startStep, step.key),
         typeKey: step.type === 'parallel' ? 'workflow.build.typeParallel' : 'workflow.build.typeApproval',
         assignment: this.assignmentSummary(step, roles, users),
@@ -271,8 +288,7 @@ export class WorkflowBuildComponent implements OnInit {
   // ── Adımlar ───────────────────────────────────────────────────────────────
 
   removeStep(key: string): void {
-    this.store.dispatch('', doc => removeStep(doc, key));
-    if (sameKey(this.selectedStepKey(), key)) this.selectedStepKey.set(null);
+    this.store.dispatch('', doc => removeSteps(doc, [key]));
     this.syncStartStep();
   }
 
@@ -293,6 +309,8 @@ export class WorkflowBuildComponent implements OnInit {
     const step = findStep(doc, key);
     if (!step) return;
 
+    this.store.selection.set(selectNodes([step.key]));
+
     const labelKey = Object.keys(doc.graph.entityStatusMap).find(k => sameKey(k, step.key));
     this.stepDialog.set({
       step,
@@ -303,10 +321,17 @@ export class WorkflowBuildComponent implements OnInit {
 
   /** Pop-up sonucu belgeye yazılır: düzenlemede yerine konur, yeni adımda eklenir. */
   onStepSaved(result: StepDialogResult): void {
-    this.store.dispatch('', doc =>
-      upsertStep(doc, result.originalKey || null, result.step, result.statusLabel));
+    const at = this.stepDialog()?.at ?? null;
 
-    this.selectedStepKey.set(result.step.key);
+    this.store.dispatch('', doc => {
+      const next = upsertStep(doc, result.originalKey || null, result.step, result.statusLabel);
+      // Sağ tıkla belirli bir yere eklenen adım oraya yerleşir (tek geri al adımı).
+      return at && !result.originalKey
+        ? moveSteps(next, [{ key: result.step.key, x: at.x, y: at.y }])
+        : next;
+    });
+
+    this.store.selection.set(selectNodes([result.step.key]));
     this.syncStartStep();
     this.stepDialog.set(null);
   }
@@ -593,9 +618,25 @@ export class WorkflowBuildComponent implements OnInit {
 
   // ── Canvas köprüsü ────────────────────────────────────────────────────────
 
-  /** Canvas'ta taşınan düğümün konumu belgeye yazılır (bırakışta, tek geri al adımı). */
-  onNodeMoved(event: { key: string; x: number; y: number }): void {
-    this.store.dispatch('', doc => moveStep(doc, event.key, event.x, event.y));
+  /** Canvas'ta taşınan düğümlerin konumları belgeye yazılır (bırakışta, tek geri al adımı). */
+  onNodesMoved(moves: Array<{ key: string; x: number; y: number }>): void {
+    this.store.dispatch(this.moveReason, doc => moveSteps(doc, moves));
+  }
+
+  /**
+   * Taşımanın geçmiş nedeni. Sürükleme bırakışı tek adımdır (''); ok tuşuyla
+   * itmeler 'nudge' ile birleşir — basılı tutulan ok onlarca geri al adımı
+   * bırakmasın. Tuvalin output'u senkron yayıldığı için alan bayrağı yeterli.
+   */
+  private moveReason = '';
+
+  private nudge(direction: 'left' | 'right' | 'up' | 'down', large: boolean): void {
+    this.moveReason = 'nudge';
+    try {
+      this.canvas()?.nudge(direction, large);
+    } finally {
+      this.moveReason = '';
+    }
   }
 
   /**
@@ -620,7 +661,160 @@ export class WorkflowBuildComponent implements OnInit {
     });
   }
 
-  onNodeSelected(key: string): void {
-    this.selectedStepKey.set(key);
+  onSelectionChange(selection: CanvasSelection): void {
+    this.store.selection.set(selection);
+  }
+
+  /** Sağ tık menüsünden gelen, belgeyi ilgilendiren işlemler. */
+  onMenuAction(action: CanvasMenuAction): void {
+    switch (action.type) {
+      case 'open':      this.openStep(action.key); break;
+      case 'setStart':  this.makeStart(action.key); break;
+      case 'duplicate': this.duplicateSelection(); break;
+      case 'delete':    this.deleteSelection(); break;
+      case 'selectAll': this.selectAll(); break;
+      case 'addStep':
+        if (this.readonlyMode()) return;
+        this.stepDialog.set({
+          step: null, statusLabel: '', newKey: suggestKey(this.store.doc()),
+          at: { x: Math.max(0, action.at.x), y: Math.max(0, action.at.y) }
+        });
+        break;
+    }
+  }
+
+  // ── Düzenleme komutları (menü + klavye) ───────────────────────────────────
+
+  undo(): void {
+    this.store.undo();
+    this.syncFormFromDoc();
+  }
+
+  redo(): void {
+    this.store.redo();
+    this.syncFormFromDoc();
+  }
+
+  private makeStart(key: string): void {
+    this.store.dispatch('', doc => setStart(doc, findStep(doc, key)?.key ?? doc.graph.startStep));
+    this.syncStartStep();
+  }
+
+  /**
+   * Seçimi siler: kenar seçiliyse bağlantı kaldırılır (çıkış terminale düşer),
+   * düğümler seçiliyse adımlar silinir. Onay sorulmaz — Ctrl+Z geri alır ve
+   * bildirim bunu söyler (geri alınabilir işlemde diyalog gereksiz bir adımdır).
+   */
+  deleteSelection(): void {
+    if (this.readonlyMode()) return;
+    const selection = this.store.selection();
+
+    if (selection.edge) {
+      const edge = selection.edge;
+      this.store.dispatch('', doc => disconnect(doc, edge.from, edge.port));
+      this.store.selection.set(selectNodes([]));
+      this.notification.success(this.languageService.t('workflow.build.edgeRemoved'));
+      return;
+    }
+
+    if (selection.nodes.length === 0) return;
+
+    const count = selection.nodes.length;
+    this.store.dispatch('', doc => removeSteps(doc, selection.nodes));
+    this.syncStartStep();
+    this.notification.success(this.languageService.t('workflow.build.stepsDeleted', { n: count }));
+  }
+
+  copySelection(): void {
+    this.clipboard = copySteps(this.store.doc(), this.store.selection().nodes) ?? this.clipboard;
+  }
+
+  paste(): void {
+    if (this.readonlyMode() || !this.clipboard) return;
+    this.insertCopies(this.clipboard, true);
+  }
+
+  duplicateSelection(): void {
+    if (this.readonlyMode()) return;
+    const clip = copySteps(this.store.doc(), this.store.selection().nodes);
+    if (clip) this.insertCopies(clip, false);
+  }
+
+  /** Panodaki adımları ekler ve kopyaları seçer. */
+  private insertCopies(clipboard: DesignClipboard, announce: boolean): void {
+    let pasted: string[] = [];
+    this.store.dispatch('', doc => {
+      const result = pasteSteps(doc, clipboard);
+      pasted = result.keys;
+      return result.doc;
+    });
+
+    if (pasted.length === 0) return;
+    this.store.selection.set(selectNodes(pasted));
+    this.syncStartStep();
+    if (announce) {
+      this.notification.success(this.languageService.t('workflow.build.pasted', { n: pasted.length }));
+    }
+  }
+
+  selectAll(): void {
+    this.store.selection.set(selectNodes(this.store.graph().steps.map(step => step.key)));
+  }
+
+  /**
+   * Tasarımcı klavye kısayolları. Yazı alanındayken ya da adım pop-up'ı açıkken
+   * hiçbiri çalışmaz (orada Ctrl+Z metni geri alır). Geri al/yinele her sekmede,
+   * diğerleri yalnız Tasarım sekmesinde.
+   */
+  @HostListener('document:keydown', ['$event'])
+  onKeydown(event: KeyboardEvent): void {
+    if (this.stepDialog() || isTypingTarget(event.target)) return;
+
+    const action = commandFor(event);
+    if (!action) return;
+
+    if (action.command === 'undo' || action.command === 'redo') {
+      event.preventDefault();
+      if (action.command === 'undo') this.undo(); else this.redo();
+      return;
+    }
+
+    if (this.activeTab() !== 'canvas') return;
+    const canvas = this.canvas();
+
+    // Yapacak işi olmayan komut tarayıcıya bırakılır: seçim yokken oklar sayfayı
+    // kaydırsın, Ctrl+C sayfadaki seçili metni kopyalasın.
+    const hasNodes = this.store.selection().nodes.length > 0;
+    if (action.command.startsWith('nudge') && !hasNodes) return;
+    if ((action.command === 'copy' || action.command === 'duplicate') && !hasNodes) return;
+    if (action.command === 'paste' && !this.clipboard) return;
+
+    switch (action.command) {
+      case 'delete':     this.deleteSelection(); break;
+      case 'copy':       this.copySelection(); break;
+      case 'paste':      this.paste(); break;
+      case 'duplicate':  this.duplicateSelection(); break;
+      case 'selectAll':  this.selectAll(); break;
+      case 'escape':
+        this.store.selection.set(selectNodes([]));
+        canvas?.closeMenu();
+        break;
+      case 'open': {
+        if (isActivationTarget(event.target)) return;
+        const key = this.store.selection().nodes[0];
+        if (key) this.openStep(key);
+        break;
+      }
+      case 'fit':        canvas?.fitToScreen(); break;
+      case 'zoomIn':     canvas?.zoomIn(); break;
+      case 'zoomOut':    canvas?.zoomOut(); break;
+      case 'nudgeLeft':  this.nudge('left', action.large); break;
+      case 'nudgeRight': this.nudge('right', action.large); break;
+      case 'nudgeUp':    this.nudge('up', action.large); break;
+      case 'nudgeDown':  this.nudge('down', action.large); break;
+      default: return;
+    }
+
+    event.preventDefault();
   }
 }

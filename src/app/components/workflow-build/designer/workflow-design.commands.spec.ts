@@ -3,9 +3,12 @@ import { WorkflowDesignDoc, emptyDoc } from './workflow-design.doc';
 import {
   clearPositions,
   connect,
+  disconnect,
   findStep,
   moveStep,
+  moveSteps,
   removeStep,
+  removeSteps,
   setConditions,
   setMeta,
   setStart,
@@ -174,6 +177,39 @@ describe('workflow-design.commands', () => {
 
       expect(findStep(cleared, 'final')!.x).toBeNull();
       expect(clearPositions(cleared)).toBe(cleared);
+    });
+  });
+
+  describe('çoklu işlemler', () => {
+    it('moveSteps hepsini tek belgede yazar; hiçbiri değişmezse aynı belge döner', () => {
+      const doc = moveSteps(sampleDoc(), [{ key: 'yonetici', x: 0, y: 0 }, { key: 'FINAL', x: 40, y: 80 }]);
+
+      expect([findStep(doc, 'yonetici')!.x, findStep(doc, 'final')!.y]).toEqual([0, 80]);
+      expect(moveSteps(doc, [{ key: 'final', x: 40, y: 80 }])).toBe(doc);
+      expect(moveSteps(doc, [{ key: 'yok', x: 1, y: 1 }])).toBe(doc);
+    });
+
+    it('removeSteps birden çok adımı siler ve tüm referanslarını temizler', () => {
+      const doc = removeSteps(sampleDoc(), ['onaylar', 'yonetici']);
+
+      expect(doc.graph.steps.map(s => s.key)).toEqual(['final']);
+      expect(doc.graph.startStep).toBe('final');
+      expect(doc.graph.entityStatusMap['onaylar']).toBeUndefined();
+      expect(doc.graph.entityStatusMap['__completed']).toBe('Onaylandı');
+    });
+
+    it('disconnect çıkışı terminale düşürür, diğer çıkışa dokunmaz', () => {
+      const doc = disconnect(sampleDoc(), 'onaylar', 'anyReject');
+      const step = findStep(doc, 'onaylar')!;
+
+      expect(step.onAnyReject).toBeNull();
+      expect(step.onComplete).toBe('final');
+    });
+
+    it('bağlı olmayan çıkışı ya da bilinmeyen adımı kesmek belgeyi değiştirmez', () => {
+      const doc = sampleDoc();
+      expect(disconnect(doc, 'final', 'approve')).toBe(doc);
+      expect(disconnect(doc, 'yok', 'approve')).toBe(doc);
     });
   });
 

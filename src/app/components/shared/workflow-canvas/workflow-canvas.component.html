@@ -57,13 +57,19 @@
     DEĞİL transform ile yapılıyor: scrollLeft/scrollTop ile transform aynı anda
     haritalamaya karışır ve kaydırılabilir alan ölçekle büyümez.
   -->
+  <!-- tabindex: klavye kısayolları tuval odaktayken de çalışsın; aria-label
+       ekran okuyucuya tuvalin ne olduğunu söyler. -->
   <div class="canvas-viewport"
        #viewport
+       tabindex="0"
+       role="application"
+       [attr.aria-label]="'workflow.canvas.aria' | t"
        [class.canvas-viewport--panning]="panning()"
        [style.background-size]="grid().size"
        [style.background-position]="grid().position"
        (wheel)="onWheel($event)"
-       (pointerdown)="onSurfacePointerDown($event)">
+       (pointerdown)="onSurfacePointerDown($event)"
+       (contextmenu)="onContextMenu($event)">
 
     <div class="canvas-world"
          [style.transform]="'translate(' + camera().panX + 'px, ' + camera().panY + 'px) scale(' + camera().zoom + ')'"
@@ -94,7 +100,8 @@
         }
 
         @for (edge of edges(); track edge.key) {
-          <g class="canvas-edge" [class.canvas-edge--reject]="edge.isRejection">
+          <g class="canvas-edge" [class.canvas-edge--reject]="edge.isRejection"
+             [class.canvas-edge--selected]="isEdgeSelected(edge)">
             <!-- non-scaling-stroke: uzaklaşınca çizgi kaybolmasın, yaklaşınca kalınlaşmasın. -->
             <path [attr.d]="edge.geometry.path"
                   vector-effect="non-scaling-stroke"
@@ -143,8 +150,8 @@
              [style.top.px]="node.y"
              [style.width.px]="node.width"
              [style.height.px]="node.height"
-             (pointerdown)="onNodeDragStart($event, node)"
-             (dblclick)="nodeOpened.emit(node.key)">
+             (pointerdown)="onNodePointerDown($event, node)"
+             (dblclick)="onNodeDoubleClick(node)">
 
           <!-- Yükseklik sabit (model = DOM); uzun ad kesilir, tamamı ipucunda. -->
           <div class="canvas-node-title" [title]="node.label">{{ node.label }}</div>
@@ -176,6 +183,26 @@
           }
         </div>
       }
+
+      <!-- Çerçeve (lasso) seçimi — dünya koordinatında, kamerayla birlikte ölçeklenir. -->
+      @if (lasso(); as rect) {
+        <div class="canvas-lasso"
+             [style.left.px]="rect.x" [style.top.px]="rect.y"
+             [style.width.px]="rect.width" [style.height.px]="rect.height"></div>
+      }
     </div>
   </div>
+
+  <!-- Sağ tık menüsü: viewport'un KARDEŞİ (transform'lu atanın içinde fixed
+       konumlama ekrana göre değil ataya göre olurdu). -->
+  @if (menu(); as m) {
+    <div class="canvas-menu" #menu role="menu" [style.left.px]="m.x" [style.top.px]="m.y"
+         (keydown.escape)="closeMenu()">
+      @for (item of m.items; track item.id) {
+        <button type="button" role="menuitem" class="canvas-menu-item"
+                [class.canvas-menu-item--danger]="item.danger"
+                (click)="runMenuItem(item)">{{ item.labelKey | t }}</button>
+      }
+    </div>
+  }
 }

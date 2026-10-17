@@ -14,6 +14,25 @@
         {{ 'workflow.build.newVersion' | t }}
       </button>
     } @else {
+      @if (store.dirty()) {
+        <span class="unsaved-dot" role="status" [title]="'workflow.build.unsaved' | t">
+          <span class="sr-only">{{ 'workflow.build.unsaved' | t }}</span>
+        </span>
+      }
+      <button type="button" class="btn btn-ghost btn-sm" [disabled]="!store.canUndo()" (click)="undo()"
+              [attr.aria-label]="'workflow.build.undo' | t" [title]="'workflow.build.undo' | t">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+        </svg>
+      </button>
+      <button type="button" class="btn btn-ghost btn-sm" [disabled]="!store.canRedo()" (click)="redo()"
+              [attr.aria-label]="'workflow.build.redo' | t" [title]="'workflow.build.redo' | t">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m15 14 5-5-5-5" /><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
+        </svg>
+      </button>
       <button type="button" class="btn btn-secondary btn-sm" [disabled]="saving" (click)="validate()">
         {{ 'workflow.build.validationTitle' | t }}
       </button>
@@ -147,7 +166,7 @@
               <tbody>
                 @for (row of rows(); track $index; let i = $index) {
                   <tr class="clickable-row" tabindex="0"
-                      [class.is-selected]="selectedStepKey() === row.key"
+                      [class.is-selected]="row.selected"
                       (click)="openStep(row.key)" (keydown.enter)="openStep(row.key)">
                     <td class="col-order"><span class="step-order">{{ i + 1 }}</span></td>
                     <td>
@@ -191,12 +210,14 @@
         }
         <app-workflow-canvas
           [graph]="previewGraph()"
-          [selectedKey]="selectedStepKey()"
+          [selectedNodes]="store.selection().nodes"
+          [selectedEdge]="store.selection().edge"
           [readonly]="readonlyMode()"
-          (nodeMoved)="onNodeMoved($event)"
+          (selectionChange)="onSelectionChange($event)"
+          (nodesMoved)="onNodesMoved($event)"
           (layoutReset)="onLayoutReset()"
           (edgeCreated)="onEdgeCreated($event)"
-          (nodeSelected)="onNodeSelected($event)"
+          (menuAction)="onMenuAction($event)"
           (nodeOpened)="openStep($event)" />
       </div>
     }

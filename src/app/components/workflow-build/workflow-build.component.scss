@@ -186,3 +186,13 @@
     display: flex;
   }
 }
+
+// Kaydedilmemiş değişiklik işareti — geri alıp kayıtlı hale dönünce kaybolur.
+.unsaved-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warn);
+  flex: 0 0 auto;
+}
