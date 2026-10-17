@@ -59,24 +59,26 @@
 
   <ng-template #dataTable>
     @if (res.rows.length > 0) {
-      <table class="data-table">
-        <thead>
-          <tr>
-            @for (col of res.columns; track col.name) {
-              <th>{{ col.name }}</th>
-            }
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of res.rows; track $index) {
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
             <tr>
               @for (col of res.columns; track col.name) {
-                <td>{{ row[col.name] }}</td>
+                <th>{{ col.name }}</th>
               }
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (row of res.rows; track $index) {
+              <tr>
+                @for (col of res.columns; track col.name) {
+                  <td>{{ row[col.name] }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
 
       <!-- Sayfalama: yalnız tablo görünümünde. Sunucu her yanıtta total döndürür. -->
       @if (isTableView() && (res.total ?? 0) > res.rows.length) {

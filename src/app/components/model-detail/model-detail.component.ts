@@ -9,7 +9,6 @@ import { TreeStep, applyTreeResult, applyUpdateResults } from './tree-save.util'
 import {
   PublishedModelService, PublishedModel, PublishedColumn, TreeSaveResult
 } from '../../services/published-model.service';
-import { PublishModelService } from '../../services/publish-model.service';
 import { PermissionService } from '../../services/permission.service';
 import { ModelColumnSettingService, ModelColumnSettingDto } from '../../services/model-column-setting.service';
 import { ColumnVisibilityComponent, ColumnVisibilityItem } from '../shared/column-visibility/column-visibility.component';
@@ -210,7 +209,6 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private publishedModel: PublishedModelService,
-    private publishModel: PublishModelService,
     private fb: FormBuilder,
     public permission: PermissionService,
     private modelColumnSetting: ModelColumnSettingService
@@ -367,9 +365,11 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
           this.openEditMode();
           this.loadWorkflowState();
         } else if (record.success && !record.data) {
-          // Assembly yüklü değil — bir kez retry
-          this.retryWithAssembly();
-          return;
+          // Kayıt yok ya da kullanıcı göremez (yalnız-kendi-kayıtları kapsamı). Assembly
+          // eksikliği burada değil, success=false + AssemblyNotLoaded olarak gelir — eskiden
+          // burada loadAssembly yeniden denenirdi: admin'de sonsuz döngü, admin olmayanda
+          // 403 → /models yönlendirmesi.
+          this.recordError = this.languageService.t('model.detail.recordNotFound');
         } else {
           this.recordError = record.message ?? this.languageService.t('model.detail.recordNotFound');
         }
@@ -386,25 +386,19 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  private retryWithAssembly(): void {
-    this.publishModel.loadAssembly().pipe(markDirty(this.cdr)).subscribe({
-      next: () => this.loadAll(),
-      error: () => {
-        this.loadingRecord = false;
-        this.recordError = this.languageService.t('model.detail.assemblyNotLoaded');
-      }
-    });
-  }
-
   private loadChildren(): void {
     this.loadingChildren = true;
     this.publishedModel.getChildModels(this.typeName).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.loadingChildren = false;
-        if (res.success && res.data?.length) {
-          this.childModelNames = res.data;
-          this.activeTab = res.data[0];
-          for (const name of res.data) {
+        // Okuma izni olmayan alt modelin sekmesi açılmaz: satırlarını çeken getall 403
+        // döner ve kullanıcıyı kayıttan /models'e atardı. Admin'de filtre hep true.
+        const readable = (res.success ? res.data ?? [] : [])
+          .filter(name => this.permission.can(name, 'read'));
+        if (readable.length) {
+          this.childModelNames = readable;
+          this.activeTab = readable[0];
+          for (const name of readable) {
             const meta = this.allModels.find(m => m.typeName === name);
             const state = this.buildTabState(name, meta?.columns ?? []);
             this.tabStates.set(name, state);

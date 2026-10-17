@@ -1,10 +1,12 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ResponseModel } from '../models/responseModel';
 import { ListResponseModel } from '../models/responseModelList';
 import { DataResponseModel } from '../models/dataResponseModel';
 import { environment } from '../../environments/environment';
+import { SKIP_FORBIDDEN_REDIRECT } from '../interceptors/error.interceptor';
+import type { PublishedTableSchema } from './published-table.service';
 
 /** Kolon meta verisi — backend PublishedColumnInfo ile eşleşir */
 export interface PublishedColumn {
@@ -83,6 +85,12 @@ export interface TreeSaveResult {
   errors: Record<string, string>;
 }
 
+/**
+ * Yardımcı isteklerin bağlamı: 403 kullanıcıyı sayfadan koparmasın. Lookup hedefini ya da
+ * alt modeli okuma izni olmayan kullanıcı ham id / kuralsız form görür, /models'e atılmaz.
+ */
+const AUXILIARY = () => new HttpContext().set(SKIP_FORBIDDEN_REDIRECT, true);
+
 @Injectable({ providedIn: 'root' })
 export class PublishedModelService {
   private readonly baseUrl = `${environment.apiBaseUrl}/PublishedModel`;
@@ -125,7 +133,7 @@ export class PublishedModelService {
     if (displayColumn) params = params.set('displayColumn', displayColumn);
     if (opts.search)   params = params.set('search', opts.search);
 
-    return this.http.get<PagedResponseModel<LookupOption>>(`${this.baseUrl}/lookupOptions`, { params });
+    return this.http.get<PagedResponseModel<LookupOption>>(`${this.baseUrl}/lookupOptions`, { params, context: AUXILIARY() });
   }
 
   /**
@@ -147,7 +155,7 @@ export class PublishedModelService {
 
     if (displayColumn) params = params.set('displayColumn', displayColumn);
 
-    return this.http.get<PagedResponseModel<LookupOption>>(`${this.baseUrl}/lookupOptions`, { params });
+    return this.http.get<PagedResponseModel<LookupOption>>(`${this.baseUrl}/lookupOptions`, { params, context: AUXILIARY() });
   }
 
   /**
@@ -175,6 +183,18 @@ export class PublishedModelService {
   getChildModels(parentTypeName: string): Observable<ListResponseModel<string>> {
     const params = new HttpParams().set('parentTypeName', parentTypeName);
     return this.http.get<ListResponseModel<string>>(`${this.baseUrl}/children`, { params });
+  }
+
+  /**
+   * Kayıt formunun şema kuralları (doğrulama, otomatik değer, salt okunur) — modelde Read
+   * izni yeter. Admin'e özel /Published/getTable ile AYNI veriyi döner; kayıt formları bunu,
+   * şema tasarım ekranları (admin) getTable'ı kullanır.
+   */
+  getSchema(typeName: string): Observable<DataResponseModel<PublishedTableSchema>> {
+    const params = new HttpParams().set('typeName', typeName);
+    return this.http.get<DataResponseModel<PublishedTableSchema>>(
+      `${this.baseUrl}/schema`, { params, context: AUXILIARY() }
+    );
   }
 
   /** Tek kayıt getirir */

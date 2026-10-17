@@ -154,7 +154,6 @@ export const MODEL_I18N: Translations = {
   'model.detail.schemaLoadFailed': { tr: 'Model şeması yüklenemedi.', en: 'Model schema could not be loaded.' },
   'model.detail.recordNotFound': { tr: 'Kayıt bulunamadı.', en: 'Record not found.' },
   'model.detail.recordLoadFailed': { tr: 'Kayıt yüklenemedi.', en: 'Record could not be loaded.' },
-  'model.detail.assemblyNotLoaded': { tr: 'Model backend\'de yüklü değil. "Tablo Oluştur"dan yeniden yayınlayın.', en: 'The model is not loaded on the backend. Re-publish it from "Create Table".' },
   'model.detail.createFailed': { tr: 'Kayıt oluşturulamadı.', en: 'Record could not be created.' },
   'model.detail.updateFailed': { tr: 'Güncelleme başarısız.', en: 'Update failed.' },
   'model.detail.deleteConfirmTitle': { tr: 'Kaydı sil', en: 'Delete record' },

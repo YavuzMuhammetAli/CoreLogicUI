@@ -276,31 +276,36 @@ Kurallar:
 ### Veri Tablosu
 
 ```html
-<table class="data-table">
-  <thead>
-    <tr>
-      <th>Ad</th>
-      <th>Tip</th>
-      <th>Kurallar</th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    @for (row of rows; track row.id) {
+<div class="table-wrapper">
+  <table class="data-table">
+    <thead>
       <tr>
-        <td>{{ row.name }}</td>
-        <td><span class="badge badge-meta">{{ row.type }}</span></td>
-        <td class="td-muted">{{ row.rules }}</td>
-        <td class="td-actions">
-          <button class="btn btn-ghost btn-sm">Düzenle</button>
-          <button class="btn btn-danger btn-sm">Sil</button>
-        </td>
+        <th>Ad</th>
+        <th>Tip</th>
+        <th>Kurallar</th>
+        <th></th>
       </tr>
-    }
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      @for (row of rows; track row.id) {
+        <tr>
+          <td>{{ row.name }}</td>
+          <td><span class="badge badge-meta">{{ row.type }}</span></td>
+          <td class="td-muted">{{ row.rules }}</td>
+          <td class="td-actions">
+            <button class="btn btn-ghost btn-sm">Düzenle</button>
+            <button class="btn btn-danger btn-sm">Sil</button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
 ```
 
+- Tablo **her zaman** global `.table-wrapper` (`overflow-x: auto`) içinde durur. `.panel`
+  `overflow: hidden` olduğundan sarmalayıcısız geniş tablo mobilde kırpılır, kaydırılamaz.
+  `.table-wrapper` global'dir; component SCSS'inde yeniden tanımlama (6 kopya silindi).
 - `td-actions` **doğrudan `<td>`'ye** konur: hücre tablo hücresi olarak kalır, daralır (`width: 1%`)
   ve düğmeler **en sağa** yaslanır. (`<div class="td-actions">` de çalışır — flex, sağa yaslı.)
 - Soluk/ikincil hücre metni için `.td-muted`.

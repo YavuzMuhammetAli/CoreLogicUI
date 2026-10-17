@@ -13,6 +13,7 @@ import {
   PublishedColumn
 } from '../../services/published-model.service';
 import { LanguageService } from '../../services/language.service';
+import { PermissionService } from '../../services/permission.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import {
   inputTypeFor,
@@ -84,6 +85,7 @@ export class ModelChildrenComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly languageService = inject(LanguageService);
+  private readonly permission = inject(PermissionService);
   /** Tablo hücrelerindeki lookup FK id'lerini toplu şekilde etikete çevirir. */
   private readonly lookupLabels = inject(LookupLabelService);
 
@@ -176,12 +178,14 @@ export class ModelChildrenComponent implements OnInit {
     // 1) Alt model adlarını al
     this.publishedModel.getChildModels(this.parentTypeName).pipe(markDirty(this.cdr)).subscribe({
       next: childRes => {
-        if (!childRes.success || !childRes.data?.length) {
+        // Okuma izni olmayan alt model gösterilmez: satırlarını çeken getall 403 döner
+        // ve kullanıcıyı sayfadan /models'e atardı. Admin'de filtre hep true.
+        const childTypeNames = (childRes.success ? childRes.data ?? [] : [])
+          .filter(name => this.permission.can(name, 'read'));
+        if (!childTypeNames.length) {
           this.loading = false;
           return;
         }
-
-        const childTypeNames = childRes.data;
 
         // 2) Tüm model kolonlarını al (tek istek, tüm child'lar için)
         this.publishedModel.getModels().pipe(markDirty(this.cdr)).subscribe({

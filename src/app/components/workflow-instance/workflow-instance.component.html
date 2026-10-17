@@ -114,30 +114,32 @@
                   <span class="badge badge-meta">{{ 'workflow.instance.parallel' | t }}</span>
                 }
               </div>
-              <table class="data-table">
-                <tbody>
-                  @for (task of group.tasks; track task.id) {
-                    <tr>
-                      <td>
-                        {{ task.name }}
-                        @if (task.branchKey) { <code class="branch-tag">{{ task.branchKey }}</code> }
-                      </td>
-                      <td>{{ task.assignedRoleName || ('#' + (task.assignedUserId ?? '')) }}</td>
-                      <td>
-                        <span class="badge" [class]="'badge ' + taskStatusClass(task.status)">
-                          {{ 'workflow.task.' + task.status | t }}
-                        </span>
-                      </td>
-                      <td>{{ when(task.completedAt) }}</td>
-                      <td>
-                        @if (task.completedAt && !task.completedBy) {
-                          <span class="badge badge-meta">{{ 'workflow.instance.bySystem' | t }}</span>
-                        }
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <tbody>
+                    @for (task of group.tasks; track task.id) {
+                      <tr>
+                        <td>
+                          {{ task.name }}
+                          @if (task.branchKey) { <code class="branch-tag">{{ task.branchKey }}</code> }
+                        </td>
+                        <td>{{ task.assignedRoleName || ('#' + (task.assignedUserId ?? '')) }}</td>
+                        <td>
+                          <span class="badge" [class]="'badge ' + taskStatusClass(task.status)">
+                            {{ 'workflow.task.' + task.status | t }}
+                          </span>
+                        </td>
+                        <td>{{ when(task.completedAt) }}</td>
+                        <td>
+                          @if (task.completedAt && !task.completedBy) {
+                            <span class="badge badge-meta">{{ 'workflow.instance.bySystem' | t }}</span>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
             </div>
           }
         </div>

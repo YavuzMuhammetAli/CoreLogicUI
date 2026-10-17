@@ -18,47 +18,49 @@
       <p class="muted-hint">{{ 'workflow.versions.hint' | t }}</p>
 
       @if (versions.length > 0) {
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>{{ 'workflow.versions.colVersion' | t }}</th>
-              <th>{{ 'workflow.list.colName' | t }}</th>
-              <th>{{ 'workflow.versions.colStatus' | t }}</th>
-              <th>{{ 'workflow.list.colTrigger' | t }}</th>
-              <th>{{ 'workflow.versions.colCreated' | t }}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (version of versions; track version.id) {
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
               <tr>
-                <td>{{ version.version > 0 ? 'v' + version.version : ('workflow.list.draftVersion' | t: { n: nextVersion }) }}</td>
-                <td>{{ version.name }}</td>
-                <td>
-                  <span class="badge" [class]="'badge ' + statusClass(version.status)">
-                    {{ 'workflow.status.' + version.status | t }}
-                  </span>
-                </td>
-                <td>{{ 'workflow.trigger.' + version.triggerEvent | t }}</td>
-                <td>{{ when(version.createdOn) }}</td>
-                <td>
-                  <div class="td-actions">
-                    <a [routerLink]="['/workflows', version.id, 'edit']" class="btn btn-ghost btn-sm">
-                      {{ (version.status === 'Draft' ? 'common.edit' : 'workflow.versions.view') | t }}
-                    </a>
-                    @if (version.status === 'Published' && !hasDraft) {
-                      <button type="button" class="btn btn-secondary btn-sm"
-                              [disabled]="busy"
-                              (click)="startNewVersion(version)">
-                        {{ 'workflow.list.newVersion' | t }}
-                      </button>
-                    }
-                  </div>
-                </td>
+                <th>{{ 'workflow.versions.colVersion' | t }}</th>
+                <th>{{ 'workflow.list.colName' | t }}</th>
+                <th>{{ 'workflow.versions.colStatus' | t }}</th>
+                <th>{{ 'workflow.list.colTrigger' | t }}</th>
+                <th>{{ 'workflow.versions.colCreated' | t }}</th>
+                <th></th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (version of versions; track version.id) {
+                <tr>
+                  <td>{{ version.version > 0 ? 'v' + version.version : ('workflow.list.draftVersion' | t: { n: nextVersion }) }}</td>
+                  <td>{{ version.name }}</td>
+                  <td>
+                    <span class="badge" [class]="'badge ' + statusClass(version.status)">
+                      {{ 'workflow.status.' + version.status | t }}
+                    </span>
+                  </td>
+                  <td>{{ 'workflow.trigger.' + version.triggerEvent | t }}</td>
+                  <td>{{ when(version.createdOn) }}</td>
+                  <td>
+                    <div class="td-actions">
+                      <a [routerLink]="['/workflows', version.id, 'edit']" class="btn btn-ghost btn-sm">
+                        {{ (version.status === 'Draft' ? 'common.edit' : 'workflow.versions.view') | t }}
+                      </a>
+                      @if (version.status === 'Published' && !hasDraft) {
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                [disabled]="busy"
+                                (click)="startNewVersion(version)">
+                          {{ 'workflow.list.newVersion' | t }}
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       } @else {
         <div class="empty-state"><p>{{ 'workflow.versions.empty' | t }}</p></div>
       }

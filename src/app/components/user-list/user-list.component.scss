@@ -1,10 +1,6 @@
 /* Kullanıcı listesi — görsel dilin tamamı global styles.scss'ten gelir;
    burada yalnızca bu ekrana özgü birkaç yardımcı sınıf var. */
 
-.table-wrapper {
-  overflow-x: auto;
-}
-
 .clickable-row {
   cursor: pointer;
   transition: background var(--motion-fast) var(--ease-standard);

@@ -196,8 +196,9 @@ export class ModelDataComponent implements OnInit {
           this.rows  = (paged?.items ?? []) as DataRow[];
           this.total = paged?.total ?? 0;
           this.rowsRetried = false;
-        } else if (!this.rowsRetried && res.message?.includes('Assembly')) {
+        } else if (!this.rowsRetried && res.message?.includes('Assembly') && this.permissionService.isAdmin()) {
           // Backend yeniden başlatıldıysa assembly null olur; bir kez yükleyip tekrar dene.
+          // loadAssembly admin'e özel — admin olmayan kullanıcı doğrudan hata mesajını görür.
           this.rowsRetried = true;
           this.publishModel.loadAssembly().pipe(markDirty(this.cdr)).subscribe({
             next: () => {

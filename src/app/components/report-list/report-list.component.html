@@ -34,31 +34,33 @@
 @if (!loading && !loadError) {
   @if (reports.length > 0) {
     <div class="panel">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>{{ 'report.list.colName' | t }}</th>
-            <th>{{ 'report.list.colModel' | t }}</th>
-            <th>{{ 'report.list.colChartType' | t }}</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (report of reports; track report.id) {
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
             <tr>
-              <td>{{ report.name }}</td>
-              <td><span class="badge badge-meta">{{ report.modelName }}</span></td>
-              <td>{{ report.chartType }}</td>
-              <td>
-                <div class="td-actions">
-                  <a class="btn btn-ghost btn-sm" [routerLink]="['/reports', report.id]">{{ 'report.list.view' | t }}</a>
-                  <a class="btn btn-secondary btn-sm" [routerLink]="['/reports', report.id, 'edit']">{{ 'report.list.edit' | t }}</a>
-                </div>
-              </td>
+              <th>{{ 'report.list.colName' | t }}</th>
+              <th>{{ 'report.list.colModel' | t }}</th>
+              <th>{{ 'report.list.colChartType' | t }}</th>
+              <th></th>
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (report of reports; track report.id) {
+              <tr>
+                <td>{{ report.name }}</td>
+                <td><span class="badge badge-meta">{{ report.modelName }}</span></td>
+                <td>{{ report.chartType }}</td>
+                <td>
+                  <div class="td-actions">
+                    <a class="btn btn-ghost btn-sm" [routerLink]="['/reports', report.id]">{{ 'report.list.view' | t }}</a>
+                    <a class="btn btn-secondary btn-sm" [routerLink]="['/reports', report.id, 'edit']">{{ 'report.list.edit' | t }}</a>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     </div>
   } @else {
     <div class="panel">

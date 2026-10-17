@@ -298,6 +298,18 @@ p { margin: 0; }
   padding: var(--space-6);
 }
 
+/* Dar ekranda kart iç boşluğu küçülür; başlık aksiyonları sığmazsa alt satıra iner */
+@media (max-width: 768px) {
+  .panel-head {
+    flex-wrap: wrap;
+    padding: var(--space-4);
+  }
+
+  .panel-body {
+    padding: var(--space-4);
+  }
+}
+
 /* ---- Form alanları ---- */
 .field {
   display: grid;
@@ -433,7 +445,13 @@ input[type="checkbox"] {
   color: var(--muted);
 }
 
-/* ---- Tablo ---- */
+/* ---- Tablo ----
+   Her .data-table bir .table-wrapper içinde durur: .panel overflow:hidden olduğundan
+   sarmalayıcısız geniş tablo dar ekranda kırpılır, kaydırılamaz. */
+.table-wrapper {
+  overflow-x: auto;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -634,6 +652,11 @@ input[type="checkbox"] {
    .page-header'dan farkı: solda ayrıca .back-link taşıyan sarmalayıcı bulunabilir. */
 .page-wrap {
   padding: var(--space-6);
+
+  /* Dar ekranda boşluğu .page-content zaten veriyor — çift boşluk olmasın */
+  @media (max-width: 768px) {
+    padding: 0;
+  }
 }
 
 .page-head {

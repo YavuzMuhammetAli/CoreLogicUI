@@ -59,6 +59,31 @@
   letter-spacing: -0.01em;
 }
 
+/* Çekmeceyi kapatma düğmesi — yalnız mobilde görünür (bkz. responsive blok) */
+.sidebar-close {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--sidebar-fg-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--sidebar-hover-bg);
+    color: var(--sidebar-fg);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+}
+
 .sidebar-nav {
   flex: 1;
   padding: var(--space-5) var(--space-3);
@@ -391,24 +416,63 @@
   overflow-y: auto;
 }
 
-/* ---- Responsive ---- */
+/* ---- Responsive ----
+   Dar ekranda sidebar içeriği itmez; içeriğin üstüne çekmece olarak açılır.
+   Kırılma noktası layout.component.ts'teki MobileQuery ile AYNI olmalı. */
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.4);
+  animation: backdrop-in var(--motion-fast) var(--ease-standard);
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 @media (max-width: 768px) {
-  .app-shell {
-    grid-template-columns: 1fr;
+  /* .sidebar-collapsed da burada ezilir: masaüstündeki "0 1fr" mobilde tek in-flow
+     öğe olan .main-area'yı 0px'lik ilk sütuna düşürüp içeriği görünmez yapıyordu
+     (sidebar position:fixed olduğu için grid öğesi sayılmaz). */
+  .app-shell,
+  .app-shell.sidebar-collapsed {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .sidebar {
     position: fixed;
-    left: 0;
-    top: 0;
+    inset: 0 auto 0 0;
+    height: 100dvh;
+    max-width: 85vw;
     z-index: 100;
+    box-shadow: var(--elev-high);
   }
 
-  .app-shell:not(.sidebar-collapsed) .main-area::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.4);
-    z-index: 90;
+  .app-shell.sidebar-collapsed .sidebar {
+    box-shadow: none;
+  }
+
+  .sidebar-close {
+    display: inline-flex;
+  }
+
+  .topbar {
+    padding: 0 var(--space-4);
+  }
+
+  .topbar-right {
+    gap: var(--space-1);
+  }
+
+  /* Dar topbar'da yalnız avatar kalır; ad/e-posta profil menüsünde zaten görünür */
+  .user-info,
+  .menu-chevron {
+    display: none;
+  }
+
+  .page-content {
+    padding: var(--space-4);
   }
 }

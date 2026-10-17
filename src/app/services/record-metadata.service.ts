@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, forkJoin, of } from 'rxjs';
 import { map, shareReplay, catchError } from 'rxjs/operators';
 import { PublishedModelService, PublishedColumn } from './published-model.service';
-import { PublishedTableService, PublishedColumnSchema } from './published-table.service';
+import { PublishedColumnSchema } from './published-table.service';
 
 /** Bir model tipinin form kurmak için gereken tüm meta verisi. */
 export interface TypeMeta {
@@ -23,14 +23,14 @@ export interface TypeMeta {
  * bu servis olmasa aynı istekler her seviyede tekrar atılırdı. Tüm akışlar
  * `shareReplay(1)` ile paylaşılır — aynı tip için ikinci bir HTTP isteği gitmez.
  *
- * Doğrulama kuralları (regex/minLength/maxLength/min/max) `/Published/getTable`
+ * Doğrulama kuralları (regex/minLength/maxLength/min/max) `/PublishedModel/schema`
  * ucundan gelir; backend `ValidateDynamicEntity` de AYNI şemayı okur, böylece
- * istemci ve sunucu doğrulaması birebir örtüşür.
+ * istemci ve sunucu doğrulaması birebir örtüşür. Admin'e özel `/Published/getTable`
+ * KULLANILMAZ — admin olmayan kullanıcı orada 403 alıp /models'e atılıyordu.
  */
 @Injectable({ providedIn: 'root' })
 export class RecordMetadataService {
   private readonly publishedModel = inject(PublishedModelService);
-  private readonly publishedTable = inject(PublishedTableService);
 
   /** typeName → kolonlar (tek bir /models çağrısından indekslenir). */
   private columnsIndex$?: Observable<Map<string, PublishedColumn[]>>;
@@ -67,7 +67,7 @@ export class RecordMetadataService {
   rules$(typeName: string): Observable<Map<string, PublishedColumnSchema>> {
     let cached = this.rulesCache.get(typeName);
     if (!cached) {
-      cached = this.publishedTable.getSchema(typeName).pipe(
+      cached = this.publishedModel.getSchema(typeName).pipe(
         map(res => {
           const map = new Map<string, PublishedColumnSchema>();
           if (res.success && res.data) {

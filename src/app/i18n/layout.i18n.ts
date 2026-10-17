@@ -43,6 +43,7 @@ export const LAYOUT_I18N: Translations = {
   'layout.logout': { tr: 'Çıkış Yap', en: 'Log Out' },
   'layout.logoutAria': { tr: 'Çıkış yap', en: 'Log out' },
   'layout.toggleMenuAria': { tr: 'Menüyü aç/kapat', en: 'Toggle menu' },
+  'layout.closeMenuAria': { tr: 'Menüyü kapat', en: 'Close menu' },
   'layout.switchToEnglish': { tr: 'Switch to English', en: 'Switch to English' },
   'layout.switchToTurkish': { tr: "Türkçe'ye geç", en: "Türkçe'ye geç" },
   'layout.switchToLight': { tr: 'Açık temaya geç', en: 'Switch to light theme' },

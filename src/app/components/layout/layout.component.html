@@ -1,10 +1,23 @@
-<div class="app-shell" [class.sidebar-collapsed]="!sidebarOpen">
+<div class="app-shell" [class.sidebar-collapsed]="!sidebarOpen()">
 
-  <!-- Sidebar -->
-  <aside class="sidebar" [attr.aria-label]="'layout.sidebarAriaLabel' | t">
+  <!-- Sidebar — kapalıyken inert: gizli linkler Tab ile odak almasın -->
+  <aside
+    class="sidebar"
+    [attr.aria-label]="'layout.sidebarAriaLabel' | t"
+    [attr.inert]="sidebarOpen() ? null : ''">
     <div class="sidebar-logo">
       <span class="logo-mark">CL</span>
       <span class="logo-text">CoreLogic</span>
+      <!-- Yalnız mobilde görünür (bkz. .sidebar-close) -->
+      <button
+        class="sidebar-close"
+        type="button"
+        (click)="closeSidebar()"
+        [attr.aria-label]="'layout.closeMenuAria' | t">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
     </div>
 
     <nav class="sidebar-nav">
@@ -214,6 +227,11 @@
     </div>
   </aside>
 
+  <!-- Mobil çekmece açıkken arka plan: dokununca kapanır -->
+  @if (isMobile() && sidebarOpen()) {
+    <div class="sidebar-backdrop" aria-hidden="true" (click)="closeSidebar()"></div>
+  }
+
   <!-- Ana içerik -->
   <div class="main-area">
     <!-- Topbar -->
@@ -222,7 +240,7 @@
         class="topbar-toggle btn btn-ghost btn-sm"
         (click)="toggleSidebar()"
         type="button"
-        [attr.aria-expanded]="sidebarOpen"
+        [attr.aria-expanded]="sidebarOpen()"
         [attr.aria-label]="'layout.toggleMenuAria' | t">
         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 12h18M3 6h18M3 18h18"/>

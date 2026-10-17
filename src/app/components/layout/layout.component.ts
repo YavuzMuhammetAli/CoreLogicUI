@@ -1,5 +1,7 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, HostListener, inject, OnDestroy, OnInit, PLATFORM_ID, ViewChild } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, HostListener, inject, OnDestroy, OnInit, PLATFORM_ID, ViewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { isPlatformBrowser } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
@@ -30,7 +32,22 @@ export class LayoutComponent implements OnInit, OnDestroy {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
-  sidebarOpen = true;
+  /** Sidebar açık mı? Mobilde kapalı başlar (bkz. setupMobileSidebar). */
+  readonly sidebarOpen = signal(true);
+
+  /**
+   * Dar ekran (≤768px): sidebar içeriği itmez, üstüne çekmece olarak açılır;
+   * arka plana dokununca, Esc'le ya da sayfa değişince kapanır.
+   * Kırılma noktası layout.component.scss'teki @media ile AYNI olmalı.
+   */
+  readonly isMobile = signal(false);
+  private static readonly MobileQuery = '(max-width: 768px)';
+  private mobileQuery?: MediaQueryList;
+  private readonly onMobileChange = (e: MediaQueryListEvent) => {
+    this.isMobile.set(e.matches);
+    // Mobile geçerken çekmeceyi kapat, masaüstüne dönerken sabit sidebar'ı geri aç.
+    this.sidebarOpen.set(!e.matches);
+  };
 
   /** Giriş yapmış kullanıcının kısa profil bilgisi */
   currentUser: { name: string; email: string; initials: string; photoUrl?: string | null } | null = null;
@@ -62,6 +79,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   private taskPollTimer?: ReturnType<typeof setInterval>;
 
   private readonly platformId   = inject(PLATFORM_ID);
+  private readonly destroyRef   = inject(DestroyRef);
   private readonly userProfile  = inject(UserProfileService);
   private readonly dashboardService = inject(DashboardService);
   private readonly taskService  = inject(WorkflowTaskService);
@@ -84,20 +102,24 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
     if (!isPlatformBrowser(this.platformId)) return;
 
-    // Backend yeniden başlatıldığında publishedModelAssembly null olur.
-    // Kabuk mount edilince DB'deki assembly'yi geri yükle; veri ekranındaki
-    // /PublishedModel/* çağrıları çalışsın. Hata kullanıcıyı bloklamaz.
-    // SSR/prerender'da tarayıcı olmadığından bu blok çalışmaz — gereksiz HTTP isteği engellenir.
-    this.publishModel.loadAssembly().pipe(markDirty(this.cdr)).subscribe({
-      next: res => {
-        if (!res.success) {
-          console.warn('[CoreLogic] loadAssembly:', res.message);
+    this.setupMobileSidebar();
+
+    // Assembly'yi backend TenantResolutionMiddleware tenant'ın ilk isteğinde zaten
+    // kendisi yükler; bu çağrı admin için ek güvencedir. Uç admin'e özel — admin
+    // olmayan kullanıcıda 403 döner ve eskiden kullanıcıyı açılış sayfasından
+    // /models'e atıyordu. Hata kullanıcıyı bloklamaz.
+    if (this.permissionService.isAdmin()) {
+      this.publishModel.loadAssembly().subscribe({
+        next: res => {
+          if (!res.success) {
+            console.warn('[CoreLogic] loadAssembly:', res.message);
+          }
+        },
+        error: err => {
+          console.warn('[CoreLogic] loadAssembly başarısız:', err?.message);
         }
-      },
-      error: err => {
-        console.warn('[CoreLogic] loadAssembly başarısız:', err?.message);
-      }
-    });
+      });
+    }
 
     // H: Görev rozeti. isPlatformBrowser kontrolünün ALTINDA — sunucu tarafında
     // zamanlayıcı kurmak anlamsız ve sızıntı olurdu.
@@ -172,10 +194,11 @@ export class LayoutComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Escape tuşuyla menüyü kapat */
+  /** Escape tuşuyla menüyü (mobilde açık çekmeceyi de) kapat */
   @HostListener('document:keydown.escape')
   onEscape(): void {
     this.menuOpen = false;
+    if (this.isMobile()) this.sidebarOpen.set(false);
   }
 
   goToProfile(): void {
@@ -193,7 +216,30 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   toggleSidebar(): void {
-    this.sidebarOpen = !this.sidebarOpen;
+    this.sidebarOpen.update(open => !open);
+  }
+
+  closeSidebar(): void {
+    this.sidebarOpen.set(false);
+  }
+
+  /**
+   * Mobil çekmece davranışı. Eskiden sidebar mobilde de açık başlıyor, karartma katmanı
+   * menü düğmesini örtüyordu — kullanıcı menüyü kapatamıyordu.
+   */
+  private setupMobileSidebar(): void {
+    this.mobileQuery = window.matchMedia(LayoutComponent.MobileQuery);
+    this.isMobile.set(this.mobileQuery.matches);
+    if (this.mobileQuery.matches) this.sidebarOpen.set(false);
+    this.mobileQuery.addEventListener('change', this.onMobileChange);
+
+    // Mobilde bir linke dokununca çekmece kapansın; yoksa yeni sayfa menünün altında kalır.
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(() => {
+      if (this.isMobile()) this.sidebarOpen.set(false);
+    });
   }
 
   /** Açık/koyu tema arasında geçiş yapar */
@@ -234,5 +280,6 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.taskPollTimer) clearInterval(this.taskPollTimer);
+    this.mobileQuery?.removeEventListener('change', this.onMobileChange);
   }
 }

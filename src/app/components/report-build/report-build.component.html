@@ -85,31 +85,33 @@
         @if (f['chartType'].value === 'table') {
           @if (previewResult().rows.length > 0) {
             <p class="field-help">{{ 'report.build.previewStrikeHelp' | t }}</p>
-            <table class="data-table preview-data-table">
-              <thead>
-                <tr>
-                  @for (col of previewResult().columns; track col.name) {
-                    <th>{{ col.name }}</th>
-                  }
-                </tr>
-              </thead>
-              <tbody>
-                @for (row of previewResult().rows; track $index; let i = $index) {
-                  <tr
-                    [class.is-struck]="struckPreviewRows().has(i)"
-                    tabindex="0"
-                    [attr.aria-pressed]="struckPreviewRows().has(i)"
-                    (click)="toggleStruckPreviewRow(i)"
-                    (keydown.enter)="toggleStruckPreviewRow(i)"
-                    (keydown.space)="toggleStruckPreviewRow(i); $event.preventDefault()"
-                  >
+            <div class="table-wrapper">
+              <table class="data-table preview-data-table">
+                <thead>
+                  <tr>
                     @for (col of previewResult().columns; track col.name) {
-                      <td>{{ row[col.name] }}</td>
+                      <th>{{ col.name }}</th>
                     }
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  @for (row of previewResult().rows; track $index; let i = $index) {
+                    <tr
+                      [class.is-struck]="struckPreviewRows().has(i)"
+                      tabindex="0"
+                      [attr.aria-pressed]="struckPreviewRows().has(i)"
+                      (click)="toggleStruckPreviewRow(i)"
+                      (keydown.enter)="toggleStruckPreviewRow(i)"
+                      (keydown.space)="toggleStruckPreviewRow(i); $event.preventDefault()"
+                    >
+                      @for (col of previewResult().columns; track col.name) {
+                        <td>{{ row[col.name] }}</td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
           } @else {
             <div class="empty-state">
               <p>{{ 'report.build.previewEmpty' | t }}</p>

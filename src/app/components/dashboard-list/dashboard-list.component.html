@@ -34,28 +34,30 @@
 @if (!loading && !loadError) {
   @if (dashboards.length > 0) {
     <div class="panel">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>{{ 'dashboard.list.colName' | t }}</th>
-            <th>{{ 'dashboard.list.colWidgetCount' | t }}</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (dashboard of dashboards; track dashboard.id) {
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
             <tr>
-              <td>{{ dashboard.name }}</td>
-              <td><span class="badge badge-meta">{{ dashboard.widgets.length }}</span></td>
-              <td>
-                <div class="td-actions">
-                  <a class="btn btn-ghost btn-sm" [routerLink]="['/dashboard', dashboard.id]">{{ 'dashboard.list.view' | t }}</a>
-                </div>
-              </td>
+              <th>{{ 'dashboard.list.colName' | t }}</th>
+              <th>{{ 'dashboard.list.colWidgetCount' | t }}</th>
+              <th></th>
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (dashboard of dashboards; track dashboard.id) {
+              <tr>
+                <td>{{ dashboard.name }}</td>
+                <td><span class="badge badge-meta">{{ dashboard.widgets.length }}</span></td>
+                <td>
+                  <div class="td-actions">
+                    <a class="btn btn-ghost btn-sm" [routerLink]="['/dashboard', dashboard.id]">{{ 'dashboard.list.view' | t }}</a>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     </div>
   } @else {
     <div class="panel">
