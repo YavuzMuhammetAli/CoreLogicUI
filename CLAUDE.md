@@ -248,7 +248,12 @@ provideHttpClient(withFetch(), withInterceptors([authInterceptor, errorIntercept
 - **`provideHttpClient` zaten yapılandırılmış** — yeniden ekleme.
 - `authInterceptor`: `localStorage('access_token')` JWT'yi alır, `Authorization: Bearer` header'ı ekler.
 - `languageInterceptor`: `localStorage('lang')` dil tercihini alır, `Accept-Language` header'ı ekler.
-- `errorInterceptor`: HTTP hataları yakalar.
+- `errorInterceptor`: HTTP hataları yakalar. 401 → `/login`, 403 → `/models` yönlendirmesi yapar.
+  **Yardımcı istekler** (sayfanın asıl verisi olmayan, başarısız olunca sessizce düşebilen:
+  `loadAssembly`, form kuralları, lookup seçenek/etiketleri) `SKIP_FORBIDDEN_REDIRECT`
+  context token'ını taşır; yoksa admin'e özel ya da okuma izni olmayan bir uca giden
+  istek kullanıcıyı bulunduğu sayfadan koparır (admin olmayan kullanıcının açılış
+  dashboard'unu ve kayıt ekranını bozan hata buydu).
 - `APP_INITIALIZER` (`permissionInitializerFactory`): router etkinleşmeden önce
   `PermissionService.loadMyPermissions()`'ı çağırıp izin signal'ini doldurur — `adminGuard` ve
   `modelPermissionGuard` bu sinyali **senkron** okuyabilir (sayfa yenilemesindeki guard yarış
@@ -263,7 +268,7 @@ Tüm servisler `@Injectable({ providedIn: 'root' })`, `inject(HttpClient)` (veya
 |--------|----------|
 | `AuthService` | `/Auth/login`, `/Auth/register` |
 | `PublishedTableService` | `/Published/addTable`, `/Published/addMember` |
-| `PublishedModelService` | `/PublishedModel/getall`, `get`, `add`, `update`, `delete` |
+| `PublishedModelService` | `/PublishedModel/getall`, `get`, `add`, `update`, `delete`, `schema` (kayıt formu kuralları — Read izni yeter; admin'e özel `/Published/getTable`'ın form ikizi) |
 | `PublishModelService` | `/PublishModel` — Roslyn derleme |
 | `DatabaseService` | `/Database/createtable`, `/Database/checkdatabase` |
 | `PermissionService` | `/Permission` — kendi izin durumu, signal (`isAdmin()`, `can()`), APP_INITIALIZER ile önyüklenir |
@@ -337,7 +342,7 @@ tasarım sistemi kullanır (artık açık/koyu tema desteği dahil). Detaylar i�
 - Butonlar: `.btn` + `.btn-primary/-secondary/-danger/-ghost/-sm`
 - Kart: `.panel` / `.panel-head` / `.panel-body` / `.panel-actions`
 - Form: `.field` / `.input` / `.field-error` / `.field-help` / `.checkbox-label` / `.field-row` / `.field-head` / `.field--full` (yan yana alanlar)
-- Tablo: `.data-table` / `.td-actions` / `.td-muted`
+- Tablo: `.table-wrapper` (yatay kaydırma kabı) > `.data-table` / `.td-actions` / `.td-muted`
 - Etiket: `.badge` (+ `-success/-warn/-danger/-meta`), `.eyebrow`
 - Bildirim: `.alert` (+ `-success/-danger/-warn/-info`)
 - Yardımcı: `.spinner`, `.empty-state`, `.stack`, `.flow`, `.cluster`, `.sr-only`
@@ -751,6 +756,25 @@ Tailscale üzerinden HTTPS ile olur. Üç repo sunucuda yan yana durur
   `ng serve` development yapılandırmasıyla `environment.ts`'te kalır.
 - Yeni bir backend controller'ı için nginx'te bir şey yapmak gerekmez: `/api/` altındaki her yol iletilir.
 
+#### Çalışma akışı (2026-10-17'den itibaren)
+
+Uygulama sunucuda gerçekten kullanılıyor; geliştirme Windows'ta sürüyor. Her iş şu sırayla biter:
+
+1. **Doğrula** — `ng test` + `ng build` (backend değiştiyse `dotnet build`) geçmeli.
+2. **`main`'e commit + push** — özellik dalı açılmaz. İş birden çok repoya yayılıyorsa
+   (UI + backend) her repo kendi commit'ini alır ve hepsi push'lanır; biri eksik kalırsa
+   sunucu yarım sürümle derlenir.
+3. **Sunucuya alma kullanıcıdadır** — sunucuda `bash ~/corelogic/CoreLogic/deploy/update.sh`
+   (üç repoyu `pull --ff-only` ile çeker, imajları yeniden derler). Claude sunucuya erişmez.
+   `--ff-only` yüzünden sunucudaki repolarda elle değişiklik yapılmaz, yoksa pull düşer.
+4. **Sürüm (tenant migrasyonu)** — iş yeni bir `migrations/NNN_*.sql` eklediyse, dağıtımdan
+   sonra Platform Console → `/console/operations/migrations` → **Koşu Başlat**. Master
+   migrasyonları backend açılışında kendiliğinden koşar; tenant migrasyonları KOŞMAZ.
+
+Claude her işin sonunda kullanıcıya şunları açıkça yazar: hangi repolar değişti, hangi imaj
+yeniden derlenecek (`backend` / `web`), tenant migrasyonu gerekiyor mu (gerekiyorsa numarası),
+dağıtım sırası önemli mi.
+
 ### Yeni Component Ekleme
 ```bash
 ng generate component components/<ad>
@@ -782,6 +806,7 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
 - **Locale-duyarlı biçimlendirme** — sayı/tarih için `Intl.*Format`'ı sabit `'tr-TR'` ile kurma; `utils/locale-format.ts` üzerinden aktif dile göre al
 - **Ardışık paneller** — `.panel`'in kendi `margin`'i YOK; birden çok panel render eden konteyneri `.flow` ile sarmala, yoksa kartlar yapışık görünür. Panelleri `grid/flex` + `gap` ile dizen konteynerlerde (`.widget-grid`, `.kpi-strip`, `.model-grid`, `.plan-grid`) kullanma
 - **Yan yana form alanları** — yalnızca global `.field-row` (+ düğmeli etiket için `.field-head`, tam satır için `.field--full`). Etiket satırları sabit yükseklikte olduğundan input'lar hizalı kalır. Component SCSS'inde yerel satır sınıfı (`flex: 0 0 120px`, `align-items: end`) YAZMA — detay: `corelogic-design` skill'i "Yan yana alanlar"
+- **Tablo sarmalayıcısı** — her `.data-table` global `.table-wrapper` içinde durur: `.panel` `overflow: hidden` olduğundan sarmalayıcısız geniş tablo mobilde kırpılır ve kaydırılamaz. Component SCSS'inde `.table-wrapper`'ı yeniden TANIMLAMA
 - **Tablo hücreleri** — `<td>`'ye `display` değiştiren sınıf (`muted-hint`, `cluster`, `stack`…) VERME: hücre tablo hücresi olmaktan çıkar, komşusuyla tek hücreye birleşir (düğmeler alt satıra düşer). Soluk metin için `.td-muted`, aksiyonlar için `<td class="td-actions">` (sağa yaslı)
 - **Sayfa başlığı** — her ekranın üstünde tek satır: `.page-header` içinde `<span class="eyebrow">` + sayfanın/modelin adı, sağda aksiyonlar. Büyük `h1` başlık ve açıklama paragrafı KULLANILMAZ (`.page-title`/`.page-subtitle` kaldırıldı)
 - **Türkçe kod yorumları** — backend ile tutarlı; UI metinleri çeviri sistemi üzerinden gelir
