@@ -386,9 +386,10 @@ tablosu, table-detail sütun tablosu). Flex gerekiyorsa hücrenin **içine** `<s
 
 ### App Shell (LayoutComponent)
 CSS Grid: `grid-template-columns: var(--sidebar-w) 1fr`
-- Sidebar: `background: var(--fg)` (koyu), `color: var(--surface)`, genişlik `var(--sidebar-w)`
+- Sidebar: `var(--sidebar-bg)`, genişlik `var(--sidebar-w)`
 - Topbar: sticky, `height: var(--topbar-h)`, `background: var(--surface)`, `border-bottom: 1px solid var(--border)`
-- Responsive: 900px'de sidebar daralt (`.sidebar-collapsed`), 768px'de tamamen gizle
+- ≤768px: sidebar **çekmece** olur — kapalı başlar, içeriğin üstüne açılır; arka plana dokununca,
+  X ile, Esc ile ve sayfa değişince kapanır. `.page-content` yan boşluğu 16px'e iner.
 
 ### İki Sütunlu Bölüm
 ```scss
@@ -405,9 +406,10 @@ CSS Grid: `grid-template-columns: var(--sidebar-w) 1fr`
 
 ### Yeni Component SCSS Şablonu
 ```scss
+/* :host'a padding VERME — sayfa boşluğunu .page-content verir; ikisi birden telefonda
+   içeriği 24px+16px daraltır. */
 :host {
   display: block;
-  padding: var(--space-6);
 }
 
 .my-section {
@@ -418,6 +420,41 @@ CSS Grid: `grid-template-columns: var(--sidebar-w) 1fr`
   padding: var(--space-6);
 }
 ```
+
+---
+
+## Mobil Kurallar
+
+Uygulama telefondan da kullanılıyor (iPhone + Android, 360–414px). Kırılım noktaları 768px
+(telefon) ve 640px (çok dar). Global kurallar `styles.scss`'te; component'te tekrarlama.
+
+- **Aksiyon grupları sarılır.** Düğme satırına `flex-wrap: wrap` (ya da `.cluster`) ver. `.panel`
+  `overflow: hidden` olduğu için sarılmayan satırın sonundaki düğme (çoğu zaman birincil aksiyon)
+  kesilir. Dar ekranda satırı `justify-content: flex-end` ile sağa YASLAMA: taşma sol tarafa,
+  kaydırılamayan yöne düşer.
+- **Sabit genişlik yok.** 300px'ten geniş `min-width`/`width` yazma; ızgarada
+  `minmax(min(260px, 100%), 1fr)`, tek sütunda `minmax(0, 1fr)` (düz `1fr` kırılmayan içeriğe uzar).
+  Esneyen input/select'e `min-width: 0` ver — select en uzun seçeneği kadar genişlemek ister.
+- **Tablo** her zaman `.table-wrapper` içinde. Satırın asıl hedefi (ad) `.row-link` ile
+  tıklanabilir olsun; telefonda sondaki aksiyon düğmesine yatay kaydırmadan ulaşılamaz. Son
+  kullanıcının ana iş listesi (ör. Görevlerim) telefonda kart listesine döner.
+- **Bilgi yalnız `title`'da bırakılmaz** — dokunmatikte hover yok. Açıklama için
+  `<app-help-hint>` (dokunarak açılır), hata/durum için görünür metin (`.field-error`, rozet).
+- **Diyalog yüksekliği `dvh` ile:** `max-height: calc(100vh - 2*var(--space-4));` ardından
+  `calc(100dvh - …)`; `overscroll-behavior: contain`; uzun formda aksiyon satırı `position: sticky; bottom: 0`.
+- **Form alanı mobilde 16px.** iOS daha küçük yazılı alana odaklanınca sayfayı yakınlaştırır.
+  Global kural var; component'te input'a `font-size` verirsen ≤768'de 16px'e geri al.
+- **Dokunma alanı** ≥32px. Küçük ikon düğmelerinde görünümü bozmadan `::before { inset: -6px }`.
+- **Hover efektleri** `@media (hover: hover)` içinde — dokunmatikte yapışık kalır.
+- **Açılır menü/popover** dar ekranda ekran dışına taşabiliyorsa `position: fixed` ile alttan
+  sayfa (bkz. column-visibility); klavye açıkken konum `visualViewport`'tan hesaplanır
+  (bkz. lookup-picker). Dış tıklamayla kapanma `document:pointerdown` dinler.
+- **Dokunmatikte zor araçlar** (sürükle-bırak yerleşim, tuval) telefonda zorlanmaz:
+  `alert-info` ile "geniş ekranda düzenleyin" notu + basit liste alternatifi (bkz. dashboard-build).
+- **SVG şemalar** küçülerek okunmaz hale gelmesin: doğal genişlik (`[attr.width]`) + yatay kaydırma.
+
+Doğrulama: production build'i 375px'te gez — sayfa yatay kaymamalı, hiçbir düğme `.panel`
+tarafından kesilmemeli.
 
 ---
 

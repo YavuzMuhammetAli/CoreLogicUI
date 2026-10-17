@@ -70,7 +70,6 @@ CoreLogicUI-master/
         │   ├── model-list/                # Kayıtlı model listesi
         │   ├── model-data/                # Dinamik tablo CRUD (liste görünümü, sayfalama)
         │   ├── model-detail/               # Dinamik tablo tekil kayıt görünümü/düzenleme (new + :id)
-        │   ├── model-children/             # Alt-model (FK ilişkili) kayıtların master-detail gösterimi
         │   ├── model-node/                 # Model ağacı/şema düğümü gösterimi
         │   ├── form-build/                # Model şema listesi + seçim ekranı (admin)
         │   ├── table-detail/               # Model şema builder/düzenleme ekranı (new + :typeName, admin)
@@ -144,6 +143,7 @@ CoreLogicUI-master/
         │   ├── ai-import.mapper.ts              # Saf: AI önerisi → servis payload'ı (düzleştirme/doğrulama/ad→ID, spec'li)
         │   ├── identifier.ts                    # Model/alan adı: etiket → ad üretimi (Türkçe harf), ad doğrulayıcıları, LabelNameSync (spec'li)
         │   ├── locale-format.ts                 # Aktif dile göre sayı/tarih biçimlendirme (sabit 'tr-TR' KULLANMA)
+        │   ├── pagination.ts                    # Saf: sayfalama penceresi (pageWindow, en fazla 5 düğme, spec'li)
         │   └── auto-value/                      # Otomatik değer: formül dili (expression.ts), planlayıcı (auto-value.ts),
         │                                        #   form bağlayıcısı (auto-value-form.ts) + backend'le ORTAK vektörler (spec'li)
         ├── guards/
@@ -342,7 +342,8 @@ tasarım sistemi kullanır (artık açık/koyu tema desteği dahil). Detaylar i�
 - Butonlar: `.btn` + `.btn-primary/-secondary/-danger/-ghost/-sm`
 - Kart: `.panel` / `.panel-head` / `.panel-body` / `.panel-actions`
 - Form: `.field` / `.input` / `.field-error` / `.field-help` / `.checkbox-label` / `.field-row` / `.field-head` / `.field--full` (yan yana alanlar)
-- Tablo: `.table-wrapper` (yatay kaydırma kabı) > `.data-table` / `.td-actions` / `.td-muted`
+- Tablo: `.table-wrapper` (yatay kaydırma kabı) > `.data-table` / `.td-actions` / `.td-muted` / `.row-link` (satırın ad bağlantısı) / `.select-hit` (satır seçim kutusu etiketi)
+- Sayfalama: `.table-footer` > `.pagination` / `.page-btn` / `.page-ellipsis` / `.page-size-selector` — pencere hesabı `utils/pagination.ts` (`pageWindow`)
 - Etiket: `.badge` (+ `-success/-warn/-danger/-meta`), `.eyebrow`
 - Bildirim: `.alert` (+ `-success/-danger/-warn/-info`)
 - Yardımcı: `.spinner`, `.empty-state`, `.stack`, `.flow`, `.cluster`, `.sr-only`
@@ -805,6 +806,7 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
 - **Onay diyaloğu** — native `confirm()` KULLANMA; `shared/confirm-dialog` component'ini bağla (tasarım sistemi + tema + i18n uyumlu, test edilebilir)
 - **Locale-duyarlı biçimlendirme** — sayı/tarih için `Intl.*Format`'ı sabit `'tr-TR'` ile kurma; `utils/locale-format.ts` üzerinden aktif dile göre al
 - **Ardışık paneller** — `.panel`'in kendi `margin`'i YOK; birden çok panel render eden konteyneri `.flow` ile sarmala, yoksa kartlar yapışık görünür. Panelleri `grid/flex` + `gap` ile dizen konteynerlerde (`.widget-grid`, `.kpi-strip`, `.model-grid`, `.plan-grid`) kullanma
+- **Mobil uyumluluk** — telefondan da kullanılıyor (iPhone + Android). Aksiyon satırları sarılır, sabit `min-width` > 300px yazılmaz, bilgi yalnız `title`'da bırakılmaz (dokunmatikte hover yok → `app-help-hint`), diyaloglar `dvh` kullanır, component `:host`'una padding verilmez (boşluğu `.page-content` verir), dokunmatikte zor araçlara (sürükle-bırak, tuval) "geniş ekranda düzenleyin" notu konur. Tam liste: `corelogic-design` skill'i "Mobil Kurallar"
 - **Yan yana form alanları** — yalnızca global `.field-row` (+ düğmeli etiket için `.field-head`, tam satır için `.field--full`). Etiket satırları sabit yükseklikte olduğundan input'lar hizalı kalır. Component SCSS'inde yerel satır sınıfı (`flex: 0 0 120px`, `align-items: end`) YAZMA — detay: `corelogic-design` skill'i "Yan yana alanlar"
 - **Tablo sarmalayıcısı** — her `.data-table` global `.table-wrapper` içinde durur: `.panel` `overflow: hidden` olduğundan sarmalayıcısız geniş tablo mobilde kırpılır ve kaydırılamaz. Component SCSS'inde `.table-wrapper`'ı yeniden TANIMLAMA
 - **Tablo hücreleri** — `<td>`'ye `display` değiştiren sınıf (`muted-hint`, `cluster`, `stack`…) VERME: hücre tablo hücresi olmaktan çıkar, komşusuyla tek hücreye birleşir (düğmeler alt satıra düşer). Soluk metin için `.td-muted`, aksiyonlar için `<td class="td-actions">` (sağa yaslı)
@@ -816,7 +818,7 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
 1. **Yedekler aynı diskte** — sunucu kurulumunda yedekler `corelogic_mssql-backup` volume'ünde, yani veriyle aynı diskte duruyor; dışarı kopyalama elle yapılıyor (bkz. backend `deploy/README.md` → Yedekler)
 2. **Unit test kapsamı düşük** — kapsam `i18n/translations.spec.ts`, `shared/entity-graph/entity-graph.layout.spec.ts`, `utils/cron-builder.spec.ts` ve `utils/ai-import.mapper.spec.ts` ile genişletildi, ancak servis/component'lerin büyük kısmı hâlâ test edilmiyor
 3. **SSR bağımlılık kalıntısı** — `package.json`'da `@angular/ssr`/`express`/`@types/express` hâlâ duruyor; SSR fiilen kaldırıldığı için temizlenebilir ama `isPlatformBrowser` guard'ları kasıtlı korunuyor (bkz. `angular-standalone-component` skill)
-4. **Kalan native `confirm()` çağrıları** — `model-children`, `model-data`, `model-detail`, `role-detail`, `role-list` içinde 5 çağrı hâlâ native; `ConfirmDialogComponent`'e taşınmalı
+4. **Kalan native `confirm()` çağrısı** — `draft-models` içinde 1 çağrı hâlâ native; `ConfirmDialogComponent`'e taşınmalı
 5. **Backend controller boilerplate** — `WebAPI.Infrastructure.ApiControllerBase.Respond()` eklendi ve `ProfileController` + `PublishedModelController` + `ParameterController` bunu kullanıyor; kalan controller'lar hâlâ `result.Success ? Ok(result) : BadRequest(result)` satırını elle tekrarlıyor
 6. **Ödeme sağlayıcısı stub** — `StubPaymentGateway` her tahsilata başarı dönüyor ve `Plan`'da fiyat/para birimi kolonu yok. Stripe için: `Plan`'a parasal alanlar + `IPaymentGateway`'in gerçek implementasyonu (abonelik akışı değişmez)
 7. **Yedek geri yükleme yok** — yedek alma ve `RESTORE VERIFYONLY` doğrulaması var, ancak yedekten geri dönme ve yedek indirme ucu yok (platform tarafında da yoktu)
