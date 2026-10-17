@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, computed, inject, signal
+} from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -13,9 +15,7 @@ import {
   WorkflowCondition,
   WorkflowDefinition,
   WorkflowGraph,
-  WorkflowStep,
-  parseConditions,
-  parseDefinition
+  WorkflowStep
 } from '../../models/workflow.model';
 import { Role } from '../../models/role';
 import { AppUser } from '../../models/appUser';
@@ -24,38 +24,56 @@ import { NotificationService } from '../../services/notification.service';
 import { ResponseModel } from '../../models/responseModel';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { markDirty } from '../../utils/change-detection';
+import { exitForKind, exitsOf, sameKey } from '../../utils/workflow/workflow-exits';
 import { WorkflowGraphComponent } from '../shared/workflow-graph/workflow-graph.component';
 import { WorkflowCanvasComponent } from '../shared/workflow-canvas/workflow-canvas.component';
-import { WorkflowStepDialogComponent } from './step-dialog/workflow-step-dialog.component';
+import { StepDialogResult, WorkflowStepDialogComponent } from './step-dialog/workflow-step-dialog.component';
+import { WorkflowDesignerStore } from './designer/workflow-designer.store';
+import { docFromDefinition, docToPayload, emptyDoc } from './designer/workflow-design.doc';
 import {
-  buildAssignment,
-  buildSla,
-  cloneStepGroup,
-  newStepGroup,
-  renameStepReferences,
-  suggestStepKey
-} from './workflow-step.form';
+  clearPositions,
+  connect,
+  findStep,
+  moveStep,
+  removeStep,
+  setConditions,
+  setMeta,
+  setStart,
+  suggestKey,
+  upsertStep
+} from './designer/workflow-design.commands';
 
 type TabId = 'steps' | 'canvas' | 'trigger' | 'preview';
 
-/** Açık adım pop-up'ı: kopya grup + düzenlenen satırın indeksi (yeni adımda null). */
+/** Açık adım pop-up'ı: düzenlenen adım (yenide null), durum etiketi ve önerilen anahtar. */
 interface StepDialogState {
-  group: FormGroup;
-  index: number | null;
-  originalKey: string;
+  step: WorkflowStep | null;
+  statusLabel: string;
+  newKey: string;
+}
+
+/** Adımlar sekmesindeki bir satır — şablonda metot çağrısı yapılmasın diye önceden hesaplanır. */
+interface StepRow {
+  key: string;
+  name: string;
+  isStart: boolean;
+  typeKey: string;
+  assignment: string;
+  approveTarget: string;
+  rejectTarget: string;
 }
 
 /**
- * Akış tasarım ekranı — liste ve canvas AYNI veriyi düzenler.
+ * Akış tasarım ekranı — liste ve canvas AYNI belgeyi düzenler.
  *
  * Dört sekme: Adımlar (liste), Tasarım (sürükle-bırak canvas), Tetikleyici,
  * Önizleme (salt-okunur şema).
  *
- * Adım ayrıntıları (atama/SLA/dallar/form alanları) tek yerde, adım pop-up'ında
- * düzenlenir; pop-up hem listeden (satıra tıklama) hem canvas'tan (düğüme çift
- * tıklama) açılır. Canvas konum ve bağlantı için hızlı yoldur. Hepsi aynı
- * FormArray üzerinde çalışır, dolayısıyla hangi sekmede düzenlendiğinin
- * kaydedilen tanıma etkisi yoktur.
+ * Doğruluk kaynağı tasarım belgesidir (WorkflowDesignerStore). Belge yalnız saf
+ * komutlarla değişir (designer/workflow-design.commands.ts) ve her değişiklik
+ * geri al geçmişine yazılır. Reactive Forms yalnız iki yerde kalır: başlık
+ * alanları + tetik koşulları (bu formun değeri belgeye yazılır) ve adım pop-up'ı
+ * (kaydedince adım nesnesine çevrilir).
  *
  * Projede CDK, drag-drop ve diyagram kütüphanesi YOK — canvas native Pointer
  * Events ile yazıldı (dashboard-build'in sürükleme deseni).
@@ -67,6 +85,7 @@ interface StepDialogState {
     CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe,
     WorkflowGraphComponent, WorkflowCanvasComponent, WorkflowStepDialogComponent
   ],
+  providers: [WorkflowDesignerStore],
   templateUrl: './workflow-build.component.html',
   styleUrl: './workflow-build.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -84,6 +103,8 @@ export class WorkflowBuildComponent implements OnInit {
   private readonly languageService = inject(LanguageService);
   private readonly notification = inject(NotificationService);
 
+  readonly store = inject(WorkflowDesignerStore);
+
   readonly triggerEventOptions = TRIGGER_EVENT_OPTIONS;
   readonly operators = WORKFLOW_OPERATORS;
 
@@ -93,28 +114,55 @@ export class WorkflowBuildComponent implements OnInit {
   readonly stepDialog = signal<StepDialogState | null>(null);
 
   /**
-   * Yayınlanmış akış düzenlenemez. Form disable ediliyor ama canvas bunu
-   * kendiliğinden bilemez; taşıma ve bağlantı çizmeyi kapatmak için ayrıca
-   * bildirilmesi gerekiyor.
+   * Yayınlanmış akış düzenlenemez. Belge komutları salt-okunurken uygulanmaz;
+   * canvas da taşıma ve bağlantı çizmeyi bu bayrakla kapatır.
    */
-  readonly readonlyMode = signal(false);
+  readonly readonlyMode = this.store.readonly;
 
-  /**
-   * Önizleme grafiği signal olarak tutulur, getter olarak DEĞİL.
-   * Getter her CD turunda yeni nesne referansı üretir ve salt-okunur graf
-   * bileşenini gereksiz yere yeniden çizerdi (report-build'in canlı önizleme
-   * için yaptığı tespitle aynı).
-   */
-  readonly previewGraph = signal<WorkflowGraph | null>(null);
+  /** Canvas'ta seçili adım — liste satırı da vurgulanır. */
+  readonly selectedStepKey = this.store.selectedKey;
 
+  /** Canvas ve önizleme grafiği; adım yoksa boş durum gösterilir. */
+  readonly previewGraph = computed<WorkflowGraph | null>(() => {
+    const graph = this.store.graph();
+    return graph.steps.length > 0 ? graph : null;
+  });
+
+  /** Hedef ve başlangıç adımı açılır listeleri. */
+  readonly stepKeys = computed(() => this.store.graph().steps.map(step => step.key).filter(Boolean));
+
+  readonly roles = signal<Role[]>([]);
+  readonly users = signal<AppUser[]>([]);
+
+  /** Adımlar sekmesinin satırları. */
+  readonly rows = computed<StepRow[]>(() => {
+    // Dil değişince satır metinleri (atama özeti, terminal etiketleri) yenilensin.
+    this.languageService.lang();
+    const graph = this.store.graph();
+    const roles = this.roles();
+    const users = this.users();
+
+    return graph.steps.map(step => {
+      const [positive, negative] = exitsOf(step);
+      return {
+        key: step.key,
+        name: step.name,
+        isStart: sameKey(graph.startStep, step.key),
+        typeKey: step.type === 'parallel' ? 'workflow.build.typeParallel' : 'workflow.build.typeApproval',
+        assignment: this.assignmentSummary(step, roles, users),
+        approveTarget: positive?.target || this.languageService.t('workflow.build.terminalCompleted'),
+        rejectTarget: negative?.target || this.languageService.t('workflow.build.terminalRejected')
+      };
+    });
+  });
+
+  /** Başlık alanları + tetik koşulları. Değeri belgeye yazılır (bkz. pushFormToDoc). */
   form!: FormGroup;
 
   models: string[] = [];
   modelColumns: string[] = [];
   /** Kolonların tam meta verisi — adım pop-up'ındaki kayıt alanı seçicisi etiket/tip gösterir. */
   modelColumnMeta: PublishedColumn[] = [];
-  roles: Role[] = [];
-  users: AppUser[] = [];
 
   isNew = true;
   editingId: number | null = null;
@@ -124,9 +172,18 @@ export class WorkflowBuildComponent implements OnInit {
   submitError: string | null = null;
   validationErrors: string[] = [];
 
+  /** Salt-okunur açılan sürüm (yayınlanmış/arşiv); taslakta null. */
+  readonlyVersion: number | null = null;
+
+  /** Yeni sürüm taslağının yayınlanınca alacağı numara; ilk taslakta null. */
+  draftNextVersion: number | null = null;
+
   ngOnInit(): void {
     this.isNew = this.route.snapshot.data['mode'] === 'new';
     this.buildForm();
+    this.store.load(emptyDoc());
+    this.syncFormFromDoc();
+
     this.loadModels();
     this.loadRoles();
     this.loadUsers();
@@ -136,9 +193,9 @@ export class WorkflowBuildComponent implements OnInit {
       if (id) this.loadExisting(id);
     }
 
-    // Her değişiklikte önizlemeyi tazele; kullanıcı adımı yazarken şemayı görsün.
-    this.form.valueChanges.pipe(markDirty(this.cdr)).subscribe(() => this.refreshPreview());
-    this.refreshPreview();
+    // Başlık alanları ve koşullar belgeye yazılır. Programatik yazımlar
+    // (yükleme, geri alma) emitEvent:false ile yapıldığı için döngü oluşmaz.
+    this.form.valueChanges.subscribe(() => this.pushFormToDoc());
   }
 
   private buildForm(): void {
@@ -149,101 +206,108 @@ export class WorkflowBuildComponent implements OnInit {
       triggerEvent: ['onCreate', Validators.required],
       isEnabled: [true],
       startStep: [''],
-      steps: this.fb.array([]),
       conditions: this.fb.array([])
     });
-  }
-
-  // ── FormArray erişimcileri ────────────────────────────────────────────────
-
-  get stepsArray(): FormArray {
-    return this.form.get('steps') as FormArray;
   }
 
   get conditionsArray(): FormArray {
     return this.form.get('conditions') as FormArray;
   }
 
-  // ── Adımlar ───────────────────────────────────────────────────────────────
+  // ── Form ↔ belge ──────────────────────────────────────────────────────────
 
-  /** Yüklenen tanımdan satır ekler (populate); pop-up'tan geçmez. */
-  private pushStep(step: WorkflowStep, statusLabel = ''): void {
-    this.stepsArray.push(newStepGroup(this.fb, step.key, step, statusLabel), { emitEvent: false });
+  /**
+   * Başlık formunun değerini belgeye yazar. Aynı sebep ('form') ile kısa
+   * aralıkla gelen yazımlar tek geri al adımında birleşir — her harf ayrı
+   * adım olmaz.
+   */
+  private pushFormToDoc(): void {
+    const raw = this.form.getRawValue();
+    const conditions = ((raw.conditions ?? []) as WorkflowCondition[]).map(condition => ({
+      field: condition.field ?? '',
+      operator: condition.operator ?? 'eq',
+      value: condition.value ?? ''
+    }));
+
+    this.store.dispatch('form', doc => {
+      let next = setMeta(doc, {
+        name: raw.name ?? '',
+        code: raw.code ?? '',
+        modelName: raw.modelName ?? '',
+        triggerEvent: raw.triggerEvent,
+        isEnabled: !!raw.isEnabled
+      });
+      next = setStart(next, String(raw.startStep ?? ''));
+      return setConditions(next, conditions);
+    });
   }
 
-  removeStep(index: number): void {
-    const removedKey = this.stepsArray.at(index).value.key;
-    this.stepsArray.removeAt(index);
+  /** Belgeyi forma yazar (yükleme, geri alma). Olay üretmez. */
+  private syncFormFromDoc(): void {
+    const doc = this.store.doc();
 
-    // Silinen adım başlangıç ya da bir hedefse referanslar temizlenir; aksi halde
-    // doğrulayıcı "hedef adım bulunamadı" der ve kullanıcı sebebini göremez.
-    if (this.form.value.startStep === removedKey) {
-      this.form.patchValue({ startStep: this.stepsArray.at(0)?.value.key ?? '' });
+    this.form.patchValue({
+      name: doc.meta.name,
+      code: doc.meta.code,
+      modelName: doc.meta.modelName,
+      triggerEvent: doc.meta.triggerEvent,
+      isEnabled: doc.meta.isEnabled,
+      startStep: doc.graph.startStep
+    }, { emitEvent: false });
+
+    this.conditionsArray.clear({ emitEvent: false });
+    for (const condition of doc.conditions) {
+      this.conditionsArray.push(this.newConditionGroup(condition), { emitEvent: false });
     }
-    for (const control of this.stepsArray.controls) {
-      if (control.value.onApprove === removedKey) control.patchValue({ onApprove: '' });
-      if (control.value.onReject === removedKey) control.patchValue({ onReject: '' });
-    }
+
+    if (this.readonlyMode()) this.form.disable({ emitEvent: false });
+  }
+
+  /** Adım komutları başlangıç adımını değiştirebilir (ekleme, yeniden adlandırma, silme). */
+  private syncStartStep(): void {
+    this.form.patchValue({ startStep: this.store.graph().startStep }, { emitEvent: false });
+  }
+
+  // ── Adımlar ───────────────────────────────────────────────────────────────
+
+  removeStep(key: string): void {
+    this.store.dispatch('', doc => removeStep(doc, key));
+    if (sameKey(this.selectedStepKey(), key)) this.selectedStepKey.set(null);
+    this.syncStartStep();
   }
 
   // ── Adım pop-up'ı ─────────────────────────────────────────────────────────
 
-  /** Yeni adım için pop-up'ı boş bir grupla açar. */
+  /** Yeni adım için pop-up'ı açar. */
   openNewStep(): void {
     if (this.readonlyMode()) return;
-    this.stepDialog.set({
-      group: newStepGroup(this.fb, suggestStepKey(this.stepsArray)),
-      index: null,
-      originalKey: ''
-    });
+    this.stepDialog.set({ step: null, statusLabel: '', newKey: suggestKey(this.store.doc()) });
   }
 
   /**
-   * Mevcut adımı pop-up'ta açar. Pop-up ana formdaki grubun KOPYASINI alır;
-   * İptal edilirse kopya atılır ve ana form hiç değişmemiş olur.
+   * Var olan adımı pop-up'ta açar (listeden satır tıklaması, canvas'tan çift
+   * tıklama). Pop-up adımın KOPYASIYLA çalışır; kaydedilene kadar belge değişmez.
    */
-  openStep(index: number): void {
-    const source = this.stepsArray.at(index);
-    if (!source) return;
+  openStep(key: string): void {
+    const doc = this.store.doc();
+    const step = findStep(doc, key);
+    if (!step) return;
 
+    const labelKey = Object.keys(doc.graph.entityStatusMap).find(k => sameKey(k, step.key));
     this.stepDialog.set({
-      group: cloneStepGroup(this.fb, source),
-      index,
-      originalKey: String(source.getRawValue().key ?? '')
+      step,
+      statusLabel: labelKey ? doc.graph.entityStatusMap[labelKey] : '',
+      newKey: ''
     });
   }
 
-  /** Canvas'ta çift tıklanan düğüm — anahtarından satırı bulur. */
-  openStepByKey(key: string): void {
-    const index = this.stepsArray.controls.findIndex(
-      c => String(c.value.key ?? '').toLowerCase() === key.toLowerCase());
-    if (index >= 0) this.openStep(index);
-  }
+  /** Pop-up sonucu belgeye yazılır: düzenlemede yerine konur, yeni adımda eklenir. */
+  onStepSaved(result: StepDialogResult): void {
+    this.store.dispatch('', doc =>
+      upsertStep(doc, result.originalKey || null, result.step, result.statusLabel));
 
-  /** Kopya ana forma yazılır: düzenlemede yerine konur, yeni adımda eklenir. */
-  onStepSaved(group: FormGroup): void {
-    const state = this.stepDialog();
-    if (!state) return;
-
-    const newKey = String(group.value.key ?? '');
-
-    if (state.index === null) {
-      this.stepsArray.push(group);
-    } else {
-      this.stepsArray.setControl(state.index, group);
-    }
-
-    // Anahtar değiştiyse bağlantılar ve başlangıç adımı yeni anahtara taşınır.
-    let startStep = renameStepReferences(
-      this.stepsArray, state.originalKey, newKey, String(this.form.value.startStep ?? ''));
-
-    // İlk adım otomatik başlangıç olur — kullanıcının ayrıca seçmesi gerekmesin.
-    if (!startStep && this.stepsArray.length > 0) {
-      startStep = String(this.stepsArray.at(0).value.key ?? '');
-    }
-    this.form.patchValue({ startStep });
-
-    this.selectedStepKey.set(newKey);
+    this.selectedStepKey.set(result.step.key);
+    this.syncStartStep();
     this.stepDialog.set(null);
   }
 
@@ -254,45 +318,39 @@ export class WorkflowBuildComponent implements OnInit {
   // ── Adım listesi özetleri ─────────────────────────────────────────────────
 
   /** Atama sütunu: rol adı, kullanıcı adı, "kaydı oluşturana" ya da dal sayısı. */
-  assignmentSummary(control: { getRawValue(): Record<string, unknown> }): string {
-    const step = control.getRawValue();
-
-    if (step['type'] === 'parallel') {
-      const count = ((step['branches'] ?? []) as unknown[]).length;
-      return this.languageService.t('workflow.build.branchCount', { n: count });
+  private assignmentSummary(step: WorkflowStep, roles: Role[], users: AppUser[]): string {
+    if (step.type === 'parallel') {
+      return this.languageService.t('workflow.build.branchCount', { n: (step.branches ?? []).length });
     }
 
-    switch (step['assignMode']) {
+    switch (step.assignment?.mode) {
       case 'role': {
-        const role = this.roles.find(r => r.id === Number(step['roleId']));
+        const role = roles.find(r => r.id === Number(step.assignment?.roleId));
         return role?.name ?? '—';
       }
       case 'user': {
-        const user = this.users.find(u => u.id === Number(step['userId']));
+        const user = users.find(u => u.id === Number(step.assignment?.userId));
         return user ? `${user.firstName} ${user.lastName}` : '—';
       }
-      default:
+      case 'creator':
         return this.languageService.t('workflow.assign.creator');
+      default:
+        return '—';
     }
-  }
-
-  /** Geçiş hedefi: boşsa terminal (tamamlandı / reddedildi). */
-  targetLabel(key: unknown, kind: 'approve' | 'reject'): string {
-    const value = String(key ?? '');
-    if (value) return value;
-    return this.languageService.t(kind === 'approve'
-      ? 'workflow.build.terminalCompleted'
-      : 'workflow.build.terminalRejected');
   }
 
   // ── Koşul satırları ───────────────────────────────────────────────────────
 
-  addCondition(condition?: WorkflowCondition): void {
-    this.conditionsArray.push(this.fb.group({
+  private newConditionGroup(condition?: WorkflowCondition): FormGroup {
+    return this.fb.group({
       field: [condition?.field ?? '', Validators.required],
       operator: [condition?.operator ?? 'eq'],
       value: [condition?.value ?? '']
-    }));
+    });
+  }
+
+  addCondition(): void {
+    this.conditionsArray.push(this.newConditionGroup());
   }
 
   removeCondition(index: number): void {
@@ -313,9 +371,9 @@ export class WorkflowBuildComponent implements OnInit {
   private loadRoles(): void {
     this.roleService.getRoles().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
-        if (res.success) this.roles = res.data ?? [];
+        if (res.success) this.roles.set(res.data ?? []);
       },
-      error: () => { this.roles = []; }
+      error: () => { this.roles.set([]); }
     });
   }
 
@@ -323,15 +381,19 @@ export class WorkflowBuildComponent implements OnInit {
   private loadUsers(): void {
     this.userService.getUsers().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
-        if (res.success) this.users = (res.data ?? []).filter(u => u.status);
+        if (res.success) this.users.set((res.data ?? []).filter(u => u.status));
       },
-      error: () => { this.users = []; }
+      error: () => { this.users.set([]); }
     });
   }
 
-  /** Seçili modelin kolonları — koşul alanı açılır listesini besler. */
+  /**
+   * Seçili modelin kolonları — koşul alanı açılır listesini besler. Model adı
+   * formdan okunur: şablondaki (change) ile formun belgeye yazımı arasında sıra
+   * varsayımı yapılmasın.
+   */
   onModelChange(): void {
-    const modelName = this.form.value.modelName;
+    const modelName = String(this.form.getRawValue().modelName ?? '');
     this.publishedModelService.getModels().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         const model = (res.data ?? []).find(m => m.typeName === modelName);
@@ -356,19 +418,15 @@ export class WorkflowBuildComponent implements OnInit {
         const workflow = res.data;
         this.editingId = workflow.id;
 
-        // Yayınlanmış akış düzenlenemez ama ŞEMASI GÖRÜNEBİLMELİ. Daha önce
-        // burada erken dönülüyordu; form hiç doldurulmadığı için ekran boş
-        // açılıyor ve kullanıcı yayınladığı akışın tasarımına bir daha
-        // bakamıyordu. Önce doldur, sonra kilitle.
+        // Yayınlanmış akış düzenlenemez ama ŞEMASI GÖRÜNEBİLMELİ: önce doldur,
+        // sonra kilitle (kilit, belge komutlarını ve formu kapatır).
+        const readonly = workflow.status !== 'Draft';
+        this.readonlyMode.set(readonly);
         this.populate(workflow);
 
-        if (workflow.status !== 'Draft') {
+        if (readonly) {
           // Hata değil bilgi: kullanıcıya yolu ("Yeni Sürüm Oluştur") gösteriyoruz.
           this.readonlyVersion = workflow.version;
-          this.readonlyMode.set(true);
-          // getRawValue() disabled kontrolleri de okuduğu için önizleme ve
-          // canvas dolu kalır.
-          this.form.disable();
         } else {
           this.resolveDraftVersion(workflow.code);
         }
@@ -394,12 +452,6 @@ export class WorkflowBuildComponent implements OnInit {
       error: () => { this.draftNextVersion = null; }
     });
   }
-
-  /** Salt-okunur açılan sürüm (yayınlanmış/arşiv); taslakta null. */
-  readonlyVersion: number | null = null;
-
-  /** Yeni sürüm taslağının yayınlanınca alacağı numara; ilk taslakta null. */
-  draftNextVersion: number | null = null;
 
   /**
    * Salt-okunur sürümden düzenlenebilir taslak açar. Rota aynı bileşende kaldığı
@@ -436,138 +488,15 @@ export class WorkflowBuildComponent implements OnInit {
   }
 
   private populate(workflow: WorkflowDefinition): void {
-    this.form.patchValue({
-      name: workflow.name,
-      code: workflow.code,
-      modelName: workflow.modelName,
-      triggerEvent: workflow.triggerEvent,
-      isEnabled: workflow.isEnabled
-    }, { emitEvent: false });
-
-    const graph = parseDefinition(workflow.definitionJson);
-    this.stepsArray.clear();
-
-    for (const step of graph?.steps ?? []) {
-      // Durum etiketi grafikte ayrı bir haritada duruyor; forma geri taşınıyor.
-      this.pushStep(step, graph?.entityStatusMap?.[step.key] ?? '');
-    }
-
-    this.form.patchValue({ startStep: graph?.startStep ?? '' }, { emitEvent: false });
-
-    this.conditionsArray.clear();
-    for (const condition of parseConditions(workflow.triggerConditionJson)) {
-      this.addCondition(condition);
-    }
-
+    this.store.load(docFromDefinition(workflow));
+    this.syncFormFromDoc();
     this.onModelChange();
-    this.refreshPreview();
   }
 
-  // ── Önizleme + gönderim ───────────────────────────────────────────────────
-
-  private refreshPreview(): void {
-    const graph = this.buildGraph();
-    this.previewGraph.set(graph.steps.length > 0 ? graph : null);
-  }
-
-  /** Form değerlerinden tanım grafiğini kurar — kaydetme ve önizleme ortak kullanır. */
-  private buildGraph(): WorkflowGraph {
-    const raw = this.form.getRawValue();
-    const entityStatusMap: Record<string, string> = {};
-
-    const steps: WorkflowStep[] = (raw.steps ?? []).map((step: Record<string, unknown>) => {
-      const key = String(step['key'] ?? '');
-      const statusLabel = String(step['statusLabel'] ?? '').trim();
-      if (statusLabel) entityStatusMap[key] = statusLabel;
-
-      const isParallel = step['type'] === 'parallel';
-      const fields = (step['fields'] ?? []) as Array<Record<string, unknown>>;
-      const approveTarget = String(step['onApprove'] ?? '') || null;
-      const rejectTarget = String(step['onReject'] ?? '') || null;
-
-      if (isParallel) {
-        const branches = (step['branches'] ?? []) as Array<Record<string, unknown>>;
-
-        return {
-          key,
-          type: 'parallel' as const,
-          name: String(step['name'] ?? ''),
-          mode: (step['mode'] as 'all' | 'any') ?? 'all',
-          branches: branches.map(branch => ({
-            key: String(branch['key'] ?? ''),
-            name: String(branch['name'] ?? ''),
-            assignment: buildAssignment(branch),
-            sla: buildSla(branch)
-          })),
-          // Paralel adımın KENDİ ataması/formu gönderilmez — doğrulayıcı bunu
-          // reddediyor; görevler dallardan doğar.
-          assignment: null,
-          sla: null,
-          form: null,
-          onComplete: approveTarget,
-          onAnyReject: rejectTarget,
-          x: step['x'] as number | null,
-          y: step['y'] as number | null
-        };
-      }
-
-      const recordFields = (step['recordFields'] ?? []) as Array<Record<string, unknown>>;
-      const approveLabel = String(step['approveLabel'] ?? '').trim();
-      const allowReject = step['allowReject'] !== false;
-      const rejectLabel = allowReject ? String(step['rejectLabel'] ?? '').trim() : '';
-
-      // Form, serbest alan YA DA kayıt alanı/buton ayarı varsa üretilir; aksi halde
-      // null kalır ve görev şeması kopyası da boş olur (eski davranış).
-      const hasForm = fields.length > 0 || recordFields.length > 0
-        || !!approveLabel || !!rejectLabel || !allowReject;
-
-      return {
-        key,
-        type: 'approval' as const,
-        name: String(step['name'] ?? ''),
-        assignment: buildAssignment(step),
-        sla: buildSla(step),
-        form: hasForm ? {
-          fields: fields.map(field => ({
-            name: String(field['name'] ?? ''),
-            dataType: String(field['dataType'] ?? 'string'),
-            label: String(field['label'] ?? '') || null,
-            isRequired: !!field['isRequired'],
-            enumValues: String(field['enumValues'] ?? '') || null
-          })),
-          recordFields: recordFields.map(field => ({
-            column: String(field['column'] ?? ''),
-            isRequired: !!field['isRequired']
-          })),
-          approveLabel: approveLabel || null,
-          rejectLabel: rejectLabel || null,
-          allowReject
-        } : null,
-        onApprove: approveTarget,
-        // Red kapalıyken hedef gönderilmez — doğrulayıcı ölü kenarı reddediyor.
-        onReject: allowReject ? rejectTarget : null,
-        x: step['x'] as number | null,
-        y: step['y'] as number | null
-      };
-    });
-
-    return { startStep: String(raw.startStep ?? ''), steps, entityStatusMap };
-  }
+  // ── Gönderim ──────────────────────────────────────────────────────────────
 
   private buildPayload(): Partial<WorkflowDefinition> {
-    const raw = this.form.getRawValue();
-    const conditions = (raw.conditions ?? []) as WorkflowCondition[];
-
-    return {
-      id: this.editingId ?? 0,
-      name: raw.name,
-      code: raw.code,
-      modelName: raw.modelName,
-      triggerEvent: raw.triggerEvent,
-      isEnabled: raw.isEnabled,
-      definitionJson: JSON.stringify(this.buildGraph()),
-      triggerConditionJson: conditions.length > 0 ? JSON.stringify(conditions) : null
-    };
+    return docToPayload(this.store.doc(), this.editingId);
   }
 
   validate(): void {
@@ -596,8 +525,8 @@ export class WorkflowBuildComponent implements OnInit {
 
     const payload = this.buildPayload();
 
-    // define() DataResponseModel<number>, update() ResponseModel döner; ortak
-    // abonelik için ResponseModel'e genişletiliyor (report-build ile aynı desen).
+    // define() DataResponseModel<number>, update() DataResponseModel<string> döner;
+    // ortak abonelik için ResponseModel'e genişletiliyor (report-build ile aynı desen).
     const request: Observable<ResponseModel> = this.editingId
       ? this.workflowService.update(payload)
       : this.workflowService.define(payload);
@@ -610,6 +539,7 @@ export class WorkflowBuildComponent implements OnInit {
           return;
         }
 
+        this.store.markSaved();
         const newId = this.editingId ?? (res as { data?: number }).data ?? 0;
 
         // Yeni akış artık kayıtlı: ekran düzenleme moduna geçer. Aksi halde yayın
@@ -663,22 +593,9 @@ export class WorkflowBuildComponent implements OnInit {
 
   // ── Canvas köprüsü ────────────────────────────────────────────────────────
 
-  /** Canvas'ta seçili adım — form sekmesine geçince odaklanan satır. */
-  readonly selectedStepKey = signal<string | null>(null);
-
-  /**
-   * Canvas'ta taşınan düğümün konumu tanıma yazılır.
-   *
-   * emitEvent: false ile: her taşımada valueChanges tetiklenip önizleme
-   * yeniden kurulsaydı sürükleme gözle görülür şekilde takılırdı. Önizleme
-   * zaten bırakıştan sonra elle tazeleniyor.
-   */
+  /** Canvas'ta taşınan düğümün konumu belgeye yazılır (bırakışta, tek geri al adımı). */
   onNodeMoved(event: { key: string; x: number; y: number }): void {
-    const control = this.findStepControl(event.key);
-    if (!control) return;
-
-    control.patchValue({ x: Math.round(event.x), y: Math.round(event.y) }, { emitEvent: false });
-    this.refreshPreview();
+    this.store.dispatch('', doc => moveStep(doc, event.key, event.x, event.y));
   }
 
   /**
@@ -687,37 +604,23 @@ export class WorkflowBuildComponent implements OnInit {
    * adımlar da aynı düzene katılır ve yerleşim kuralı değişirse tanım onu izler.
    */
   onLayoutReset(): void {
-    for (const control of this.stepsArray.controls) {
-      control.patchValue({ x: null, y: null }, { emitEvent: false });
-    }
-    this.refreshPreview();
+    this.store.dispatch('', clearPositions);
   }
 
   /**
-   * Canvas'ta çizilen bağlantı adımın hedefine yazılır.
-   *
-   * Tekil ve paralel adımda aynı iki kontrol kullanılıyor (onApprove/onReject);
-   * buildGraph bunları adım tipine göre doğru alanlara ayırıyor.
+   * Canvas'ta çizilen bağlantı adımın çıkışına yazılır. Canvas port türünü
+   * (olumlu/olumsuz) bildirir; adımın gerçek çıkışı (onay/red ya da
+   * tamamlanma/herhangi biri reddederse) tip kataloğundan çözülür.
    */
   onEdgeCreated(event: { from: string; to: string; port: 'approve' | 'reject' }): void {
-    const control = this.findStepControl(event.from);
-    if (!control) return;
-
-    control.patchValue(
-      event.port === 'approve' ? { onApprove: event.to } : { onReject: event.to });
+    this.store.dispatch('', doc => {
+      const source = findStep(doc, event.from);
+      const exit = source ? exitForKind(source, event.port) : undefined;
+      return exit ? connect(doc, event.from, exit.port, event.to) : doc;
+    });
   }
 
   onNodeSelected(key: string): void {
     this.selectedStepKey.set(key);
-  }
-
-  private findStepControl(key: string) {
-    return this.stepsArray.controls.find(
-      c => String(c.value.key ?? '').toLowerCase() === key.toLowerCase());
-  }
-
-  /** Hedef adım açılır listesi: diğer adımlar + iki terminal. */
-  get stepKeys(): string[] {
-    return this.stepsArray.controls.map(c => String(c.value.key ?? '')).filter(Boolean);
   }
 }

@@ -8,7 +8,7 @@
       <button type="button" class="btn btn-ghost btn-sm" (click)="cancel()" [attr.aria-label]="'common.close' | t">✕</button>
     </div>
 
-    <form class="panel-body step-dialog-body" [formGroup]="group()" (ngSubmit)="save()">
+    <form class="panel-body step-dialog-body" [formGroup]="form" (ngSubmit)="save()">
 
       <!-- ── Genel ───────────────────────────────────────────────────────── -->
       <section class="step-section">
@@ -28,6 +28,8 @@
                    [attr.aria-invalid]="invalid('key')" aria-describedby="wf-step-key-help" />
             @if (invalid('key')) {
               <span class="field-error" role="alert">{{ 'workflow.build.stepKeyHelp' | t }}</span>
+            } @else if (duplicateKey) {
+              <span class="field-error" role="alert">{{ 'workflow.build.stepKeyDuplicate' | t }}</span>
             } @else {
               <span id="wf-step-key-help" class="field-help">{{ 'workflow.build.stepKeyHelp' | t }}</span>
             }
@@ -59,7 +61,7 @@
                 }
               </select>
             </div>
-            @if (group().getRawValue().assignMode === 'role') {
+            @if (form.getRawValue().assignMode === 'role') {
               <div class="field">
                 <label for="wf-step-role">{{ 'workflow.build.assignRole' | t }}</label>
                 <select id="wf-step-role" class="input" formControlName="roleId">
@@ -70,7 +72,7 @@
                 </select>
               </div>
             }
-            @if (group().getRawValue().assignMode === 'user') {
+            @if (form.getRawValue().assignMode === 'user') {
               <div class="field">
                 <label for="wf-step-user">{{ 'workflow.build.assignUser' | t }}</label>
                 <select id="wf-step-user" class="input" formControlName="userId">
@@ -207,6 +209,20 @@
                     <label [for]="'wf-br-due-' + b">{{ 'workflow.build.dueHours' | t }}</label>
                     <input [id]="'wf-br-due-' + b" class="input" type="number" min="1" formControlName="dueHours" />
                   </div>
+                  <!-- Dalın yükseltme süresi ve zaman aşımı davranışı. Önceden girdisi
+                       yoktu; API/AI ile tanımlananlar kayıtta korunuyor ama değiştirilemiyordu. -->
+                  <div class="field">
+                    <label [for]="'wf-br-esc-' + b">{{ 'workflow.build.escalateHours' | t }}</label>
+                    <input [id]="'wf-br-esc-' + b" class="input" type="number" min="1" formControlName="escalateAfterHours" />
+                  </div>
+                  <div class="field">
+                    <label [for]="'wf-br-timeout-' + b">{{ 'workflow.build.onTimeout' | t }}</label>
+                    <select [id]="'wf-br-timeout-' + b" class="input" formControlName="onTimeout">
+                      @for (option of timeoutPolicyOptions; track option.value) {
+                        <option [value]="option.value">{{ option.labelKey | t }}</option>
+                      }
+                    </select>
+                  </div>
                 </div>
               </div>
             }
@@ -268,7 +284,7 @@
               <label for="wf-step-approve-label">{{ 'workflow.build.approveLabel' | t }}</label>
               <input id="wf-step-approve-label" class="input" type="text" maxlength="50"
                      formControlName="approveLabel"
-                     [attr.placeholder]="group().get('name')?.value || ('workflow.build.stepName' | t)" />
+                     [attr.placeholder]="form.get('name')?.value || ('workflow.build.stepName' | t)" />
             </div>
             @if (allowReject) {
               <div class="field">
@@ -333,6 +349,11 @@
                            [attr.placeholder]="'workflow.build.fieldEnumValues' | t"
                            [attr.aria-label]="'workflow.build.fieldEnumValues' | t" />
                   }
+                  @if (fieldControl.getRawValue().dataType === 'string') {
+                    <input class="input field-enum" type="number" min="1" formControlName="maxLength"
+                           [attr.placeholder]="'workflow.build.fieldMaxLength' | t"
+                           [attr.aria-label]="'workflow.build.fieldMaxLength' | t" />
+                  }
                 </div>
               }
             </div>
@@ -345,7 +366,7 @@
       @if (readonly()) {
         <button type="button" class="btn btn-primary" (click)="cancel()">{{ 'common.close' | t }}</button>
       } @else {
-        @if (showErrors && group().invalid) {
+        @if (showErrors && form.invalid) {
           <span class="dialog-error" role="alert">{{ 'workflow.build.stepInvalid' | t }}</span>
         }
         <button type="button" class="btn btn-secondary" (click)="cancel()">{{ 'common.cancel' | t }}</button>

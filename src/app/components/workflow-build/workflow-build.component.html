@@ -71,7 +71,7 @@
         <div class="field">
           <label for="wf-start">{{ 'workflow.build.startStep' | t }}</label>
           <select id="wf-start" class="input" formControlName="startStep">
-            @for (key of stepKeys; track key) { <option [value]="key">{{ key }}</option> }
+            @for (key of stepKeys(); track key) { <option [value]="key">{{ key }}</option> }
           </select>
         </div>
       </div>
@@ -93,7 +93,7 @@
               [attr.aria-selected]="activeTab() === 'steps'"
               (click)="setTab('steps')">
         {{ 'workflow.build.tabSteps' | t }}
-        <span class="tab-badge">{{ stepsArray.length }}</span>
+        <span class="tab-badge">{{ rows().length }}</span>
       </button>
       <button type="button" class="tab-btn" role="tab"
               [class.tab-btn--active]="activeTab() === 'canvas'"
@@ -127,7 +127,7 @@
           }
         </div>
 
-        @if (stepsArray.length === 0) {
+        @if (rows().length === 0) {
           <div class="empty-state"><p>{{ 'workflow.build.noSteps' | t }}</p></div>
         } @else {
           <div class="table-wrapper">
@@ -145,28 +145,26 @@
                 </tr>
               </thead>
               <tbody>
-                @for (stepControl of stepsArray.controls; track stepControl; let i = $index) {
+                @for (row of rows(); track $index; let i = $index) {
                   <tr class="clickable-row" tabindex="0"
-                      [class.is-selected]="selectedStepKey() === stepControl.value.key"
-                      (click)="openStep(i)" (keydown.enter)="openStep(i)">
+                      [class.is-selected]="selectedStepKey() === row.key"
+                      (click)="openStep(row.key)" (keydown.enter)="openStep(row.key)">
                     <td class="col-order"><span class="step-order">{{ i + 1 }}</span></td>
                     <td>
-                      {{ stepControl.value.name || '—' }}
-                      @if (form.getRawValue().startStep === stepControl.value.key) {
+                      {{ row.name || '—' }}
+                      @if (row.isStart) {
                         <span class="badge badge-meta">{{ 'workflow.build.startBadge' | t }}</span>
                       }
                     </td>
-                    <td><code class="step-key-code">{{ stepControl.value.key }}</code></td>
-                    <td>
-                      {{ (stepControl.value.type === 'parallel' ? 'workflow.build.typeParallel' : 'workflow.build.typeApproval') | t }}
-                    </td>
-                    <td>{{ assignmentSummary(stepControl) }}</td>
-                    <td>{{ targetLabel(stepControl.value.onApprove, 'approve') }}</td>
-                    <td>{{ targetLabel(stepControl.value.onReject, 'reject') }}</td>
+                    <td><code class="step-key-code">{{ row.key }}</code></td>
+                    <td>{{ row.typeKey | t }}</td>
+                    <td>{{ row.assignment }}</td>
+                    <td>{{ row.approveTarget }}</td>
+                    <td>{{ row.rejectTarget }}</td>
                     <td class="td-actions">
                       @if (!readonlyMode()) {
                         <button type="button" class="btn btn-ghost btn-sm"
-                                (click)="$event.stopPropagation(); removeStep(i)"
+                                (click)="$event.stopPropagation(); removeStep(row.key)"
                                 (keydown.enter)="$event.stopPropagation()"
                                 [attr.aria-label]="'workflow.build.removeStep' | t">✕</button>
                       }
@@ -199,7 +197,7 @@
           (layoutReset)="onLayoutReset()"
           (edgeCreated)="onEdgeCreated($event)"
           (nodeSelected)="onNodeSelected($event)"
-          (nodeOpened)="openStepByKey($event)" />
+          (nodeOpened)="openStep($event)" />
       </div>
     }
 
@@ -274,14 +272,14 @@
 
 @if (stepDialog(); as dialog) {
   <app-workflow-step-dialog
-    [group]="dialog.group"
-    [isNew]="dialog.index === null"
+    [step]="dialog.step"
+    [statusLabel]="dialog.statusLabel"
+    [newKey]="dialog.newKey"
     [readonly]="readonlyMode()"
-    [roles]="roles"
-    [users]="users"
+    [roles]="roles()"
+    [users]="users()"
     [columns]="modelColumnMeta"
-    [stepKeys]="stepKeys"
-    [originalKey]="dialog.originalKey"
+    [stepKeys]="stepKeys()"
     (saved)="onStepSaved($event)"
     (cancelled)="closeStepDialog()" />
 }

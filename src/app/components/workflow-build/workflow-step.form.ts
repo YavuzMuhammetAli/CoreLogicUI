@@ -1,4 +1,4 @@
-import { AbstractControl, FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import {
   RecordField,
   WorkflowAssignment,
@@ -8,11 +8,13 @@ import {
 } from '../../models/workflow.model';
 
 /**
- * Akış adımı form kurucuları — tasarım ekranı ve adım pop-up'ı ortak kullanır.
+ * Akış adımı form kurucuları — adım pop-up'ı kullanır.
  *
  * Saf fonksiyonlar: FormBuilder parametre olarak alınır, bileşen durumu
- * tutulmaz. Pop-up adımın KOPYASI üzerinde çalıştığı için kopya da buradan,
- * aynı kurucuyla üretilir (bkz. cloneStepGroup).
+ * tutulmaz. Pop-up açılırken adım nesnesinden (WorkflowStep) bir grup kurulur;
+ * kaydedince grup değeri `stepFromFormValue` ile yeniden adıma çevrilir
+ * (bkz. designer/workflow-step.mapper.ts). Tasarım belgesindeki adıma pop-up
+ * kaydedilene kadar dokunulmaz — "İptal" hiçbir şeyi geri almak zorunda değil.
  */
 
 /** Adım/dal/form alanı anahtar kalıbı — backend SqlIdentifier ile aynı. */
@@ -24,6 +26,7 @@ export interface StepFieldValue {
   dataType: string;
   label?: string | null;
   isRequired: boolean;
+  maxLength?: number | null;
   enumValues?: string | null;
 }
 
@@ -63,6 +66,9 @@ export function newFieldGroup(fb: FormBuilder, field?: StepFieldValue): FormGrou
     dataType: [field?.dataType ?? 'string'],
     label: [field?.label ?? ''],
     isRequired: [field?.isRequired ?? false],
+    // Metin alanının en fazla uzunluğu. Eskiden formda kontrolü yoktu ve her
+    // kayıtta sessizce siliniyordu.
+    maxLength: [field?.maxLength ?? null],
     enumValues: [field?.enumValues ?? '']
   });
 }
@@ -88,7 +94,10 @@ export function newBranchGroup(fb: FormBuilder, branch?: Partial<WorkflowBranch>
     // SLA dal başına: "finans 24 saat, hukuk 72 saat" gerçek bir ihtiyaç.
     dueHours: [branch?.sla?.dueHours ?? null],
     escalateAfterHours: [branch?.sla?.escalateAfterHours ?? null],
-    onTimeout: [branch?.sla?.onTimeout ?? 'escalate']
+    onTimeout: [branch?.sla?.onTimeout ?? 'escalate'],
+    // Dalın görev formu pop-up'ta düzenlenmiyor (API/AI ile tanımlanabiliyor).
+    // Gizli kontrolde olduğu gibi taşınır; eskiden her kayıtta siliniyordu.
+    form: fb.control(branch?.form ?? null)
   });
 }
 
@@ -112,7 +121,7 @@ export function newStepGroup(
     escalateAfterHours: [step?.sla?.escalateAfterHours ?? null],
     onTimeout: [step?.sla?.onTimeout ?? 'escalate'],
     // Tekil adımda onApprove/onReject, paralel adımda onComplete/onAnyReject
-    // olarak yazılır; formda tek çift kontrol tutulup buildGraph'ta ayrılıyor.
+    // olarak yazılır; formda tek çift kontrol tutulup eşleyicide ayrılıyor.
     onApprove: [step?.onApprove ?? step?.onComplete ?? ''],
     onReject: [step?.onReject ?? step?.onAnyReject ?? ''],
     statusLabel: [statusLabel],
@@ -120,9 +129,6 @@ export function newStepGroup(
     approveLabel: [step?.form?.approveLabel ?? ''],
     rejectLabel: [step?.form?.rejectLabel ?? ''],
     allowReject: [step?.form?.allowReject ?? true],
-    // Canvas konumu. Formda görünmez; yalnız canvas yazar ve buildGraph okur.
-    x: [step?.x ?? null],
-    y: [step?.y ?? null],
     fields: fb.array([]),
     recordFields: fb.array([]),
     branches: fb.array([])
@@ -144,66 +150,4 @@ export function newStepGroup(
   }
 
   return group;
-}
-
-/**
- * Adım grubunun bağımsız bir kopyası — pop-up bunun üzerinde çalışır.
- *
- * Kopya sayesinde "İptal" hiçbir şey geri almak zorunda kalmaz: iç içe
- * FormArray'lerde (dallar, form alanları) yapılan ekleme/silmeler ana forma
- * hiç dokunmaz. Kaydet'te kopya yerine konur (setControl).
- */
-export function cloneStepGroup(fb: FormBuilder, source: AbstractControl): FormGroup {
-  const raw = source.getRawValue() as Record<string, unknown>;
-  const clone = newStepGroup(fb, String(raw['key'] ?? ''));
-
-  const fields = clone.get('fields') as FormArray;
-  for (const field of (raw['fields'] ?? []) as StepFieldValue[]) {
-    fields.push(newFieldGroup(fb, field));
-  }
-
-  const recordFields = clone.get('recordFields') as FormArray;
-  for (const field of (raw['recordFields'] ?? []) as RecordField[]) {
-    recordFields.push(newRecordFieldGroup(fb, field));
-  }
-
-  const branches = clone.get('branches') as FormArray;
-  for (const branch of (raw['branches'] ?? []) as Array<Record<string, unknown>>) {
-    // Dal değerleri form şeklinde (düz atama/SLA alanları); grup şekline geri çevrilir.
-    const group = newBranchGroup(fb);
-    group.patchValue(branch);
-    branches.push(group);
-  }
-
-  // Diziler patchValue'ya verilmez: patchValue FormArray'e eleman EKLEMEZ, var
-  // olanları sırayla ezerdi — yukarıda zaten tek tek kuruldular.
-  const { fields: _f, recordFields: _r, branches: _b, ...scalars } = raw;
-  clone.patchValue(scalars);
-  return clone;
-}
-
-/**
- * Adım anahtarı değiştiğinde diğer adımların hedeflerini yeni anahtara taşır.
- * Aksi halde bağlantılar sessizce kopar ve doğrulayıcı "hedef adım bulunamadı"
- * derdi. Başlangıç adımı ayrıca döner, çağıran yazar.
- */
-export function renameStepReferences(
-  steps: FormArray, oldKey: string, newKey: string, startStep: string
-): string {
-  if (!oldKey || oldKey === newKey) return startStep;
-
-  for (const control of steps.controls) {
-    if (control.value.onApprove === oldKey) control.patchValue({ onApprove: newKey });
-    if (control.value.onReject === oldKey) control.patchValue({ onReject: newKey });
-  }
-
-  return startStep === oldKey ? newKey : startStep;
-}
-
-/** Yeni adıma çakışmayan bir anahtar önerir (adim1, adim2, …). */
-export function suggestStepKey(steps: FormArray): string {
-  const existing = new Set(steps.controls.map(c => String(c.value.key ?? '').toLowerCase()));
-  let index = steps.length + 1;
-  while (existing.has(`adim${index}`)) index++;
-  return `adim${index}`;
 }

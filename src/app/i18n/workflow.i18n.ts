@@ -66,6 +66,10 @@ export const WORKFLOW_I18N: Translations = {
     tr: 'Harfle başlamalı; harf, rakam ve alt çizgi içerebilir.',
     en: 'Must start with a letter; may contain letters, digits and underscores.'
   },
+  'workflow.build.stepKeyDuplicate': {
+    tr: 'Bu anahtar başka bir adımda kullanılıyor.',
+    en: 'This key is already used by another step.'
+  },
   'workflow.build.noFields': {
     tr: 'Bu adımda onaycıdan ek bilgi istenmiyor.',
     en: 'This step does not ask the approver for extra input.'
@@ -198,6 +202,7 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.build.fieldLabel': { tr: 'Etiket', en: 'Label' },
   'workflow.build.fieldRequired': { tr: 'Zorunlu', en: 'Required' },
   'workflow.build.fieldEnumValues': { tr: 'Seçenekler (| ile ayır)', en: 'Options (separate with |)' },
+  'workflow.build.fieldMaxLength': { tr: 'En fazla karakter (isteğe bağlı)', en: 'Max characters (optional)' },
   'workflow.build.noSteps': { tr: 'Henüz adım eklenmedi.', en: 'No steps added yet.' },
   'workflow.build.triggerEvent': { tr: 'Ne zaman tetiklensin', en: 'When to trigger' },
   'workflow.build.conditions': { tr: 'Koşullar', en: 'Conditions' },
