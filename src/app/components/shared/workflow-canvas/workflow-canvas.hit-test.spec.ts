@@ -1,6 +1,6 @@
 import {
   CanvasEdge, CanvasNode, DEFAULT_NODE_X, DEFAULT_NODE_Y,
-  edgeAt, nodeAt, nodesInRect, resolveNodePositions
+  edgeAt, nodeAt, nodesInRect, portsOf, resolveNodePositions
 } from './workflow-canvas.hit-test';
 import { edgeGeometry, NODE_HEIGHT, NODE_WIDTH, BRANCH_LINE_HEIGHT } from '../workflow-graph/workflow-edge.geometry';
 import { WorkflowGraph, WorkflowStep } from '../../../models/workflow.model';
@@ -21,7 +21,7 @@ function graph(steps: WorkflowStep[], startStep = steps[0]?.key ?? ''): Workflow
 }
 
 function node(key: string, x: number, y: number, width = NODE_WIDTH, height = NODE_HEIGHT): CanvasNode {
-  return { key, label: key, x, y, width, height, isStart: false, isParallel: false, branchLabels: [] };
+  return { key, label: key, x, y, width, height, isStart: false, isParallel: false, branchLabels: [], ports: [] };
 }
 
 describe('resolveNodePositions', () => {
@@ -228,5 +228,43 @@ describe('nodesInRect', () => {
 
   it('hiçbirine değmeyen çerçeve boş döner', () => {
     expect(nodesInRect(nodes, { x: 5000, y: 5000 }, { x: 5100, y: 5100 })).toEqual([]);
+  });
+});
+
+describe('portsOf', () => {
+  it('onay adımında onay ve red portu simetrik dizilir', () => {
+    const ports = portsOf(step('a', { onApprove: 'b', onReject: null }), 168);
+
+    expect(ports.map(p => [p.port, p.kind, p.target])).toEqual([
+      ['approve', 'approve', 'b'],
+      ['reject', 'reject', null]
+    ]);
+    expect(ports.map(p => p.offset)).toEqual([56, 112]);
+  });
+
+  it('red kapalı adımda red portu çizilmez, onay portu ortaya gelir', () => {
+    // Kapalı porttan çizilen bağlantı kayıtta sessizce kayboluyordu.
+    const ports = portsOf(step('a', { form: { fields: [], allowReject: false } }), 168);
+
+    expect(ports.map(p => p.port)).toEqual(['approve']);
+    expect(ports[0].offset).toBe(84);
+  });
+
+  it('paralel adımda tamamlanma ve herhangi-biri-reddederse portları', () => {
+    const parallel: WorkflowStep = {
+      key: 'p', type: 'parallel', name: 'P', mode: 'all',
+      branches: [{ key: 'a', name: 'A' }, { key: 'b', name: 'B' }],
+      onComplete: 'son', onAnyReject: null
+    };
+
+    expect(portsOf(parallel, 168).map(p => [p.port, p.target])).toEqual([
+      ['complete', 'son'],
+      ['anyReject', null]
+    ]);
+  });
+
+  it('çözülen düğüm portlarını taşır', () => {
+    const [a] = resolveNodePositions(graph([step('a', { onApprove: 'b' }), step('b')]), [], {});
+    expect(a.ports.length).toBe(2);
   });
 });

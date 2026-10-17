@@ -93,9 +93,10 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.build.tabCanvas': { tr: 'Tasarım', en: 'Design' },
   'workflow.build.tabTrigger': { tr: 'Tetikleyici', en: 'Trigger' },
   'workflow.canvas.hint': {
-    tr: 'Ayrıntıları düzenlemek için adıma çift tıklayın. Adımı gövdesinden sürükleyerek taşıyın. Bağlantı için alt kenardaki yeşil (onay) ya da kırmızı (red) noktadan hedef adıma sürükleyin. Yakınlaşmak için Ctrl + tekerlek, kaydırmak için boş zemini sürükleyin.',
-    en: 'Double-click a step to edit its details. Drag a step by its body to move it. To connect, drag from the green (approve) or red (reject) dot at the bottom edge onto the target step. Ctrl + wheel to zoom, drag the empty background to pan.'
+    tr: 'Ayrıntıları düzenlemek için adıma çift tıklayın. Adımı gövdesinden sürükleyerek taşıyın. Bağlantı için alt kenardaki yeşil (onay) ya da kırmızı (red) noktadan hedef adıma sürükleyin; bağlantısı olmayan çıkışta süreç biter (yeşil uç: tamamlanır, kırmızı uç: reddedilir). Yakınlaşmak için Ctrl + tekerlek, kaydırmak için boş zemini sürükleyin.',
+    en: 'Double-click a step to edit its details. Drag a step by its body to move it. To connect, drag from the green (approve) or red (reject) dot at the bottom edge onto the target step; an exit without a connection ends the process (green end: completed, red end: rejected). Ctrl + wheel to zoom, drag the empty background to pan.'
   },
+  'workflow.canvas.start': { tr: 'Başlangıç', en: 'Start' },
   'workflow.canvas.portApprove': { tr: 'Onay bağlantısı çiz', en: 'Draw approve connection' },
   'workflow.canvas.portReject': { tr: 'Red bağlantısı çiz', en: 'Draw reject connection' },
   'workflow.canvas.hintReadonly': {

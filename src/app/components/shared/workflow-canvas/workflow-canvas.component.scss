@@ -69,6 +69,9 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+  // Sağdan dolaşan geri dönüşler ve başlangıç hapının çizgisi SVG kutusunun
+  // dışına taşabilir; kırpılmasın (görünürlük sınırını viewport belirler).
+  overflow: visible;
 }
 
 .canvas-edge {
@@ -98,6 +101,42 @@
 
 .arrow-head { fill: var(--border); }
 .arrow-head--reject { fill: var(--danger); }
+
+// ── Başlangıç ve bitiş ──────────────────────────────────────────────────────
+
+.canvas-start-link {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+// Başlangıç hapı: tıklanmaz (kaydırma zemine düşer); akışın giriş noktasını gösterir.
+.canvas-start {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-on);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
+// Hedefsiz çıkış: süreç burada biter. Yeşil = tamamlanır, kırmızı = reddedilir.
+.canvas-stub {
+  line { stroke: var(--success); stroke-width: 1.5; opacity: 0.7; }
+  circle { fill: var(--success-bg); stroke: var(--success); stroke-width: 2.5; }
+}
+
+.canvas-stub--reject {
+  line { stroke: var(--danger); stroke-dasharray: 3 3; }
+  circle { fill: var(--danger-bg); stroke: var(--danger); }
+}
 
 // ── Düğüm ────────────────────────────────────────────────────────────────────
 

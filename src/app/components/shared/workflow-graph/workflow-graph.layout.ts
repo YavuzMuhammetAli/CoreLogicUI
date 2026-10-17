@@ -1,4 +1,5 @@
 import { WorkflowGraph, outgoingTargets, WORKFLOW_TERMINAL_COMPLETED, WORKFLOW_TERMINAL_REJECTED } from '../../../models/workflow.model';
+import { exitsOf } from '../../../utils/workflow/workflow-exits';
 import {
   NODE_WIDTH, COLUMN_GAP, ROW_GAP, PADDING, TERMINAL_HEIGHT,
   EdgeRequest, nodeSize, portPositions, routeEdges
@@ -90,38 +91,54 @@ export function layoutWorkflow(graph: WorkflowGraph | null): WorkflowLayout {
  * Her adımın katmanını başlangıçtan EN UZUN yol ile hesaplar.
  *
  * En uzun yol (en kısa değil): bir adım birden çok yoldan ulaşılabiliyorsa, en
- * geç ulaşıldığı katmanda çizilmeli ki oklar hep aşağı doğru aksın ve şema
- * karışmasın. Döngüler (red → önceki adıma dönüş) meşrudur, bu yüzden ziyaret
- * edilen düğüm tekrar işlenmez — aksi halde sonsuz döngüye girilirdi.
+ * geç ulaşıldığı katmanda çizilmeli ki oklar hep aşağı doğru aksın.
+ *
+ * Döngüler (red → önceki adıma dönüş) meşrudur ama en uzun yol döngülü grafikte
+ * tanımsızdır. Önceki BFS ziyaret edilen düğümü "daha derin katman bulundukça"
+ * yeniden kuyruğa sokuyordu; döngüde bu her turda doğruydu ve yalnız güvenlik
+ * tavanı durduruyordu — başlangıç adımı bile en alt satıra düşebiliyordu.
+ * Şimdi iki aşama var:
+ *   1) Başlangıçtan derinlik öncelikli arama; YIĞINDAKİ bir düğüme giden kenar
+ *      geri dönüş sayılır ve katmanlamaya katılmaz (geri kalanı döngüsüzdür).
+ *   2) Döngüsüz kenarlarda topolojik sırayla en uzun yol. Başlangıç hep 0.
+ * Geri dönüşler canvas'ta yandan dolaştırılır.
  */
 function computeLayers(graph: WorkflowGraph): Map<string, number> {
-  const layers = new Map<string, number>();
-  const start = graph.steps.find(s => eq(s.key, graph.startStep)) ?? graph.steps[0];
+  const byKey = new Map(graph.steps.map(step => [step.key.toLowerCase(), step]));
+  const start = byKey.get((graph.startStep ?? '').toLowerCase()) ?? graph.steps[0];
+  const startKey = start.key.toLowerCase();
 
-  const queue: Array<{ key: string; layer: number }> = [{ key: start.key, layer: 0 }];
-  layers.set(start.key.toLowerCase(), 0);
+  const state = new Map<string, 'visiting' | 'done'>();
+  const forward = new Map<string, string[]>();
+  const postorder: string[] = [];
 
-  // Güvenlik tavanı: bozuk bir tanımda bile döngü sonlanmalı.
-  let guard = graph.steps.length * graph.steps.length + 16;
+  const visit = (key: string): void => {
+    state.set(key, 'visiting');
+    const targets: string[] = [];
 
-  while (queue.length > 0 && guard-- > 0) {
-    const current = queue.shift()!;
-    const step = graph.steps.find(s => eq(s.key, current.key));
-    if (!step) continue;
+    for (const exit of exitsOf(byKey.get(key)!)) {
+      const target = exit.target?.toLowerCase();
+      if (!target || isTerminal(target) || !byKey.has(target)) continue;
 
-    const { approve, reject } = outgoingTargets(step);
-    for (const target of [approve, reject]) {
-      if (!target || isTerminal(target)) continue;
+      const seen = state.get(target);
+      if (seen === 'visiting') continue;       // geri dönüş — katmanlamaya katılmaz
+      targets.push(target);
+      if (seen === undefined) visit(target);
+    }
 
-      const targetKey = target.toLowerCase();
-      const nextLayer = current.layer + 1;
-      const known = layers.get(targetKey);
+    forward.set(key, targets);
+    state.set(key, 'done');
+    postorder.push(key);
+  };
 
-      // Yalnızca DAHA DERİN bir katman bulunursa güncellenir.
-      if (known === undefined || nextLayer > known) {
-        layers.set(targetKey, nextLayer);
-        queue.push({ key: target, layer: nextLayer });
-      }
+  visit(startKey);
+
+  // Ters postorder döngüsüz kenarlar için geçerli bir topolojik sıradır.
+  const layers = new Map<string, number>([[startKey, 0]]);
+  for (const key of postorder.reverse()) {
+    const layer = layers.get(key) ?? 0;
+    for (const target of forward.get(key) ?? []) {
+      if ((layers.get(target) ?? -1) < layer + 1) layers.set(target, layer + 1);
     }
   }
 

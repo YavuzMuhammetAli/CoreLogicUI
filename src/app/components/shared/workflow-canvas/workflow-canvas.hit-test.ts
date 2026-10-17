@@ -1,7 +1,8 @@
 import { WorkflowGraph, WorkflowStep } from '../../../models/workflow.model';
 import {
-  EdgeGeometry, Point, distanceToEdge, nodeSize
+  EdgeGeometry, Point, distanceToEdge, nodeSize, portPositions
 } from '../workflow-graph/workflow-edge.geometry';
+import { ExitPort, exitsOf } from '../../../utils/workflow/workflow-exits';
 
 /**
  * Canvas düğüm/kenar yerleşimi ve isabet testi — SAF fonksiyonlar, Angular yok.
@@ -12,6 +13,16 @@ import {
 
 /** Sürüklenen bağlantının hangi çıkıştan başladığı. */
 export type PortKind = 'approve' | 'reject';
+
+/** Düğümün altındaki bir çıkış portu. */
+export interface CanvasPort {
+  port: ExitPort;
+  kind: PortKind;
+  /** Düğümün soluna göre yatay konum (px). */
+  offset: number;
+  /** Hedef adım; boşsa akış bu çıkışta biter (terminal). */
+  target: string | null;
+}
 
 /** Canvas'ta çizilen düğüm — konum ve ölçü dahil. */
 export interface CanvasNode {
@@ -24,6 +35,11 @@ export interface CanvasNode {
   isStart: boolean;
   isParallel: boolean;
   branchLabels: string[];
+  /**
+   * Bağlanabilir çıkışlar (tip kataloğundan). Kapalı çıkış (red kapalı adımda
+   * red) port olarak çizilmez: oraya çizilen bağlantı kayıtta sessizce kaybolurdu.
+   */
+  ports: CanvasPort[];
 }
 
 /** İki düğüm arasındaki bağlantı. */
@@ -78,7 +94,8 @@ export function resolveNodePositions(
       height: size.height,
       isStart: eq(step.key, graph.startStep),
       isParallel: step.type === 'parallel',
-      branchLabels: branchLabelsOf(step)
+      branchLabels: branchLabelsOf(step),
+      ports: portsOf(step, size.width)
     };
 
     return { node, pinned };
@@ -186,6 +203,19 @@ export function nodesInRect(nodes: ReadonlyArray<CanvasNode>, a: Point, b: Point
   return nodes.filter(node =>
     node.x <= maxX && node.x + node.width >= minX &&
     node.y <= maxY && node.y + node.height >= minY);
+}
+
+/** Düğümün bağlanabilir çıkışları, alt kenara eşit aralıkla dizilmiş. */
+export function portsOf(step: WorkflowStep, width: number): CanvasPort[] {
+  const enabled = exitsOf(step).filter(exit => exit.enabled);
+  const offsets = portPositions(enabled.length, width);
+
+  return enabled.map((exit, index) => ({
+    port: exit.port,
+    kind: exit.kind,
+    offset: offsets[index],
+    target: exit.target
+  }));
 }
 
 function branchLabelsOf(step: WorkflowStep): string[] {

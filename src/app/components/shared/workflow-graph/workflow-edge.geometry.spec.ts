@@ -1,7 +1,7 @@
 import {
   BRANCH_LINE_HEIGHT, FORWARD_MIN_GAP, NODE_HEIGHT, NODE_WIDTH,
   backEdgeGeometry, cubicPointAt, distanceToEdge, edgeGeometry, isForward, nodeSize,
-  portPositions, routeEdges, selfLoopGeometry
+  portPositions, routeEdges, routeOrthogonal, roundedPolyline, selfLoopGeometry, simplifyPolyline
 } from './workflow-edge.geometry';
 import { WorkflowStep } from '../../../models/workflow.model';
 
@@ -258,5 +258,88 @@ describe('distanceToEdge', () => {
     const onSegment = { x: ortho.p0.x, y: (ortho.p0.y + ortho.p1.y) / 2 };
 
     expect(distanceToEdge(ortho, onSegment)).toBeLessThan(0.001);
+  });
+});
+
+describe('roundedPolyline', () => {
+  it('köşeleri ikinci derece eğriyle yuvarlatır', () => {
+    const d = roundedPolyline([{ x: 0, y: 0 }, { x: 0, y: 40 }, { x: 100, y: 40 }], 8);
+    expect(d).toBe('M 0 0 L 0 32 Q 0 40 8 40 L 100 40');
+  });
+
+  it('yarıçap kısa parçanın yarısını aşmaz', () => {
+    const d = roundedPolyline([{ x: 0, y: 0 }, { x: 0, y: 6 }, { x: 100, y: 6 }], 8);
+    expect(d).toBe('M 0 0 L 0 3 Q 0 6 3 6 L 100 6');
+  });
+
+  it('hizalı uçlar tek düz çizgidir', () => {
+    expect(roundedPolyline([{ x: 5, y: 0 }, { x: 5, y: 40 }, { x: 5, y: 80 }])).toBe('M 5 0 L 5 80');
+  });
+
+  it('tekrarlanan ve aynı doğrudaki ara noktalar atılır', () => {
+    expect(simplifyPolyline([{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 10 }, { x: 0, y: 20 }, { x: 5, y: 20 }]))
+      .toEqual([{ x: 0, y: 0 }, { x: 0, y: 20 }, { x: 5, y: 20 }]);
+  });
+});
+
+describe('routeOrthogonal', () => {
+  const box = (x: number, y: number) => ({ x, y, width: NODE_WIDTH, height: NODE_HEIGHT });
+
+  it('ileri kenar porttan iner, kanalda yatay gider, hedefin üst-ortasına girer', () => {
+    const source = box(0, 0);
+    const target = box(300, 140);
+
+    const [edge] = routeOrthogonal([{ source, target, sourceOffsetX: 56 }], [source, target]);
+
+    expect(edge.points).toEqual([
+      { x: 56, y: 60 }, { x: 56, y: 100 }, { x: 384, y: 100 }, { x: 384, y: 140 }
+    ]);
+    expect(edge.style).toBe('orthogonal');
+    expect(edge.path.startsWith('M 56 60')).toBeTrue();
+  });
+
+  it('hizalı ileri kenar tek dikey çizgidir', () => {
+    const source = box(0, 0);
+    const target = box(0, 140);
+
+    const [edge] = routeOrthogonal([{ source, target }], [source, target]);
+
+    expect(edge.points).toEqual([{ x: 84, y: 60 }, { x: 84, y: 140 }]);
+  });
+
+  it('katman atlayan kenar aradaki kutuyu kesecekse hedefin üstündeki kanala geçer', () => {
+    const source = box(0, 0);
+    const middle = box(260, 140);          // hedefin tam üstünde, ara katmanda
+    const target = box(260, 280);
+
+    const [edge] = routeOrthogonal([{ source, target }], [source, middle, target]);
+    const [, , corner] = edge.points!;
+
+    // Yatay parça hedefin hemen üstündeki boşlukta: ara kutunun altında.
+    expect(corner.y).toBeGreaterThan(middle.y + middle.height);
+    expect(corner.y).toBeLessThan(target.y);
+  });
+
+  it('geri dönüş sağdan dolaşır; iç içe döngüler ayrı şeritte', () => {
+    const a = box(0, 0);
+    const b = box(0, 140);
+    const c = box(0, 280);
+
+    const [short, long] = routeOrthogonal(
+      [{ source: b, target: a }, { source: c, target: a }], [a, b, c]);
+
+    expect(short.maxX).toBeGreaterThan(NODE_WIDTH);
+    expect(long.maxX).toBeGreaterThan(short.maxX);
+    expect(short.points![0]).toEqual({ x: NODE_WIDTH, y: 170 });
+  });
+
+  it('isabet testi kırık çizgiyi kullanır', () => {
+    const source = box(0, 0);
+    const target = box(300, 140);
+    const [edge] = routeOrthogonal([{ source, target, sourceOffsetX: 56 }], [source, target]);
+
+    // Yatay parçanın üzerindeki nokta: eğri örneklemesiyle değil kırık çizgiyle ölçülür.
+    expect(distanceToEdge(edge, { x: 200, y: 100 })).toBeCloseTo(0, 6);
+    expect(distanceToEdge(edge, { x: 200, y: 110 })).toBeCloseTo(10, 6);
   });
 });

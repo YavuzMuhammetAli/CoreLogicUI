@@ -87,6 +87,12 @@
           </marker>
         </defs>
 
+        <!-- Başlangıç hapından başlangıç adımına inen çizgi. -->
+        @if (start(); as s) {
+          <path class="canvas-start-link" [attr.d]="s.path" vector-effect="non-scaling-stroke"
+                marker-end="url(#wfc-arrow)" />
+        }
+
         @for (edge of edges(); track edge.key) {
           <g class="canvas-edge" [class.canvas-edge--reject]="edge.isRejection">
             <!-- non-scaling-stroke: uzaklaşınca çizgi kaybolmasın, yaklaşınca kalınlaşmasın. -->
@@ -100,11 +106,32 @@
           </g>
         }
 
+        <!-- Akışın bittiği çıkışlar: kısa çizgi + uç işareti (BPMN bitiş olayı gibi). -->
+        @for (stub of stubs(); track stub.key) {
+          <g class="canvas-stub" [class.canvas-stub--reject]="stub.kind === 'reject'">
+            <line [attr.x1]="stub.x" [attr.y1]="stub.y1" [attr.x2]="stub.x" [attr.y2]="stub.y2"
+                  vector-effect="non-scaling-stroke" />
+            <circle [attr.cx]="stub.x" [attr.cy]="stub.y2 + 5" r="5" />
+          </g>
+        }
+
         <!-- Sürüklenirken imci takip eden geçici çizgi. -->
         @if (pendingPath(); as path) {
           <path class="canvas-edge-pending" [attr.d]="path" vector-effect="non-scaling-stroke" />
         }
       </svg>
+
+      <!-- Başlangıç hapı: akışın nereden başladığı şemada görünsün. -->
+      @if (start(); as s) {
+        <div class="canvas-start"
+             [style.left.px]="s.x" [style.top.px]="s.y"
+             [style.width.px]="s.width" [style.height.px]="s.height">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M7 4l13 8-13 8z" />
+          </svg>
+          {{ 'workflow.canvas.start' | t }}
+        </div>
+      }
 
       @for (node of nodes(); track node.key) {
         <div class="canvas-node"
@@ -132,20 +159,20 @@
           }
 
           <!--
-            Çıkış portları. Yeşil onay, kırmızı red yolunu bağlar; porttan
-            sürükleyip hedef düğümde bırakmak bağlantıyı kurar. Konumlar
-            portPositions() ile eşit aralıklı — geçiş başına port geldiğinde
-            (Faz 10) aynı formül N porta genelleniyor.
+            Çıkış portları adımın kendi çıkışlarından gelir (tip kataloğu).
+            Yeşil olumlu, kırmızı red yolunu bağlar; porttan sürükleyip hedef
+            düğümde bırakmak bağlantıyı kurar. Kapalı çıkışın (red kapalı adım)
+            portu yoktur.
           -->
           @if (!locked()) {
-            <button type="button" class="canvas-port canvas-port--approve"
-                    [style.left.px]="portOffsets()[0] - 7"
-                    (pointerdown)="onPortDragStart($event, node, 'approve')"
-                    [attr.aria-label]="'workflow.canvas.portApprove' | t"></button>
-            <button type="button" class="canvas-port canvas-port--reject"
-                    [style.left.px]="portOffsets()[1] - 7"
-                    (pointerdown)="onPortDragStart($event, node, 'reject')"
-                    [attr.aria-label]="'workflow.canvas.portReject' | t"></button>
+            @for (port of node.ports; track port.port) {
+              <button type="button" class="canvas-port"
+                      [class.canvas-port--approve]="port.kind === 'approve'"
+                      [class.canvas-port--reject]="port.kind === 'reject'"
+                      [style.left.px]="port.offset - 7"
+                      (pointerdown)="onPortDragStart($event, node, port)"
+                      [attr.aria-label]="(port.kind === 'approve' ? 'workflow.canvas.portApprove' : 'workflow.canvas.portReject') | t"></button>
+            }
           }
         </div>
       }

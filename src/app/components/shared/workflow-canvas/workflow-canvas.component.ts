@@ -1,13 +1,13 @@
 import {
-  ChangeDetectionStrategy, Component, ElementRef, PLATFORM_ID,
-  inject, input, output, signal, viewChild, computed
+  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, PLATFORM_ID,
+  computed, effect, inject, input, output, signal, untracked, viewChild
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { WorkflowGraph, outgoingTargets } from '../../../models/workflow.model';
+import { WorkflowGraph } from '../../../models/workflow.model';
 import { layoutWorkflow } from '../workflow-graph/workflow-graph.layout';
-import { EdgeRequest, portPositions, routeEdges } from '../workflow-graph/workflow-edge.geometry';
+import { EdgeRequest, routeOrthogonal } from '../workflow-graph/workflow-edge.geometry';
 import {
-  CanvasEdge, CanvasNode, PortKind,
+  CanvasEdge, CanvasNode, CanvasPort, PortKind,
   nodeAt, resolveNodePositions
 } from './workflow-canvas.hit-test';
 import {
@@ -17,10 +17,37 @@ import {
 import { LanguageService } from '../../../services/language.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 
-export type { CanvasEdge, CanvasNode, PortKind } from './workflow-canvas.hit-test';
+export type { CanvasEdge, CanvasNode, CanvasPort, PortKind } from './workflow-canvas.hit-test';
 
 /** Kenar etiketleri bu zoom seviyesinin altında okunamıyor, gizlenir. */
 const EDGE_LABEL_MIN_ZOOM = 0.55;
+
+/** Hedefsiz çıkışın (akış burada biter) kısa uç çizgisinin boyu. */
+const STUB_LENGTH = 22;
+
+/** Başlangıç hapının ölçüsü ve başlangıç adımının üstündeki boşluk. */
+const START_WIDTH = 104;
+const START_HEIGHT = 28;
+const START_GAP = 36;
+
+/** Bir çıkışın akışı bitirdiği yer: düğüm altındaki kısa çizgi + uç işareti. */
+export interface CanvasStub {
+  key: string;
+  kind: PortKind;
+  x: number;
+  y1: number;
+  y2: number;
+}
+
+/** Başlangıç hapı: başlangıç adımının üstünde, ona bağlı. */
+export interface CanvasStart {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** Haptan başlangıç adımına inen çizgi. */
+  path: string;
+}
 
 /**
  * Sürükle-bırak akış tasarımcısı.
@@ -60,7 +87,7 @@ export class WorkflowCanvasComponent {
 
   /** Düğüm taşındı — (key, x, y). Konum tanıma yazılmalı. */
   readonly nodeMoved = output<{ key: string; x: number; y: number }>();
-  /** Bağlantı kuruldu — kaynak adımın onApprove/onReject'i güncellenmeli. */
+  /** Bağlantı kuruldu — kaynak adımın ilgili çıkışı güncellenmeli. */
   readonly edgeCreated = output<{ from: string; to: string; port: PortKind }>();
   readonly nodeSelected = output<string>();
   /** Düğüme çift tıklandı — adım ayrıntı pop-up'ı açılmalı (salt-okunurda da). */
@@ -78,7 +105,7 @@ export class WorkflowCanvasComponent {
 
   /**
    * Sürükleme sırasında konumlar burada tutulur ve her pointer olayında
-   * tanıma yazılmaz — form değişimi tüm grafiği yeniden kurar ve sürükleme
+   * tanıma yazılmaz — tanım değişimi tüm grafiği yeniden kurar ve sürükleme
    * takılırdı. Tanıma yazma yalnızca bırakışta (pointerup) yapılır.
    */
   private readonly liveOffsets = signal<Record<string, Point>>({});
@@ -97,69 +124,89 @@ export class WorkflowCanvasComponent {
   });
 
   /**
-   * Otomatik yerleşim AYRI bir computed'de duruyor.
-   *
-   * Daha önce `nodes` içinde `liveOffsets()` ile aynı yerde okunuyordu; sürükleme
-   * saniyede ~60 kez `liveOffsets`'i değiştirdiği için BFS + yerleştirme + kenar
-   * kurulumu 60 Hz yeniden koşuyordu. Ayrılınca yerleşim yalnızca grafik
-   * değiştiğinde hesaplanır.
+   * Otomatik yerleşim AYRI bir computed'de duruyor: sürükleme saniyede ~60 kez
+   * `liveOffsets`'i değiştiriyor; yerleşim aynı yerde okunsaydı her karede
+   * yeniden hesaplanırdı. Ayrılınca yalnızca grafik değiştiğinde hesaplanır.
    */
   private readonly autoLayout = computed(() => layoutWorkflow(this.graph()));
 
   readonly nodes = computed<CanvasNode[]>(() =>
     resolveNodePositions(this.graph(), this.autoLayout().nodes, this.liveOffsets()));
 
+  private readonly nodesByKey = computed(() =>
+    new Map(this.nodes().map(node => [node.key.toLowerCase(), node])));
+
   /**
    * Kenarlar düğüm konumlarından türetilir; sürüklerken canlı takip eder.
    *
-   * Onay kenarı yeşil, red kenarı kırmızı porttan çıkar — ikisi aynı noktadan
-   * çıksaydı üst üste binerdi. Hedef kaynağın altında değilse (red → önceki
-   * adım) kenar kutuların içinden değil sağından dolaştırılır (bkz. routeEdges).
+   * Dik açılı ve yuvarlak köşeli: her kenar kendi portundan çıkar, yatay bir
+   * kanalda hedefin hizasına gelir. Hedef kaynağın altında değilse (red → önceki
+   * adım) kenar kutuların sağından dolaştırılır (bkz. routeOrthogonal).
    */
   readonly edges = computed<CanvasEdge[]>(() => {
-    const graph = this.graph();
-    if (!graph) return [];
-
     const nodes = this.nodes();
-    const byKey = new Map(nodes.map(node => [node.key.toLowerCase(), node]));
-    const approveLabel = this.languageService.t('workflow.canvas.edgeApprove');
-    const rejectLabel = this.languageService.t('workflow.canvas.edgeReject');
+    const byKey = this.nodesByKey();
+    const labels: Record<PortKind, string> = {
+      approve: this.languageService.t('workflow.canvas.edgeApprove'),
+      reject: this.languageService.t('workflow.canvas.edgeReject')
+    };
     const pending: Array<Omit<CanvasEdge, 'geometry'> & { request: EdgeRequest }> = [];
 
-    for (const step of graph.steps) {
-      const source = byKey.get(step.key.toLowerCase());
-      if (!source) continue;
+    for (const source of nodes) {
+      for (const port of source.ports) {
+        // Hedefsiz çıkış kenar değil uç işaretidir (bkz. stubs).
+        if (!port.target) continue;
 
-      const { approve, reject } = outgoingTargets(step);
-      const [approvePort, rejectPort] = portPositions(2, source.width);
-      const outgoing: Array<{ targetKey: string | null | undefined; label: string; port: PortKind; offset: number }> = [
-        { targetKey: approve, label: approveLabel, port: 'approve', offset: approvePort },
-        { targetKey: reject, label: rejectLabel, port: 'reject', offset: rejectPort }
-      ];
-
-      for (const edge of outgoing) {
-        // Terminal ve boş hedefler canvas'ta çizilmez: her düğümden iki terminale
-        // ok çekmek şemayı okunmaz hale getirirdi. Terminaller form sekmesinde görünür.
-        if (!edge.targetKey) continue;
-
-        const target = byKey.get(edge.targetKey.toLowerCase());
+        const target = byKey.get(port.target.toLowerCase());
         if (!target) continue;
 
         pending.push({
-          key: `${source.key}->${edge.targetKey}:${edge.port}`,
-          label: edge.label,
-          isRejection: edge.port === 'reject',
+          key: `${source.key}->${port.target}:${port.kind}`,
+          label: labels[port.kind],
+          isRejection: port.kind === 'reject',
           from: source.key,
-          to: edge.targetKey,
-          port: edge.port,
-          request: { source, target, sourceOffsetX: edge.offset }
+          to: port.target,
+          port: port.kind,
+          request: { source, target, sourceOffsetX: port.offset }
         });
       }
     }
 
-    const geometries = routeEdges(pending.map(edge => edge.request), nodes);
+    const geometries = routeOrthogonal(pending.map(edge => edge.request), nodes);
 
     return pending.map(({ request, ...edge }, index) => ({ ...edge, geometry: geometries[index] }));
+  });
+
+  /**
+   * Akışın bittiği çıkışlar: düğümün altında kısa bir çizgi ve uç işareti
+   * (onay/tamamlanma yeşil, red kırmızı). Eskiden hiç çizilmiyordu ve hangi
+   * çıkışın süreci bitirdiği şemadan okunamıyordu. Hedefi silinmiş (bulunamayan)
+   * çıkış da burada değil, doğrulama panelinde görünür.
+   */
+  readonly stubs = computed<CanvasStub[]>(() =>
+    this.nodes().flatMap(node => node.ports
+      .filter(port => !port.target)
+      .map(port => ({
+        key: `${node.key}:${port.port}`,
+        kind: port.kind,
+        x: node.x + port.offset,
+        y1: node.y + node.height,
+        y2: node.y + node.height + STUB_LENGTH
+      }))));
+
+  /** Başlangıç hapı — başlangıç adımı varsa onun üstünde. */
+  readonly start = computed<CanvasStart | null>(() => {
+    const node = this.nodes().find(n => n.isStart);
+    if (!node) return null;
+
+    const centerX = node.x + node.width / 2;
+    const x = centerX - START_WIDTH / 2;
+    const y = node.y - START_GAP - START_HEIGHT;
+
+    return {
+      x, y, width: START_WIDTH, height: START_HEIGHT,
+      path: `M ${centerX} ${y + START_HEIGHT} L ${centerX} ${node.y}`
+    };
   });
 
   /** Sürüklenen geçici bağlantının yolu — sürüklenen portun kendisinden başlar. */
@@ -167,30 +214,85 @@ export class WorkflowCanvasComponent {
     const pending = this.pendingEdge();
     if (!pending) return null;
 
-    const source = this.nodes().find(node => node.key === pending.from);
-    if (!source) return null;
+    const source = this.nodesByKey().get(pending.from.toLowerCase());
+    const port = source?.ports.find(p => p.kind === pending.port);
+    if (!source || !port) return null;
 
-    const [approvePort, rejectPort] = portPositions(2, source.width);
-    const x1 = source.x + (pending.port === 'approve' ? approvePort : rejectPort);
+    const x1 = source.x + port.offset;
     const y1 = source.y + source.height;
     const midY = (y1 + pending.y) / 2;
 
     return `M ${x1} ${y1} C ${x1} ${midY}, ${pending.x} ${midY}, ${pending.x} ${pending.y}`;
   });
 
-  /** Çıkış portlarının düğüm içindeki yatay konumu (px). */
-  readonly portOffsets = computed(() => portPositions(2, this.nodes()[0]?.width ?? 168));
+  /**
+   * Çizilen her şeyin dünya sınırı: düğümler, kenarlar (sağdan dolaşan geri
+   * dönüşler kutuların dışına taşar), uç işaretleri ve başlangıç hapı.
+   */
+  private readonly contentBounds = computed(() => {
+    const boxes: Array<{ x: number; y: number; width: number; height: number }> = [...this.nodes()];
 
-  /** Canvas yüzeyinin gerekli boyutu — düğümler taşınca büyür. */
+    for (const { geometry: g } of this.edges()) {
+      boxes.push({ x: g.minX, y: g.minY, width: g.maxX - g.minX, height: g.maxY - g.minY });
+    }
+    for (const stub of this.stubs()) {
+      boxes.push({ x: stub.x - 6, y: stub.y1, width: 12, height: stub.y2 - stub.y1 + 6 });
+    }
+
+    const start = this.start();
+    if (start) boxes.push(start);
+
+    return boundsOf(boxes);
+  });
+
+  /**
+   * Canvas yüzeyinin gerekli boyutu — içerik taşınınca büyür. Kenarlar da
+   * hesaba katılır: önceden yalnız düğümlere bakılıyordu ve sağdan dolaşan
+   * geri dönüş kenarları SVG'nin dışında kalıp kırpılıyordu.
+   */
   readonly canvasSize = computed(() => {
-    const nodes = this.nodes();
-    if (nodes.length === 0) return { width: 600, height: 320 };
+    const bounds = this.contentBounds();
+    if (!bounds) return { width: 600, height: 320 };
 
     return {
-      width: Math.max(600, ...nodes.map(node => node.x + node.width + 80)),
-      height: Math.max(320, ...nodes.map(node => node.y + node.height + 80))
+      width: Math.max(600, bounds.maxX + 80),
+      height: Math.max(320, bounds.maxY + 80)
     };
   });
+
+  constructor() {
+    // Tanım değişince (bırakış sonrası yazım, geri alma, başka sekmeden düzenleme)
+    // canlı ofsetler bırakılır: aksi halde bir kez sürüklenmiş düğüm, tanımdaki
+    // konumunu sonsuza dek gölgelerdi.
+    effect(() => {
+      this.graph();
+      untracked(() => {
+        if (!this.dragState) this.liveOffsets.set({});
+      });
+    }, { allowSignalWrites: true });
+
+    // İçerik ilk geldiğinde şema görünüre sığdırılır. Başlangıç hapı ve sağdan
+    // dolaşan kenarlar dünya koordinatında negatif/uzak yerlere düşebiliyor;
+    // sabit (0,0) kamerayla açılışta ekran dışında kalırlardı.
+    effect(() => {
+      if (this.fitted || this.nodes().length === 0) return;
+      this.fitted = true;
+      this.fitAfterRender();
+    });
+
+    // Jest yarıda kalırken bileşen kapanırsa (sekme değişimi) document
+    // dinleyicileri sızmasın.
+    inject(DestroyRef).onDestroy(() => this.detachAll());
+  }
+
+  /** İlk sığdırma yapıldı mı — sonraki tanım değişiklikleri kamerayı oynatmaz. */
+  private fitted = false;
+
+  /** Viewport DOM'a yerleştikten sonra sığdırır (ölçüsü ancak o zaman bilinir). */
+  private fitAfterRender(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    requestAnimationFrame(() => this.fitToScreen());
+  }
 
   // ── Kamera ────────────────────────────────────────────────────────────────
 
@@ -230,31 +332,31 @@ export class WorkflowCanvasComponent {
     if (rect) this.camera.update(camera => zoomAtCenter(camera, 1 / ZOOM_STEP, rect));
   }
 
+  /**
+   * %100'e döner, baktığı yeri kaybetmeden (viewport merkezi sabit). Eskiden
+   * kamera başlangıç noktasına zıplıyordu; şema ve başlangıç hapı görünürden
+   * kayboluyordu.
+   */
   resetZoom(): void {
-    this.camera.set(IDENTITY_CAMERA);
+    const rect = this.viewportRect();
+    if (!rect) {
+      this.camera.set(IDENTITY_CAMERA);
+      return;
+    }
+    this.camera.update(camera => zoomAtCenter(camera, 1 / camera.zoom, rect));
   }
 
-  /** Elle konumları bırakıp otomatik yerleşime döner; kamera başa alınır. */
+  /** Elle konumları bırakıp otomatik yerleşime döner; yeni yerleşim görünüre sığdırılır. */
   autoArrange(): void {
     this.liveOffsets.set({});
-    this.camera.set(IDENTITY_CAMERA);
     this.layoutReset.emit();
+    this.fitAfterRender();
   }
 
-  /**
-   * Tüm şemayı görünüre sığdırır ve sol-üst köşeye yaslar.
-   *
-   * Sınıra kenarlar da girer: sağdan dolaşan geri dönüş eğrileri kutuların
-   * dışına taşıyor, yalnız düğümlere göre sığdırınca kırpılıyordu.
-   */
+  /** Tüm şemayı (başlangıç hapı, geri dönüşler ve uç işaretleri dahil) görünüre sığdırır. */
   fitToScreen(): void {
     const element = this.viewportRef()?.nativeElement;
-    const bounds = boundsOf([
-      ...this.nodes(),
-      ...this.edges().map(({ geometry: g }) => ({
-        x: g.minX, y: g.minY, width: g.maxX - g.minX, height: g.maxY - g.minY
-      }))
-    ]);
+    const bounds = this.contentBounds();
     if (!element || !bounds) return;
 
     this.camera.set(fitToView(bounds, {
@@ -279,6 +381,37 @@ export class WorkflowCanvasComponent {
     return screenToWorld(event.clientX, event.clientY, rect, this.camera());
   }
 
+  // ── Kare başına tek güncelleme ────────────────────────────────────────────
+
+  private frameRequest = 0;
+  private frameJob: (() => void) | null = null;
+
+  /**
+   * pointermove saniyede 60'tan fazla gelebilir (yüksek tazelemeli ekran,
+   * tablet kalemi); her biri sinyal yazıp kenarları yeniden yönlendirseydi
+   * sürükleme takılırdı. Kare başına yalnız EN SON hareket uygulanır.
+   */
+  private scheduleFrame(job: () => void): void {
+    this.frameJob = job;
+    if (this.frameRequest) return;
+
+    this.frameRequest = requestAnimationFrame(() => {
+      this.frameRequest = 0;
+      const pending = this.frameJob;
+      this.frameJob = null;
+      pending?.();
+    });
+  }
+
+  /** Bırakışta bekleyen son hareketi hemen uygular — bırakılan konum kaybolmasın. */
+  private flushFrame(): void {
+    if (this.frameRequest) cancelAnimationFrame(this.frameRequest);
+    this.frameRequest = 0;
+    const pending = this.frameJob;
+    this.frameJob = null;
+    pending?.();
+  }
+
   // ── Zemin kaydırma ────────────────────────────────────────────────────────
 
   private panState: { startX: number; startY: number; origin: Camera } | null = null;
@@ -291,7 +424,7 @@ export class WorkflowCanvasComponent {
    */
   onSurfacePointerDown(event: PointerEvent): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    // Sağ tuş menüsü Faz 7'de gelecek; şimdilik tarayıcıya bırakılıyor.
+    // Sağ tuş tarayıcıya bırakılır (sağ tık menüsü sonraki adımda).
     if (event.button !== 0 && event.button !== 1) return;
     // Dokunmatikte ikinci parmak panState'i sıfırlayıp görünümü zıplatıyordu.
     if (!event.isPrimary) return;
@@ -311,13 +444,13 @@ export class WorkflowCanvasComponent {
     const state = this.panState;
     if (!state || !event.isPrimary) return;
 
-    this.camera.set(panBy(
-      state.origin,
-      event.clientX - state.startX,
-      event.clientY - state.startY));
+    const { clientX, clientY } = event;
+    this.scheduleFrame(() => this.camera.set(panBy(
+      state.origin, clientX - state.startX, clientY - state.startY)));
   };
 
   private readonly onSurfacePointerUp = (): void => {
+    this.flushFrame();
     this.panState = null;
     this.panning.set(false);
     document.removeEventListener('pointermove', this.onSurfacePointerMove);
@@ -333,6 +466,9 @@ export class WorkflowCanvasComponent {
 
   onNodeDragStart(event: PointerEvent, node: CanvasNode): void {
     if (!isPlatformBrowser(this.platformId) || !event.isPrimary) return;
+    // Yalnız sol tuş: sağ/orta tuş düğümü sürüklemeye başlıyor ve menü açıldığı
+    // için pointerup hiç gelmeyince düğüm imleci izlemeye devam ediyordu.
+    if (event.button !== 0) return;
 
     event.preventDefault();
     event.stopPropagation();
@@ -368,10 +504,12 @@ export class WorkflowCanvasComponent {
     const x = Math.max(0, state.originX + (event.clientX - state.startX) / zoom);
     const y = Math.max(0, state.originY + (event.clientY - state.startY) / zoom);
 
-    this.liveOffsets.update(current => ({ ...current, [state.key]: { x, y } }));
+    this.scheduleFrame(() =>
+      this.liveOffsets.update(current => ({ ...current, [state.key]: { x, y } })));
   };
 
   private readonly onNodeDragEnd = (): void => {
+    this.flushFrame();
     const state = this.dragState;
     this.dragState = null;
     document.removeEventListener('pointermove', this.onNodeDragMove);
@@ -386,14 +524,15 @@ export class WorkflowCanvasComponent {
 
   // ── Bağlantı çizme ────────────────────────────────────────────────────────
 
-  onPortDragStart(event: PointerEvent, node: CanvasNode, port: PortKind): void {
+  onPortDragStart(event: PointerEvent, node: CanvasNode, port: CanvasPort): void {
     if (!isPlatformBrowser(this.platformId) || this.locked() || !event.isPrimary) return;
+    if (event.button !== 0) return;
 
     event.preventDefault();
     event.stopPropagation();
 
     const point = this.toWorldPoint(event);
-    this.pendingEdge.set({ from: node.key, port, x: point.x, y: point.y });
+    this.pendingEdge.set({ from: node.key, port: port.kind, x: point.x, y: point.y });
 
     document.addEventListener('pointermove', this.onPortDragMove);
     document.addEventListener('pointerup', this.onPortDragEnd);
@@ -401,15 +540,18 @@ export class WorkflowCanvasComponent {
   }
 
   private readonly onPortDragMove = (event: PointerEvent): void => {
-    const pending = this.pendingEdge();
-    if (!pending || !event.isPrimary) return;
+    if (!this.pendingEdge() || !event.isPrimary) return;
 
     const point = this.toWorldPoint(event);
-    this.pendingEdge.set({ ...pending, x: point.x, y: point.y });
+    this.scheduleFrame(() => {
+      const pending = this.pendingEdge();
+      if (pending) this.pendingEdge.set({ ...pending, x: point.x, y: point.y });
+    });
   };
 
   /** İptal edilen jest bağlantı oluşturmaz — yalnız yarım çizgiyi temizler. */
   private readonly onPortDragCancel = (): void => {
+    this.flushFrame();
     this.pendingEdge.set(null);
     document.removeEventListener('pointermove', this.onPortDragMove);
     document.removeEventListener('pointerup', this.onPortDragEnd);
@@ -417,6 +559,7 @@ export class WorkflowCanvasComponent {
   };
 
   private readonly onPortDragEnd = (event: PointerEvent): void => {
+    this.flushFrame();
     const pending = this.pendingEdge();
     this.pendingEdge.set(null);
     document.removeEventListener('pointermove', this.onPortDragMove);
@@ -428,14 +571,32 @@ export class WorkflowCanvasComponent {
     const target = nodeAt(this.nodes(), this.toWorldPoint(event));
     // Kendine bağlantı yok sayılır: sonsuz döngü kurmanın en kolay yolu bu
     // ve kullanıcının bunu isteyerek yaptığı bir senaryo yok.
-    if (!target || target.key === pending.from) return;
+    if (!target || target.key.toLowerCase() === pending.from.toLowerCase()) return;
 
     this.edgeCreated.emit({ from: pending.from, to: target.key, port: pending.port });
   };
 
+  /** Bileşen kapanırken yarım kalan jestlerin document dinleyicilerini söker. */
+  private detachAll(): void {
+    if (this.frameRequest) cancelAnimationFrame(this.frameRequest);
+    this.frameRequest = 0;
+    this.frameJob = null;
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    document.removeEventListener('pointermove', this.onSurfacePointerMove);
+    document.removeEventListener('pointerup', this.onSurfacePointerUp);
+    document.removeEventListener('pointercancel', this.onSurfacePointerUp);
+    document.removeEventListener('pointermove', this.onNodeDragMove);
+    document.removeEventListener('pointerup', this.onNodeDragEnd);
+    document.removeEventListener('pointercancel', this.onNodeDragEnd);
+    document.removeEventListener('pointermove', this.onPortDragMove);
+    document.removeEventListener('pointerup', this.onPortDragEnd);
+    document.removeEventListener('pointercancel', this.onPortDragCancel);
+  }
+
   // ── Yardımcılar ───────────────────────────────────────────────────────────
 
   isSelected(node: CanvasNode): boolean {
-    return this.selectedKey() === node.key;
+    return (this.selectedKey() ?? '').toLowerCase() === node.key.toLowerCase();
   }
 }

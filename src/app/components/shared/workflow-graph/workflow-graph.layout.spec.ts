@@ -324,3 +324,34 @@ describe('layoutWorkflow', () => {
     expect(layout.nodes.find(n => n.key === 'finans')!.layer).toBe(1);
   });
 });
+
+describe('layoutWorkflow — döngü', () => {
+  function stepOf(key: string, onApprove?: string, onReject?: string): WorkflowStep {
+    return {
+      key, type: 'approval', name: key, assignment: { mode: 'role', roleId: 1 },
+      onApprove: onApprove ?? null, onReject: onReject ?? null
+    };
+  }
+
+  it('red ile başa dönen akışta başlangıç en üstte kalır, zincir sırayla iner', () => {
+    // REGRESYON: eski BFS döngüde düğümü yeniden kuyruğa sokuyordu; c→a reddinde
+    // c b'nin üstüne, a→b→c→d akışında başlangıç en alt satıra düşüyordu.
+    const layout = layoutWorkflow({
+      startStep: 'a', entityStatusMap: {},
+      steps: [stepOf('a', 'b'), stepOf('b', 'c'), stepOf('c', 'd', 'a'), stepOf('d')]
+    });
+
+    const layer = (key: string) => layout.nodes.find(n => n.key === key)!.layer;
+    expect([layer('a'), layer('b'), layer('c'), layer('d')]).toEqual([0, 1, 2, 3]);
+  });
+
+  it('başlangıca dönen geri kenar katmanlamaya katılmaz', () => {
+    const layout = layoutWorkflow({
+      startStep: 'a', entityStatusMap: {},
+      steps: [stepOf('a', 'b'), stepOf('b', 'c', 'a'), stepOf('c')]
+    });
+
+    const layer = (key: string) => layout.nodes.find(n => n.key === key)!.layer;
+    expect([layer('a'), layer('b'), layer('c')]).toEqual([0, 1, 2]);
+  });
+});

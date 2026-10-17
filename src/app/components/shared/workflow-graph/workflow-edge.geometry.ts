@@ -56,10 +56,10 @@ export interface EdgeBox {
 /**
  * Kenar çizim biçimi.
  *
- * `orthogonal` bugün kullanılmıyor ama parametre şimdiden duruyor: N-yollu
- * dallanma geldiğinde aynı iki düğüm arasındaki paralel eğriler üst üste biner
- * ve dik köşeli yola geçmek gerekir. Parametreyi sonradan eklemek iki çağıranı
- * da tekrar açmak demekti.
+ * Tasarım tuvali dik açılı, yuvarlak köşeli kenar kullanır (`routeOrthogonal`);
+ * çok çıkışlı adımlarda eğriler üst üste biniyordu. Salt-okunur önizleme şeması
+ * hâlâ Bézier'dir (`routeEdges`). `edgeGeometry(…, 'orthogonal')` keskin köşeli
+ * eski biçimdir ve spec'i biçimini sabitlediği için değiştirilmedi.
  */
 export type EdgeStyle = 'bezier' | 'orthogonal';
 
@@ -82,6 +82,11 @@ export interface EdgeGeometry {
   p2: Point;
   p3: Point;
   style: EdgeStyle;
+  /**
+   * Kırık çizgi (dik açılı) yolun köşe noktaları, uçlar dahil. Doluysa isabet
+   * testi bunları kullanır; yuvarlatılmış köşeler isabet için yeterince yakın.
+   */
+  points?: Point[];
 }
 
 /**
@@ -345,6 +350,10 @@ export function distanceToEdge(geometry: EdgeGeometry, point: Point, samples = E
   const { p0, p1, p2, p3 } = geometry;
   let best = Infinity;
 
+  if (geometry.points && geometry.points.length >= 2) {
+    return distanceToPolyline(geometry.points, point);
+  }
+
   if (geometry.style === 'orthogonal') {
     // Kırık çizgi: üç düz parçanın en yakınına bak.
     best = Math.min(
@@ -378,4 +387,221 @@ function distanceToSegment(point: Point, a: Point, b: Point): number {
   const t = Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSquared));
 
   return Math.hypot(point.x - (a.x + t * dx), point.y - (a.y + t * dy));
+}
+
+/** Noktanın kırık çizgiye (ardışık parçalar) en kısa uzaklığı. */
+export function distanceToPolyline(points: ReadonlyArray<Point>, point: Point): number {
+  let best = Infinity;
+  for (let i = 1; i < points.length; i++) {
+    best = Math.min(best, distanceToSegment(point, points[i - 1], points[i]));
+  }
+  return best;
+}
+
+// ── Dik açılı (orthogonal) yönlendirme ──────────────────────────────────────
+
+/** Dik açılı kenarın köşe yuvarlama yarıçapı (px). */
+export const EDGE_CORNER_RADIUS = 8;
+
+/**
+ * Köşeleri yuvarlatılmış kırık çizgi için SVG yolu.
+ *
+ * Her köşe, gelen ve giden parçanın kısa olanının yarısını aşmayan bir ikinci
+ * derece eğriyle (Q) yumuşatılır — kısa bir parçada yarıçap komşu köşeyle
+ * çakışmasın. Aynı noktada tekrar eden ya da aynı doğru üzerinde kalan ara
+ * noktalar atılır; düz hizadaki iki uç tek bir çizgi olur.
+ */
+export function roundedPolyline(points: ReadonlyArray<Point>, radius = EDGE_CORNER_RADIUS): string {
+  const pts = simplifyPolyline(points);
+  if (pts.length === 0) return '';
+
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+
+  for (let i = 1; i < pts.length - 1; i++) {
+    const prev = pts[i - 1];
+    const corner = pts[i];
+    const next = pts[i + 1];
+
+    const r = Math.min(radius, distance(prev, corner) / 2, distance(corner, next) / 2);
+    const entry = towards(corner, prev, r);
+    const exit = towards(corner, next, r);
+
+    d += ` L ${entry.x} ${entry.y} Q ${corner.x} ${corner.y} ${exit.x} ${exit.y}`;
+  }
+
+  if (pts.length > 1) {
+    const last = pts[pts.length - 1];
+    d += ` L ${last.x} ${last.y}`;
+  }
+
+  return d;
+}
+
+/** Tekrarlanan ve aynı doğru üzerindeki ara noktaları atar. */
+export function simplifyPolyline(points: ReadonlyArray<Point>): Point[] {
+  const unique: Point[] = [];
+  for (const point of points) {
+    const last = unique[unique.length - 1];
+    if (!last || last.x !== point.x || last.y !== point.y) unique.push(point);
+  }
+
+  if (unique.length < 3) return unique;
+
+  const result: Point[] = [unique[0]];
+  for (let i = 1; i < unique.length - 1; i++) {
+    const a = result[result.length - 1];
+    const b = unique[i];
+    const c = unique[i + 1];
+    const collinear = (a.x === b.x && b.x === c.x) || (a.y === b.y && b.y === c.y);
+    if (!collinear) result.push(b);
+  }
+  result.push(unique[unique.length - 1]);
+
+  return result;
+}
+
+/**
+ * Kenarların hepsini dik açılı yönlendirir; sonuç girdiyle AYNI sırada döner.
+ *
+ *   - İleri kenar: porttan aşağı, yatay bir "kanalda" hedefin hizasına, sonra
+ *     hedefin üst-ortasına. Kanal önce kaynağın hemen altındaki boşlukta denenir;
+ *     oradan inen dikey parça başka bir kutunun içinden geçecekse hedefin hemen
+ *     üstündeki boşluk kullanılır (çok katmanı atlayan kenarlar ara kutuları
+ *     kesmesin). Hizalı uçlar tek dikey çizgidir.
+ *   - Geri kenar (hedef kaynağın altında değil): kaynağın sağından çıkar, dikey
+ *     aralığındaki en sağ kutunun dışındaki şeritten dolaşır, hedefe sağından
+ *     girer. Kısa döngüler önce yönlendirilir ki içte kalsın (bkz. routeEdges).
+ */
+export function routeOrthogonal(
+  requests: ReadonlyArray<EdgeRequest>,
+  obstacles: ReadonlyArray<EdgeBox>,
+  radius = EDGE_CORNER_RADIUS
+): EdgeGeometry[] {
+  const result: EdgeGeometry[] = new Array(requests.length);
+  const back: Array<{ index: number; top: number; bottom: number }> = [];
+
+  requests.forEach((request, index) => {
+    if (isForward(request.source, request.target)) {
+      result[index] = forwardOrthogonal(request, obstacles, radius);
+      return;
+    }
+
+    const { source, target } = request;
+    back.push({
+      index,
+      top: Math.min(source.y, target.y),
+      bottom: Math.max(source.y + source.height, target.y + target.height)
+    });
+  });
+
+  back.sort((a, b) => (a.bottom - a.top) - (b.bottom - b.top));
+  const routed: Array<{ top: number; bottom: number }> = [];
+
+  for (const item of back) {
+    const { source, target } = requests[item.index];
+
+    const rightmost = Math.max(
+      source.x + source.width,
+      target.x + target.width,
+      ...obstacles
+        .filter(box => box.y < item.bottom && box.y + box.height > item.top)
+        .map(box => box.x + box.width));
+
+    const lane = routed.filter(other => other.top < item.bottom && other.bottom > item.top).length;
+    const clearX = rightmost + BACK_EDGE_BULGE + lane * BACK_EDGE_LANE_GAP;
+
+    const start: Point = { x: source.x + source.width, y: source.y + source.height / 2 };
+    const end: Point = { x: target.x + target.width, y: target.y + target.height / 2 };
+    const points = [start, { x: clearX, y: start.y }, { x: clearX, y: end.y }, end];
+
+    result[item.index] = polylineGeometry(points, radius, {
+      x: clearX,
+      y: (start.y + end.y) / 2 - LABEL_OFFSET
+    });
+    routed.push({ top: item.top, bottom: item.bottom });
+  }
+
+  return result;
+}
+
+function forwardOrthogonal(request: EdgeRequest, obstacles: ReadonlyArray<EdgeBox>, radius: number): EdgeGeometry {
+  const { source, target, sourceOffsetX } = request;
+
+  const x1 = source.x + (sourceOffsetX ?? source.width / 2);
+  const y1 = source.y + source.height;
+  const x2 = target.x + target.width / 2;
+  const y2 = target.y;
+
+  // Etiket portun hemen altında: hangi çıkıştan çıktığı okunur.
+  const label = { x: x1, y: y1 + Math.min(16, (y2 - y1) / 2) };
+
+  if (Math.abs(x1 - x2) < 0.5) {
+    return polylineGeometry([{ x: x1, y: y1 }, { x: x1, y: y2 }], radius, label);
+  }
+
+  const half = Math.min(ROW_GAP / 2, (y2 - y1) / 2);
+  const others = obstacles.filter(box => box !== source && box !== target);
+
+  const below = y1 + half;
+  if (!verticalHits(others, x2, below, y2)) {
+    return polylineGeometry(
+      [{ x: x1, y: y1 }, { x: x1, y: below }, { x: x2, y: below }, { x: x2, y: y2 }], radius, label);
+  }
+
+  const above = y2 - half;
+  const viaAbove = [{ x: x1, y: y1 }, { x: x1, y: above }, { x: x2, y: above }, { x: x2, y: y2 }];
+  if (!verticalHits(others, x1, y1, above)) {
+    return polylineGeometry(viaAbove, radius, label);
+  }
+
+  // İki kanal da bir kutudan geçiyor: kaynağa yakın olan tercih edilir (kenar
+  // en azından çıktığı yerde okunaklı kalsın).
+  return polylineGeometry(
+    [{ x: x1, y: y1 }, { x: x1, y: below }, { x: x2, y: below }, { x: x2, y: y2 }], radius, label);
+}
+
+/** x hizasındaki [y1, y2] dikey parçası herhangi bir kutunun içinden geçiyor mu? */
+function verticalHits(boxes: ReadonlyArray<EdgeBox>, x: number, y1: number, y2: number): boolean {
+  const top = Math.min(y1, y2);
+  const bottom = Math.max(y1, y2);
+  return boxes.some(box =>
+    x > box.x && x < box.x + box.width && box.y < bottom && box.y + box.height > top);
+}
+
+function polylineGeometry(points: Point[], radius: number, label: Point): EdgeGeometry {
+  const simplified = simplifyPolyline(points);
+  const xs = simplified.map(p => p.x);
+  const ys = simplified.map(p => p.y);
+  const first = simplified[0];
+  const last = simplified[simplified.length - 1];
+
+  return {
+    path: roundedPolyline(simplified, radius),
+    labelX: label.x,
+    labelY: label.y,
+    minX: Math.min(...xs),
+    minY: Math.min(...ys),
+    maxX: Math.max(...xs),
+    maxY: Math.max(...ys),
+    p0: first,
+    p1: simplified[1] ?? last,
+    p2: simplified[simplified.length - 2] ?? first,
+    p3: last,
+    style: 'orthogonal',
+    points: simplified
+  };
+}
+
+function distance(a: Point, b: Point): number {
+  return Math.hypot(b.x - a.x, b.y - a.y);
+}
+
+/** `from`'dan `to` yönünde `length` kadar ilerlemiş nokta. */
+function towards(from: Point, to: Point, length: number): Point {
+  const total = distance(from, to);
+  if (total === 0) return { ...from };
+  return {
+    x: from.x + ((to.x - from.x) / total) * length,
+    y: from.y + ((to.y - from.y) / total) * length
+  };
 }
