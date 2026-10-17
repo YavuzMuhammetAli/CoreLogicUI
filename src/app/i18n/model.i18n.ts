@@ -1,7 +1,7 @@
 import { Translations } from './translations.model';
 
 /**
- * model-list / model-data / model-detail / model-children / model-node / table-detail
+ * model-list / model-data / model-detail / model-node / table-detail
  * ekranlarına özel statik metinler. `common.i18n.ts`'de zaten tanımlı genel anahtarlar
  * (kaydet, vazgeç, sil, düzenle, ekle, yeni, ara, aktif/pasif vb.) burada tekrar tanımlanmaz.
  */
@@ -217,49 +217,6 @@ export const MODEL_I18N: Translations = {
   'record.stateSaved': { tr: 'Kaydedildi', en: 'Saved' },
   'record.stateFailed': { tr: 'Hata', en: 'Failed' },
   'record.statePending': { tr: 'Bekliyor', en: 'Pending' },
-
-  // ── model-children.component.html / .ts ──────────────────────────────────────
-  'model.children.loading': { tr: 'Alt modeller yükleniyor...', en: 'Loading sub-models...' },
-  'model.children.label': { tr: 'Alt Model', en: 'Sub-model' },
-  'model.children.refreshTitle': { tr: 'Yenile', en: 'Refresh' },
-  'model.children.refresh': { tr: 'Yenile', en: 'Refresh' },
-  'model.children.new': { tr: 'Yeni', en: 'New' },
-  'model.children.emptyMessage': { tr: 'Bu kayıda ait {typeName} kaydı yok. "Yeni" ile ekleyin.', en: 'There is no {typeName} record for this entry. Add one with "New".' },
-  'model.children.tableAria': { tr: '{typeName} kayıtları', en: '{typeName} records' },
-  'model.children.expandColumn': { tr: 'Alt Kayıtlar', en: 'Sub-records' },
-  'model.children.actionsColumn': { tr: 'İşlemler', en: 'Actions' },
-  'model.children.downloadFileTitle': { tr: 'Dosyayı indir', en: 'Download file' },
-  'model.children.download': { tr: 'İndir', en: 'Download' },
-  'model.children.collapse': { tr: 'Daralt', en: 'Collapse' },
-  'model.children.expand': { tr: 'Genişlet', en: 'Expand' },
-  'model.children.expandSubRecordsAria': { tr: '{action} alt kayıtlar', en: '{action} sub-records' },
-  'model.children.editRecordAria': { tr: 'Kaydı düzenle', en: 'Edit record' },
-  'model.children.edit': { tr: 'Düzenle', en: 'Edit' },
-  'model.children.deleteRecordAria': { tr: 'Kaydı sil', en: 'Delete record' },
-  'model.children.delete': { tr: 'Sil', en: 'Delete' },
-  'model.children.recordCount': { tr: '{count} kayıt', en: '{count} records' },
-  'model.children.dialogEditAria': { tr: 'Kaydı düzenle', en: 'Edit record' },
-  'model.children.dialogAddAria': { tr: 'Yeni kayıt ekle', en: 'Add new record' },
-  'model.children.editTitle': { tr: 'Kaydı Düzenle', en: 'Edit Record' },
-  'model.children.newRecordTitle': { tr: 'Yeni {typeName} Kaydı', en: 'New {typeName} Record' },
-  'model.children.closeFormAria': { tr: 'Formu kapat', en: 'Close form' },
-  'model.children.fkAutoLinked': { tr: '{fkColumn}: {parentId} (otomatik bağlandı)', en: '{fkColumn}: {parentId} (automatically linked)' },
-  'model.children.selectOption': { tr: 'Seçin...', en: 'Select...' },
-  'model.children.activeSuffix': { tr: '{label} aktif', en: '{label} active' },
-  'model.children.preview': { tr: 'Önizleme', en: 'Preview' },
-  'model.children.fileExists': { tr: 'Dosya mevcut', en: 'File exists' },
-  'model.children.download2': { tr: 'İndir', en: 'Download' },
-  'model.children.fieldRequired': { tr: '{label} zorunludur.', en: '{label} is required.' },
-  'model.children.cancel': { tr: 'İptal', en: 'Cancel' },
-  'model.children.update': { tr: 'Güncelle', en: 'Update' },
-  'model.children.save': { tr: 'Kaydet', en: 'Save' },
-  'model.children.metaLoadFailed': { tr: 'Model meta verisi alınamadı.', en: 'Model metadata could not be retrieved.' },
-  'model.children.childrenLoadFailed': { tr: 'Alt modeller yüklenemedi.', en: 'Sub-models could not be loaded.' },
-  'model.children.recordsFetchFailed': { tr: 'Kayıtlar alınamadı.', en: 'Records could not be retrieved.' },
-  'model.children.recordsLoadFailed': { tr: 'Kayıtlar yüklenemedi.', en: 'Records could not be loaded.' },
-  'model.children.operationFailed': { tr: 'İşlem başarısız.', en: 'Operation failed.' },
-  'model.children.deleteConfirmTitle': { tr: 'Alt kaydı sil', en: 'Delete sub-record' },
-  'model.children.deleteConfirm': { tr: 'ID:{id} kaydını silmek istediğinize emin misiniz?', en: 'Are you sure you want to delete record ID:{id}?' },
 
   // ── model-node.component.html / .ts ───────────────────────────────────────────
   'model.node.parentFkHint': { tr: 'Parent\'a FK bağlı', en: 'FK-linked to parent' },

@@ -9,8 +9,8 @@ import { PublishedModelService } from './published-model.service';
  * NEDEN AYRI SERVİS: dropdown artık tembel yükleniyor, yani hedef tablonun TAM listesi
  * hiçbir yerde tutulmuyor. Hücrelerde etiket gösterebilmek için görünen sayfadaki
  * benzersiz id'ler toplanıp kolon başına TEK `?ids=` isteğiyle çözülür — maliyet sayfa
- * boyutuyla sınırlıdır. Aynı mantık hem model-detail hem model-children'da gerektiği
- * için burada tek yerde durur.
+ * boyutuyla sınırlıdır. Kullanıcısı model-detail (alt model sekmelerindeki tablolar);
+ * önbellek bileşen ömründen bağımsız kalsın diye servis olarak durur.
  *
  * Önbellek anahtarı `hedefTablo|etiketKolonu` çiftidir: aynı tabloya farklı etiket
  * kolonuyla bakan iki kolon birbirinin etiketini kullanamaz. (Kaldırılan

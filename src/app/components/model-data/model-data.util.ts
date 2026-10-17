@@ -1,7 +1,7 @@
 /**
  * model-data.util.ts
  * Model veri ekranı için ortak yardımcı saf fonksiyonlar.
- * Hem ModelDataComponent hem de ModelChildrenComponent tarafından yeniden kullanılır.
+ * ModelDataComponent, model-detail ve ortak form/diyalog bileşenleri tarafından yeniden kullanılır.
  */
 
 import { PublishedColumn } from '../../services/published-model.service';
