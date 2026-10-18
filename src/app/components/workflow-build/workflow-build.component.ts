@@ -1,6 +1,6 @@
 import {
   ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, OnInit, PLATFORM_ID,
-  computed, inject, signal, viewChild
+  computed, effect, inject, signal, untracked, viewChild
 } from '@angular/core';
 import { CommonModule, Location, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -38,6 +38,7 @@ import {
 } from '../shared/workflow-canvas/workflow-canvas.component';
 import { Point } from '../shared/workflow-canvas/workflow-canvas.camera';
 import { WorkflowPaletteComponent } from './designer/workflow-palette.component';
+import { WorkflowInspectorComponent } from './designer/workflow-inspector.component';
 import {
   commandFor, isActivationTarget, isTypingTarget
 } from '../shared/workflow-canvas/workflow-canvas.keymap';
@@ -109,7 +110,7 @@ interface StepRow {
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe,
     WorkflowCanvasComponent, WorkflowStepDialogComponent, ConfirmDialogComponent,
-    WorkflowPaletteComponent
+    WorkflowPaletteComponent, WorkflowInspectorComponent
   ],
   providers: [WorkflowDesignerStore],
   templateUrl: './workflow-build.component.html',
@@ -255,6 +256,18 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
    * başka biri kaydettiyse sunucu reddeder (iyimser kilit). Yeni taslakta null.
    */
   private lastModifiedOn: string | null = null;
+
+  constructor() {
+    // Başlangıç adımı belgede birçok yoldan değişir (silme, yeniden adlandırma —
+    // özellik paneli dahil, geri alma); başlıktaki seçici her zaman belgeyi göstersin.
+    effect(() => {
+      const start = this.store.graph().startStep;
+      untracked(() => {
+        const control = this.form?.get('startStep');
+        if (control && control.value !== start) control.setValue(start, { emitEvent: false });
+      });
+    });
+  }
 
   ngOnInit(): void {
     this.isNew = this.route.snapshot.data['mode'] === 'new';
@@ -832,7 +845,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     this.syncFormFromDoc();
   }
 
-  private makeStart(key: string): void {
+  makeStart(key: string): void {
     this.store.dispatch('', doc => setStart(doc, findStep(doc, key)?.key ?? doc.graph.startStep));
     this.syncStartStep();
   }

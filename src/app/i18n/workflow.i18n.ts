@@ -107,6 +107,53 @@ export const WORKFLOW_I18N: Translations = {
     en: 'No steps yet. Drag a step here from the palette on the left, or click it.'
   },
 
+  // ── Özellik paneli ────────────────────────────────────────────────────────
+  'workflow.inspector.aria': { tr: 'Seçimin özellikleri', en: 'Selection properties' },
+  'workflow.inspector.title': { tr: 'Özellikler', en: 'Properties' },
+  'workflow.inspector.empty': {
+    tr: 'Ayarlarını görmek için bir adıma ya da bağlantıya tıklayın. Paletten yeni adım ekleyebilirsiniz.',
+    en: 'Click a step or connection to see its settings. Add new steps from the palette.'
+  },
+  'workflow.inspector.emptyReadonly': {
+    tr: 'Ayrıntılarını görmek için bir adıma tıklayın.',
+    en: 'Click a step to see its details.'
+  },
+  'workflow.inspector.keyHelp': {
+    tr: 'Değiştirince bağlantılar da güncellenir (alandan çıkınca uygulanır).',
+    en: 'Connections follow the change (applied when you leave the field).'
+  },
+  'workflow.inspector.key.empty': { tr: 'Anahtar boş olamaz.', en: 'The key cannot be empty.' },
+  'workflow.inspector.key.invalid': {
+    tr: 'Harf ile başlamalı; yalnız İngilizce harf, rakam ve alt çizgi içerebilir.',
+    en: 'Must start with a letter; only English letters, digits and underscores.'
+  },
+  'workflow.inspector.key.duplicate': { tr: 'Bu anahtar başka bir adımda kullanılıyor.', en: 'Another step already uses this key.' },
+  'workflow.inspector.assignee': { tr: 'Kime atanır', en: 'Assigned to' },
+  'workflow.inspector.choose': { tr: '— Seçin —', en: '— Select —' },
+  'workflow.inspector.noDue': { tr: 'Süre sınırı yok', en: 'No time limit' },
+  'workflow.inspector.statusLabelPlaceholder': { tr: 'Ör. Müdür onayında', en: 'e.g. Awaiting manager' },
+  'workflow.inspector.joinMode': { tr: 'İlerleme kuralı', en: 'Completion rule' },
+  'workflow.inspector.branches': { tr: 'Dallar', en: 'Branches' },
+  'workflow.inspector.branchesHelp': {
+    tr: 'Dalları ve atamalarını "Tüm ayarlar" penceresinde düzenleyin.',
+    en: 'Edit branches and their assignees in "All settings".'
+  },
+  'workflow.inspector.exits': { tr: 'Sonra', en: 'Then' },
+  'workflow.inspector.exit.approve': { tr: 'Onaylanınca', en: 'When approved' },
+  'workflow.inspector.exit.reject': { tr: 'Reddedilince', en: 'When rejected' },
+  'workflow.inspector.exit.done': { tr: 'Tamamlanınca', en: 'When completed' },
+  'workflow.inspector.exit.complete': { tr: 'Dallar tamamlanınca', en: 'When branches complete' },
+  'workflow.inspector.exit.anyReject': { tr: 'Bir dal reddedince', en: 'When a branch rejects' },
+  'workflow.inspector.allSettings': { tr: 'Tüm ayarlar…', en: 'All settings…' },
+  'workflow.inspector.details': { tr: 'Ayrıntılar…', en: 'Details…' },
+  'workflow.inspector.edge': { tr: 'Bağlantı', en: 'Connection' },
+  'workflow.inspector.target': { tr: 'Hedef adım', en: 'Target step' },
+  'workflow.inspector.multi': { tr: '{n} adım seçili', en: '{n} steps selected' },
+  'workflow.inspector.multiHelp': {
+    tr: 'Birlikte taşıyabilir, çoğaltabilir ya da silebilirsiniz. Tek bir adımın ayarları için yalnız ona tıklayın.',
+    en: 'You can move, duplicate or delete them together. Click a single step to see its settings.'
+  },
+
   // ── Düğüm türleri ve palet ────────────────────────────────────────────────
   'workflow.build.typeApproval': { tr: 'Tekil onay', en: 'Single approval' },
   'workflow.build.typeParallel': { tr: 'Paralel onay', en: 'Parallel approval' },

@@ -169,6 +169,35 @@ export function clearPositions(doc: WorkflowDesignDoc): WorkflowDesignDoc {
   return { ...doc, graph: { ...doc.graph, steps } };
 }
 
+/**
+ * Adımı yerinde dönüştürür (özellik panelinin alan değişiklikleri). Dönüşüm
+ * aynı nesneyi döndürürse belge de aynı kalır — boş geri al adımı oluşmaz.
+ */
+export function patchStep(
+  doc: WorkflowDesignDoc, key: string, transform: (step: WorkflowStep) => WorkflowStep
+): WorkflowDesignDoc {
+  const step = findStep(doc, key);
+  return step ? replaceStep(doc, step, transform(step)) : doc;
+}
+
+/** Adımın durum etiketini yazar; boş metin etiketi siler. */
+export function labelStep(doc: WorkflowDesignDoc, key: string, label: string): WorkflowDesignDoc {
+  const step = findStep(doc, key);
+  return step ? setStatusLabel(doc, step.key, label) : doc;
+}
+
+/**
+ * Adımın anahtarını değiştirir; ona yapılan tüm referanslar (çıkışlar,
+ * başlangıç, durum etiketi) taşınır. Geçerlilik ve tekillik çağıranın işi.
+ */
+export function renameStep(doc: WorkflowDesignDoc, oldKey: string, newKey: string): WorkflowDesignDoc {
+  const step = findStep(doc, oldKey);
+  if (!step || step.key === newKey) return doc;
+
+  const steps = doc.graph.steps.map(s => s === step ? { ...step, key: newKey } : s);
+  return renameReferences({ ...doc, graph: { ...doc.graph, steps } }, step.key, newKey);
+}
+
 /** Yeni adıma çakışmayan bir anahtar önerir (adim1, adim2, …). */
 export function suggestKey(doc: WorkflowDesignDoc, prefix = 'adim'): string {
   const existing = new Set(doc.graph.steps.map(step => step.key.toLowerCase()));

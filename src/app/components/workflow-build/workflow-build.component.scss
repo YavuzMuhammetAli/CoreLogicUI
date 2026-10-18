@@ -179,22 +179,34 @@
 
 // ── Tasarımcı yerleşimi: palet | tuval ──────────────────────────────────────
 
+// Geniş ekranda palet | tuval | özellik paneli. Daralınca panel tuvalin altına,
+// tabletin altında palet tuvalin üstüne iner; telefonda panel yok (pop-up var).
 .designer {
   display: grid;
-  grid-template-columns: 156px minmax(0, 1fr);
+  grid-template-columns: 156px minmax(0, 1fr) 300px;
   gap: var(--space-4);
   align-items: start;
-
-  @media (max-width: 1024px) {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .designer--readonly {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 300px;
 }
 
 .designer-canvas { min-width: 0; }
+
+@media (max-width: 1360px) {
+  .designer { grid-template-columns: 156px minmax(0, 1fr); }
+  .designer--readonly { grid-template-columns: minmax(0, 1fr); }
+  .designer-inspector { grid-column: 1 / -1; }
+}
+
+@media (max-width: 1024px) {
+  .designer { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .designer-inspector { display: none; }
+}
 
 // Tuval dokunmatikte zor (küçük portlar, çift dokunuşla açma); aynı işler Adımlar
 // sekmesinden ve adım diyaloğundan yapılabildiği için telefonda yalnız yönlendirme notu.

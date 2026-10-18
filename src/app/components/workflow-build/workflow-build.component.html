@@ -215,6 +215,14 @@
             (edgeCreated)="onEdgeCreated($event)"
             (menuAction)="onMenuAction($event)"
             (nodeOpened)="openStep($event)" />
+          <app-workflow-inspector
+            class="designer-inspector"
+            [roles]="roles()"
+            [users]="users()"
+            (openSettings)="openStep($event)"
+            (makeStart)="makeStart($event)"
+            (duplicate)="duplicateSelection()"
+            (remove)="deleteSelection()" />
         </div>
       </div>
     }

@@ -1,0 +1,200 @@
+<aside class="inspector" [attr.aria-label]="'workflow.inspector.aria' | t">
+  @if (node(); as step) {
+    <!-- ── Tek adım ─────────────────────────────────────────────────────── -->
+    <header class="inspector-head" [attr.data-tone]="kind()?.tone">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path [attr.d]="kind()?.icon ?? ''" />
+      </svg>
+      <span class="eyebrow">{{ (kind()?.labelKey ?? '') | t }}</span>
+      @if (isStart()) {
+        <span class="badge badge-meta">{{ 'workflow.canvas.start' | t }}</span>
+      }
+    </header>
+
+    <div class="inspector-body">
+      <div class="field">
+        <label for="ins-name">{{ 'workflow.build.stepName' | t }}</label>
+        <input id="ins-name" class="input" type="text" [value]="step.name"
+               [disabled]="readonly()" (input)="onName($event)" />
+      </div>
+
+      <div class="field">
+        <label for="ins-key">{{ 'workflow.build.stepKey' | t }}</label>
+        <input id="ins-key" class="input input-mono" type="text" [value]="step.key"
+               [disabled]="readonly()"
+               [attr.aria-invalid]="keyError() ? true : null"
+               [attr.aria-describedby]="keyError() ? 'ins-key-error' : 'ins-key-help'"
+               (change)="commitKey($event)" (keydown.enter)="$any($event.target).blur()" />
+        @if (keyError(); as problem) {
+          <span id="ins-key-error" class="field-error" role="alert">{{ 'workflow.inspector.key.' + problem | t }}</span>
+        } @else {
+          <span id="ins-key-help" class="field-help">{{ 'workflow.inspector.keyHelp' | t }}</span>
+        }
+      </div>
+
+      @if (step.type === 'parallel') {
+        <div class="field">
+          <label for="ins-join">{{ 'workflow.inspector.joinMode' | t }}</label>
+          <select id="ins-join" class="input" [disabled]="readonly()" (change)="onJoinMode($event)">
+            @for (option of joinModes; track option.value) {
+              <option [value]="option.value" [selected]="(step.mode ?? 'all') === option.value">{{ option.labelKey | t }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="inspector-section">
+          <span class="inspector-section-title">{{ 'workflow.inspector.branches' | t }}</span>
+          <ul class="inspector-list">
+            @for (branch of branches(); track branch.key) {
+              <li><span>{{ branch.name }}</span><span class="inspector-muted">{{ branch.assignee }}</span></li>
+            }
+          </ul>
+          <p class="field-help">{{ 'workflow.inspector.branchesHelp' | t }}</p>
+        </div>
+      } @else {
+        <div class="field">
+          <label for="ins-mode">{{ 'workflow.inspector.assignee' | t }}</label>
+          <select id="ins-mode" class="input" [disabled]="readonly()" (change)="onAssignmentMode($event)">
+            @for (option of assignmentModes; track option.value) {
+              <option [value]="option.value" [selected]="step.assignment?.mode === option.value">{{ option.labelKey | t }}</option>
+            }
+          </select>
+        </div>
+
+        @if (step.assignment?.mode === 'role') {
+          <div class="field">
+            <label for="ins-role">{{ 'workflow.build.assignRole' | t }}</label>
+            <select id="ins-role" class="input" [disabled]="readonly()" (change)="onAssignee($event)"
+                    [attr.aria-invalid]="!step.assignment?.roleId ? true : null">
+              <option value="" [selected]="!step.assignment?.roleId">{{ 'workflow.inspector.choose' | t }}</option>
+              @for (role of roles(); track role.id) {
+                <option [value]="role.id" [selected]="isSelectedRole(role.id)">{{ role.name }}</option>
+              }
+            </select>
+          </div>
+        } @else if (step.assignment?.mode === 'user') {
+          <div class="field">
+            <label for="ins-user">{{ 'workflow.build.assignUser' | t }}</label>
+            <select id="ins-user" class="input" [disabled]="readonly()" (change)="onAssignee($event)"
+                    [attr.aria-invalid]="!step.assignment?.userId ? true : null">
+              <option value="" [selected]="!step.assignment?.userId">{{ 'workflow.inspector.choose' | t }}</option>
+              @for (user of users(); track user.id) {
+                <option [value]="user.id" [selected]="isSelectedUser(user.id)">{{ user.firstName }} {{ user.lastName }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <div class="field">
+          <label for="ins-due">{{ 'workflow.build.dueHours' | t }}</label>
+          <input id="ins-due" class="input" type="number" min="1" step="1"
+                 [value]="step.sla?.dueHours ?? ''" [disabled]="readonly()"
+                 [placeholder]="'workflow.inspector.noDue' | t" (input)="onDueHours($event)" />
+        </div>
+
+        <label class="inspector-check">
+          <input type="checkbox" [checked]="step.form?.allowReject !== false" [disabled]="readonly()"
+                 (change)="onAllowReject($event)" />
+          {{ 'workflow.build.allowReject' | t }}
+        </label>
+      }
+
+      <div class="field">
+        <label for="ins-label">{{ 'workflow.build.statusLabel' | t }}</label>
+        <input id="ins-label" class="input" type="text" [value]="statusLabel()" [disabled]="readonly()"
+               [placeholder]="'workflow.inspector.statusLabelPlaceholder' | t" (input)="onStatusLabel($event)" />
+      </div>
+
+      <div class="inspector-section">
+        <span class="inspector-section-title">{{ 'workflow.inspector.exits' | t }}</span>
+        @for (exit of exits(); track exit.port) {
+          <div class="field">
+            <label [for]="'ins-exit-' + exit.port" class="inspector-exit-label"
+                   [class.inspector-exit-label--reject]="exit.kind === 'reject'">{{ exitLabelKey(step, exit.port) | t }}</label>
+            <select [id]="'ins-exit-' + exit.port" class="input" [disabled]="readonly()"
+                    (change)="onExitTarget(exit.port, $event)">
+              <option value="" [selected]="!exit.target">{{ terminalKey(exit.kind) | t }}</option>
+              @for (target of targets(); track target.key) {
+                <option [value]="target.key" [selected]="exit.target.toLowerCase() === target.key.toLowerCase()">{{ target.label }}</option>
+              }
+            </select>
+          </div>
+        }
+      </div>
+    </div>
+
+    <footer class="inspector-actions">
+      <button type="button" class="btn btn-secondary btn-sm" (click)="openSettings.emit(step.key)">
+        {{ (readonly() ? 'workflow.inspector.details' : 'workflow.inspector.allSettings') | t }}
+      </button>
+      @if (!readonly()) {
+        @if (!isStart()) {
+          <button type="button" class="btn btn-ghost btn-sm" (click)="makeStart.emit(step.key)">
+            {{ 'workflow.canvas.menu.setStart' | t }}
+          </button>
+        }
+        <button type="button" class="btn btn-ghost btn-sm" (click)="duplicate.emit()">
+          {{ 'workflow.canvas.menu.duplicate' | t }}
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm inspector-danger" (click)="remove.emit()">
+          {{ 'workflow.canvas.menu.delete' | t }}
+        </button>
+      }
+    </footer>
+  } @else if (edge()) {
+    @if (edge(); as e) {
+      <!-- ── Bağlantı ─────────────────────────────────────────────────────── -->
+      <header class="inspector-head">
+        <span class="eyebrow">{{ 'workflow.inspector.edge' | t }}</span>
+      </header>
+      <div class="inspector-body">
+        <p class="inspector-text">
+          <strong>{{ e.step.name || e.step.key }}</strong>
+          · <span [class.inspector-reject]="e.kind === 'reject'">{{ exitLabelKey(e.step, e.port) | t }}</span>
+        </p>
+        <div class="field">
+          <label for="ins-edge-target">{{ 'workflow.inspector.target' | t }}</label>
+          <select id="ins-edge-target" class="input" [disabled]="readonly()" (change)="onExitTarget(e.port, $event)">
+            @for (target of targets(); track target.key) {
+              <option [value]="target.key" [selected]="e.target.toLowerCase() === target.key.toLowerCase()">{{ target.label }}</option>
+            }
+          </select>
+        </div>
+      </div>
+      @if (!readonly()) {
+        <footer class="inspector-actions">
+          <button type="button" class="btn btn-ghost btn-sm inspector-danger" (click)="remove.emit()">
+            {{ 'workflow.canvas.menu.deleteEdge' | t }}
+          </button>
+        </footer>
+      }
+    }
+  } @else if (multiCount() > 1) {
+    <!-- ── Çoklu seçim ──────────────────────────────────────────────────── -->
+    <header class="inspector-head">
+      <span class="eyebrow">{{ 'workflow.inspector.multi' | t: { n: multiCount() } }}</span>
+    </header>
+    <div class="inspector-body">
+      <p class="inspector-text">{{ 'workflow.inspector.multiHelp' | t }}</p>
+    </div>
+    @if (!readonly()) {
+      <footer class="inspector-actions">
+        <button type="button" class="btn btn-ghost btn-sm" (click)="duplicate.emit()">
+          {{ 'workflow.canvas.menu.duplicate' | t }}
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm inspector-danger" (click)="remove.emit()">
+          {{ 'workflow.canvas.menu.delete' | t }}
+        </button>
+      </footer>
+    }
+  } @else {
+    <!-- ── Seçim yok ────────────────────────────────────────────────────── -->
+    <header class="inspector-head">
+      <span class="eyebrow">{{ 'workflow.inspector.title' | t }}</span>
+    </header>
+    <div class="inspector-body">
+      <p class="inspector-text">{{ (readonly() ? 'workflow.inspector.emptyReadonly' : 'workflow.inspector.empty') | t }}</p>
+    </div>
+  }
+</aside>
