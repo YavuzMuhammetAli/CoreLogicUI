@@ -305,7 +305,43 @@ export interface WorkflowForm {
   allowReject?: boolean;
 }
 
-export type WorkflowStepType = 'approval' | 'parallel';
+export type WorkflowStepType = 'approval' | 'parallel' | 'condition' | 'end';
+
+/** Koşul durumundaki satırların birleşimi. */
+export type WorkflowCaseMatch = 'all' | 'any';
+
+/** Bitiş düğümünün sonucu. */
+export type WorkflowEndOutcome = 'completed' | 'rejected';
+
+/**
+ * Koşul düğümünün bir durumu: satırlar (hepsi/herhangi biri) ya da formül
+ * (otomatik değer dili, sonucu doğru/yanlış). Sırayla denenir, ilk eşleşen kazanır.
+ */
+export interface WorkflowCase {
+  key: string;
+  label?: string | null;
+  match?: WorkflowCaseMatch | null;
+  when: WorkflowCondition[];
+  expression?: string | null;
+  to?: string | null;
+}
+
+/** Koşul satırı operatörleri: tetik operatörleri + boş/dolu denetimi (backend WorkflowCaseOperators). */
+export const CASE_OPERATORS: ReadonlyArray<{ value: string; labelKey: string }> = [
+  { value: 'eq',         labelKey: 'report.operator.eq' },
+  { value: 'ne',         labelKey: 'report.operator.ne' },
+  { value: 'gt',         labelKey: 'report.operator.gt' },
+  { value: 'ge',         labelKey: 'report.operator.ge' },
+  { value: 'lt',         labelKey: 'report.operator.lt' },
+  { value: 'le',         labelKey: 'report.operator.le' },
+  { value: 'contains',   labelKey: 'report.operator.contains' },
+  { value: 'startswith', labelKey: 'report.operator.startswith' },
+  { value: 'isempty',    labelKey: 'workflow.case.operator.isempty' },
+  { value: 'notempty',   labelKey: 'workflow.case.operator.notempty' }
+];
+
+/** Değer girilmeyen operatörler. */
+export const VALUELESS_OPERATORS: ReadonlySet<string> = new Set(['isempty', 'notempty']);
 
 /** Paralel adımda ilerleme kuralı — backend WorkflowJoinModes ile aynı. */
 export type WorkflowJoinMode = 'all' | 'any';
@@ -339,6 +375,12 @@ export interface WorkflowStep {
   mode?: WorkflowJoinMode | null;
   onComplete?: string | null;
   onAnyReject?: string | null;
+  // ── Yalnızca type = condition ─────────────────────────────────────────────
+  cases?: WorkflowCase[];
+  /** Hiçbir durum eşleşmezse gidilecek adım (zorunlu). */
+  defaultTo?: string | null;
+  // ── Yalnızca type = end ───────────────────────────────────────────────────
+  outcome?: WorkflowEndOutcome | null;
 
   /**
    * Canvas'ta elle taşınmış konum. YOKSA otomatik yerleşim kullanılır —
@@ -401,6 +443,45 @@ export interface WorkflowStepInfo {
   key: string;
   name: string;
   isParallel: boolean;
+  /** Adım tipi — Bitiş geri alma hedefi olamaz. */
+  type?: WorkflowStepType;
+}
+
+// ── Simülasyon (POST /Workflow/simulate) ─────────────────────────────────────
+
+export interface WorkflowSimDecision {
+  stepKey: string;
+  branchKey?: string | null;
+  decision: 'approve' | 'reject';
+}
+
+export interface WorkflowSimulateRequest {
+  definition: Partial<WorkflowDefinition>;
+  /** Örnek kayıt (kolon → değer); entityId verilirse yok sayılır. */
+  record?: Record<string, string | number | boolean | null>;
+  entityId?: number | null;
+  decisions: WorkflowSimDecision[];
+}
+
+export type WorkflowSimOutcome = 'completed' | 'rejected' | 'waiting' | 'incident' | 'failed' | 'limit';
+
+export interface WorkflowSimStep {
+  seq: number;
+  stepKey: string;
+  type: string;
+  /** Adımdan çıkılan port (approve, reject, case:x, default…). */
+  port?: string | null;
+  caseKey?: string | null;
+  decision?: string | null;
+}
+
+export interface WorkflowSimulation {
+  outcome: WorkflowSimOutcome;
+  endStepKey?: string | null;
+  /** Beklenen ya da hatalı adım. */
+  stopStepKey?: string | null;
+  message?: string | null;
+  path: WorkflowSimStep[];
 }
 
 /** Görevi başka bir kullanıcıya/role devretme isteği. */

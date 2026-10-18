@@ -1,5 +1,5 @@
 import { WorkflowStep } from '../../models/workflow.model';
-import { exitForKind, exitsOf, mapRefs, sameKey, setExit } from './workflow-exits';
+import { caseKeyOf, casePort, exitForKind, exitsOf, mapRefs, sameKey, setExit } from './workflow-exits';
 
 const approval: WorkflowStep = {
   key: 'mudur', type: 'approval', name: 'Müdür', onApprove: 'finans', onReject: ''
@@ -61,5 +61,46 @@ describe('workflow-exits', () => {
 
     expect(mapRefs(approval, key => key)).toBe(approval);
     expect(mapRefs(approval, key => key === 'finans' ? null : key).onApprove).toBeNull();
+  });
+
+  describe('koşul ve bitiş', () => {
+    const condition: WorkflowStep = {
+      key: 'tutar', type: 'condition', name: 'Tutar?', defaultTo: 'son',
+      cases: [
+        { key: 'buyuk', label: 'Büyük', when: [], to: 'finans' },
+        { key: 'acil', label: null, when: [], to: null }
+      ]
+    };
+
+    it('koşul: durum başına nötr port + varsayılan, terminale düşmez', () => {
+      const exits = exitsOf(condition);
+      expect(exits.map(e => e.port)).toEqual(['case:buyuk', 'case:acil', 'default']);
+      expect(exits.every(e => e.kind === 'neutral' && e.fallback === null)).toBeTrue();
+      expect(exits.map(e => e.label)).toEqual(['Büyük', 'acil', null]);
+      expect(exits.map(e => e.target)).toEqual(['finans', null, 'son']);
+    });
+
+    it('bitişin çıkışı yok', () => {
+      expect(exitsOf({ key: 'son', type: 'end', name: 'Son', outcome: 'completed' })).toEqual([]);
+    });
+
+    it('setExit durum ve varsayılan yolu yazar; değişmeyende aynı nesne', () => {
+      expect(setExit(condition, casePort('acil'), 'mudur').cases![1].to).toBe('mudur');
+      expect(setExit(condition, 'default', 'red').defaultTo).toBe('red');
+      expect(setExit(condition, casePort('buyuk'), 'finans')).toBe(condition);
+      expect(setExit(condition, casePort('yok'), 'x')).toBe(condition);
+      expect(setExit(condition, 'approve', 'x')).toBe(condition);
+    });
+
+    it('mapRefs koşul yollarını da taşır', () => {
+      const renamed = mapRefs(condition, key => key === 'finans' ? 'muhasebe' : key === 'son' ? null : key);
+      expect(renamed.cases![0].to).toBe('muhasebe');
+      expect(renamed.defaultTo).toBeNull();
+    });
+
+    it('port ↔ durum anahtarı', () => {
+      expect(caseKeyOf('case:buyuk')).toBe('buyuk');
+      expect(caseKeyOf('default')).toBeNull();
+    });
   });
 });

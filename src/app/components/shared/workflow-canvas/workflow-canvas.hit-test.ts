@@ -2,7 +2,7 @@ import { WorkflowGraph, WorkflowStep } from '../../../models/workflow.model';
 import {
   EdgeGeometry, Point, distanceToEdge, nodeSize, portPositions
 } from '../workflow-graph/workflow-edge.geometry';
-import { ExitPort, exitsOf } from '../../../utils/workflow/workflow-exits';
+import { ExitKind, ExitPort, exitsOf } from '../../../utils/workflow/workflow-exits';
 
 /**
  * Canvas düğüm/kenar yerleşimi ve isabet testi — SAF fonksiyonlar, Angular yok.
@@ -11,8 +11,8 @@ import { ExitPort, exitsOf } from '../../../utils/workflow/workflow-exits';
  * isabet kararı buradadır, dolayısıyla TestBed'siz test edilebilir.
  */
 
-/** Sürüklenen bağlantının hangi çıkıştan başladığı. */
-export type PortKind = 'approve' | 'reject';
+/** Port türü: olumlu (onay), olumsuz (red) ya da nötr (koşul yolu). */
+export type PortKind = ExitKind;
 
 /** Düğümün altındaki bir çıkış portu. */
 export interface CanvasPort {
@@ -22,6 +22,8 @@ export interface CanvasPort {
   offset: number;
   /** Hedef adım; boşsa akış bu çıkışta biter (terminal). */
   target: string | null;
+  /** Koşul durumunun etiketi; varsayılan yol ve onay/red'de null. */
+  label: string | null;
 }
 
 /** Canvas'ta çizilen düğüm — konum ve ölçü dahil. */
@@ -219,7 +221,8 @@ export function portsOf(step: WorkflowStep, width: number): CanvasPort[] {
     port: exit.port,
     kind: exit.kind,
     offset: offsets[index],
-    target: exit.target
+    target: exit.target,
+    label: exit.label ?? null
   }));
 }
 

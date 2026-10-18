@@ -18,6 +18,7 @@ import {
   WorkflowDefinition,
   WorkflowGraph,
   WorkflowIssue,
+  WorkflowSimulation,
   WorkflowStep
 } from '../../models/workflow.model';
 import { Role } from '../../models/role';
@@ -28,9 +29,9 @@ import { DataResponseModel } from '../../models/dataResponseModel';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { HasUnsavedChanges } from '../../guards/unsaved-changes.guard';
 import { markDirty } from '../../utils/change-detection';
-import { exitForKind, exitsOf, sameKey } from '../../utils/workflow/workflow-exits';
+import { ExitPort, exitsOf, sameKey } from '../../utils/workflow/workflow-exits';
 import {
-  NodeKind, createStep, nodeKindInfo, nodeKindOf
+  NodeKind, createStep, nodeKindInfo, nodeKindOf, nodeTone
 } from '../../utils/workflow/workflow-node-types';
 import { SummaryLookup, assignmentSummary, stepSummary } from '../../utils/workflow/workflow-step-summary';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
@@ -42,6 +43,8 @@ import { Point } from '../shared/workflow-canvas/workflow-canvas.camera';
 import { WorkflowPaletteComponent } from './designer/workflow-palette.component';
 import { WorkflowInspectorComponent } from './designer/workflow-inspector.component';
 import { WorkflowIssuesPanelComponent } from './designer/workflow-issues-panel.component';
+import { WorkflowSimulatePanelComponent } from './designer/workflow-simulate-panel.component';
+import { WorkflowOverlay, simulationOverlay } from '../../utils/workflow/workflow-overlay';
 import {
   IssueRow, badgeTitle, countIssues, issueRows, rowsByStep
 } from './designer/workflow-issues';
@@ -124,7 +127,8 @@ interface StepRow {
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe,
     WorkflowCanvasComponent, WorkflowStepDialogComponent, ConfirmDialogComponent,
-    WorkflowPaletteComponent, WorkflowInspectorComponent, WorkflowIssuesPanelComponent
+    WorkflowPaletteComponent, WorkflowInspectorComponent, WorkflowIssuesPanelComponent,
+    WorkflowSimulatePanelComponent
   ],
   providers: [WorkflowDesignerStore],
   templateUrl: './workflow-build.component.html',
@@ -217,6 +221,19 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   private readonly validationKey = computed(() =>
     this.docReady() && !this.store.readonly() ? semanticKey(this.store.doc()) : null);
 
+  // ── Simülasyon ────────────────────────────────────────────────────────────
+
+  /** Simülasyon paneli açık mı (özellik panelinin yerini alır). */
+  readonly simulating = signal(false);
+
+  /** Son simülasyonun şemadaki yolu; belge anlamca değişince silinir (eskimiş yol yanıltır). */
+  readonly simOverlay = signal<WorkflowOverlay | null>(null);
+
+  /** Simülasyona gönderilen tanım — kaydedilmemiş taslak da koşturulabilir. */
+  readonly simPayload = computed(() => docToPayload(this.store.doc(), this.editingId));
+
+  private readonly semanticDoc = computed(() => semanticKey(this.store.doc()));
+
   /** Sorun satırları — dil ya da adım adı değişince metinler yenilenir. */
   readonly issueRows = computed<IssueRow[]>(() => {
     this.languageService.lang();
@@ -249,7 +266,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
       const counts = countIssues(rows);
       meta[key] = {
         kindLabel: lookup.t(info.labelKey),
-        tone: info.tone,
+        tone: nodeTone(step),
         icon: info.icon,
         summary: stepSummary(step, lookup),
         errors: counts.errors,
@@ -268,8 +285,10 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     const byStep = this.stepIssues();
 
     return graph.steps.map(step => {
-      const [positive, negative] = exitsOf(step);
+      const exits = exitsOf(step);
+      const [positive, negative] = exits;
       const counts = countIssues(byStep[step.key.toLowerCase()] ?? []);
+      const targets = this.exitColumns(step.type, exits, positive?.target, negative?.target);
       return {
         key: step.key,
         name: step.name,
@@ -279,8 +298,8 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
         warnings: counts.warnings,
         typeKey: nodeKindInfo(nodeKindOf(step)).labelKey,
         assignment: assignmentSummary(step, lookup),
-        approveTarget: positive?.target || this.languageService.t('workflow.build.terminalCompleted'),
-        rejectTarget: negative?.target || this.languageService.t('workflow.build.terminalRejected')
+        approveTarget: targets[0],
+        rejectTarget: targets[1]
       };
     });
   });
@@ -322,6 +341,17 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
         if (control && control.value !== start) control.setValue(start, { emitEvent: false });
       });
     });
+
+    // Şemadaki simülasyon yolu, akış ANLAMCA değişince silinir (taşımak silmez):
+    // eski yolu yeni şemanın üstünde göstermek yanıltırdı.
+    let lastSemantic: string | null = null;
+    effect(() => {
+      const key = this.semanticDoc();
+      untracked(() => {
+        if (lastSemantic !== null && key !== lastSemantic) this.simOverlay.set(null);
+        lastSemantic = key;
+      });
+    }, { allowSignalWrites: true });
 
     // Canlı doğrulama: belge (konumlar hariç) değişip durulunca sunucuya sorulur;
     // yeni düzenleme gelirse önceki istek iptal edilir. Ağ hatasında son sonuç
@@ -514,7 +544,8 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
       key,
       name: t(nodeKindInfo(kind).defaultNameKey),
       completeLabel: t('workflow.node.taskComplete'),
-      branchNames: [t('workflow.node.branchName', { n: 1 }), t('workflow.node.branchName', { n: 2 })]
+      branchNames: [t('workflow.node.branchName', { n: 1 }), t('workflow.node.branchName', { n: 2 })],
+      caseLabel: t('workflow.case.firstLabel')
     });
 
     this.store.dispatch('', doc => {
@@ -686,6 +717,22 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   }
 
   // ── Gönderim ──────────────────────────────────────────────────────────────
+
+  // ── Simülasyon ────────────────────────────────────────────────────────────
+
+  openSimulation(): void {
+    this.setTab('canvas');
+    this.simulating.set(true);
+  }
+
+  closeSimulation(): void {
+    this.simulating.set(false);
+    this.simOverlay.set(null);
+  }
+
+  onSimulated(result: WorkflowSimulation | null): void {
+    this.simOverlay.set(result ? simulationOverlay(result) : null);
+  }
 
   // ── Sorunlar ──────────────────────────────────────────────────────────────
 
@@ -903,13 +950,30 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
    * (olumlu/olumsuz) bildirir; adımın gerçek çıkışı (onay/red ya da
    * tamamlanma/herhangi biri reddederse) tip kataloğundan çözülür.
    */
-  onEdgeCreated(event: { from: string; to: string; port: 'approve' | 'reject' }): void {
-    this.store.dispatch('', doc => {
-      const source = findStep(doc, event.from);
-      const exit = source ? exitForKind(source, event.port) : undefined;
-      return exit ? connect(doc, event.from, exit.port, event.to) : doc;
-    });
+  /** Porttan çizilen bağlantı — port kimliği tuvalden gelir (koşulun her durumu ayrı porttur). */
+  onEdgeCreated(event: { from: string; to: string; exitPort: ExitPort }): void {
+    this.store.dispatch('', doc => connect(doc, event.from, event.exitPort, event.to));
   }
+
+  /**
+   * Adım listesinin "onaylanırsa / reddedilirse" sütunları. Koşulda tüm yollar
+   * tek sütunda ("Evet → finans · Diğer → son"), Bitiş'te çıkış yok.
+   */
+  private exitColumns(
+    type: string, exits: ReturnType<typeof exitsOf>, approve?: string | null, reject?: string | null
+  ): [string, string] {
+    const t = (key: string) => this.languageService.t(key);
+    if (type === 'end') return ['—', '—'];
+    if (type === 'condition') {
+      const paths = exits.map(e => `${e.label ?? t('workflow.canvas.edgeDefault')} → ${e.target ?? '—'}`);
+      return [paths.join(' · '), '—'];
+    }
+    return [approve || t('workflow.build.terminalCompleted'), reject || t('workflow.build.terminalRejected')];
+  }
+
+  /** Pop-up'ın hedef seçicisi için adım adları. */
+  readonly stepOptions = computed(() =>
+    this.store.graph().steps.map(step => ({ key: step.key, name: step.name })));
 
   onSelectionChange(selection: CanvasSelection): void {
     this.store.selection.set(selection);

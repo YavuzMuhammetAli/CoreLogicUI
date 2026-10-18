@@ -9,6 +9,13 @@
   </span>
   <div class="cluster">
     <a routerLink="/workflows" class="btn btn-ghost btn-sm">{{ 'common.cancel' | t }}</a>
+    <!-- Simülasyon geniş ekranda (tuvalin yanında); telefonda tuval yok. -->
+    <button type="button" class="btn btn-ghost btn-sm simulate-btn" [class.simulate-btn--active]="simulating()"
+            (click)="simulating() ? closeSimulation() : openSimulation()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4l13 8-13 8z" /></svg>
+      {{ 'workflow.simulate.open' | t }}
+    </button>
     @if (readonlyMode()) {
       <button type="button" class="btn btn-primary" [disabled]="saving" (click)="startNewVersion()">
         {{ 'workflow.build.newVersion' | t }}
@@ -211,6 +218,7 @@
             class="designer-canvas"
             [graph]="canvasGraph()"
             [nodeMeta]="nodeMeta()"
+            [overlay]="simOverlay()"
             [selectedNodes]="store.selection().nodes"
             [selectedEdge]="store.selection().edge"
             [readonly]="readonlyMode()"
@@ -223,15 +231,25 @@
             (edgeCreated)="onEdgeCreated($event)"
             (menuAction)="onMenuAction($event)"
             (nodeOpened)="openStep($event)" />
-          <app-workflow-inspector
-            class="designer-inspector"
-            [roles]="roles()"
-            [users]="users()"
-            [issues]="selectedIssues()"
-            (openSettings)="openStep($event)"
-            (makeStart)="makeStart($event)"
-            (duplicate)="duplicateSelection()"
-            (remove)="deleteSelection()" />
+          @if (simulating()) {
+            <app-workflow-simulate-panel
+              class="designer-inspector"
+              [graph]="store.graph()"
+              [payload]="simPayload()"
+              [columns]="modelColumnMeta"
+              (simulated)="onSimulated($event)"
+              (closed)="closeSimulation()" />
+          } @else {
+            <app-workflow-inspector
+              class="designer-inspector"
+              [roles]="roles()"
+              [users]="users()"
+              [issues]="selectedIssues()"
+              (openSettings)="openStep($event)"
+              (makeStart)="makeStart($event)"
+              (duplicate)="duplicateSelection()"
+              (remove)="deleteSelection()" />
+          }
         </div>
       </div>
     }
@@ -327,6 +345,7 @@
     [users]="users()"
     [columns]="modelColumnMeta"
     [stepKeys]="stepKeys()"
+    [steps]="stepOptions()"
     (saved)="onStepSaved($event)"
     (cancelled)="closeStepDialog()" />
 }

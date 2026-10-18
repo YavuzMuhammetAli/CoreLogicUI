@@ -35,7 +35,12 @@ export interface IssueCounts {
 export function issueText(issue: WorkflowIssue, i18n: IssueText): string {
   const key = `workflow.issue.${issue.code}`;
   const params: Record<string, string | number> = { ...(issue.args ?? {}) };
-  if (issue.port) params['port'] = i18n.t(`workflow.inspector.exit.${issue.port}`);
+  if (issue.port) {
+    // Koşul yolunun adı durumun etiketidir (sunucu "label" argümanında tırnaklı yollar).
+    params['port'] = issue.port.startsWith('case:')
+      ? (issue.args?.['label'] ?? issue.port.slice(5)).replace(/"/g, '')
+      : i18n.t(`workflow.inspector.exit.${issue.port}`);
+  }
 
   const text = i18n.t(key, params);
   return text === key ? issue.message : text;

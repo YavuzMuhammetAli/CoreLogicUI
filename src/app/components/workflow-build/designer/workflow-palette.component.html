@@ -1,7 +1,8 @@
 <div class="palette" role="toolbar" [attr.aria-label]="'workflow.palette.aria' | t">
-  <span class="eyebrow palette-title">{{ 'workflow.palette.title' | t }}</span>
+  @for (group of groups; track group.titleKey) {
+  <span class="eyebrow palette-title">{{ group.titleKey | t }}</span>
 
-  @for (kind of kinds; track kind.kind) {
+  @for (kind of group.kinds; track kind.kind) {
     <button type="button" class="palette-item"
             [attr.data-kind]="kind.kind"
             [attr.data-tone]="kind.tone"
@@ -18,6 +19,7 @@
       </span>
       <span class="palette-label">{{ kind.labelKey | t }}</span>
     </button>
+  }
   }
 
   <p class="palette-help">{{ 'workflow.palette.help' | t }}</p>

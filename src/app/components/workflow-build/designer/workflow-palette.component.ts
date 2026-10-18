@@ -24,7 +24,11 @@ export class WorkflowPaletteComponent {
 
   readonly add = output<NodeKind>();
 
-  readonly kinds = NODE_KINDS;
+  /** Gruplar: insan adımları, akışı yönlendiren adımlar. */
+  readonly groups = [
+    { titleKey: 'workflow.palette.human', kinds: NODE_KINDS.filter(k => k.category === 'human') },
+    { titleKey: 'workflow.palette.flow', kinds: NODE_KINDS.filter(k => k.category === 'flow') }
+  ];
 
   onDragStart(event: DragEvent, kind: NodeKind): void {
     if (this.disabled() || !event.dataTransfer) {

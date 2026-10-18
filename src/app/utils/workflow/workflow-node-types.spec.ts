@@ -1,6 +1,6 @@
 import { WorkflowStep } from '../../models/workflow.model';
 import { exitsOf } from './workflow-exits';
-import { NODE_KINDS, createStep, isNodeKind, nodeKindInfo, nodeKindOf } from './workflow-node-types';
+import { NODE_KINDS, createStep, isNodeKind, nodeKindInfo, nodeKindOf, nodeTone } from './workflow-node-types';
 import { assignmentSummary, assignmentText, stepSummary, SummaryLookup } from './workflow-step-summary';
 
 const lookup: SummaryLookup = {
@@ -46,6 +46,28 @@ describe('workflow-node-types', () => {
     const step = createStep('approval', { key: 'a', name: 'A' });
     expect(step.assignment).toEqual({ mode: 'role', roleId: null });
     expect(assignmentText(step.assignment, lookup)).toBe('—');
+  });
+});
+
+describe('koşul ve bitiş türleri', () => {
+  it('yeni koşul bir durum ve boş varsayılan yolla başlar', () => {
+    const step = createStep('condition', { key: 'k', name: 'K', caseLabel: 'Evet' });
+    expect(nodeKindOf(step)).toBe('condition');
+    expect(step.cases?.map(c => c.label)).toEqual(['Evet']);
+    expect(step.defaultTo).toBeNull();
+    expect(exitsOf(step).map(e => e.port)).toEqual(['case:durum1', 'default']);
+  });
+
+  it('bitiş rengi sonuca göre', () => {
+    const end = createStep('end', { key: 'son', name: 'Son' });
+    expect(nodeTone(end)).toBe('success');
+    expect(nodeTone({ ...end, outcome: 'rejected' })).toBe('danger');
+    expect(nodeKindInfo('condition').automatic).toBeTrue();
+  });
+
+  it('özet: koşulda durum sayısı, bitişte sonuç', () => {
+    expect(stepSummary(createStep('condition', { key: 'k', name: 'K' }), lookup)).toBe('workflow.node.caseCount:{"n":1}');
+    expect(stepSummary(createStep('end', { key: 's', name: 'S' }), lookup)).toBe('workflow.node.endCompleted');
   });
 });
 

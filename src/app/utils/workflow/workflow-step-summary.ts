@@ -30,13 +30,21 @@ export function assignmentText(assignment: WorkflowAssignment | null | undefined
 
 /** Liste sütunu: tekil adımda atama, paralelde dal sayısı. */
 export function assignmentSummary(step: WorkflowStep, lookup: SummaryLookup): string {
-  return step.type === 'parallel'
-    ? lookup.t('workflow.build.branchCount', { n: (step.branches ?? []).length })
-    : assignmentText(step.assignment, lookup);
+  switch (step.type) {
+    case 'parallel':  return lookup.t('workflow.build.branchCount', { n: (step.branches ?? []).length });
+    case 'condition': return lookup.t('workflow.node.automatic');
+    case 'end':       return '—';
+    default:          return assignmentText(step.assignment, lookup);
+  }
 }
 
-/** Kartın özet satırı: atama özeti, varsa "· 48 sa" süre sınırı. */
+/** Kartın özet satırı: atama özeti, varsa "· 48 sa" süre sınırı; koşulda durum sayısı, bitişte sonuç. */
 export function stepSummary(step: WorkflowStep, lookup: SummaryLookup): string {
+  if (step.type === 'condition') return lookup.t('workflow.node.caseCount', { n: (step.cases ?? []).length });
+  if (step.type === 'end') {
+    return lookup.t(step.outcome === 'rejected' ? 'workflow.node.endRejected' : 'workflow.node.endCompleted');
+  }
+
   const parts = [assignmentSummary(step, lookup)];
   const due = step.type === 'parallel' ? null : step.sla?.dueHours;
   if (due && due > 0) parts.push(lookup.t('workflow.node.hours', { n: due }));

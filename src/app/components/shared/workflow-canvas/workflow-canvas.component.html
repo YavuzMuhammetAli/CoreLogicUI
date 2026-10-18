@@ -64,6 +64,7 @@
      role="application"
      [attr.aria-label]="'workflow.canvas.aria' | t"
      [class.canvas-viewport--panning]="panning()"
+     [class.canvas-viewport--overlay]="overlay() !== null"
      [style.background-size]="grid().size"
      [style.background-position]="grid().position"
      (wheel)="onWheel($event)"
@@ -107,6 +108,8 @@
 
       @for (edge of edges(); track edge.key) {
         <g class="canvas-edge" [class.canvas-edge--reject]="edge.isRejection"
+           [class.canvas-edge--neutral]="edge.port === 'neutral'"
+           [class.canvas-edge--taken]="isEdgeTaken(edge)"
            [class.canvas-edge--selected]="isEdgeSelected(edge)">
           <!-- non-scaling-stroke: uzaklaşınca çizgi kaybolmasın, yaklaşınca kalınlaşmasın. -->
           <path [attr.d]="edge.geometry.path"
@@ -121,7 +124,8 @@
 
       <!-- Akışın bittiği çıkışlar: kısa çizgi + uç işareti (BPMN bitiş olayı gibi). -->
       @for (stub of stubs(); track stub.key) {
-        <g class="canvas-stub" [class.canvas-stub--reject]="stub.kind === 'reject'">
+        <g class="canvas-stub" [class.canvas-stub--reject]="stub.kind === 'reject'"
+           [class.canvas-stub--neutral]="stub.kind === 'neutral'">
           <line [attr.x1]="stub.x" [attr.y1]="stub.y1" [attr.x2]="stub.x" [attr.y2]="stub.y2"
                 vector-effect="non-scaling-stroke" />
           <!-- Düzenlenebilirken uç işaretinin yerini "+" düğmesi alır (aynı renk). -->
@@ -154,6 +158,7 @@
       @for (stub of stubs(); track stub.key) {
         <button type="button" class="canvas-stub-add"
                 [class.canvas-stub-add--reject]="stub.kind === 'reject'"
+                [class.canvas-stub-add--neutral]="stub.kind === 'neutral'"
                 [style.left.px]="stub.x - 8" [style.top.px]="stub.y2 - 3"
                 (pointerdown)="$event.stopPropagation()"
                 (click)="openQuickAdd($event, stub)"
@@ -175,6 +180,7 @@
            [class.canvas-node--parallel]="node.isParallel"
            [class.canvas-node--selected]="isSelected(node)"
            [class.canvas-node--locked]="locked()"
+           [attr.data-overlay]="overlayOf(node)"
            [style.left.px]="node.x"
            [style.top.px]="node.y"
            [style.width.px]="node.width"
@@ -221,9 +227,10 @@
             <button type="button" class="canvas-port"
                     [class.canvas-port--approve]="port.kind === 'approve'"
                     [class.canvas-port--reject]="port.kind === 'reject'"
+                    [class.canvas-port--neutral]="port.kind === 'neutral'"
                     [style.left.px]="port.offset - 7"
                     (pointerdown)="onPortDragStart($event, node, port)"
-                    [attr.aria-label]="(port.kind === 'approve' ? 'workflow.canvas.portApprove' : 'workflow.canvas.portReject') | t"></button>
+                    [attr.aria-label]="portAria(port)" [title]="portAria(port)"></button>
           }
         }
       </div>

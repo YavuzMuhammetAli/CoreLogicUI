@@ -10,6 +10,7 @@ import {
   BRANCH_LINE_HEIGHT, EdgeRequest, NODE_HEIGHT, NODE_WIDTH, routeOrthogonal
 } from '../workflow-graph/workflow-edge.geometry';
 import { NODE_KINDS, NodeKind, NodeTone, isNodeKind } from '../../../utils/workflow/workflow-node-types';
+import { OverlayNodeState, WorkflowOverlay, edgeId } from '../../../utils/workflow/workflow-overlay';
 import {
   CanvasEdge, CanvasNode, CanvasPort, PortKind,
   edgeAt, nodeAt, nodesInRect, resolveNodePositions
@@ -216,13 +217,21 @@ export class WorkflowCanvasComponent {
   readonly nodeMeta = input<Readonly<Record<string, CanvasNodeMeta>>>({});
 
   /**
+   * Yol katmanı (simülasyon, çalışan süreç): geçilen düğümler ve kenarlar
+   * vurgulanır, kalanlar soluklaşır. null → normal çizim.
+   */
+  readonly overlay = input<WorkflowOverlay | null>(null);
+
+  private readonly overlayEdges = computed(() => new Set(this.overlay()?.edges ?? []));
+
+  /**
    * Düğümler taşındı — konumlar tanıma TEK değişiklikte yazılmalı. İlk elle
    * taşımada konumu otomatik yerleşimden gelen diğer düğümler de eklenir
    * (bkz. pinAll): sonraki eklemelerde yerleşim değişince "zıplamasınlar".
    */
   readonly nodesMoved = output<Array<{ key: string; x: number; y: number }>>();
   /** Bağlantı kuruldu — kaynak adımın ilgili çıkışı güncellenmeli. */
-  readonly edgeCreated = output<{ from: string; to: string; port: PortKind }>();
+  readonly edgeCreated = output<{ from: string; to: string; port: PortKind; exitPort: ExitPort }>();
   readonly selectionChange = output<CanvasSelection>();
   /** Düğüme çift tıklandı — adım ayrıntı pop-up'ı açılmalı (salt-okunurda da). */
   readonly nodeOpened = output<string>();
@@ -244,7 +253,7 @@ export class WorkflowCanvasComponent {
   private readonly liveOffsets = signal<Record<string, Point>>({});
 
   /** Bağlantı çizilirken imcin bulunduğu nokta — geçici çizgi için. */
-  readonly pendingEdge = signal<{ from: string; port: PortKind; x: number; y: number } | null>(null);
+  readonly pendingEdge = signal<{ from: string; port: PortKind; exitPort: ExitPort; x: number; y: number } | null>(null);
 
   /** Lasso çerçevesi (dünya koordinatı); çizilmiyorken null. */
   readonly lasso = signal<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -288,7 +297,8 @@ export class WorkflowCanvasComponent {
     const byKey = this.nodesByKey();
     const labels: Record<PortKind, string> = {
       approve: this.languageService.t('workflow.canvas.edgeApprove'),
-      reject: this.languageService.t('workflow.canvas.edgeReject')
+      reject: this.languageService.t('workflow.canvas.edgeReject'),
+      neutral: this.languageService.t('workflow.canvas.edgeDefault')
     };
     const pending: Array<Omit<CanvasEdge, 'geometry'> & { request: EdgeRequest }> = [];
 
@@ -301,8 +311,9 @@ export class WorkflowCanvasComponent {
         if (!target) continue;
 
         pending.push({
-          key: `${source.key}->${port.target}:${port.kind}`,
-          label: labels[port.kind],
+          // Port kimliği anahtarda: koşulun iki durumu aynı hedefe gidebilir.
+          key: `${source.key}->${port.target}:${port.port}`,
+          label: port.kind === 'neutral' ? (port.label ?? labels.neutral) : labels[port.kind],
           isRejection: port.kind === 'reject',
           from: source.key,
           to: port.target,
@@ -357,7 +368,7 @@ export class WorkflowCanvasComponent {
     if (!pending) return null;
 
     const source = this.nodesByKey().get(pending.from.toLowerCase());
-    const port = source?.ports.find(p => p.kind === pending.port);
+    const port = source?.ports.find(p => p.port === pending.exitPort);
     if (!source || !port) return null;
 
     const x1 = source.x + port.offset;
@@ -592,6 +603,24 @@ export class WorkflowCanvasComponent {
 
   isSelected(node: CanvasNode): boolean {
     return this.selectedSet().has(node.key.toLowerCase());
+  }
+
+  overlayOf(node: CanvasNode): OverlayNodeState | null {
+    return this.overlay()?.nodes[node.key.toLowerCase()] ?? null;
+  }
+
+  isEdgeTaken(edge: CanvasEdge): boolean {
+    return this.overlayEdges().has(edgeId(edge.from, edge.exitPort));
+  }
+
+  /** Port düğmesinin ekran okuyucu metni — koşul yolunda durumun etiketi. */
+  portAria(port: CanvasPort): string {
+    if (port.kind === 'neutral') {
+      return this.languageService.t('workflow.canvas.portCase', {
+        label: port.label ?? this.languageService.t('workflow.canvas.edgeDefault')
+      });
+    }
+    return this.languageService.t(port.kind === 'approve' ? 'workflow.canvas.portApprove' : 'workflow.canvas.portReject');
   }
 
   metaOf(node: CanvasNode): CanvasNodeMeta | null {
@@ -839,7 +868,7 @@ export class WorkflowCanvasComponent {
     this.closeMenu();
 
     const point = this.toWorld(event.clientX, event.clientY);
-    this.pendingEdge.set({ from: node.key, port: port.kind, x: point.x, y: point.y });
+    this.pendingEdge.set({ from: node.key, port: port.kind, exitPort: port.port, x: point.x, y: point.y });
     this.attach(this.onPortDragMove, this.onPortDragEnd);
   }
 
@@ -867,7 +896,7 @@ export class WorkflowCanvasComponent {
     // ve kullanıcının bunu isteyerek yaptığı bir senaryo yok.
     if (!target || target.key.toLowerCase() === pending.from.toLowerCase()) return;
 
-    this.edgeCreated.emit({ from: pending.from, to: target.key, port: pending.port });
+    this.edgeCreated.emit({ from: pending.from, to: target.key, port: pending.port, exitPort: pending.exitPort });
   };
 
   // ── Sağ tık menüsü ────────────────────────────────────────────────────────

@@ -1,0 +1,115 @@
+<aside class="sim" [attr.aria-label]="'workflow.simulate.title' | t">
+  <header class="sim-head">
+    <span class="eyebrow">{{ 'workflow.simulate.title' | t }}</span>
+    <button type="button" class="btn btn-ghost btn-sm" (click)="closed.emit()" [attr.aria-label]="'common.close' | t">✕</button>
+  </header>
+
+  <div class="sim-body">
+    <p class="field-help sim-intro">{{ 'workflow.simulate.intro' | t }}</p>
+
+    <!-- Kayıt değerleri -->
+    <div class="sim-section">
+      <span class="sim-section-title">{{ 'workflow.simulate.record' | t }}</span>
+      <div class="sim-source" role="radiogroup" [attr.aria-label]="'workflow.simulate.record' | t">
+        <label class="sim-radio">
+          <input type="radio" name="sim-source" [checked]="source() === 'sample'" (change)="source.set('sample')" />
+          {{ 'workflow.simulate.sample' | t }}
+        </label>
+        <label class="sim-radio">
+          <input type="radio" name="sim-source" [checked]="source() === 'record'" (change)="source.set('record')" />
+          {{ 'workflow.simulate.existing' | t }}
+        </label>
+      </div>
+
+      @if (source() === 'record') {
+        <div class="field">
+          <label for="sim-entity">{{ 'workflow.simulate.recordId' | t }}</label>
+          <input id="sim-entity" class="input" type="number" min="1" [value]="entityId()"
+                 (input)="entityId.set($any($event.target).value)" />
+        </div>
+      } @else if (columns().length === 0) {
+        <p class="field-help">{{ 'workflow.simulate.noModel' | t }}</p>
+      } @else {
+        @for (column of columns(); track column.columnName) {
+          <div class="field">
+            <label [for]="'sim-col-' + column.columnName">{{ columnLabel(column) }}</label>
+            @switch (inputKind(column)) {
+              @case ('number') {
+                <input [id]="'sim-col-' + column.columnName" class="input" type="number" step="any"
+                       [value]="values()[column.columnName] ?? ''" (input)="setValue(column.columnName, $event)" />
+              }
+              @case ('date') {
+                <input [id]="'sim-col-' + column.columnName" class="input" type="date"
+                       [value]="values()[column.columnName] ?? ''" (input)="setValue(column.columnName, $event)" />
+              }
+              @case ('boolean') {
+                <select [id]="'sim-col-' + column.columnName" class="input" (change)="setValue(column.columnName, $event)">
+                  <option value="" [selected]="!values()[column.columnName]">—</option>
+                  <option value="true" [selected]="values()[column.columnName] === 'true'">{{ 'common.yes' | t }}</option>
+                  <option value="false" [selected]="values()[column.columnName] === 'false'">{{ 'common.no' | t }}</option>
+                </select>
+              }
+              @default {
+                <input [id]="'sim-col-' + column.columnName" class="input" type="text"
+                       [value]="values()[column.columnName] ?? ''" (input)="setValue(column.columnName, $event)" />
+              }
+            }
+          </div>
+        }
+      }
+    </div>
+
+    <!-- İnsan adımlarının kararları -->
+    @if (decisionRows().length > 0) {
+      <div class="sim-section">
+        <span class="sim-section-title">{{ 'workflow.simulate.decisions' | t }}</span>
+        @for (row of decisionRows(); track row.id) {
+          <div class="field">
+            <label [for]="'sim-dec-' + row.id">{{ row.label }}</label>
+            <select [id]="'sim-dec-' + row.id" class="input" (change)="setDecision(row.id, $event)">
+              <option value="approve" [selected]="decisionOf(row.id) === 'approve'">{{ 'workflow.simulate.approve' | t }}</option>
+              @if (row.canReject) {
+                <option value="reject" [selected]="decisionOf(row.id) === 'reject'">{{ 'workflow.simulate.reject' | t }}</option>
+              }
+            </select>
+          </div>
+        }
+      </div>
+    }
+
+    @if (error(); as message) {
+      <div class="alert alert-danger" role="alert">{{ message }}</div>
+    }
+
+    <!-- Sonuç -->
+    @if (result(); as r) {
+      <div class="sim-section" role="status">
+        <span class="sim-section-title">{{ 'workflow.simulate.result' | t }}</span>
+        <span class="badge sim-outcome" [attr.data-outcome]="r.outcome">{{ outcomeKey(r.outcome) | t }}</span>
+        @if (r.message) {
+          <p class="sim-message">{{ r.message }}</p>
+        }
+        <ol class="sim-path">
+          @for (row of pathRows(); track row.seq) {
+            <li>
+              <span>{{ row.name }}</span>
+              @if (row.exit) {
+                <span class="sim-exit">→ {{ row.exit }}</span>
+              }
+            </li>
+          }
+        </ol>
+      </div>
+    }
+  </div>
+
+  <footer class="sim-actions">
+    <button type="button" class="btn btn-primary btn-sm" [disabled]="running()" (click)="run()">
+      @if (running()) { <span class="spinner" aria-hidden="true"></span> }
+      {{ 'workflow.simulate.run' | t }}
+    </button>
+    @if (result()) {
+      <button type="button" class="btn btn-ghost btn-sm" (click)="clear()">{{ 'workflow.simulate.clear' | t }}</button>
+    }
+  </footer>
+</aside>

@@ -119,6 +119,9 @@
 }
 
 .inspector-exit-label--reject::before { background: var(--danger); }
+.inspector-exit-label--neutral::before { background: var(--accent); }
+
+.inspector-cases { list-style: decimal inside; }
 
 .inspector-reject { color: var(--danger); }
 

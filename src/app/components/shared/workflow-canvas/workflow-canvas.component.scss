@@ -102,6 +102,30 @@
 .arrow-head { fill: var(--border); }
 .arrow-head--reject { fill: var(--danger); }
 
+// Koşul yolları: biri ötekinden "iyi" değil — vurgu rengi, düz çizgi.
+.canvas-edge--neutral {
+  path { stroke: color-mix(in oklab, var(--accent) 55%, var(--border)); }
+  text { fill: var(--accent); font-weight: 600; }
+}
+
+// ── Yol katmanı (simülasyon / çalışan süreç) ────────────────────────────────
+
+.canvas-viewport--overlay {
+  .canvas-edge:not(.canvas-edge--taken) { opacity: 0.25; }
+  .canvas-stub, .canvas-stub-add { opacity: 0.35; }
+  .canvas-node:not([data-overlay]) { opacity: 0.45; }
+}
+
+.canvas-edge--taken {
+  path { stroke: var(--accent); stroke-width: 3; opacity: 1; stroke-dasharray: none; }
+  text { fill: var(--accent); font-weight: 700; }
+}
+
+.canvas-node[data-overlay='visited'] { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 8%, var(--surface)); }
+.canvas-node[data-overlay='current'] { border-color: var(--warn); border-width: 2.5px; background: var(--warn-bg); }
+.canvas-node[data-overlay='failed'] { border-color: var(--danger); border-width: 2.5px; background: var(--danger-bg); }
+.canvas-node[data-overlay='end'] { border-color: var(--success); border-width: 2.5px; background: var(--success-bg); }
+
 // ── Başlangıç ve bitiş ──────────────────────────────────────────────────────
 
 .canvas-start-link {
@@ -136,6 +160,12 @@
 .canvas-stub--reject {
   line { stroke: var(--danger); stroke-dasharray: 3 3; }
   circle { fill: var(--danger-bg); stroke: var(--danger); }
+}
+
+// Hedefsiz koşul yolu — bitiş DEĞİL, eksik bağlantı (doğrulama hatası).
+.canvas-stub--neutral {
+  line { stroke: var(--warn); stroke-dasharray: 2 3; }
+  circle { fill: var(--warn-bg); stroke: var(--warn); }
 }
 
 // ── Düğüm ────────────────────────────────────────────────────────────────────
@@ -180,6 +210,8 @@
 .canvas-node[data-tone='accent'] { --node-tone: var(--accent); }
 .canvas-node[data-tone='success'] { --node-tone: var(--success); }
 .canvas-node[data-tone='warn'] { --node-tone: var(--warn); }
+.canvas-node[data-tone='danger'] { --node-tone: var(--danger); }
+.canvas-node[data-tone='neutral'] { --node-tone: var(--fg-2); }
 
 .canvas-node--selected {
   box-shadow: var(--node-stripe), 0 0 0 3px var(--elev-ring, rgba(29, 78, 216, 0.25));
@@ -287,6 +319,16 @@
   &:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 }
 
+.canvas-stub-add--neutral {
+  border-color: var(--warn);
+  background: var(--warn-bg);
+  color: var(--warn);
+
+  @media (hover: hover) {
+    &:hover { background: var(--warn); color: var(--surface); }
+  }
+}
+
 .canvas-stub-add--reject {
   border-color: var(--danger);
   background: var(--danger-bg);
@@ -335,6 +377,10 @@
 
 .canvas-port--reject {
   background: var(--danger);
+}
+
+.canvas-port--neutral {
+  background: var(--accent);
 }
 
 // ── Seçim ────────────────────────────────────────────────────────────────────

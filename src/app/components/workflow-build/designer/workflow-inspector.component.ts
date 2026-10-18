@@ -3,6 +3,7 @@ import {
   ASSIGNMENT_MODE_OPTIONS,
   JOIN_MODE_OPTIONS,
   WorkflowAssignmentMode,
+  WorkflowEndOutcome,
   WorkflowJoinMode,
   WorkflowStep
 } from '../../../models/workflow.model';
@@ -10,7 +11,7 @@ import { Role } from '../../../models/role';
 import { AppUser } from '../../../models/appUser';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { LanguageService } from '../../../services/language.service';
-import { ExitPort, exitsOf, sameKey } from '../../../utils/workflow/workflow-exits';
+import { ExitKind, ExitPort, caseKeyOf, exitsOf, sameKey } from '../../../utils/workflow/workflow-exits';
 import { NodeKindInfo, nodeKindInfo, nodeKindOf } from '../../../utils/workflow/workflow-node-types';
 import { SummaryLookup, assignmentText } from '../../../utils/workflow/workflow-step-summary';
 import { WorkflowDesignerStore } from './workflow-designer.store';
@@ -26,7 +27,7 @@ import {
 interface EdgeView {
   step: WorkflowStep;
   port: ExitPort;
-  kind: 'approve' | 'reject';
+  kind: ExitKind;
   target: string;
 }
 
@@ -192,6 +193,11 @@ export class WorkflowInspectorComponent {
     this.apply('join', step => setJoinMode(step, mode));
   }
 
+  onOutcome(event: Event): void {
+    const outcome = (event.target as HTMLSelectElement).value as WorkflowEndOutcome;
+    this.apply('outcome', step => (step.outcome ?? 'completed') === outcome ? step : { ...step, outcome });
+  }
+
   onStatusLabel(event: Event): void {
     const step = this.node();
     if (!step || this.readonly()) return;
@@ -233,16 +239,35 @@ export class WorkflowInspectorComponent {
   // ── Etiketler ─────────────────────────────────────────────────────────────
 
   /**
-   * Çıkış etiketi: görevin olumlu çıkışı "Tamamlanınca", onayınki "Onaylanınca".
-   * Tür, çıkışın SAHİBİ adımdan okunur — kenar seçiliyken seçili düğüm yoktur.
+   * Çıkışın metni: görevin olumlu çıkışı "Tamamlanınca", onayınki "Onaylanınca";
+   * koşulda durumun etiketi ya da "Hiçbiri eşleşmezse". Tür, çıkışın SAHİBİ
+   * adımdan okunur — kenar seçiliyken seçili düğüm yoktur.
    */
-  exitLabelKey(step: WorkflowStep, port: ExitPort): string {
-    if (port === 'approve' && nodeKindOf(step) === 'task') return 'workflow.inspector.exit.done';
-    return `workflow.inspector.exit.${port}`;
+  exitLabel(step: WorkflowStep, port: ExitPort): string {
+    const t = (key: string) => this.languageService.t(key);
+    const caseKey = caseKeyOf(port);
+    if (caseKey !== null) {
+      const item = (step.cases ?? []).find(c => c.key === caseKey);
+      return t('workflow.inspector.exit.case').replace('{label}', item?.label || caseKey);
+    }
+    if (port === 'approve' && nodeKindOf(step) === 'task') return t('workflow.inspector.exit.done');
+    return t(`workflow.inspector.exit.${port}`);
   }
 
-  terminalKey(kind: 'approve' | 'reject'): string {
-    return kind === 'approve' ? 'workflow.build.terminalCompleted' : 'workflow.build.terminalRejected';
+  /** Boş hedef seçeneği: onay/red'de terminal, koşul yolunda "— Seçin —" (eksik bağlantı). */
+  terminalKey(kind: ExitKind): string {
+    switch (kind) {
+      case 'approve': return 'workflow.build.terminalCompleted';
+      case 'reject':  return 'workflow.build.terminalRejected';
+      default:        return 'workflow.inspector.choose';
+    }
+  }
+
+  /** Koşul durumunun panel özeti: satır sayısı ya da formül. */
+  caseSummary(item: NonNullable<WorkflowStep['cases']>[number]): string {
+    return item.expression != null
+      ? this.languageService.t('workflow.case.summaryFormula')
+      : this.languageService.t('workflow.case.summaryRows', { n: item.when.length });
   }
 
   isSelectedRole(id: number): boolean {

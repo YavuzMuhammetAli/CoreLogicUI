@@ -213,6 +213,13 @@
   }
 }
 
+// Simülasyon düğmesi telefonda gizli (tuval ve paneller geniş ekran işi).
+.simulate-btn {
+  @media (max-width: 768px) { display: none; }
+}
+
+.simulate-btn--active { color: var(--accent); background: color-mix(in oklab, var(--accent) 10%, transparent); }
+
 // Başlıktaki doğrulama özeti: sorun yoksa sakin, hata varsa kırmızı.
 .issue-chip { color: var(--success); }
 .issue-chip--warn { color: var(--warn); }

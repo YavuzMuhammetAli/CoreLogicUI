@@ -38,6 +38,10 @@
 
 .palette-item[data-tone='success'] { --tone: var(--success); }
 .palette-item[data-tone='warn'] { --tone: var(--warn); }
+.palette-item[data-tone='neutral'] { --tone: var(--fg-2); }
+.palette-item[data-tone='danger'] { --tone: var(--danger); }
+
+.palette-title:not(:first-child) { margin-top: var(--space-2); }
 
 .palette-icon {
   flex: 0 0 auto;

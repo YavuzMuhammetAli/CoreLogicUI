@@ -6,7 +6,9 @@ import { ListResponseModel } from '../models/responseModelList';
 import { DataResponseModel } from '../models/dataResponseModel';
 import {
   WorkflowDefinition,
-  WorkflowValidationResult
+  WorkflowValidationResult,
+  WorkflowSimulateRequest,
+  WorkflowSimulation
 } from '../models/workflow.model';
 import { environment } from '../../environments/environment';
 
@@ -91,6 +93,15 @@ export class WorkflowService {
   validate(workflow: Partial<WorkflowDefinition>): Observable<DataResponseModel<WorkflowValidationResult>> {
     return this.http.post<DataResponseModel<WorkflowValidationResult>>(
       `${this.baseUrl}/validate`, workflow);
+  }
+
+  /**
+   * Tanımı (kaydedilmemiş taslak olabilir) örnek kayıt ve kararlarla sunucuda
+   * bellekte koşturur; hiçbir şey yazılmaz. Gerçek motorun fonksiyonlarını
+   * kullandığı için görülen yol, yayından sonra izlenecek yoldur.
+   */
+  simulate(request: WorkflowSimulateRequest): Observable<DataResponseModel<WorkflowSimulation>> {
+    return this.http.post<DataResponseModel<WorkflowSimulation>>(`${this.baseUrl}/simulate`, request);
   }
 
   publish(id: number): Observable<ResponseModel> {

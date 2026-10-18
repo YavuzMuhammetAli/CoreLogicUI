@@ -136,7 +136,8 @@ export class WorkflowInstanceComponent implements OnInit {
   private loadSteps(instanceId: number): void {
     this.instanceService.steps(instanceId).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
-        if (res.success) this.steps = res.data ?? [];
+        // Bitiş geri alma hedefi olamaz: o adıma girmek süreci hemen bitirirdi.
+        if (res.success) this.steps = (res.data ?? []).filter(step => step.type !== 'end');
       },
       error: () => { this.steps = []; }
     });

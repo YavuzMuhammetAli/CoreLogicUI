@@ -1,0 +1,35 @@
+<div class="editor stack">
+  <section class="editor-section">
+    <span class="eyebrow">{{ 'workflow.build.sectionGeneral' | t }}</span>
+    <div class="field-row">
+      <div class="field">
+        <label for="end-name">{{ 'workflow.build.stepName' | t }}</label>
+        <input id="end-name" class="input" type="text" [value]="draft().step.name" [disabled]="readonly()"
+               (input)="onName($event)" />
+      </div>
+      <div class="field">
+        <label for="end-key">{{ 'workflow.build.stepKey' | t }}</label>
+        <input id="end-key" class="input input-mono" type="text" [value]="draft().step.key" [disabled]="readonly()"
+               (change)="onKey($event)" />
+      </div>
+    </div>
+  </section>
+
+  <section class="editor-section">
+    <div class="field-row">
+      <div class="field">
+        <label for="end-outcome">{{ 'workflow.end.outcome' | t }}</label>
+        <select id="end-outcome" class="input" [disabled]="readonly()" (change)="onOutcome($event)">
+          <option value="completed" [selected]="draft().step.outcome !== 'rejected'">{{ 'workflow.end.completed' | t }}</option>
+          <option value="rejected" [selected]="draft().step.outcome === 'rejected'">{{ 'workflow.end.rejected' | t }}</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="end-status">{{ 'workflow.build.statusLabel' | t }}</label>
+        <input id="end-status" class="input" type="text" [value]="draft().statusLabel" [disabled]="readonly()"
+               [placeholder]="draft().step.name" aria-describedby="end-status-help" (input)="onStatusLabel($event)" />
+        <span id="end-status-help" class="field-help">{{ 'workflow.end.statusHelp' | t }}</span>
+      </div>
+    </div>
+  </section>
+</div>

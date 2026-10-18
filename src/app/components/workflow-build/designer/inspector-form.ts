@@ -94,8 +94,3 @@ export function exitRows(step: WorkflowStep): ExitRow[] {
     .filter(exit => exit.enabled)
     .map(exit => ({ port: exit.port, kind: exit.kind, target: exit.target ?? '' }));
 }
-
-/** Etiketin çeviri anahtarı: tekil adımda onay/red, paralelde tamamlanma/herhangi biri reddederse. */
-export function exitLabelKey(port: ExitPort): string {
-  return `workflow.inspector.exit.${port}`;
-}

@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, Component, HostListener, OnInit, computed, inject, input, output
+  ChangeDetectionStrategy, Component, HostListener, OnInit, computed, inject, input, output, signal
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
@@ -16,6 +16,10 @@ import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { newBranchGroup, newFieldGroup, newRecordFieldGroup, newStepGroup } from '../workflow-step.form';
 import { stepFromFormValue } from '../designer/workflow-step.mapper';
 import { sameKey } from '../../../utils/workflow/workflow-exits';
+import { LanguageService } from '../../../services/language.service';
+import { ConditionEditorComponent, StepTarget } from '../editors/condition-editor.component';
+import { EndDraft, EndEditorComponent } from '../editors/end-editor.component';
+import { keyProblem } from '../designer/inspector-form';
 
 /** Form alanı tipi seçenekleri — model kolon tipleriyle aynı sözlükten dar bir alt küme. */
 const FORM_FIELD_TYPES = ['string', 'int', 'decimal', 'boolean', 'datetime', 'dateonly', 'enum'] as const;
@@ -39,13 +43,14 @@ export interface StepDialogResult {
 @Component({
   selector: 'app-workflow-step-dialog',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
+  imports: [CommonModule, ReactiveFormsModule, TranslatePipe, ConditionEditorComponent, EndEditorComponent],
   templateUrl: './workflow-step-dialog.component.html',
   styleUrl: './workflow-step-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WorkflowStepDialogComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
+  private readonly languageService = inject(LanguageService);
 
   /** Düzenlenecek adım; yeni adımda null. */
   readonly step = input<WorkflowStep | null>(null);
@@ -60,12 +65,34 @@ export class WorkflowStepDialogComponent implements OnInit {
   readonly stepKeys = input<string[]>([]);
   /** Akışın bağlı olduğu modelin kolonları — kayıt alanı seçicisi. Model seçilmemişse boş. */
   readonly columns = input<PublishedColumn[]>([]);
+  /** Adımların adları — koşul düzenleyicisinin hedef seçicisi "Ad (anahtar)" göstersin. */
+  readonly steps = input<Array<{ key: string; name: string }>>([]);
 
   readonly saved = output<StepDialogResult>();
   readonly cancelled = output<void>();
 
   readonly isNew = computed(() => this.step() === null);
   readonly originalKey = computed(() => this.step()?.key ?? '');
+
+  /**
+   * Koşul ve Bitiş kendi düzenleyicisiyle açılır (onay/paralel reaktif formu
+   * onlara uymuyor); düzenleyici adımın kopyasını yayar, Kaydet belgeye yazar.
+   */
+  readonly special = computed(() => this.step()?.type === 'condition' || this.step()?.type === 'end');
+  readonly specialDraft = signal<WorkflowStep | null>(null);
+  readonly specialLabel = signal('');
+  readonly specialError = signal<string | null>(null);
+
+  /** Koşul hedefleri: diğer adımlar, "Ad (anahtar)". */
+  readonly targets = computed<StepTarget[]>(() => {
+    const names = new Map(this.steps().map(s => [s.key.toLowerCase(), s.name]));
+    return this.stepKeys()
+      .filter(key => !sameKey(key, this.originalKey()))
+      .map(key => {
+        const name = names.get(key.toLowerCase());
+        return { key, label: name ? `${name} (${key})` : key };
+      });
+  });
 
   readonly assignmentModeOptions = ASSIGNMENT_MODE_OPTIONS;
   readonly timeoutPolicyOptions = TIMEOUT_POLICY_OPTIONS;
@@ -84,6 +111,10 @@ export class WorkflowStepDialogComponent implements OnInit {
 
   ngOnInit(): void {
     const step = this.step();
+    if (step && this.special()) {
+      this.specialDraft.set(structuredClone(step));
+      this.specialLabel.set(this.statusLabel());
+    }
     this.form = newStepGroup(this.fb, step?.key ?? this.newKey(), step ?? undefined, this.statusLabel());
     this.initialValue = JSON.stringify(this.form.getRawValue());
     if (this.readonly()) this.form.disable({ emitEvent: false });
@@ -176,9 +207,45 @@ export class WorkflowStepDialogComponent implements OnInit {
 
   // ── Kapatma ───────────────────────────────────────────────────────────────
 
+  onSpecialStep(step: WorkflowStep): void {
+    this.specialDraft.set(step);
+    this.specialError.set(null);
+  }
+
+  onEndDraft(draft: EndDraft): void {
+    this.specialDraft.set(draft.step);
+    this.specialLabel.set(draft.statusLabel);
+    this.specialError.set(null);
+  }
+
+  /** Koşul / Bitiş kaydı: anahtar kuralı panelle aynı; değişiklik yoksa belge değişmez. */
+  private saveSpecial(): void {
+    const draft = this.specialDraft();
+    const original = this.step();
+    if (!draft || !original) return;
+
+    const problem = keyProblem(draft.key, this.stepKeys(), this.originalKey());
+    if (problem) {
+      this.specialError.set(this.languageService.t(`workflow.inspector.key.${problem}`));
+      return;
+    }
+
+    if (JSON.stringify(draft) === JSON.stringify(original) && this.specialLabel() === this.statusLabel()) {
+      this.cancelled.emit();
+      return;
+    }
+
+    this.saved.emit({ step: draft, statusLabel: this.specialLabel(), originalKey: this.originalKey() });
+  }
+
   save(): void {
     if (this.readonly()) {
       this.cancelled.emit();
+      return;
+    }
+
+    if (this.special()) {
+      this.saveSpecial();
       return;
     }
 

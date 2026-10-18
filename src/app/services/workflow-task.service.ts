@@ -155,6 +155,15 @@ export class WorkflowInstanceService {
       `${this.baseUrl}/steps`, { params: new HttpParams().set('instanceId', instanceId) });
   }
 
+  /**
+   * Hata vermiş (olay) otomatik adımı atlar (admin) — koşulda varsayılan yoldan
+   * devam edilir. Düzeltip yeniden denemek için aynı adıma `rollback`.
+   */
+  skipStep(id: number): Observable<ResponseModel> {
+    return this.http.post<ResponseModel>(
+      `${this.baseUrl}/skipStep`, null, { params: new HttpParams().set('id', id) });
+  }
+
   /** Süreci iptal eder ve açık görevlerini kapatır (admin). */
   cancel(id: number): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(

@@ -60,6 +60,24 @@
           </ul>
           <p class="field-help">{{ 'workflow.inspector.branchesHelp' | t }}</p>
         </div>
+      } @else if (step.type === 'condition') {
+        <div class="inspector-section">
+          <span class="inspector-section-title">{{ 'workflow.case.title' | t }}</span>
+          <ol class="inspector-list inspector-cases">
+            @for (item of step.cases ?? []; track item.key) {
+              <li><span>{{ item.label || item.key }}</span><span class="inspector-muted">{{ caseSummary(item) }}</span></li>
+            }
+          </ol>
+          <p class="field-help">{{ 'workflow.case.inspectorHelp' | t }}</p>
+        </div>
+      } @else if (step.type === 'end') {
+        <div class="field">
+          <label for="ins-outcome">{{ 'workflow.end.outcome' | t }}</label>
+          <select id="ins-outcome" class="input" [disabled]="readonly()" (change)="onOutcome($event)">
+            <option value="completed" [selected]="step.outcome !== 'rejected'">{{ 'workflow.end.completed' | t }}</option>
+            <option value="rejected" [selected]="step.outcome === 'rejected'">{{ 'workflow.end.rejected' | t }}</option>
+          </select>
+        </div>
       } @else {
         <div class="field">
           <label for="ins-mode">{{ 'workflow.inspector.assignee' | t }}</label>
@@ -114,12 +132,14 @@
                [placeholder]="'workflow.inspector.statusLabelPlaceholder' | t" (input)="onStatusLabel($event)" />
       </div>
 
+      @if (exits().length > 0) {
       <div class="inspector-section">
         <span class="inspector-section-title">{{ 'workflow.inspector.exits' | t }}</span>
         @for (exit of exits(); track exit.port) {
           <div class="field">
             <label [for]="'ins-exit-' + exit.port" class="inspector-exit-label"
-                   [class.inspector-exit-label--reject]="exit.kind === 'reject'">{{ exitLabelKey(step, exit.port) | t }}</label>
+                   [class.inspector-exit-label--reject]="exit.kind === 'reject'"
+                   [class.inspector-exit-label--neutral]="exit.kind === 'neutral'">{{ exitLabel(step, exit.port) }}</label>
             <select [id]="'ins-exit-' + exit.port" class="input" [disabled]="readonly()"
                     (change)="onExitTarget(exit.port, $event)">
               <option value="" [selected]="!exit.target">{{ terminalKey(exit.kind) | t }}</option>
@@ -130,6 +150,7 @@
           </div>
         }
       </div>
+      }
     </div>
 
     <footer class="inspector-actions">
@@ -159,7 +180,7 @@
       <div class="inspector-body">
         <p class="inspector-text">
           <strong>{{ e.step.name || e.step.key }}</strong>
-          · <span [class.inspector-reject]="e.kind === 'reject'">{{ exitLabelKey(e.step, e.port) | t }}</span>
+          · <span [class.inspector-reject]="e.kind === 'reject'">{{ exitLabel(e.step, e.port) }}</span>
         </p>
         <div class="field">
           <label for="ins-edge-target">{{ 'workflow.inspector.target' | t }}</label>
