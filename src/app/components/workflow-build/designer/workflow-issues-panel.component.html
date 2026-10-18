@@ -1,0 +1,72 @@
+<section class="panel issues" [class.issues--clean]="rows().length === 0"
+         [attr.aria-labelledby]="'wf-issues-title'">
+  <button type="button" class="issues-head" (click)="toggle()"
+          [attr.aria-expanded]="expanded()" aria-controls="wf-issues-list"
+          [disabled]="rows().length === 0">
+    @if (rows().length === 0) {
+      <svg class="issues-icon issues-icon--ok" width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+    } @else {
+      <svg class="issues-icon" [class.issues-icon--warn]="counts().errors === 0" width="16" height="16"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+           stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+      </svg>
+    }
+
+    <span id="wf-issues-title" class="issues-title">{{ 'workflow.issues.title' | t }}</span>
+
+    @if (rows().length === 0) {
+      <span class="issues-summary">{{ 'workflow.issues.none' | t }}</span>
+    } @else {
+      <span class="issues-summary">
+        @if (counts().errors > 0) {
+          <span class="badge badge-danger">{{ 'workflow.issues.errors' | t: { n: counts().errors } }}</span>
+        }
+        @if (counts().warnings > 0) {
+          <span class="badge badge-warn">{{ 'workflow.issues.warnings' | t: { n: counts().warnings } }}</span>
+        }
+      </span>
+    }
+
+    @if (validating()) {
+      <span class="issues-validating" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <span class="sr-only">{{ 'workflow.issues.validating' | t }}</span>
+      </span>
+    }
+
+    @if (rows().length > 0) {
+      <svg class="issues-chevron" [class.issues-chevron--open]="expanded()" width="14" height="14"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+           stroke-linejoin="round" aria-hidden="true">
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    }
+  </button>
+
+  @if (expanded() && rows().length > 0) {
+    <ul id="wf-issues-list" class="issues-list">
+      @for (row of rows(); track $index) {
+        <li>
+          <button type="button" class="issue-row" [class.issue-row--warn]="row.severity === 'warning'"
+                  [disabled]="row.target === 'flow'" (click)="pick.emit(row)">
+            <span class="issue-dot" aria-hidden="true"></span>
+            <span class="sr-only">{{ (row.severity === 'error' ? 'workflow.issues.error' : 'workflow.issues.warning') | t }}:</span>
+            @if (row.location) {
+              <span class="issue-location">{{ row.location }}</span>
+            } @else if (row.target === 'trigger') {
+              <span class="issue-location">{{ 'workflow.build.tabTrigger' | t }}</span>
+            }
+            <span class="issue-text">{{ row.text }}</span>
+          </button>
+        </li>
+      }
+    </ul>
+    @if (counts().errors > 0) {
+      <p class="issues-foot">{{ 'workflow.issues.publishBlocked' | t }}</p>
+    }
+  }
+</section>

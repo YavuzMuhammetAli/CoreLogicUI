@@ -509,10 +509,11 @@ export class WorkflowCanvasComponent {
    * Yeni eklenen düğümü görünür alana getirir (en küçük kaydırmayla, zoom
    * değişmez). Şemanın tamamı mevcut zoom'da sığıyorsa tamamı getirilir:
    * otomatik yerleşim yeni düğüm için KOMŞULARI da kaydırabiliyor ve yalnız yeni
-   * düğüme bakmak onları ekran dışında bırakıyordu. Konum ancak çizimden sonra
-   * kesinleştiği için bir sonraki render'da çalışır.
+   * düğüme bakmak onları ekran dışında bırakıyordu. `preferContent` false ise
+   * (sorun listesinden adıma gitmek) yalnız düğüm getirilir. Konum ancak
+   * çizimden sonra kesinleştiği için bir sonraki render'da çalışır.
    */
-  reveal(key: string): void {
+  reveal(key: string, preferContent = true): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
     afterNextRender(() => {
@@ -527,7 +528,7 @@ export class WorkflowCanvasComponent {
       const content = bounds
         ? { x: bounds.minX, y: bounds.minY, width: bounds.maxX - bounds.minX, height: bounds.maxY - bounds.minY }
         : null;
-      const fits = !!content
+      const fits = preferContent && !!content
         && content.width * zoom <= view.width - margin * 2
         && content.height * zoom <= view.height - margin * 2;
 

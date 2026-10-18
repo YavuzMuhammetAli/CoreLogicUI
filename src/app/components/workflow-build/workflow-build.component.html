@@ -33,8 +33,18 @@
           <path d="m15 14 5-5-5-5" /><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
         </svg>
       </button>
-      <button type="button" class="btn btn-secondary btn-sm" [disabled]="saving" (click)="validate()">
-        {{ 'workflow.build.validationTitle' | t }}
+      <!-- Canlı doğrulamanın özeti; tıklayınca sorun listesine gider. -->
+      <button type="button" class="btn btn-ghost btn-sm issue-chip"
+              [class.issue-chip--error]="issueCounts().errors > 0"
+              [class.issue-chip--warn]="issueCounts().errors === 0 && issueCounts().warnings > 0"
+              (click)="showIssues()">
+        @if (issueCounts().errors > 0) {
+          {{ 'workflow.issues.chipErrors' | t: { n: issueCounts().errors } }}
+        } @else if (issueCounts().warnings > 0) {
+          {{ 'workflow.issues.chipWarnings' | t: { n: issueCounts().warnings } }}
+        } @else {
+          {{ 'workflow.issues.chipNone' | t }}
+        }
       </button>
       <button type="button" class="btn btn-secondary" [disabled]="saving" (click)="onSubmit(false)">
         {{ 'workflow.build.save' | t }}
@@ -56,14 +66,6 @@
 }
 @if (submitError) {
   <div class="alert alert-danger" role="alert">{{ submitError }}</div>
-}
-@if (validationErrors.length > 0) {
-  <div class="alert alert-warn" role="alert">
-    <strong>{{ 'workflow.build.validationTitle' | t }}</strong>
-    <ul class="validation-list">
-      @for (error of validationErrors; track error) { <li>{{ error }}</li> }
-    </ul>
-  </div>
 }
 
 <form [formGroup]="form" class="flow">
@@ -168,6 +170,12 @@
                       @if (row.isStart) {
                         <span class="badge badge-meta">{{ 'workflow.build.startBadge' | t }}</span>
                       }
+                      @if (row.errors + row.warnings > 0) {
+                        <span class="badge" [class.badge-danger]="row.errors > 0" [class.badge-warn]="row.errors === 0"
+                              [title]="'workflow.issues.rowBadge' | t: { n: row.errors + row.warnings }">
+                          {{ row.errors || row.warnings }}
+                        </span>
+                      }
                     </td>
                     <td><code class="step-key-code">{{ row.key }}</code></td>
                     <td>{{ row.typeKey | t }}</td>
@@ -219,6 +227,7 @@
             class="designer-inspector"
             [roles]="roles()"
             [users]="users()"
+            [issues]="selectedIssues()"
             (openSettings)="openStep($event)"
             (makeStart)="makeStart($event)"
             (duplicate)="duplicateSelection()"
@@ -288,6 +297,15 @@
       </div>
     }
   </div>
+
+  @if (!readonlyMode()) {
+    <app-workflow-issues-panel
+      id="wf-issues"
+      [rows]="issueRows()"
+      [validating]="validating()"
+      [(expanded)]="issuesExpanded"
+      (pick)="pickIssue($event)" />
+  }
 </form>
 
 <!-- Kaydedilmemiş değişiklikle ayrılırken (rota guard'ı bu cevabı bekler). -->

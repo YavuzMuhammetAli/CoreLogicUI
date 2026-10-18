@@ -107,6 +107,220 @@ export const WORKFLOW_I18N: Translations = {
     en: 'No steps yet. Drag a step here from the palette on the left, or click it.'
   },
 
+  // ── Doğrulama sorunları (workflow.issue.{kod} = backend WorkflowValidator kodları) ──
+  'workflow.issues.title': { tr: 'Sorunlar', en: 'Issues' },
+  'workflow.issues.none': { tr: 'Sorun yok — akış yayınlanabilir.', en: 'No issues — the workflow can be published.' },
+  'workflow.issues.errors': { tr: '{n} hata', en: '{n} error(s)' },
+  'workflow.issues.warnings': { tr: '{n} uyarı', en: '{n} warning(s)' },
+  'workflow.issues.validating': { tr: 'Denetleniyor…', en: 'Checking…' },
+  'workflow.issues.error': { tr: 'Hata', en: 'Error' },
+  'workflow.issues.warning': { tr: 'Uyarı', en: 'Warning' },
+  'workflow.issues.more': { tr: '(+{n} sorun daha)', en: '(+{n} more)' },
+  'workflow.issues.rowBadge': { tr: '{n} sorun', en: '{n} issue(s)' },
+  'workflow.issues.publishBlocked': {
+    tr: 'Taslak hatalarıyla da kaydedilir; yayınlamak için hataları giderin. Uyarılar yayını engellemez.',
+    en: 'The draft is saved even with errors; fix them to publish. Warnings do not block publishing.'
+  },
+  'workflow.issues.chipNone': { tr: '✓ Sorun yok', en: '✓ No issues' },
+  'workflow.issues.chipErrors': { tr: '! {n} hata', en: '! {n} error(s)' },
+  'workflow.issues.chipWarnings': { tr: '{n} uyarı', en: '{n} warning(s)' },
+  'workflow.issue.definition.invalidJson': {
+    tr: 'Akış tanımı okunamadı (bozuk veri).',
+    en: 'The workflow definition could not be read (corrupt data).'
+  },
+  'workflow.issue.steps.empty': {
+    tr: 'Akışta hiç adım yok — paletten bir adım ekleyin.',
+    en: 'The workflow has no steps — add one from the palette.'
+  },
+  'workflow.issue.steps.tooMany': {
+    tr: 'Bir akışta en fazla {max} adım olabilir.',
+    en: 'A workflow can have at most {max} steps.'
+  },
+  'workflow.issue.step.keyEmpty': {
+    tr: 'Bir adımın anahtarı boş.',
+    en: 'A step has an empty key.'
+  },
+  'workflow.issue.step.keyInvalid': {
+    tr: 'Anahtar geçersiz: "{key}". Harf ile başlamalı; yalnız İngilizce harf, rakam ve alt çizgi.',
+    en: 'Invalid key "{key}". It must start with a letter; only English letters, digits and underscores.'
+  },
+  'workflow.issue.key.nonAscii': {
+    tr: '"{key}" anahtarında Türkçe ya da İngilizce dışı harf var; veritabanında başka bir anahtarla karışabilir.',
+    en: 'The key "{key}" contains non-English letters; it may be confused with another key in the database.'
+  },
+  'workflow.issue.step.keyDuplicate': {
+    tr: '"{key}" anahtarı birden çok adımda kullanılıyor.',
+    en: 'The key "{key}" is used by more than one step.'
+  },
+  'workflow.issue.step.nameEmpty': {
+    tr: 'Adımın adı boş.',
+    en: 'The step has no name.'
+  },
+  'workflow.issue.step.typeUnsupported': {
+    tr: 'Adım türü desteklenmiyor: "{type}".',
+    en: 'Unsupported step type: "{type}".'
+  },
+  'workflow.issue.step.rejectTargetWhileDisabled': {
+    tr: 'Reddetme kapalı ama red hedefi tanımlı; hedefi kaldırın ya da reddetmeyi açın.',
+    en: 'Rejection is off but a reject target is set; remove the target or allow rejection.'
+  },
+  'workflow.issue.step.branchesNotAllowed': {
+    tr: 'Tekil adım dal tanımlayamaz.',
+    en: 'A single step cannot have branches.'
+  },
+  'workflow.issue.parallel.tooFewBranches': {
+    tr: 'Paralel adımda en az iki dal olmalı.',
+    en: 'A parallel step needs at least two branches.'
+  },
+  'workflow.issue.parallel.modeInvalid': {
+    tr: 'İlerleme kuralı geçersiz: "{mode}".',
+    en: 'Invalid completion rule: "{mode}".'
+  },
+  'workflow.issue.branch.keyEmpty': {
+    tr: 'Bir dalın anahtarı boş.',
+    en: 'A branch has an empty key.'
+  },
+  'workflow.issue.branch.keyInvalid': {
+    tr: 'Dal anahtarı geçersiz: "{branch}".',
+    en: 'Invalid branch key: "{branch}".'
+  },
+  'workflow.issue.branch.keyDuplicate': {
+    tr: '"{branch}" dal anahtarı yineleniyor.',
+    en: 'The branch key "{branch}" is duplicated.'
+  },
+  'workflow.issue.branch.nameEmpty': {
+    tr: 'Dalın adı boş.',
+    en: 'The branch has no name.'
+  },
+  'workflow.issue.branch.columnShared': {
+    tr: '"{column}" kolonu birden çok dalda düzenleniyor; aynı anda açık iki dal birbirinin değerini ezerdi.',
+    en: 'The column "{column}" is edited in more than one branch; two open branches would overwrite each other.'
+  },
+  'workflow.issue.parallel.noBranchCanReject': {
+    tr: 'Hiçbir dal reddedemiyor ama red hedefi tanımlı.',
+    en: 'No branch can reject, yet a reject target is set.'
+  },
+  'workflow.issue.parallel.assignmentOnStep': {
+    tr: 'Paralel adımda atama dallara verilir, adımın kendisine değil.',
+    en: 'In a parallel step, assignees are set on the branches, not on the step.'
+  },
+  'workflow.issue.assignment.missing': {
+    tr: 'Kime atanacağı seçilmemiş.',
+    en: 'No assignee is selected.'
+  },
+  'workflow.issue.assignment.modeInvalid': {
+    tr: 'Atama türü geçersiz: "{mode}".',
+    en: 'Invalid assignment type: "{mode}".'
+  },
+  'workflow.issue.assignment.userRequired': {
+    tr: 'Kullanıcı seçilmemiş.',
+    en: 'No user is selected.'
+  },
+  'workflow.issue.assignment.roleRequired': {
+    tr: 'Rol seçilmemiş.',
+    en: 'No role is selected.'
+  },
+  'workflow.issue.sla.dueHoursInvalid': {
+    tr: 'Süre sınırı sıfırdan büyük olmalı.',
+    en: 'The time limit must be greater than zero.'
+  },
+  'workflow.issue.sla.escalateHoursInvalid': {
+    tr: 'Yükseltme süresi sıfırdan büyük olmalı.',
+    en: 'The escalation time must be greater than zero.'
+  },
+  'workflow.issue.sla.timeoutPolicyInvalid': {
+    tr: 'Zaman aşımı davranışı geçersiz: "{policy}".',
+    en: 'Invalid timeout behaviour: "{policy}".'
+  },
+  'workflow.issue.sla.escalateBeforeDue': {
+    tr: 'Yükseltme süresi, süre sınırından kısa olamaz.',
+    en: 'The escalation time cannot be shorter than the time limit.'
+  },
+  'workflow.issue.sla.escalationOnly': {
+    tr: 'Süre sınırı yok; yalnız yükseltme süresi olduğu için yükseltme hiç tetiklenmez.',
+    en: 'There is no time limit; with only an escalation time, escalation never fires.'
+  },
+  'workflow.issue.form.fieldNameEmpty': {
+    tr: 'Bir karar alanının adı boş.',
+    en: 'A decision field has no name.'
+  },
+  'workflow.issue.form.fieldDuplicate': {
+    tr: '"{field}" karar alanı yineleniyor.',
+    en: 'The decision field "{field}" is duplicated.'
+  },
+  'workflow.issue.form.fieldTypeInvalid': {
+    tr: '"{field}" alanının tipi geçersiz: "{type}".',
+    en: 'The field "{field}" has an invalid type: "{type}".'
+  },
+  'workflow.issue.form.enumValuesEmpty': {
+    tr: '"{field}" alanının seçenek listesi boş.',
+    en: 'The field "{field}" has no options.'
+  },
+  'workflow.issue.form.maxLengthInvalid': {
+    tr: '"{field}" alanında en fazla uzunluk sıfırdan büyük olmalı.',
+    en: 'The maximum length of "{field}" must be greater than zero.'
+  },
+  'workflow.issue.recordField.columnEmpty': {
+    tr: 'Bir kayıt alanında kolon seçilmemiş.',
+    en: 'A record field has no column selected.'
+  },
+  'workflow.issue.recordField.duplicate': {
+    tr: '"{column}" kayıt alanı yineleniyor.',
+    en: 'The record field "{column}" is duplicated.'
+  },
+  'workflow.issue.recordField.columnMissing': {
+    tr: '"{column}" kolonu modelde yok.',
+    en: 'The column "{column}" does not exist in the model.'
+  },
+  'workflow.issue.buttons.approveLabelTooLong': {
+    tr: 'Onay düğmesi metni en fazla {max} karakter olabilir.',
+    en: 'The approve button text can be at most {max} characters.'
+  },
+  'workflow.issue.buttons.rejectLabelTooLong': {
+    tr: 'Red düğmesi metni en fazla {max} karakter olabilir.',
+    en: 'The reject button text can be at most {max} characters.'
+  },
+  'workflow.issue.sla.autoRejectWhileRejectDisabled': {
+    tr: 'Reddetme kapalıyken zaman aşımında otomatik red seçilemez.',
+    en: 'Auto-reject on timeout cannot be chosen while rejection is off.'
+  },
+  'workflow.issue.sla.autoApproveWithRequiredFields': {
+    tr: 'Zorunlu kayıt alanı varken zaman aşımında otomatik onay seçilemez.',
+    en: 'Auto-approve on timeout cannot be chosen while there are required record fields.'
+  },
+  'workflow.issue.start.missing': {
+    tr: 'Başlangıç adımı seçilmemiş.',
+    en: 'No start step is selected.'
+  },
+  'workflow.issue.start.notFound': {
+    tr: 'Başlangıç adımı bulunamadı: "{start}".',
+    en: 'The start step was not found: "{start}".'
+  },
+  'workflow.issue.transition.targetNotFound': {
+    tr: '"{port}" çıkışının hedefi bulunamadı: "{target}".',
+    en: 'The target of the "{port}" exit was not found: "{target}".'
+  },
+  'workflow.issue.step.unreachable': {
+    tr: 'Başlangıçtan bu adıma ulaşılamıyor — önceki bir adımın çıkışını buna bağlayın.',
+    en: 'This step cannot be reached from the start — connect an exit of an earlier step to it.'
+  },
+  'workflow.issue.trigger.jsonInvalid': {
+    tr: 'Tetikleme koşulları okunamadı (bozuk veri).',
+    en: 'The trigger conditions could not be read (corrupt data).'
+  },
+  'workflow.issue.trigger.fieldEmpty': {
+    tr: 'Bir tetikleme koşulunda alan seçilmemiş.',
+    en: 'A trigger condition has no field selected.'
+  },
+  'workflow.issue.trigger.operatorInvalid': {
+    tr: 'Tetikleme koşulunda operatör geçersiz: "{operator}".',
+    en: 'Invalid operator in a trigger condition: "{operator}".'
+  },
+  'workflow.issue.trigger.fieldMissing': {
+    tr: 'Tetikleme koşulundaki "{field}" alanı modelde yok.',
+    en: 'The trigger condition field "{field}" does not exist in the model.'
+  },
+
   // ── Özellik paneli ────────────────────────────────────────────────────────
   'workflow.inspector.aria': { tr: 'Seçimin özellikleri', en: 'Selection properties' },
   'workflow.inspector.title': { tr: 'Özellikler', en: 'Properties' },
@@ -327,8 +541,6 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.build.noConditions': { tr: 'Koşul yok — her kayıtta tetiklenir.', en: 'No conditions — triggers on every record.' },
   'workflow.build.save': { tr: 'Kaydet', en: 'Save' },
   'workflow.build.saveAndPublish': { tr: 'Kaydet ve Yayınla', en: 'Save and Publish' },
-  'workflow.build.validationTitle': { tr: 'Tanım sorunları', en: 'Definition issues' },
-  'workflow.build.validationOk': { tr: 'Tanım geçerli.', en: 'The definition is valid.' },
   'workflow.build.saveFailed': { tr: 'Akış kaydedilemedi.', en: 'Workflow could not be saved.' },
   'workflow.build.loadFailed': { tr: 'Akış yüklenemedi.', en: 'Workflow could not be loaded.' },
   'workflow.build.serverError': { tr: 'Sunucuya ulaşılamadı.', en: 'Could not reach the server.' },

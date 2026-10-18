@@ -1,11 +1,12 @@
 import {
-  ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, OnInit, PLATFORM_ID,
-  computed, effect, inject, signal, untracked, viewChild
+  ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, Injector, OnInit, PLATFORM_ID,
+  afterNextRender, computed, effect, inject, signal, untracked, viewChild
 } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { CommonModule, Location, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { Observable, catchError, debounceTime, distinctUntilChanged, filter, of, switchMap, tap } from 'rxjs';
 import { WorkflowService } from '../../services/workflow.service';
 import { PublishedColumn, PublishedModelService } from '../../services/published-model.service';
 import { RoleAdminService } from '../../services/role-admin.service';
@@ -16,6 +17,7 @@ import {
   WorkflowCondition,
   WorkflowDefinition,
   WorkflowGraph,
+  WorkflowIssue,
   WorkflowStep
 } from '../../models/workflow.model';
 import { Role } from '../../models/role';
@@ -39,12 +41,16 @@ import {
 import { Point } from '../shared/workflow-canvas/workflow-canvas.camera';
 import { WorkflowPaletteComponent } from './designer/workflow-palette.component';
 import { WorkflowInspectorComponent } from './designer/workflow-inspector.component';
+import { WorkflowIssuesPanelComponent } from './designer/workflow-issues-panel.component';
+import {
+  IssueRow, badgeTitle, countIssues, issueRows, rowsByStep
+} from './designer/workflow-issues';
 import {
   commandFor, isActivationTarget, isTypingTarget
 } from '../shared/workflow-canvas/workflow-canvas.keymap';
 import { StepDialogResult, WorkflowStepDialogComponent } from './step-dialog/workflow-step-dialog.component';
 import { WorkflowDesignerStore } from './designer/workflow-designer.store';
-import { docFromDefinition, docToPayload, emptyDoc } from './designer/workflow-design.doc';
+import { docFromDefinition, docToPayload, emptyDoc, semanticKey } from './designer/workflow-design.doc';
 import {
   clearPositions,
   connect,
@@ -66,6 +72,12 @@ type TabId = 'steps' | 'canvas' | 'trigger';
 /** Bu genişliğin altında tuval yerine Adımlar sekmesi açılır (mobil kırılma noktası). */
 const NARROW_SCREEN_QUERY = '(max-width: 768px)';
 
+/**
+ * Son düzenlemeden bu kadar sonra sunucuda doğrulanır. Yazarken her tuşta istek
+ * atılmasın; konum değişiklikleri (sürükleme) hiç doğrulama tetiklemez.
+ */
+const VALIDATION_DEBOUNCE_MS = 800;
+
 /** Açık adım pop-up'ı: düzenlenen adım (yenide null), durum etiketi ve önerilen anahtar. */
 interface StepDialogState {
   step: WorkflowStep | null;
@@ -79,6 +91,8 @@ interface StepRow {
   name: string;
   selected: boolean;
   isStart: boolean;
+  errors: number;
+  warnings: number;
   typeKey: string;
   assignment: string;
   approveTarget: string;
@@ -110,7 +124,7 @@ interface StepRow {
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe,
     WorkflowCanvasComponent, WorkflowStepDialogComponent, ConfirmDialogComponent,
-    WorkflowPaletteComponent, WorkflowInspectorComponent
+    WorkflowPaletteComponent, WorkflowInspectorComponent, WorkflowIssuesPanelComponent
   ],
   providers: [WorkflowDesignerStore],
   templateUrl: './workflow-build.component.html',
@@ -119,6 +133,7 @@ interface StepRow {
 })
 export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly injector = inject(Injector);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
@@ -188,21 +203,58 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     };
   });
 
-  /** Tuval kartlarının tip etiketi, ikonu ve özet satırı (anahtar küçük harfli). */
+  // ── Canlı doğrulama ───────────────────────────────────────────────────────
+
+  /** Sunucunun son doğrulama bulguları (taslak; yayınlanmış sürümde boş). */
+  readonly issues = signal<WorkflowIssue[]>([]);
+  readonly validating = signal(false);
+  readonly issuesExpanded = signal(true);
+
+  /** Belge yüklendi mi — yükleme bitmeden boş belgeyi doğrulayıp yalancı sorun gösterme. */
+  private readonly docReady = signal(false);
+
+  /** Doğrulamayı tetikleyen anahtar: konumsuz belge; salt-okunurda ya da yüklenmeden null. */
+  private readonly validationKey = computed(() =>
+    this.docReady() && !this.store.readonly() ? semanticKey(this.store.doc()) : null);
+
+  /** Sorun satırları — dil ya da adım adı değişince metinler yenilenir. */
+  readonly issueRows = computed<IssueRow[]>(() => {
+    this.languageService.lang();
+    return issueRows(this.issues(), this.store.doc(), this.languageService);
+  });
+
+  readonly issueCounts = computed(() => countIssues(this.issueRows()));
+
+  /** Adım başına sorunlar (anahtar küçük harfli) — rozet, liste ve özellik paneli. */
+  readonly stepIssues = computed<Record<string, IssueRow[]>>(() =>
+    Object.fromEntries(rowsByStep(this.issueRows())));
+
+  /** Özellik panelinde seçili adımın sorunları. */
+  readonly selectedIssues = computed<IssueRow[]>(() => {
+    const selection = this.store.selection();
+    if (selection.edge || selection.nodes.length !== 1) return [];
+    return this.stepIssues()[selection.nodes[0].toLowerCase()] ?? [];
+  });
+
+  /** Tuval kartlarının tip etiketi, ikonu, özet satırı ve sorun rozeti (anahtar küçük harfli). */
   readonly nodeMeta = computed<Record<string, CanvasNodeMeta>>(() => {
     const lookup = this.summaryLookup();
+    const byStep = this.stepIssues();
     const meta: Record<string, CanvasNodeMeta> = {};
 
     for (const step of this.store.graph().steps) {
       const info = nodeKindInfo(nodeKindOf(step));
-      meta[step.key.toLowerCase()] = {
+      const key = step.key.toLowerCase();
+      const rows = byStep[key] ?? [];
+      const counts = countIssues(rows);
+      meta[key] = {
         kindLabel: lookup.t(info.labelKey),
         tone: info.tone,
         icon: info.icon,
         summary: stepSummary(step, lookup),
-        errors: 0,
-        warnings: 0,
-        issueTitle: ''
+        errors: counts.errors,
+        warnings: counts.warnings,
+        issueTitle: badgeTitle(rows, this.languageService)
       };
     }
     return meta;
@@ -213,14 +265,18 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     const lookup = this.summaryLookup();
     const graph = this.store.graph();
     const selection = this.store.selection();
+    const byStep = this.stepIssues();
 
     return graph.steps.map(step => {
       const [positive, negative] = exitsOf(step);
+      const counts = countIssues(byStep[step.key.toLowerCase()] ?? []);
       return {
         key: step.key,
         name: step.name,
         selected: isNodeSelected(selection, step.key),
         isStart: sameKey(graph.startStep, step.key),
+        errors: counts.errors,
+        warnings: counts.warnings,
         typeKey: nodeKindInfo(nodeKindOf(step)).labelKey,
         assignment: assignmentSummary(step, lookup),
         approveTarget: positive?.target || this.languageService.t('workflow.build.terminalCompleted'),
@@ -243,7 +299,6 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   saving = false;
   loadError: string | null = null;
   submitError: string | null = null;
-  validationErrors: string[] = [];
 
   /** Salt-okunur açılan sürüm (yayınlanmış/arşiv); taslakta null. */
   readonlyVersion: number | null = null;
@@ -267,10 +322,29 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
         if (control && control.value !== start) control.setValue(start, { emitEvent: false });
       });
     });
+
+    // Canlı doğrulama: belge (konumlar hariç) değişip durulunca sunucuya sorulur;
+    // yeni düzenleme gelirse önceki istek iptal edilir. Ağ hatasında son sonuç
+    // ekranda kalır — doğrulama yardımcıdır, düzenlemeyi engellemez.
+    toObservable(this.validationKey).pipe(
+      debounceTime(VALIDATION_DEBOUNCE_MS),
+      distinctUntilChanged(),
+      tap(key => { if (key === null) this.issues.set([]); }),
+      filter((key): key is string => key !== null),
+      tap(() => this.validating.set(true)),
+      switchMap(() => this.workflowService.validate(docToPayload(this.store.doc(), this.editingId)).pipe(
+        catchError(() => of(null)))),
+      takeUntilDestroyed()
+    ).subscribe(res => {
+      this.validating.set(false);
+      if (res?.success && res.data) this.issues.set(res.data.issues ?? []);
+      this.cdr.markForCheck();
+    });
   }
 
   ngOnInit(): void {
     this.isNew = this.route.snapshot.data['mode'] === 'new';
+    if (this.isNew) this.docReady.set(true);
     this.buildForm();
     this.store.load(emptyDoc());
     this.syncFormFromDoc();
@@ -541,6 +615,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
         const readonly = workflow.status !== 'Draft';
         this.readonlyMode.set(readonly);
         this.populate(workflow);
+        this.docReady.set(true);
 
         if (readonly) {
           // Hata değil bilgi: kullanıcıya yolu ("Yeni Sürüm Oluştur") gösteriyoruz.
@@ -594,7 +669,6 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
         this.readonlyMode.set(false);
         this.readonlyVersion = null;
         this.submitError = null;
-        this.validationErrors = [];
         this.form.enable({ emitEvent: false });
         this.loadExisting(draftId);
       },
@@ -613,22 +687,43 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
 
   // ── Gönderim ──────────────────────────────────────────────────────────────
 
-  private buildPayload(): Partial<WorkflowDefinition> {
-    return docToPayload(this.store.doc(), this.editingId);
+  // ── Sorunlar ──────────────────────────────────────────────────────────────
+
+  /** Başlıktaki sorun düğmesi: listeyi açar ve görünür alana getirir. */
+  showIssues(): void {
+    this.issuesExpanded.set(true);
+    if (!isPlatformBrowser(this.platformId)) return;
+    afterNextRender(() => document.getElementById('wf-issues')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), { injector: this.injector });
   }
 
-  validate(): void {
-    this.workflowService.validate(this.buildPayload()).pipe(markDirty(this.cdr)).subscribe({
-      next: res => {
-        this.validationErrors = res.data?.errors ?? [];
-        if (res.data?.isValid) {
-          this.notification.success(this.languageService.t('workflow.build.validationOk'));
-        }
-      },
-      error: err => {
-        this.submitError = err?.error?.message ?? this.languageService.t('workflow.build.serverError');
-      }
-    });
+  /**
+   * Sorun satırına tıklama: ilgili adımı seçer ve tuvalde gösterir; telefonda
+   * (tuval yok) adım pop-up'ını açar. Tetik sorunu Tetikleyici sekmesine götürür.
+   */
+  pickIssue(row: IssueRow): void {
+    if (row.target === 'trigger') {
+      this.setTab('trigger');
+      return;
+    }
+
+    const step = row.stepKey ? findStep(this.store.doc(), row.stepKey) : undefined;
+    if (!step) return;
+
+    this.store.selection.set(selectNodes([step.key]));
+    if (this.isNarrowScreen()) {
+      this.openStep(step.key);
+      return;
+    }
+
+    this.setTab('canvas');
+    afterNextRender(() => this.canvas()?.reveal(step.key, false), { injector: this.injector });
+  }
+
+  private isNarrowScreen(): boolean {
+    return isPlatformBrowser(this.platformId)
+      && typeof window.matchMedia === 'function'
+      && window.matchMedia(NARROW_SCREEN_QUERY).matches;
   }
 
   /**
@@ -645,7 +740,6 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
 
     this.saving = true;
     this.submitError = null;
-    this.validationErrors = [];
 
     // Gönderilen belge: yanıt gelene kadar yapılan düzenlemeler "kaydedildi" sayılmasın.
     const sent = this.store.doc();

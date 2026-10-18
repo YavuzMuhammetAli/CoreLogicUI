@@ -13,6 +13,14 @@
     </header>
 
     <div class="inspector-body">
+      @if (issues().length > 0) {
+        <ul class="inspector-issues" role="list" [attr.aria-label]="'workflow.issues.title' | t">
+          @for (issue of issues(); track $index) {
+            <li [class.inspector-issue--warn]="issue.severity === 'warning'">{{ issue.text }}</li>
+          }
+        </ul>
+      }
+
       <div class="field">
         <label for="ins-name">{{ 'workflow.build.stepName' | t }}</label>
         <input id="ins-name" class="input" type="text" [value]="step.name"

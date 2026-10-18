@@ -16,6 +16,7 @@ import { SummaryLookup, assignmentText } from '../../../utils/workflow/workflow-
 import { WorkflowDesignerStore } from './workflow-designer.store';
 import { connect, findStep, labelStep, patchStep, renameStep } from './workflow-design.commands';
 import { selectNodes } from './workflow-selection';
+import { IssueRow } from './workflow-issues';
 import {
   ExitRow, KeyProblem, exitRows, keyProblem, setAllowReject, setAssignee, setAssignmentMode,
   setDueHours, setJoinMode, setName
@@ -52,6 +53,8 @@ export class WorkflowInspectorComponent {
 
   readonly roles = input<Role[]>([]);
   readonly users = input<AppUser[]>([]);
+  /** Seçili adımın doğrulama sorunları. */
+  readonly issues = input<IssueRow[]>([]);
 
   /** Tüm ayarlar (adım pop-up'ı). */
   readonly openSettings = output<string>();

@@ -160,11 +160,6 @@
   letter-spacing: 0.04em;
 }
 
-.validation-list {
-  margin: var(--space-2) 0 0;
-  padding-left: var(--space-4);
-}
-
 @media (max-width: 768px) {
   .condition-head { display: none; }
 
@@ -217,6 +212,11 @@
     display: flex;
   }
 }
+
+// Başlıktaki doğrulama özeti: sorun yoksa sakin, hata varsa kırmızı.
+.issue-chip { color: var(--success); }
+.issue-chip--warn { color: var(--warn); }
+.issue-chip--error { color: var(--danger); }
 
 // Kaydedilmemiş değişiklik işareti — geri alıp kayıtlı hale dönünce kaybolur.
 .unsaved-dot {

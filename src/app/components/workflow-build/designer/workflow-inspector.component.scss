@@ -76,6 +76,23 @@
 
 .inspector-muted { color: var(--muted); }
 
+// Seçili adımın sorunları — alanların üstünde, ne eksik olduğu ilk bakışta görünsün.
+.inspector-issues {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  display: grid;
+  gap: var(--space-1);
+  border-radius: 8px;
+  background: var(--danger-bg);
+  font-size: var(--text-sm);
+  color: var(--danger);
+
+  li::before { content: '• '; }
+}
+
+.inspector-issue--warn { color: var(--warn); }
+
 .inspector-text {
   margin: 0;
   font-size: var(--text-sm);
