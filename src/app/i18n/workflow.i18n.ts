@@ -97,6 +97,10 @@ export const WORKFLOW_I18N: Translations = {
     en: 'Double-click: edit step · Click: select (Shift for multiple, Shift + drag: box) · Drag: move (Alt: no grid) · Drag from the green/red dot at the bottom onto a step: connect; an unconnected exit ends the process · Delete: remove · Ctrl+Z/Y: undo/redo · Ctrl+C/V/D: copy/paste/duplicate · Right-click: menu · Ctrl + wheel: zoom.'
   },
   'workflow.canvas.start': { tr: 'Başlangıç', en: 'Start' },
+  'workflow.canvas.empty': {
+    tr: 'Henüz adım yok. İlk adımı "Adım Ekle" ile oluşturun.',
+    en: 'No steps yet. Create the first one with "Add Step".'
+  },
   'workflow.canvas.aria': {
     tr: 'Akış şeması. Ok tuşları seçili adımları iter, Delete siler, Enter ayrıntıyı açar.',
     en: 'Workflow diagram. Arrow keys nudge the selected steps, Delete removes, Enter opens details.'
@@ -138,7 +142,6 @@ export const WORKFLOW_I18N: Translations = {
     tr: 'Elle verilen konumları sıfırlar; onay yolu dikey, red dalı sağda olacak şekilde yeniden dizer.',
     en: 'Resets manual positions and re-arranges the steps with the approve path vertical and reject branches to the right.'
   },
-  'workflow.build.tabPreview': { tr: 'Önizleme', en: 'Preview' },
   'workflow.build.tablistAria': { tr: 'Akış tasarım sekmeleri', en: 'Workflow design tabs' },
   'workflow.build.name': { tr: 'Akış adı', en: 'Workflow name' },
   'workflow.build.code': { tr: 'Kod', en: 'Code' },
@@ -247,8 +250,12 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.build.saveFailed': { tr: 'Akış kaydedilemedi.', en: 'Workflow could not be saved.' },
   'workflow.build.loadFailed': { tr: 'Akış yüklenemedi.', en: 'Workflow could not be loaded.' },
   'workflow.build.serverError': { tr: 'Sunucuya ulaşılamadı.', en: 'Could not reach the server.' },
-  'workflow.build.previewEmpty': { tr: 'Önizleme için en az bir adım ekleyin.', en: 'Add at least one step to preview.' },
-  'workflow.build.previewAria': { tr: 'Akış şeması', en: 'Workflow diagram' },
+  'workflow.build.leaveTitle': { tr: 'Kaydedilmemiş değişiklikler', en: 'Unsaved changes' },
+  'workflow.build.leaveMessage': {
+    tr: 'Akışta kaydetmediğiniz değişiklikler var. Kaydetmeden ayrılırsanız bu değişiklikler kaybolur.',
+    en: 'This workflow has changes you have not saved. If you leave without saving, they will be lost.'
+  },
+  'workflow.build.leaveConfirm': { tr: 'Kaydetmeden ayrıl', en: 'Leave without saving' },
 
   // ── my-tasks ──────────────────────────────────────────────────────────────
   'task.list.title': { tr: 'Görevlerim', en: 'My Tasks' },

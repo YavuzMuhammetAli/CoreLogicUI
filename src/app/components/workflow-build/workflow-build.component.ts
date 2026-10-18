@@ -1,8 +1,8 @@
 import {
-  ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, OnInit,
+  ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, OnInit, PLATFORM_ID,
   computed, inject, signal, viewChild
 } from '@angular/core';
-import { CommonModule, Location } from '@angular/common';
+import { CommonModule, Location, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
@@ -22,11 +22,13 @@ import { Role } from '../../models/role';
 import { AppUser } from '../../models/appUser';
 import { LanguageService } from '../../services/language.service';
 import { NotificationService } from '../../services/notification.service';
-import { ResponseModel } from '../../models/responseModel';
+import { DataResponseModel } from '../../models/dataResponseModel';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { HasUnsavedChanges } from '../../guards/unsaved-changes.guard';
 import { markDirty } from '../../utils/change-detection';
 import { exitForKind, exitsOf, sameKey } from '../../utils/workflow/workflow-exits';
-import { WorkflowGraphComponent } from '../shared/workflow-graph/workflow-graph.component';
+import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
+import { IDENTITY_CAMERA } from '../shared/workflow-canvas/workflow-canvas.camera';
 import {
   CanvasMenuAction, CanvasSelection, WorkflowCanvasComponent
 } from '../shared/workflow-canvas/workflow-canvas.component';
@@ -52,7 +54,10 @@ import {
 import { DesignClipboard, copySteps, pasteSteps } from './designer/workflow-clipboard';
 import { isNodeSelected, selectNodes } from './designer/workflow-selection';
 
-type TabId = 'steps' | 'canvas' | 'trigger' | 'preview';
+type TabId = 'steps' | 'canvas' | 'trigger';
+
+/** Bu genişliğin altında tuval yerine Adımlar sekmesi açılır (mobil kırılma noktası). */
+const NARROW_SCREEN_QUERY = '(max-width: 768px)';
 
 /** Açık adım pop-up'ı: düzenlenen adım (yenide null), durum etiketi ve önerilen anahtar. */
 interface StepDialogState {
@@ -78,8 +83,12 @@ interface StepRow {
 /**
  * Akış tasarım ekranı — liste ve canvas AYNI belgeyi düzenler.
  *
- * Dört sekme: Adımlar (liste), Tasarım (sürükle-bırak canvas), Tetikleyici,
- * Önizleme (salt-okunur şema).
+ * Üç sekme: Adımlar (liste), Tasarım (sürükle-bırak canvas), Tetikleyici.
+ * Salt-okunur sürümde tuval şemayı gösterir (ayrı önizleme sekmesi yok).
+ *
+ * Kaydet ekranda kalır (taslak eksikleriyle de kaydedilir); Kaydet ve Yayınla
+ * yayınlanan sürümü salt-okunur açar. Kaydedilmemiş değişiklikle ayrılırken
+ * sorulur (rota guard'ı + beforeunload).
  *
  * Doğruluk kaynağı tasarım belgesidir (WorkflowDesignerStore). Belge yalnız saf
  * komutlarla değişir (designer/workflow-design.commands.ts) ve her değişiklik
@@ -95,14 +104,15 @@ interface StepRow {
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe,
-    WorkflowGraphComponent, WorkflowCanvasComponent, WorkflowStepDialogComponent
+    WorkflowCanvasComponent, WorkflowStepDialogComponent, ConfirmDialogComponent
   ],
   providers: [WorkflowDesignerStore],
   templateUrl: './workflow-build.component.html',
   styleUrl: './workflow-build.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class WorkflowBuildComponent implements OnInit {
+export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
+  private readonly platformId = inject(PLATFORM_ID);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
@@ -120,7 +130,15 @@ export class WorkflowBuildComponent implements OnInit {
   readonly triggerEventOptions = TRIGGER_EVENT_OPTIONS;
   readonly operators = WORKFLOW_OPERATORS;
 
-  readonly activeTab = signal<TabId>('steps');
+  /** Masaüstünde tuval, telefonda Adımlar açılır (tuval dokunmatikte zor; bkz. canvasMobileNotice). */
+  readonly activeTab = signal<TabId>(this.initialTab());
+
+  /** Tuvale saklı kamera yokken verilen başlangıç değeri. */
+  readonly identityCamera = IDENTITY_CAMERA;
+
+  /** "Kaydetmeden ayrıl?" sorusu açık mı; cevap bekleyen guard'ın çözücüsü. */
+  readonly leaveConfirm = signal(false);
+  private leaveResolver: ((leave: boolean) => void) | null = null;
 
   /** Açık adım pop-up'ı; kapalıyken null. */
   readonly stepDialog = signal<StepDialogState | null>(null);
@@ -137,8 +155,8 @@ export class WorkflowBuildComponent implements OnInit {
   /** Sayfa içi pano (kopyala/yapıştır). */
   private clipboard: DesignClipboard | null = null;
 
-  /** Canvas ve önizleme grafiği; adım yoksa boş durum gösterilir. */
-  readonly previewGraph = computed<WorkflowGraph | null>(() => {
+  /** Tuvalin grafiği; adım yoksa tuval boş durum gösterir. */
+  readonly canvasGraph = computed<WorkflowGraph | null>(() => {
     const graph = this.store.graph();
     return graph.steps.length > 0 ? graph : null;
   });
@@ -194,6 +212,12 @@ export class WorkflowBuildComponent implements OnInit {
 
   /** Yeni sürüm taslağının yayınlanınca alacağı numara; ilk taslakta null. */
   draftNextVersion: number | null = null;
+
+  /**
+   * Taslağın sunucudaki son değişiklik damgası — kayıtta geri gönderilir; arada
+   * başka biri kaydettiyse sunucu reddeder (iyimser kilit). Yeni taslakta null.
+   */
+  private lastModifiedOn: string | null = null;
 
   ngOnInit(): void {
     this.isNew = this.route.snapshot.data['mode'] === 'new';
@@ -442,6 +466,7 @@ export class WorkflowBuildComponent implements OnInit {
 
         const workflow = res.data;
         this.editingId = workflow.id;
+        this.lastModifiedOn = workflow.lastModifiedOn ?? null;
 
         // Yayınlanmış akış düzenlenemez ama ŞEMASI GÖRÜNEBİLMELİ: önce doldur,
         // sonra kilitle (kilit, belge komutlarını ve formu kapatır).
@@ -538,7 +563,13 @@ export class WorkflowBuildComponent implements OnInit {
     });
   }
 
+  /**
+   * Kaydeder ve EKRANDA KALIR. Yayınla seçiliyse ardından yayınlar ve yayınlanan
+   * sürüm salt-okunur açılır. Taslak eksikleriyle de kaydedilir; eksikler yayında
+   * engellenir.
+   */
   onSubmit(publish: boolean): void {
+    if (this.saving) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -548,11 +579,15 @@ export class WorkflowBuildComponent implements OnInit {
     this.submitError = null;
     this.validationErrors = [];
 
-    const payload = this.buildPayload();
+    // Gönderilen belge: yanıt gelene kadar yapılan düzenlemeler "kaydedildi" sayılmasın.
+    const sent = this.store.doc();
+    const payload: Partial<WorkflowDefinition> = {
+      ...docToPayload(sent, this.editingId),
+      expectedLastModifiedOn: this.lastModifiedOn
+    };
 
-    // define() DataResponseModel<number>, update() DataResponseModel<string> döner;
-    // ortak abonelik için ResponseModel'e genişletiliyor (report-build ile aynı desen).
-    const request: Observable<ResponseModel> = this.editingId
+    // define() yeni ID'yi, update() yeni damgayı döner.
+    const request: Observable<DataResponseModel<number | string>> = this.editingId
       ? this.workflowService.update(payload)
       : this.workflowService.define(payload);
 
@@ -564,25 +599,18 @@ export class WorkflowBuildComponent implements OnInit {
           return;
         }
 
-        this.store.markSaved();
-        const newId = this.editingId ?? (res as { data?: number }).data ?? 0;
-
-        // Yeni akış artık kayıtlı: ekran düzenleme moduna geçer. Aksi halde yayın
-        // düşüp kullanıcı tekrar bastığında define() yeniden çağrılır ve aynı
-        // kodla ikinci bir taslak açılmaya çalışılırdı (taslak artık eksikleriyle
-        // de kaydedildiği için bu yol gerçekten koşuyor).
-        if (!this.editingId && newId) {
-          this.editingId = newId;
-          this.isNew = false;
-          this.location.replaceState(`/workflows/${newId}/edit`);
+        this.store.markSaved(sent);
+        if (this.editingId) {
+          this.lastModifiedOn = typeof res.data === 'string' && res.data ? res.data : this.lastModifiedOn;
+        } else {
+          this.adoptNewDraft(Number(res.data));
         }
 
-        if (publish && newId) {
-          this.publishThen(newId);
+        if (publish && this.editingId) {
+          this.publishThen(this.editingId);
         } else {
           this.saving = false;
           this.notification.success(res.message ?? '');
-          this.router.navigate(['/workflows']);
         }
       },
       error: err => {
@@ -592,24 +620,84 @@ export class WorkflowBuildComponent implements OnInit {
     });
   }
 
+  /**
+   * Yeni taslak kaydedildi: ekran düzenleme moduna geçer. Aksi halde ikinci
+   * Kaydet define()'ı yeniden çağırır ve aynı kodla ikinci taslak açmaya çalışırdı.
+   * define() damga dönmediği için sonraki kaydın iyimser kilidi için okunur.
+   */
+  private adoptNewDraft(id: number): void {
+    if (!id) return;
+    this.editingId = id;
+    this.isNew = false;
+    this.location.replaceState(`/workflows/${id}/edit`);
+
+    this.workflowService.get(id).pipe(markDirty(this.cdr)).subscribe({
+      next: res => {
+        if (res.success && res.data && this.editingId === id) {
+          this.lastModifiedOn = res.data.lastModifiedOn ?? null;
+        }
+      },
+      error: () => { /* damga okunamazsa sonraki kayıt kilitsiz gider; kayıt yine olur */ }
+    });
+  }
+
   private publishThen(id: number): void {
     this.workflowService.publish(id).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.saving = false;
-        if (res.success) {
-          this.notification.success(res.message ?? '');
-          this.router.navigate(['/workflows']);
-        } else {
-          // Kayıt başarılı ama yayın başarısız: kullanıcı listede taslağı görecek,
-          // bu yüzden hata ekranda kalmalı ve yönlendirme yapılmamalı.
+        if (!res.success) {
+          // Taslak kaydedildi ama yayın reddedildi (eksikler): ekranda düzenlemeye devam.
           this.submitError = res.message ?? this.languageService.t('workflow.build.saveFailed');
+          return;
         }
+
+        this.notification.success(res.message ?? '');
+        // Yayınlanan sürüm salt-okunur açılır — listeye atmak, kullanıcıya az önce
+        // yayınladığı şemayı göstermemek olurdu.
+        this.draftNextVersion = null;
+        this.loadExisting(id);
       },
       error: err => {
         this.saving = false;
         this.submitError = err?.error?.message ?? this.languageService.t('workflow.build.serverError');
       }
     });
+  }
+
+  // ── Ayrılma ───────────────────────────────────────────────────────────────
+
+  /** Rota guard'ı sorar: kaydedilmemiş değişiklik varsa kullanıcıya onaylatılır. */
+  canLeave(): boolean | Promise<boolean> {
+    if (!this.store.dirty()) return true;
+
+    // Önceki soru cevapsız kaldıysa (art arda iki gezinme) o "kal" sayılır.
+    this.leaveResolver?.(false);
+    return new Promise<boolean>(resolve => {
+      this.leaveResolver = resolve;
+      this.leaveConfirm.set(true);
+      this.cdr.markForCheck();
+    });
+  }
+
+  resolveLeave(leave: boolean): void {
+    this.leaveConfirm.set(false);
+    const resolve = this.leaveResolver;
+    this.leaveResolver = null;
+    resolve?.(leave);
+  }
+
+  /** Sekme kapatma / yenileme rota guard'ına uğramaz; tarayıcının kendi uyarısı istenir. */
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (!this.store.dirty()) return;
+    event.preventDefault();
+    // Eski tarayıcılar uyarıyı yalnız returnValue doluysa gösterir.
+    event.returnValue = '';
+  }
+
+  private initialTab(): TabId {
+    if (!isPlatformBrowser(this.platformId) || typeof window.matchMedia !== 'function') return 'steps';
+    return window.matchMedia(NARROW_SCREEN_QUERY).matches ? 'steps' : 'canvas';
   }
 
   setTab(tab: TabId): void {
@@ -768,7 +856,7 @@ export class WorkflowBuildComponent implements OnInit {
    */
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
-    if (this.stepDialog() || isTypingTarget(event.target)) return;
+    if (this.stepDialog() || this.leaveConfirm() || isTypingTarget(event.target)) return;
 
     const action = commandFor(event);
     if (!action) return;

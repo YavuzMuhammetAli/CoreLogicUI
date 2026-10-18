@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
 import { adminGuard } from './guards/admin.guard';
 import { modelPermissionGuard } from './guards/model-permission.guard';
+import { unsavedChangesGuard } from './guards/unsaved-changes.guard';
 
 export const routes: Routes = [
   // Giriş ekranı (korumasız)
@@ -206,6 +207,7 @@ export const routes: Routes = [
       {
         path: 'workflows/new',
         canActivate: [adminGuard],
+        canDeactivate: [unsavedChangesGuard],
         data: { mode: 'new' },
         loadComponent: () =>
           import('./components/workflow-build/workflow-build.component').then(m => m.WorkflowBuildComponent)
@@ -235,6 +237,7 @@ export const routes: Routes = [
       {
         path: 'workflows/:id/edit',
         canActivate: [adminGuard],
+        canDeactivate: [unsavedChangesGuard],
         loadComponent: () =>
           import('./components/workflow-build/workflow-build.component').then(m => m.WorkflowBuildComponent)
       },

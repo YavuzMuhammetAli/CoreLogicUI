@@ -1,5 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { WorkflowGraph } from '../../../models/workflow.model';
+import { Camera } from '../../shared/workflow-canvas/workflow-canvas.camera';
 import { WorkflowDesignDoc, emptyDoc, serializeDoc } from './workflow-design.doc';
 import { DesignSelection, EMPTY_SELECTION, pruneSelection } from './workflow-selection';
 import {
@@ -48,6 +49,13 @@ export class WorkflowDesignerStore {
   /** Seçim — canvas ve adım listesi aynı seçimi gösterir. */
   readonly selection = signal<DesignSelection>(EMPTY_SELECTION);
 
+  /**
+   * Tuvalin kamerası. Tuval sekme değişiminde DOM'dan kalkar (gizli sekmede
+   * sıfır boyutlu olur, sığdırma bozulur); dönüşte kaldığı yerden açılsın diye
+   * kamera burada saklanır. null → tuval ilk açılışta şemayı sığdırır.
+   */
+  readonly camera = signal<Camera | null>(null);
+
   /** Belgeyi yükler; geçmiş, seçim ve "kaydedilmemiş" bayrağı sıfırlanır. */
   load(doc: WorkflowDesignDoc): void {
     this.history.set(createHistory(doc));
@@ -84,8 +92,12 @@ export class WorkflowDesignerStore {
     this.selection.update(selection => pruneSelection(selection, this.doc()));
   }
 
-  /** Başarılı kayıttan sonra: mevcut belge artık "kaydedilmiş" sayılır. */
-  markSaved(): void {
-    this.savedSnapshot.set(serializeDoc(this.doc()));
+  /**
+   * Başarılı kayıttan sonra: GÖNDERİLEN belge "kaydedilmiş" sayılır. İstek
+   * sürerken yapılan düzenlemeler kaydedilmiş görünmesin diye anlık görüntü
+   * gönderim anında alınıp buraya verilir.
+   */
+  markSaved(doc: WorkflowDesignDoc = this.doc()): void {
+    this.savedSnapshot.set(serializeDoc(doc));
   }
 }

@@ -12,7 +12,8 @@ import { TranslatePipe } from '../../../pipes/translate.pipe';
   standalone: true,
   imports: [TranslatePipe],
   templateUrl: './confirm-dialog.component.html',
-  styleUrls: ['./confirm-dialog.component.scss'],
+  styleUrls: ['./confirm-dialog.component.scss']
+,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ConfirmDialogComponent {
@@ -30,6 +31,11 @@ export class ConfirmDialogComponent {
    * `1000 + depth * 10` kullanıyor, onay kutusu bunun da üstüne çıkmalı).
    */
   zIndex = input<number | null>(null);
+  /**
+   * Onay düğmesinin metni (çevrilmiş). Boşsa "Sil" — diyalog silme onayı için
+   * yazıldı; başka bir onayda (ör. "Kaydetmeden ayrıl") düğme ne yapacağını söylemeli.
+   */
+  confirmLabel = input('');
 
   confirmed = output<void>();
   cancelled = output<void>();

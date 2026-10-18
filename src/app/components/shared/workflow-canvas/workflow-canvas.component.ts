@@ -1,6 +1,6 @@
 import {
   ChangeDetectionStrategy, Component, DestroyRef, ElementRef, Injector, PLATFORM_ID,
-  afterNextRender, computed, effect, inject, input, output, signal, untracked, viewChild
+  afterNextRender, computed, effect, inject, input, model, output, signal, untracked, viewChild
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { WorkflowGraph } from '../../../models/workflow.model';
@@ -155,6 +155,15 @@ export class WorkflowCanvasComponent {
   readonly locked = input(false, { alias: 'readonly' });
 
   /**
+   * Kamera iki yönlü bağlanır (`[(camera)]`): tuval sekme değişiminde DOM'dan
+   * kalkıyor, dönüşte kaldığı yerden açılsın diye değer ekranda saklanır.
+   */
+  readonly camera = model<Camera>(IDENTITY_CAMERA);
+
+  /** İçerik ilk geldiğinde şema sığdırılsın mı (saklı kamera varsa hayır). */
+  readonly fitOnOpen = input(true);
+
+  /**
    * Düğümler taşındı — konumlar tanıma TEK değişiklikte yazılmalı. İlk elle
    * taşımada konumu otomatik yerleşimden gelen diğer düğümler de eklenir
    * (bkz. pinAll): sonraki eklemelerde yerleşim değişince "zıplamasınlar".
@@ -190,7 +199,6 @@ export class WorkflowCanvasComponent {
 
   readonly menu = signal<MenuState | null>(null);
 
-  readonly camera = signal<Camera>(IDENTITY_CAMERA);
   readonly zoomPercent = computed(() => Math.round(this.camera().zoom * 100));
   readonly showEdgeLabels = computed(() => this.camera().zoom > EDGE_LABEL_MIN_ZOOM);
 
@@ -357,7 +365,7 @@ export class WorkflowCanvasComponent {
     effect(() => {
       if (this.fitted || this.nodes().length === 0) return;
       this.fitted = true;
-      this.fitAfterRender();
+      if (untracked(this.fitOnOpen)) this.fitAfterRender();
     });
 
     // Jest yarıda kalırken bileşen kapanırsa (sekme değişimi) document

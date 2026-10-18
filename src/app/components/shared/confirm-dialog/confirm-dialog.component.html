@@ -52,7 +52,7 @@
           @if (busy()) {
             <span class="spinner" aria-hidden="true"></span>
           }
-          {{ hasUsage() && !isFinalStep() ? ('common.deleteAnyway' | t) : ('common.delete' | t) }}
+          {{ hasUsage() && !isFinalStep() ? ('common.deleteAnyway' | t) : (confirmLabel() || ('common.delete' | t)) }}
         </button>
       </div>
     </div>

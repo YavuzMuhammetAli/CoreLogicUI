@@ -127,12 +127,6 @@
         {{ 'workflow.build.tabTrigger' | t }}
         <span class="tab-badge">{{ conditionsArray.length }}</span>
       </button>
-      <button type="button" class="tab-btn" role="tab"
-              [class.tab-btn--active]="activeTab() === 'preview'"
-              [attr.aria-selected]="activeTab() === 'preview'"
-              (click)="setTab('preview')">
-        {{ 'workflow.build.tabPreview' | t }}
-      </button>
     </div>
 
     @if (activeTab() === 'steps') {
@@ -209,10 +203,13 @@
           </div>
         }
         <app-workflow-canvas
-          [graph]="previewGraph()"
+          [graph]="canvasGraph()"
           [selectedNodes]="store.selection().nodes"
           [selectedEdge]="store.selection().edge"
           [readonly]="readonlyMode()"
+          [camera]="store.camera() ?? identityCamera"
+          (cameraChange)="store.camera.set($event)"
+          [fitOnOpen]="store.camera() === null"
           (selectionChange)="onSelectionChange($event)"
           (nodesMoved)="onNodesMoved($event)"
           (layoutReset)="onLayoutReset()"
@@ -282,14 +279,17 @@
         </section>
       </div>
     }
-
-    @if (activeTab() === 'preview') {
-      <div class="tab-panel" role="tabpanel">
-        <app-workflow-graph [graph]="previewGraph()" />
-      </div>
-    }
   </div>
 </form>
+
+<!-- Kaydedilmemiş değişiklikle ayrılırken (rota guard'ı bu cevabı bekler). -->
+<app-confirm-dialog
+  [open]="leaveConfirm()"
+  [title]="'workflow.build.leaveTitle' | t"
+  [message]="'workflow.build.leaveMessage' | t"
+  [confirmLabel]="'workflow.build.leaveConfirm' | t"
+  (confirmed)="resolveLeave(true)"
+  (cancelled)="resolveLeave(false)" />
 
 @if (stepDialog(); as dialog) {
   <app-workflow-step-dialog
