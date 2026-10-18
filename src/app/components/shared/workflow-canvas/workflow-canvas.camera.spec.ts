@@ -1,6 +1,6 @@
 import {
   Camera, GRID_MIN_SCREEN_STEP, GRID_STEP, IDENTITY_CAMERA, MAX_ZOOM, MIN_ZOOM, ViewportRect,
-  boundsOf, clampZoom, fitToView, gridStyle, panBy, screenToWorld, worldToScreen, zoomAt, zoomAtCenter
+  boundsOf, clampZoom, fitToView, gridStyle, panBy, revealBox, screenToWorld, worldToScreen, zoomAt, zoomAtCenter
 } from './workflow-canvas.camera';
 
 /**
@@ -239,5 +239,27 @@ describe('boundsOf', () => {
     ]);
 
     expect(bounds).toEqual({ minX: 10, minY: 5, maxX: 260, maxY: 205 });
+  });
+
+  describe('revealBox', () => {
+    const view = { width: 800, height: 600 };
+    const camera: Camera = { zoom: 1, panX: 0, panY: 0 };
+
+    it('görünür kutuda kamera aynı nesne kalır', () => {
+      expect(revealBox(camera, { x: 100, y: 100, width: 168, height: 60 }, view)).toBe(camera);
+    });
+
+    it('sağdan taşan kutu için yalnız gerektiği kadar sola kaydırır', () => {
+      const next = revealBox(camera, { x: 700, y: 100, width: 168, height: 60 }, view);
+      // sağ kenar 868 → 800 − 24 = 776 olmalı: 92 px.
+      expect(next).toEqual({ zoom: 1, panX: -92, panY: 0 });
+    });
+
+    it('soldan/üstten taşan kutuyu kenar payıyla getirir; zoom hesaba katılır', () => {
+      const zoomed: Camera = { zoom: 0.5, panX: -200, panY: 0 };
+      // x=100 → ekranda 50 − 200 = −150 → 24'e: +174.
+      expect(revealBox(zoomed, { x: 100, y: -100, width: 168, height: 60 }, view))
+        .toEqual({ zoom: 0.5, panX: -26, panY: 74 });
+    });
   });
 });

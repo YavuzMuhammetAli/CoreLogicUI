@@ -177,6 +177,25 @@
   }
 }
 
+// ── Tasarımcı yerleşimi: palet | tuval ──────────────────────────────────────
+
+.designer {
+  display: grid;
+  grid-template-columns: 156px minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.designer--readonly {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.designer-canvas { min-width: 0; }
+
 // Tuval dokunmatikte zor (küçük portlar, çift dokunuşla açma); aynı işler Adımlar
 // sekmesinden ve adım diyaloğundan yapılabildiği için telefonda yalnız yönlendirme notu.
 .canvas-mobile-notice {

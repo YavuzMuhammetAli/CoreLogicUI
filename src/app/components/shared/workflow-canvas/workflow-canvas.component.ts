@@ -6,20 +6,25 @@ import { isPlatformBrowser } from '@angular/common';
 import { WorkflowGraph } from '../../../models/workflow.model';
 import { ExitPort } from '../../../utils/workflow/workflow-exits';
 import { layoutWorkflow } from '../workflow-graph/workflow-graph.layout';
-import { EdgeRequest, routeOrthogonal } from '../workflow-graph/workflow-edge.geometry';
+import {
+  BRANCH_LINE_HEIGHT, EdgeRequest, NODE_HEIGHT, NODE_WIDTH, routeOrthogonal
+} from '../workflow-graph/workflow-edge.geometry';
+import { NODE_KINDS, NodeKind, NodeTone, isNodeKind } from '../../../utils/workflow/workflow-node-types';
 import {
   CanvasEdge, CanvasNode, CanvasPort, PortKind,
   edgeAt, nodeAt, nodesInRect, resolveNodePositions
 } from './workflow-canvas.hit-test';
 import {
   Camera, IDENTITY_CAMERA, Point, ViewportRect, ZOOM_STEP,
-  boundsOf, fitToView, gridStyle, panBy, screenToWorld, zoomAt, zoomAtCenter
+  boundsOf, fitToView, gridStyle, panBy, revealBox, screenToWorld, zoomAt, zoomAtCenter
 } from './workflow-canvas.camera';
 import {
-  clampToWindow, dragPositions, exceedsThreshold, normalizedRect, nudgeDelta, snapValue
+  centeredAt, clampToWindow, dragPositions, exceedsThreshold, findFreeSpot, normalizedRect,
+  nudgeDelta, placeBelow, snapValue
 } from './workflow-canvas.interaction';
 import { LanguageService } from '../../../services/language.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
+import { HelpHintComponent } from '../help-hint/help-hint.component';
 
 export type { CanvasEdge, CanvasNode, CanvasPort, PortKind } from './workflow-canvas.hit-test';
 
@@ -34,9 +39,34 @@ const START_WIDTH = 104;
 const START_HEIGHT = 28;
 const START_GAP = 36;
 
+/** Paletten tuvale sürüklenen düğüm türünün veri türü (HTML5 sürükle-bırak). */
+export const WORKFLOW_NODE_MIME = 'application/x-corelogic-workflow-node';
+
+/**
+ * Düğüm kartının ekran bilgisi — tasarım ekranı hesaplar (tip etiketi, atama
+ * özeti, sorun sayıları); tuval yalnız çizer. Anahtar küçük harfli adım anahtarı.
+ */
+export interface CanvasNodeMeta {
+  kindLabel: string;
+  tone: NodeTone;
+  /** 24×24 stroke ikon yolu. */
+  icon: string;
+  summary: string;
+  errors: number;
+  warnings: number;
+  /** Sorun rozetinin ipucu / ekran okuyucu metni. */
+  issueTitle: string;
+}
+
+/** Yeni düğümün konumu verilirken otomatik yerleşimdeki komşuların sabitlenecek konumları. */
+export type CanvasMoves = Array<{ key: string; x: number; y: number }>;
+
 /** Bir çıkışın akışı bitirdiği yer: düğüm altındaki kısa çizgi + uç işareti. */
 export interface CanvasStub {
   key: string;
+  /** Çıkışın sahibi adım ve portu — "+" ile bağlı düğüm eklemek için. */
+  from: string;
+  port: ExitPort;
   kind: PortKind;
   x: number;
   y1: number;
@@ -70,12 +100,31 @@ export type CanvasMenuAction =
   | { type: 'setStart'; key: string }
   | { type: 'duplicate' }
   | { type: 'delete' }
-  | { type: 'addStep'; at: Point }
+  | {
+      type: 'addNode';
+      kind: NodeKind;
+      /** null: konum verilmez, otomatik yerleşim yerleştirir (hiçbir düğüm sabit değilken). */
+      at: Point | null;
+      /** Doluysa yeni düğüm bu çıkışa bağlanır. */
+      from: CanvasEdgeRef | null;
+      /** Konum verildiğinde otomatik yerleşimdeki düğümler de sabitlenir (zıplamasınlar). */
+      pins: CanvasMoves;
+    }
   | { type: 'selectAll' };
+
+/** Yeni düğümün kaplayacağı kutu (paralel iki dalla başlar). */
+function kindSize(kind: NodeKind): { width: number; height: number } {
+  return {
+    width: NODE_WIDTH,
+    height: NODE_HEIGHT + (kind === 'parallel' ? 2 * BRANCH_LINE_HEIGHT : 0)
+  };
+}
 
 interface MenuItem {
   id: string;
   labelKey: string;
+  /** Çevrilmiş metin (parametreli etiketler için); varsa labelKey yerine gösterilir. */
+  label?: string;
   danger?: boolean;
   run: () => void;
 }
@@ -138,7 +187,7 @@ type Gesture =
 @Component({
   selector: 'app-workflow-canvas',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, HelpHintComponent],
   templateUrl: './workflow-canvas.component.html',
   styleUrl: './workflow-canvas.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -162,6 +211,9 @@ export class WorkflowCanvasComponent {
 
   /** İçerik ilk geldiğinde şema sığdırılsın mı (saklı kamera varsa hayır). */
   readonly fitOnOpen = input(true);
+
+  /** Kartların tip/özet/sorun bilgisi (anahtar küçük harfli). Yoksa kart anahtarı gösterir. */
+  readonly nodeMeta = input<Readonly<Record<string, CanvasNodeMeta>>>({});
 
   /**
    * Düğümler taşındı — konumlar tanıma TEK değişiklikte yazılmalı. İlk elle
@@ -276,6 +328,8 @@ export class WorkflowCanvasComponent {
       .filter(port => !port.target)
       .map(port => ({
         key: `${node.key}:${port.port}`,
+        from: node.key,
+        port: port.port,
         kind: port.kind,
         x: node.x + port.offset,
         y1: node.y + node.height,
@@ -451,6 +505,36 @@ export class WorkflowCanvasComponent {
     }, 32, 1, 'start'));
   }
 
+  /**
+   * Yeni eklenen düğümü görünür alana getirir (en küçük kaydırmayla, zoom
+   * değişmez). Şemanın tamamı mevcut zoom'da sığıyorsa tamamı getirilir:
+   * otomatik yerleşim yeni düğüm için KOMŞULARI da kaydırabiliyor ve yalnız yeni
+   * düğüme bakmak onları ekran dışında bırakıyordu. Konum ancak çizimden sonra
+   * kesinleştiği için bir sonraki render'da çalışır.
+   */
+  reveal(key: string): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    afterNextRender(() => {
+      const node = this.nodesByKey().get(key.toLowerCase());
+      const element = this.viewportRef()?.nativeElement;
+      const bounds = this.contentBounds();
+      if (!node || !element) return;
+
+      const view = { width: element.clientWidth, height: element.clientHeight };
+      const margin = 24;
+      const zoom = this.camera().zoom;
+      const content = bounds
+        ? { x: bounds.minX, y: bounds.minY, width: bounds.maxX - bounds.minX, height: bounds.maxY - bounds.minY }
+        : null;
+      const fits = !!content
+        && content.width * zoom <= view.width - margin * 2
+        && content.height * zoom <= view.height - margin * 2;
+
+      this.camera.update(camera => revealBox(camera, fits ? content! : node, view, margin));
+    }, { injector: this.injector });
+  }
+
   /** Viewport merkezinin dünya koordinatı — klavyeyle eklenen adım için konum. */
   viewportCenter(): Point | null {
     const rect = this.viewportRect();
@@ -507,6 +591,10 @@ export class WorkflowCanvasComponent {
 
   isSelected(node: CanvasNode): boolean {
     return this.selectedSet().has(node.key.toLowerCase());
+  }
+
+  metaOf(node: CanvasNode): CanvasNodeMeta | null {
+    return this.nodeMeta()[node.key.toLowerCase()] ?? null;
   }
 
   isEdgeSelected(edge: CanvasEdge): boolean {
@@ -832,10 +920,15 @@ export class WorkflowCanvasComponent {
         }
       } else {
         if (editable) {
-          items.push({
-            id: 'add', labelKey: 'workflow.canvas.menu.addStep',
-            run: () => this.menuAction.emit({ type: 'addStep', at: world })
-          });
+          for (const info of NODE_KINDS) {
+            items.push({
+              id: `add-${info.kind}`, labelKey: info.labelKey, label: this.addLabel(info.labelKey),
+              run: () => this.menuAction.emit({
+                type: 'addNode', kind: info.kind, at: centeredAt(world, kindSize(info.kind)),
+                from: null, pins: this.pinAll([])
+              })
+            });
+          }
           items.push({
             id: 'arrange', labelKey: 'workflow.canvas.autoLayout',
             run: () => this.autoArrange()
@@ -876,6 +969,79 @@ export class WorkflowCanvasComponent {
     if (placed.x !== menu.x || placed.y !== menu.y) this.menu.set({ ...menu, ...placed });
 
     element.querySelector<HTMLElement>('.canvas-menu-item')?.focus({ preventScroll: true });
+  }
+
+  // ── Yeni düğüm: hızlı ekle, sürükle-bırak, palet ───────────────────────────
+
+  private addLabel(kindLabelKey: string): string {
+    return this.languageService.t('workflow.canvas.menu.addKind', { kind: this.languageService.t(kindLabelKey) });
+  }
+
+  /**
+   * Bağlantısız çıkışın ucundaki "+": hangi türde düğüm ekleneceğini sorar,
+   * seçilen düğüm o çıkışa bağlı olarak eklenir.
+   */
+  openQuickAdd(event: MouseEvent, stub: CanvasStub): void {
+    event.stopPropagation();
+    if (this.locked() || !isPlatformBrowser(this.platformId)) return;
+
+    const anchor = (event.currentTarget as HTMLElement | null)?.getBoundingClientRect();
+    const from: CanvasEdgeRef = { from: stub.from, port: stub.port };
+    const items: MenuItem[] = NODE_KINDS.map(info => ({
+      id: `quick-${info.kind}`, labelKey: info.labelKey, label: this.addLabel(info.labelKey),
+      run: () => {
+        const placement = this.placeNew(info.kind, from);
+        this.menuAction.emit({ type: 'addNode', kind: info.kind, from, ...placement });
+      }
+    }));
+
+    this.menu.set({
+      x: anchor ? anchor.left : event.clientX,
+      y: anchor ? anchor.bottom + 4 : event.clientY,
+      items
+    });
+    document.addEventListener('pointerdown', this.onOutsidePointerDown, true);
+    afterNextRender(() => this.placeMenu(), { injector: this.injector });
+  }
+
+  /**
+   * Yeni düğümün yeri. Hiçbir düğüm elle konumlanmamışsa konum verilmez —
+   * otomatik yerleşim bağlı düğümü kendi katmanına koyar. Aksi halde bağlanan
+   * çıkışın altına (ya da görünür alanın ortasına), boş bir yere konur ve
+   * otomatik yerleşimdeki komşular sabitlenir.
+   */
+  placeNew(kind: NodeKind, from: CanvasEdgeRef | null): { at: Point | null; pins: CanvasMoves } {
+    const nodes = this.nodes();
+    if (!nodes.some(node => node.pinned)) return { at: null, pins: [] };
+
+    const size = kindSize(kind);
+    const source = from ? this.nodesByKey().get(from.from.toLowerCase()) : undefined;
+
+    if (source) {
+      const port = source.ports.find(p => p.port === from!.port);
+      return { at: placeBelow(source, port?.offset ?? source.width / 2, size, nodes), pins: this.pinAll([]) };
+    }
+
+    const center = this.viewportCenter() ?? { x: 0, y: 0 };
+    const start = centeredAt(center, size);
+    return { at: findFreeSpot(start, size, nodes), pins: this.pinAll([]) };
+  }
+
+  onDragOver(event: DragEvent): void {
+    if (this.locked() || !event.dataTransfer?.types.includes(WORKFLOW_NODE_MIME)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+  }
+
+  /** Paletten bırakılan düğüm, bırakılan noktaya ortalanır. */
+  onDrop(event: DragEvent): void {
+    const kind = event.dataTransfer?.getData(WORKFLOW_NODE_MIME);
+    if (this.locked() || !isNodeKind(kind)) return;
+
+    event.preventDefault();
+    this.focusViewport();
+    const at = centeredAt(this.toWorld(event.clientX, event.clientY), kindSize(kind));
+    this.menuAction.emit({ type: 'addNode', kind, at, from: null, pins: this.pinAll([]) });
   }
 
   runMenuItem(item: MenuItem): void {

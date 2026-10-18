@@ -154,6 +154,32 @@ export function fitToView(
   };
 }
 
+/**
+ * Kutuyu (dünya koordinatı) görünür alana getiren EN KÜÇÜK kaydırma; zaten
+ * görünürse aynı kamera nesnesi döner. Zoom değişmez. Kutu görünür alandan
+ * büyükse sol/üst kenarı hizalanır (başlık ve ad görünsün).
+ */
+export function revealBox(
+  camera: Camera,
+  box: { x: number; y: number; width: number; height: number },
+  viewport: { width: number; height: number },
+  margin = 24
+): Camera {
+  const axis = (start: number, extent: number, pan: number, size: number): number => {
+    const from = start * camera.zoom + pan;
+    const to = (start + extent) * camera.zoom + pan;
+    if (from < margin || to - from > size - margin * 2) return margin - from;
+    if (to > size - margin) return size - margin - to;
+    return 0;
+  };
+
+  if (viewport.width <= 0 || viewport.height <= 0) return camera;
+
+  const dx = axis(box.x, box.width, camera.panX, viewport.width);
+  const dy = axis(box.y, box.height, camera.panY, viewport.height);
+  return dx === 0 && dy === 0 ? camera : panBy(camera, dx, dy);
+}
+
 /** Izgaranın dünya birimindeki temel aralığı (zoom 1'de noktalar arası px). */
 export const GRID_STEP = 20;
 /** Bundan sık ızgara gürültüye döner; aralık ikiye katlanır. */

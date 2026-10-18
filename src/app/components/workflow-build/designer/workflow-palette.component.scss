@@ -1,0 +1,72 @@
+:host { display: block; }
+
+.palette {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.palette-title { margin-bottom: var(--space-1); }
+
+.palette-item {
+  --tone: var(--accent);
+
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 36px;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--tone);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: grab;
+
+  @media (hover: hover) {
+    &:hover:not(:disabled) { background: var(--surface-warm); }
+  }
+
+  &:active:not(:disabled) { cursor: grabbing; }
+  &:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  &:disabled { opacity: 0.55; cursor: not-allowed; }
+}
+
+.palette-item[data-tone='success'] { --tone: var(--success); }
+.palette-item[data-tone='warn'] { --tone: var(--warn); }
+
+.palette-icon {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  color: var(--tone);
+}
+
+.palette-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette-help {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+// Dar ekranda palet tuvalin üstünde yatay bir şerit olur.
+@media (max-width: 1024px) {
+  .palette {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .palette-title { margin: 0 var(--space-2) 0 0; }
+  .palette-item { width: auto; }
+  .palette-help { flex-basis: 100%; margin: 0; }
+}

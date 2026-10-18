@@ -145,12 +145,18 @@
 // 8 + 20 (başlık) + 16 (anahtar) + 8 + kenarlık ≤ 60. Değiştirirsen
 // workflow-edge.geometry.ts'teki sabitleri de güncelle, yoksa kutular yine biner.
 .canvas-node {
+  // Tip rengi (data-tone): sol kenarda şerit. Seçim halkası da box-shadow
+  // olduğu için ikisi tek değişkenle birleştirilir.
+  --node-tone: var(--border);
+  --node-stripe: inset 4px 0 0 var(--node-tone);
+
   position: absolute;
   box-sizing: border-box;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-2) calc(var(--space-3) + 2px);
   border: 1.5px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
+  box-shadow: var(--node-stripe);
   cursor: move;
   // Sürüklerken metin seçimi ve dokunmatik kaydırma devreye girmemeli.
   user-select: none;
@@ -171,8 +177,12 @@
   background: var(--surface-warm);
 }
 
+.canvas-node[data-tone='accent'] { --node-tone: var(--accent); }
+.canvas-node[data-tone='success'] { --node-tone: var(--success); }
+.canvas-node[data-tone='warn'] { --node-tone: var(--warn); }
+
 .canvas-node--selected {
-  box-shadow: 0 0 0 3px var(--elev-ring, rgba(29, 78, 216, 0.25));
+  box-shadow: var(--node-stripe), 0 0 0 3px var(--elev-ring, rgba(29, 78, 216, 0.25));
 }
 
 .canvas-node-title,
@@ -188,6 +198,49 @@
   line-height: 20px;
   font-weight: 500;
   color: var(--fg);
+}
+
+// Tip + atama özeti satırı — yükseklik anahtar satırıyla aynı (16px).
+.canvas-node-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  line-height: 16px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+
+  svg { flex: 0 0 auto; color: var(--node-tone); }
+}
+
+.canvas-node-meta-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Sorun rozeti: kartın sağ üst köşesinde, hata kırmızı / yalnız uyarı sarı.
+.canvas-node-issues {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.canvas-node-issues--warn {
+  background: var(--warn);
 }
 
 .canvas-node-key {
@@ -210,6 +263,52 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+}
+
+// Bağlantısız çıkışın ucu (düzenlenebilirken): akış burada biter; tıklayınca
+// bağlı yeni adım eklenir. Renk uç işaretiyle aynı anlamı taşır.
+.canvas-stub-add {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 2px solid var(--success);
+  border-radius: 50%;
+  background: var(--success-bg);
+  color: var(--success);
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover { background: var(--success); color: var(--surface); transform: scale(1.15); }
+  }
+
+  &:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+}
+
+.canvas-stub-add--reject {
+  border-color: var(--danger);
+  background: var(--danger-bg);
+  color: var(--danger);
+
+  @media (hover: hover) {
+    &:hover { background: var(--danger); color: var(--surface); }
+  }
+}
+
+// Boş tuval: bırakma hedefi görünür kalsın, yazı tıklamaları engellemesin.
+.canvas-empty {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  pointer-events: none;
 }
 
 // ── Portlar ──────────────────────────────────────────────────────────────────

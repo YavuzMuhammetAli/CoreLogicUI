@@ -195,27 +195,27 @@
       <div class="tab-panel stack" role="tabpanel">
         <!-- Yalnız dar ekranda görünür (bkz. .canvas-mobile-notice) -->
         <div class="alert alert-info canvas-mobile-notice" role="note">{{ 'workflow.build.canvasMobileNotice' | t }}</div>
-        @if (!readonlyMode()) {
-          <div class="tab-toolbar tab-toolbar--end">
-            <button type="button" class="btn btn-secondary btn-sm" (click)="openNewStep()">
-              {{ 'workflow.build.addStep' | t }}
-            </button>
-          </div>
-        }
-        <app-workflow-canvas
-          [graph]="canvasGraph()"
-          [selectedNodes]="store.selection().nodes"
-          [selectedEdge]="store.selection().edge"
-          [readonly]="readonlyMode()"
-          [camera]="store.camera() ?? identityCamera"
-          (cameraChange)="store.camera.set($event)"
-          [fitOnOpen]="store.camera() === null"
-          (selectionChange)="onSelectionChange($event)"
-          (nodesMoved)="onNodesMoved($event)"
-          (layoutReset)="onLayoutReset()"
-          (edgeCreated)="onEdgeCreated($event)"
-          (menuAction)="onMenuAction($event)"
-          (nodeOpened)="openStep($event)" />
+        <div class="designer" [class.designer--readonly]="readonlyMode()">
+          @if (!readonlyMode()) {
+            <app-workflow-palette class="designer-palette" (add)="onPaletteAdd($event)" />
+          }
+          <app-workflow-canvas
+            class="designer-canvas"
+            [graph]="canvasGraph()"
+            [nodeMeta]="nodeMeta()"
+            [selectedNodes]="store.selection().nodes"
+            [selectedEdge]="store.selection().edge"
+            [readonly]="readonlyMode()"
+            [camera]="store.camera() ?? identityCamera"
+            (cameraChange)="store.camera.set($event)"
+            [fitOnOpen]="store.camera() === null"
+            (selectionChange)="onSelectionChange($event)"
+            (nodesMoved)="onNodesMoved($event)"
+            (layoutReset)="onLayoutReset()"
+            (edgeCreated)="onEdgeCreated($event)"
+            (menuAction)="onMenuAction($event)"
+            (nodeOpened)="openStep($event)" />
+        </div>
       </div>
     }
 

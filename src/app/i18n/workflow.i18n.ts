@@ -93,13 +93,49 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.build.tabCanvas': { tr: 'Tasarım', en: 'Design' },
   'workflow.build.tabTrigger': { tr: 'Tetikleyici', en: 'Trigger' },
   'workflow.canvas.hint': {
-    tr: 'Çift tık: adımı düzenle · Tıkla: seç (Shift ile çoklu, Shift + sürükle: çerçeve) · Sürükle: taşı (Alt: ızgarasız) · Alt kenardaki yeşil/kırmızı noktadan hedefe sürükle: bağla; bağlantısız çıkışta süreç biter · Delete: sil · Ctrl+Z/Y: geri al/yinele · Ctrl+C/V/D: kopyala/yapıştır/çoğalt · Sağ tık: menü · Ctrl + tekerlek: yakınlaş.',
-    en: 'Double-click: edit step · Click: select (Shift for multiple, Shift + drag: box) · Drag: move (Alt: no grid) · Drag from the green/red dot at the bottom onto a step: connect; an unconnected exit ends the process · Delete: remove · Ctrl+Z/Y: undo/redo · Ctrl+C/V/D: copy/paste/duplicate · Right-click: menu · Ctrl + wheel: zoom.'
+    tr: 'Paletten adım sürükleyin · Alttaki noktadan hedefe sürükleyerek bağlayın · Boş çıkıştaki + bağlı adım ekler · Çift tık: tüm ayarlar.',
+    en: 'Drag steps from the palette · Drag from a bottom dot onto a step to connect · The + on a free exit adds a connected step · Double-click: all settings.'
+  },
+  'workflow.canvas.shortcutsLabel': { tr: 'Kısayollar', en: 'Shortcuts' },
+  'workflow.canvas.shortcuts': {
+    tr: 'Tıkla: seç · Shift/Ctrl + tıkla: seçime ekle · Shift + sürükle: çerçeveyle seç · Sürükle: taşı (Alt: ızgarasız) · Oklar: it (Shift: ızgara adımı) · Delete: sil · Ctrl+Z / Ctrl+Y: geri al / yinele · Ctrl+C / V / D: kopyala / yapıştır / çoğalt · Ctrl+A: tümünü seç · Enter: ayarlar · F: sığdır · + / −: yakınlaştır · Sağ tık: menü · Ctrl + tekerlek: yakınlaştır, tekerlek: kaydır.',
+    en: 'Click: select · Shift/Ctrl + click: add to selection · Shift + drag: box select · Drag: move (Alt: no grid) · Arrows: nudge (Shift: grid step) · Delete: remove · Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+C / V / D: copy / paste / duplicate · Ctrl+A: select all · Enter: settings · F: fit · + / −: zoom · Right-click: menu · Ctrl + wheel: zoom, wheel: scroll.'
   },
   'workflow.canvas.start': { tr: 'Başlangıç', en: 'Start' },
   'workflow.canvas.empty': {
-    tr: 'Henüz adım yok. İlk adımı "Adım Ekle" ile oluşturun.',
-    en: 'No steps yet. Create the first one with "Add Step".'
+    tr: 'Henüz adım yok. Soldaki paletten bir adımı buraya sürükleyin ya da tıklayın.',
+    en: 'No steps yet. Drag a step here from the palette on the left, or click it.'
+  },
+
+  // ── Düğüm türleri ve palet ────────────────────────────────────────────────
+  'workflow.build.typeApproval': { tr: 'Tekil onay', en: 'Single approval' },
+  'workflow.build.typeParallel': { tr: 'Paralel onay', en: 'Parallel approval' },
+  'workflow.node.approval': { tr: 'Onay', en: 'Approval' },
+  'workflow.node.approvalHelp': {
+    tr: 'Atanan kişi kaydı onaylar ya da reddeder.',
+    en: 'The assignee approves or rejects the record.'
+  },
+  'workflow.node.approvalName': { tr: 'Yeni onay', en: 'New approval' },
+  'workflow.node.task': { tr: 'Görev', en: 'Task' },
+  'workflow.node.taskHelp': {
+    tr: 'Atanan kişi işi yapar ve tamamlar; reddetme yoktur.',
+    en: 'The assignee does the work and completes it; there is no rejection.'
+  },
+  'workflow.node.taskName': { tr: 'Yeni görev', en: 'New task' },
+  'workflow.node.taskComplete': { tr: 'Tamamla', en: 'Complete' },
+  'workflow.node.parallel': { tr: 'Paralel onay', en: 'Parallel approval' },
+  'workflow.node.parallelHelp': {
+    tr: 'Birden çok kişi aynı anda onaylar; hepsinin ya da birinin onayıyla ilerler.',
+    en: 'Several people approve at the same time; proceeds when all or any of them approve.'
+  },
+  'workflow.node.parallelName': { tr: 'Paralel onay', en: 'Parallel approval' },
+  'workflow.node.branchName': { tr: 'Dal {n}', en: 'Branch {n}' },
+  'workflow.node.hours': { tr: '{n} sa', en: '{n} h' },
+  'workflow.palette.title': { tr: 'Ekle', en: 'Add' },
+  'workflow.palette.aria': { tr: 'Adım türleri', en: 'Step types' },
+  'workflow.palette.help': {
+    tr: 'Tuvale sürükleyin ya da tıklayın — tıklanan adım, seçili adımın boş çıkışına bağlanır.',
+    en: 'Drag onto the canvas or click — a clicked step is connected to the free exit of the selected step.'
   },
   'workflow.canvas.aria': {
     tr: 'Akış şeması. Ok tuşları seçili adımları iter, Delete siler, Enter ayrıntıyı açar.',
@@ -111,7 +147,8 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.canvas.menu.duplicate': { tr: 'Çoğalt', en: 'Duplicate' },
   'workflow.canvas.menu.delete': { tr: 'Sil', en: 'Delete' },
   'workflow.canvas.menu.deleteEdge': { tr: 'Bağlantıyı kaldır', en: 'Remove connection' },
-  'workflow.canvas.menu.addStep': { tr: 'Buraya adım ekle', en: 'Add step here' },
+  'workflow.canvas.menu.addKind': { tr: '{kind} ekle', en: 'Add {kind}' },
+  'workflow.canvas.quickAdd': { tr: 'Bu çıkışa adım ekle', en: 'Add a step to this exit' },
   'workflow.canvas.menu.selectAll': { tr: 'Tümünü seç', en: 'Select all' },
   'workflow.build.undo': { tr: 'Geri al (Ctrl+Z)', en: 'Undo (Ctrl+Z)' },
   'workflow.build.redo': { tr: 'Yinele (Ctrl+Y)', en: 'Redo (Ctrl+Y)' },
@@ -163,8 +200,6 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.build.stepKey': { tr: 'Anahtar', en: 'Key' },
   'workflow.build.stepName': { tr: 'Adım adı', en: 'Step name' },
   'workflow.build.stepType': { tr: 'Adım tipi', en: 'Step type' },
-  'workflow.build.typeApproval': { tr: 'Tekil onay', en: 'Single approval' },
-  'workflow.build.typeParallel': { tr: 'Paralel onay', en: 'Parallel approval' },
   'workflow.build.joinMode': { tr: 'İlerleme kuralı', en: 'Join rule' },
   'workflow.build.joinModeHelp': {
     tr: 'Reddetme her zaman önceliklidir: bir dal reddederse kalanlar iptal edilir.',

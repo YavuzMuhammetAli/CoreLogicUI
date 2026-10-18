@@ -27,11 +27,17 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
 import { HasUnsavedChanges } from '../../guards/unsaved-changes.guard';
 import { markDirty } from '../../utils/change-detection';
 import { exitForKind, exitsOf, sameKey } from '../../utils/workflow/workflow-exits';
+import {
+  NodeKind, createStep, nodeKindInfo, nodeKindOf
+} from '../../utils/workflow/workflow-node-types';
+import { SummaryLookup, assignmentSummary, stepSummary } from '../../utils/workflow/workflow-step-summary';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { IDENTITY_CAMERA } from '../shared/workflow-canvas/workflow-canvas.camera';
 import {
-  CanvasMenuAction, CanvasSelection, WorkflowCanvasComponent
+  CanvasMenuAction, CanvasMoves, CanvasNodeMeta, CanvasSelection, WorkflowCanvasComponent
 } from '../shared/workflow-canvas/workflow-canvas.component';
+import { Point } from '../shared/workflow-canvas/workflow-canvas.camera';
+import { WorkflowPaletteComponent } from './designer/workflow-palette.component';
 import {
   commandFor, isActivationTarget, isTypingTarget
 } from '../shared/workflow-canvas/workflow-canvas.keymap';
@@ -52,7 +58,7 @@ import {
   upsertStep
 } from './designer/workflow-design.commands';
 import { DesignClipboard, copySteps, pasteSteps } from './designer/workflow-clipboard';
-import { isNodeSelected, selectNodes } from './designer/workflow-selection';
+import { EdgeRef, isNodeSelected, selectNodes } from './designer/workflow-selection';
 
 type TabId = 'steps' | 'canvas' | 'trigger';
 
@@ -64,8 +70,6 @@ interface StepDialogState {
   step: WorkflowStep | null;
   statusLabel: string;
   newKey: string;
-  /** Sağ tık "Buraya adım ekle": yeni adım bu konuma yerleşir. */
-  at?: { x: number; y: number } | null;
 }
 
 /** Adımlar sekmesindeki bir satır — şablonda metot çağrısı yapılmasın diye önceden hesaplanır. */
@@ -104,7 +108,8 @@ interface StepRow {
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe,
-    WorkflowCanvasComponent, WorkflowStepDialogComponent, ConfirmDialogComponent
+    WorkflowCanvasComponent, WorkflowStepDialogComponent, ConfirmDialogComponent,
+    WorkflowPaletteComponent
   ],
   providers: [WorkflowDesignerStore],
   templateUrl: './workflow-build.component.html',
@@ -167,14 +172,46 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   readonly roles = signal<Role[]>([]);
   readonly users = signal<AppUser[]>([]);
 
+  /**
+   * Rol/kullanıcı adlarını ve çeviriyi özet fonksiyonlarına veren bağlam. Dil
+   * değişince de yeniden kurulur — özet metinleri çevrilmiş parçalar içeriyor.
+   */
+  private readonly summaryLookup = computed<SummaryLookup>(() => {
+    this.languageService.lang();
+    const roles = new Map(this.roles().map(role => [role.id, role.name]));
+    const users = new Map(this.users().map(user => [user.id, `${user.firstName} ${user.lastName}`]));
+    return {
+      roleName: id => roles.get(id) ?? null,
+      userName: id => users.get(id) ?? null,
+      t: (key, params) => this.languageService.t(key, params)
+    };
+  });
+
+  /** Tuval kartlarının tip etiketi, ikonu ve özet satırı (anahtar küçük harfli). */
+  readonly nodeMeta = computed<Record<string, CanvasNodeMeta>>(() => {
+    const lookup = this.summaryLookup();
+    const meta: Record<string, CanvasNodeMeta> = {};
+
+    for (const step of this.store.graph().steps) {
+      const info = nodeKindInfo(nodeKindOf(step));
+      meta[step.key.toLowerCase()] = {
+        kindLabel: lookup.t(info.labelKey),
+        tone: info.tone,
+        icon: info.icon,
+        summary: stepSummary(step, lookup),
+        errors: 0,
+        warnings: 0,
+        issueTitle: ''
+      };
+    }
+    return meta;
+  });
+
   /** Adımlar sekmesinin satırları. */
   readonly rows = computed<StepRow[]>(() => {
-    // Dil değişince satır metinleri (atama özeti, terminal etiketleri) yenilensin.
-    this.languageService.lang();
+    const lookup = this.summaryLookup();
     const graph = this.store.graph();
     const selection = this.store.selection();
-    const roles = this.roles();
-    const users = this.users();
 
     return graph.steps.map(step => {
       const [positive, negative] = exitsOf(step);
@@ -183,8 +220,8 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
         name: step.name,
         selected: isNodeSelected(selection, step.key),
         isStart: sameKey(graph.startStep, step.key),
-        typeKey: step.type === 'parallel' ? 'workflow.build.typeParallel' : 'workflow.build.typeApproval',
-        assignment: this.assignmentSummary(step, roles, users),
+        typeKey: nodeKindInfo(nodeKindOf(step)).labelKey,
+        assignment: assignmentSummary(step, lookup),
         approveTarget: positive?.target || this.languageService.t('workflow.build.terminalCompleted'),
         rejectTarget: negative?.target || this.languageService.t('workflow.build.terminalRejected')
       };
@@ -345,15 +382,8 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
 
   /** Pop-up sonucu belgeye yazılır: düzenlemede yerine konur, yeni adımda eklenir. */
   onStepSaved(result: StepDialogResult): void {
-    const at = this.stepDialog()?.at ?? null;
-
-    this.store.dispatch('', doc => {
-      const next = upsertStep(doc, result.originalKey || null, result.step, result.statusLabel);
-      // Sağ tıkla belirli bir yere eklenen adım oraya yerleşir (tek geri al adımı).
-      return at && !result.originalKey
-        ? moveSteps(next, [{ key: result.step.key, x: at.x, y: at.y }])
-        : next;
-    });
+    this.store.dispatch('', doc =>
+      upsertStep(doc, result.originalKey || null, result.step, result.statusLabel));
 
     this.store.selection.set(selectNodes([result.step.key]));
     this.syncStartStep();
@@ -364,28 +394,53 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     this.stepDialog.set(null);
   }
 
-  // ── Adım listesi özetleri ─────────────────────────────────────────────────
+  // ── Yeni düğüm (palet, "+", sağ tık, bırakma) ─────────────────────────────
 
-  /** Atama sütunu: rol adı, kullanıcı adı, "kaydı oluşturana" ya da dal sayısı. */
-  private assignmentSummary(step: WorkflowStep, roles: Role[], users: AppUser[]): string {
-    if (step.type === 'parallel') {
-      return this.languageService.t('workflow.build.branchCount', { n: (step.branches ?? []).length });
-    }
+  /**
+   * Paletten tıklayarak ekleme: tek adım seçiliyse yeni düğüm onun ilk boş
+   * çıkışına bağlanır (akışı yukarıdan aşağı kurmanın en kısa yolu); değilse
+   * bağlantısız eklenir.
+   */
+  onPaletteAdd(kind: NodeKind): void {
+    if (this.readonlyMode()) return;
 
-    switch (step.assignment?.mode) {
-      case 'role': {
-        const role = roles.find(r => r.id === Number(step.assignment?.roleId));
-        return role?.name ?? '—';
-      }
-      case 'user': {
-        const user = users.find(u => u.id === Number(step.assignment?.userId));
-        return user ? `${user.firstName} ${user.lastName}` : '—';
-      }
-      case 'creator':
-        return this.languageService.t('workflow.assign.creator');
-      default:
-        return '—';
-    }
+    const selected = this.store.selection().nodes;
+    const source = selected.length === 1 ? findStep(this.store.doc(), selected[0]) : undefined;
+    const free = source ? exitsOf(source).find(exit => exit.enabled && !exit.target) : undefined;
+    const from: EdgeRef | null = source && free ? { from: source.key, port: free.port } : null;
+
+    const placement = this.canvas()?.placeNew(kind, from) ?? { at: null, pins: [] };
+    this.addNode(kind, placement.at, from, placement.pins);
+  }
+
+  /**
+   * Yeni düğümü ekler — konum, komşuların sabitlenmesi ve bağlantı TEK geri al
+   * adımında. Varsayılan ad verilir ve düğüm seçilir; eksik atama sorun olarak
+   * görünür, özellik panelinden tamamlanır.
+   */
+  private addNode(kind: NodeKind, at: Point | null, from: EdgeRef | null, pins: CanvasMoves): void {
+    if (this.readonlyMode()) return;
+
+    const t = (key: string, params?: Record<string, string | number>) => this.languageService.t(key, params);
+    const key = suggestKey(this.store.doc());
+    const step = createStep(kind, {
+      key,
+      name: t(nodeKindInfo(kind).defaultNameKey),
+      completeLabel: t('workflow.node.taskComplete'),
+      branchNames: [t('workflow.node.branchName', { n: 1 }), t('workflow.node.branchName', { n: 2 })]
+    });
+
+    this.store.dispatch('', doc => {
+      let next = upsertStep(doc, null, step, '');
+      if (pins.length > 0) next = moveSteps(next, pins);
+      if (at) next = moveSteps(next, [{ key, x: at.x, y: at.y }]);
+      if (from) next = connect(next, from.from, from.port, key);
+      return next;
+    });
+
+    this.store.selection.set(selectNodes([key]));
+    this.syncStartStep();
+    this.canvas()?.reveal(key);
   }
 
   // ── Koşul satırları ───────────────────────────────────────────────────────
@@ -761,13 +816,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
       case 'duplicate': this.duplicateSelection(); break;
       case 'delete':    this.deleteSelection(); break;
       case 'selectAll': this.selectAll(); break;
-      case 'addStep':
-        if (this.readonlyMode()) return;
-        this.stepDialog.set({
-          step: null, statusLabel: '', newKey: suggestKey(this.store.doc()),
-          at: { x: Math.max(0, action.at.x), y: Math.max(0, action.at.y) }
-        });
-        break;
+      case 'addNode':   this.addNode(action.kind, action.at, action.from, action.pins); break;
     }
   }
 
