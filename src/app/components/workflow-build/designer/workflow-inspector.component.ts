@@ -15,7 +15,7 @@ import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { LanguageService } from '../../../services/language.service';
 import { ExitKind, ExitPort, caseKeyOf, exitsOf, sameKey } from '../../../utils/workflow/workflow-exits';
 import { NodeKindInfo, nodeKindInfo, nodeKindOf } from '../../../utils/workflow/workflow-node-types';
-import { SummaryLookup, assignmentText, recipientText } from '../../../utils/workflow/workflow-step-summary';
+import { SummaryLookup, assignmentText, recipientText, timerSummary } from '../../../utils/workflow/workflow-step-summary';
 import { WorkflowDesignerStore } from './workflow-designer.store';
 import { connect, findStep, labelStep, patchStep, renameStep } from './workflow-design.commands';
 import { selectNodes } from './workflow-selection';
@@ -263,6 +263,15 @@ export class WorkflowInspectorComponent {
       case 'reject':  return 'workflow.build.terminalRejected';
       default:        return 'workflow.inspector.choose';
     }
+  }
+
+  /** Bekleme özeti ("2 gün", "Bitis tarihine kadar"). */
+  timerText(step: WorkflowStep): string {
+    return timerSummary(step, {
+      roleName: () => null,
+      userName: () => null,
+      t: (key, params) => this.languageService.t(key, params)
+    });
   }
 
   /** Alan güncelle satırının panel özeti: "= Onaylandı", "formül", "temizlenir". */

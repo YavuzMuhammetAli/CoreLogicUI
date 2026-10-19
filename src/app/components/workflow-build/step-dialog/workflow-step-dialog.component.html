@@ -19,6 +19,9 @@
             <app-action-editor [step]="draft" [columns]="columns()" [targets]="targets()"
                                [stepKeys]="stepKeys()" [readonly]="readonly()"
                                (stepChange)="onSpecialStep($event)" />
+          } @else if (draft.type === 'timer') {
+            <app-timer-editor [step]="draft" [columns]="columns()" [targets]="targets()"
+                              [readonly]="readonly()" (stepChange)="onSpecialStep($event)" />
           } @else if (draft.type === 'notify') {
             <app-notify-editor [step]="draft" [columns]="columns()" [targets]="targets()"
                                [humanSteps]="humanSteps()" [roles]="roles()" [users]="users()"

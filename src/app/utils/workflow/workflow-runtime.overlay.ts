@@ -73,6 +73,7 @@ export function buildRuntimeOverlay(
       // Alan güncelle / bildirim tamamlandı → tek "sonraki" çıkışından devam.
       case 'FieldsUpdated':
       case 'NotificationQueued':
+      case 'TimerFired':
         if (key) pending = { from: key, port: 'next' };
         break;
       case 'ConditionEvaluated':

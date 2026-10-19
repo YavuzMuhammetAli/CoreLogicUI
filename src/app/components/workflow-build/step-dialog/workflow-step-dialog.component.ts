@@ -21,6 +21,7 @@ import { ConditionEditorComponent, StepTarget } from '../editors/condition-edito
 import { EndDraft, EndEditorComponent } from '../editors/end-editor.component';
 import { ActionEditorComponent } from '../editors/action-editor.component';
 import { NotifyEditorComponent } from '../editors/notify-editor.component';
+import { TimerEditorComponent } from '../editors/timer-editor.component';
 import { keyProblem } from '../designer/inspector-form';
 
 /** Form alanı tipi seçenekleri — model kolon tipleriyle aynı sözlükten dar bir alt küme. */
@@ -47,7 +48,7 @@ export interface StepDialogResult {
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, TranslatePipe,
-    ConditionEditorComponent, EndEditorComponent, ActionEditorComponent, NotifyEditorComponent
+    ConditionEditorComponent, EndEditorComponent, ActionEditorComponent, NotifyEditorComponent, TimerEditorComponent
   ],
   templateUrl: './workflow-step-dialog.component.html',
   styleUrl: './workflow-step-dialog.component.scss',
@@ -86,7 +87,7 @@ export class WorkflowStepDialogComponent implements OnInit {
    */
   readonly special = computed(() => {
     const type = this.step()?.type;
-    return type === 'condition' || type === 'end' || type === 'action' || type === 'notify';
+    return type === 'condition' || type === 'end' || type === 'action' || type === 'notify' || type === 'timer';
   });
   readonly specialDraft = signal<WorkflowStep | null>(null);
   readonly specialLabel = signal('');

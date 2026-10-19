@@ -212,7 +212,7 @@
         <div class="alert alert-info canvas-mobile-notice" role="note">{{ 'workflow.build.canvasMobileNotice' | t }}</div>
         <div class="designer" [class.designer--readonly]="readonlyMode()">
           @if (!readonlyMode()) {
-            <app-workflow-palette class="designer-palette" (add)="onPaletteAdd($event)" />
+            <app-workflow-palette class="designer-palette" [unavailable]="unavailableKinds()" (add)="onPaletteAdd($event)" />
           }
           <app-workflow-canvas
             class="designer-canvas"

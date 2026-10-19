@@ -82,9 +82,10 @@ export function exitsOf(step: WorkflowStep): WorkflowExit[] {
     case 'end':
       return [];
 
-    // Alan güncelle / bildirim: tek "sonraki" çıkışı; hedefsiz kalırsa doğrulama hatası.
+    // Alan güncelle / bildirim / bekleme: tek "sonraki" çıkışı; hedefsiz kalırsa doğrulama hatası.
     case 'action':
     case 'notify':
+    case 'timer':
       return [{ port: 'next', kind: 'neutral', target: step.next || null, fallback: null, enabled: true, label: null }];
 
     default:
@@ -122,7 +123,7 @@ export function setExit(step: WorkflowStep, port: ExitPort, target: string | nul
     return { ...step, cases };
   }
 
-  if (step.type === 'action' || step.type === 'notify') {
+  if (step.type === 'action' || step.type === 'notify' || step.type === 'timer') {
     return port === 'next' && (step.next || null) !== value ? { ...step, next: value } : step;
   }
 

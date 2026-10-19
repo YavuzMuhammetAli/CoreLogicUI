@@ -114,6 +114,12 @@ describe('workflow-exits', () => {
       expect(exitsOf({ ...action, type: 'notify', next: null })[0].target).toBeNull();
     });
 
+    it('bekleme de tek "sonraki" çıkışlıdır', () => {
+      const timer: WorkflowStep = { key: 'bekle', type: 'timer', name: 'Bekle', timer: { mode: 'duration', amount: 1, unit: 'days' }, next: 'son' };
+      expect(exitsOf(timer).map(e => e.port)).toEqual(['next']);
+      expect(setExit(timer, 'next', 'x').next).toBe('x');
+    });
+
     it('setExit yalnız next yazar; mapRefs onu da taşır', () => {
       expect(setExit(action, 'next', 'finans').next).toBe('finans');
       expect(setExit(action, 'approve', 'finans')).toBe(action);

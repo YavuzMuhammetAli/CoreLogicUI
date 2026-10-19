@@ -382,6 +382,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     this.loadModels();
     this.loadRoles();
     this.loadUsers();
+    this.loadCapabilities();
 
     if (!this.isNew) {
       const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -588,6 +589,21 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
         if (res.success) this.models = (res.data ?? []).map(m => m.typeName);
       },
       error: () => { this.models = []; }
+    });
+  }
+
+  /**
+   * Bu şirkette kullanılamayan düğümler paletten pasif görünür (Bekleme →
+   * migrasyon 022). Okunamazsa kısıt konmaz: yayın sunucuda zaten denetleniyor.
+   */
+  readonly unavailableKinds = signal<ReadonlySet<NodeKind>>(new Set());
+
+  private loadCapabilities(): void {
+    this.workflowService.capabilities().subscribe({
+      next: res => {
+        if (res.success && res.data && !res.data.timers) this.unavailableKinds.set(new Set<NodeKind>(['timer']));
+      },
+      error: () => { /* kısıt yok */ }
     });
   }
 
@@ -965,7 +981,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   ): [string, string] {
     const t = (key: string) => this.languageService.t(key);
     if (type === 'end') return ['—', '—'];
-    if (type === 'action' || type === 'notify') return [exits[0]?.target || '—', '—'];
+    if (type === 'action' || type === 'notify' || type === 'timer') return [exits[0]?.target || '—', '—'];
     if (type === 'condition') {
       const paths = exits.map(e => `${e.label ?? t('workflow.canvas.edgeDefault')} → ${e.target ?? '—'}`);
       return [paths.join(' · '), '—'];

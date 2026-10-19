@@ -42,3 +42,15 @@ export function formatNumber(value: number, lang: Lang): string {
 export function formatDate(value: Date, lang: Lang): string {
   return dateFormatter(lang).format(value);
 }
+
+const dateTimeFormatters = new Map<Lang, Intl.DateTimeFormat>();
+
+/** Tarih + saat (bekleme vadesi gibi saatin önemli olduğu yerler). */
+export function formatDateTime(value: Date, lang: Lang): string {
+  let formatter = dateTimeFormatters.get(lang);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(LOCALES[lang], { dateStyle: 'medium', timeStyle: 'short' });
+    dateTimeFormatters.set(lang, formatter);
+  }
+  return formatter.format(value);
+}

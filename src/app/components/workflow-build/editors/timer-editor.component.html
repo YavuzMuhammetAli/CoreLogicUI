@@ -1,0 +1,109 @@
+<div class="editor stack">
+  <section class="editor-section">
+    <span class="eyebrow">{{ 'workflow.build.sectionGeneral' | t }}</span>
+    <div class="field-row">
+      <div class="field">
+        <label for="tmr-name">{{ 'workflow.build.stepName' | t }}</label>
+        <input id="tmr-name" class="input" type="text" [value]="draft().name" [disabled]="readonly()"
+               (input)="onName($event)" />
+      </div>
+      <div class="field">
+        <label for="tmr-key">{{ 'workflow.build.stepKey' | t }}</label>
+        <input id="tmr-key" class="input input-mono" type="text" [value]="draft().key" [disabled]="readonly()"
+               (change)="onKey($event)" aria-describedby="tmr-key-help" />
+        <span id="tmr-key-help" class="field-help">{{ 'workflow.build.stepKeyHelp' | t }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="editor-section">
+    <span class="eyebrow">{{ 'workflow.timer.title' | t }}</span>
+    <div class="case-mode" role="radiogroup" [attr.aria-label]="'workflow.timer.mode' | t">
+      <label class="checkbox-label">
+        <input type="radio" name="tmr-mode" [checked]="mode() === 'duration'" [disabled]="readonly()"
+               (change)="setMode('duration')" />
+        {{ 'workflow.timer.modeDuration' | t }}
+      </label>
+      <label class="checkbox-label">
+        <input type="radio" name="tmr-mode" [checked]="mode() === 'untilField'" [disabled]="readonly()"
+               (change)="setMode('untilField')" />
+        {{ 'workflow.timer.modeUntilField' | t }}
+      </label>
+    </div>
+
+    @if (mode() === 'duration') {
+      <div class="field-row">
+        <div class="field">
+          <label for="tmr-amount">{{ 'workflow.timer.amount' | t }}</label>
+          <input id="tmr-amount" class="input" type="number" min="1" step="any" [value]="timer().amount ?? ''"
+                 [disabled]="readonly()" [attr.aria-invalid]="durationProblem() ? true : null"
+                 aria-describedby="tmr-amount-help" (input)="onAmount($event)" />
+        </div>
+        <div class="field">
+          <label for="tmr-unit">{{ 'workflow.timer.unit' | t }}</label>
+          <select id="tmr-unit" class="input" [disabled]="readonly()" (change)="onUnit($event)">
+            @for (unit of units; track unit) {
+              <option [value]="unit" [selected]="(timer().unit ?? 'hours') === unit">{{ 'workflow.timer.unitName.' + unit | t }}</option>
+            }
+          </select>
+        </div>
+      </div>
+      @switch (durationProblem()) {
+        @case ('invalid') {
+          <span id="tmr-amount-help" class="field-error" role="alert">{{ 'workflow.timer.durationInvalid' | t }}</span>
+        }
+        @case ('tooLong') {
+          <span id="tmr-amount-help" class="field-error" role="alert">{{ 'workflow.timer.durationTooLong' | t: { max: maxDays } }}</span>
+        }
+        @default {
+          <span id="tmr-amount-help" class="field-help">{{ 'workflow.timer.durationHelp' | t }}</span>
+        }
+      }
+    } @else {
+      <div class="field-row">
+        <div class="field">
+          <label for="tmr-field">{{ 'workflow.timer.field' | t }}</label>
+          <select id="tmr-field" class="input" [disabled]="readonly()" (change)="onField($event)"
+                  [attr.aria-invalid]="!timer().field ? true : null">
+            @if (!isKnownDateColumn(timer().field)) {
+              <option [value]="timer().field ?? ''" selected>{{ timer().field || ('workflow.inspector.choose' | t) }}</option>
+            }
+            @for (column of dateColumns(); track column.columnName) {
+              <option [value]="column.columnName" [selected]="column.columnName.toLowerCase() === (timer().field ?? '').toLowerCase()">{{ columnLabel(column) }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="tmr-offset">{{ 'workflow.timer.offset' | t }}</label>
+          <input id="tmr-offset" class="input" type="number" step="any" [value]="timer().offsetHours ?? 0"
+                 [disabled]="readonly()" aria-describedby="tmr-offset-help" (input)="onOffset($event)" />
+        </div>
+      </div>
+      <span id="tmr-offset-help" class="field-help">{{ 'workflow.timer.offsetHelp' | t }}</span>
+      @if (dateColumns().length === 0) {
+        <span class="field-error" role="alert">{{ 'workflow.timer.noDateColumns' | t }}</span>
+      }
+      <div class="field">
+        <label for="tmr-missing">{{ 'workflow.timer.onMissing' | t }}</label>
+        <select id="tmr-missing" class="input" [disabled]="readonly()" (change)="onMissing($event)">
+          <option value="continue" [selected]="timer().onMissing !== 'incident'">{{ 'workflow.timer.onMissingContinue' | t }}</option>
+          <option value="incident" [selected]="timer().onMissing === 'incident'">{{ 'workflow.timer.onMissingIncident' | t }}</option>
+        </select>
+      </div>
+    }
+    <p class="field-help">{{ 'workflow.timer.lockNote' | t }}</p>
+  </section>
+
+  <section class="editor-section">
+    <div class="field">
+      <label for="tmr-next">{{ 'workflow.action.next' | t }}</label>
+      <select id="tmr-next" class="input" [disabled]="readonly()" (change)="onNext($event)"
+              [attr.aria-invalid]="!draft().next ? true : null">
+        <option value="" [selected]="!draft().next">{{ 'workflow.inspector.choose' | t }}</option>
+        @for (target of targets(); track target.key) {
+          <option [value]="target.key" [selected]="target.key.toLowerCase() === (draft().next ?? '').toLowerCase()">{{ target.label }}</option>
+        }
+      </select>
+    </div>
+  </section>
+</div>

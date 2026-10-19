@@ -15,7 +15,7 @@ import { WorkflowOverlay } from '../../utils/workflow/workflow-overlay';
 import { buildRuntimeOverlay } from '../../utils/workflow/workflow-runtime.overlay';
 import { nodeKindInfo, nodeKindOf, nodeTone } from '../../utils/workflow/workflow-node-types';
 import { markDirty } from '../../utils/change-detection';
-import { formatDate } from '../../utils/locale-format';
+import { formatDate, formatDateTime } from '../../utils/locale-format';
 
 /**
  * Süreç detayı — şema üstünde yol, zaman çizelgesi, görevler ve zincir doğrulama.
@@ -319,8 +319,11 @@ export class WorkflowInstanceComponent implements OnInit {
       let summary: string;
       switch (state) {
         case 'current': {
+          const until = step.type === 'timer' ? this.waitingUntil(instance, key) : null;
           const who = this.waitingFor(instance.tasks ?? [], key);
-          summary = who ? t('workflow.runtime.waitingFor', { who }) : t('workflow.runtime.waiting');
+          summary = until ? t('workflow.runtime.waitingUntil', { date: until })
+            : who ? t('workflow.runtime.waitingFor', { who })
+            : t('workflow.runtime.waiting');
           break;
         }
         case 'failed':  summary = t('workflow.runtime.failed'); break;
@@ -339,6 +342,19 @@ export class WorkflowInstanceComponent implements OnInit {
       };
     }
     return meta;
+  }
+
+  /** Bekleme adımının vadesi: o adımın son TimerScheduled olayından (yerel saatle). */
+  private waitingUntil(instance: WorkflowInstance, stepKey: string): string | null {
+    const scheduled = [...(instance.timeline ?? [])].reverse()
+      .find(event => event.eventType === 'TimerScheduled' && event.stepKey?.toLowerCase() === stepKey);
+    if (!scheduled?.dataJson) return null;
+    try {
+      const fireAt = (JSON.parse(scheduled.dataJson) as { fireAt?: string }).fireAt;
+      return fireAt ? formatDateTime(new Date(fireAt.endsWith('Z') ? fireAt : fireAt + 'Z'), this.languageService.lang()) : null;
+    } catch {
+      return null;
+    }
   }
 
   /** Adımda bekleyen görevlerin atandığı rol/kişi — paralelde birden çok. */

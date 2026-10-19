@@ -321,7 +321,34 @@ export interface WorkflowForm {
   allowReject?: boolean;
 }
 
-export type WorkflowStepType = 'approval' | 'parallel' | 'condition' | 'end' | 'action' | 'notify';
+export type WorkflowStepType = 'approval' | 'parallel' | 'condition' | 'end' | 'action' | 'notify' | 'timer';
+
+/** Bekleme modu — backend WorkflowTimerModes ile aynı. */
+export type WorkflowTimerMode = 'duration' | 'untilField';
+export type WorkflowTimerUnit = 'minutes' | 'hours' | 'days';
+
+/** Bekleme düğümünün ayarları. */
+export interface WorkflowTimerConfig {
+  mode?: WorkflowTimerMode | null;
+  /** Süre miktarı (duration). */
+  amount?: number | null;
+  unit?: WorkflowTimerUnit | null;
+  /** Tarih alanı (untilField) — İstanbul saatiyle; yalnız tarihse gece yarısı. */
+  field?: string | null;
+  /** Tarihe eklenecek saat; negatif = önce. */
+  offsetHours?: number | null;
+  /** Tarih boşsa: beklemeden devam ya da olay. */
+  onMissing?: 'continue' | 'incident' | null;
+}
+
+/** Bekleme en fazla bu kadar gün sürebilir (backend MaxDuration). */
+export const TIMER_MAX_DAYS = 366;
+
+/** Tenant'ın kullanabildiği akış özellikleri (GET /Workflow/capabilities). */
+export interface WorkflowCapabilities {
+  /** Bekleme düğümü — migrasyon 022. */
+  timers: boolean;
+}
 
 /** Alan güncelle satırının değer kaynağı — backend WorkflowSetModes ile aynı. */
 export type WorkflowSetMode = 'value' | 'formula' | 'clear';
@@ -445,6 +472,8 @@ export interface WorkflowStep {
   notify?: WorkflowNotifyConfig | null;
   /** Otomatik eylemden sonra gidilecek adım (zorunlu). */
   next?: string | null;
+  /** Bekleme ayarları (type = timer). */
+  timer?: WorkflowTimerConfig | null;
 
   /**
    * Canvas'ta elle taşınmış konum. YOKSA otomatik yerleşim kullanılır —

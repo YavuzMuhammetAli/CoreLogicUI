@@ -8,7 +8,7 @@ import { WorkflowStep, WorkflowStepType } from '../../models/workflow.model';
  * onay adımıdır (motor `approval` olarak koşar); kullanıcı için ayrı bir kavram
  * olduğu için ayrı tür olarak sunulur.
  */
-export type NodeKind = 'approval' | 'task' | 'parallel' | 'condition' | 'action' | 'notify' | 'end';
+export type NodeKind = 'approval' | 'task' | 'parallel' | 'condition' | 'action' | 'notify' | 'timer' | 'end';
 
 /** Kartın renk şeridi — tasarım sisteminin durum renkleri. */
 export type NodeTone = 'accent' | 'success' | 'warn' | 'danger' | 'neutral';
@@ -101,6 +101,17 @@ export const NODE_KINDS: ReadonlyArray<NodeKindInfo> = [
     icon: 'M4 4h16v12H5.2L4 17.2zM4 8l8 5 8-5'
   },
   {
+    kind: 'timer',
+    type: 'timer',
+    labelKey: 'workflow.node.timer',
+    descriptionKey: 'workflow.node.timerHelp',
+    defaultNameKey: 'workflow.node.timerName',
+    tone: 'neutral',
+    category: 'automation',
+    automatic: true,
+    icon: 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z'
+  },
+  {
     kind: 'end',
     type: 'end',
     labelKey: 'workflow.node.end',
@@ -124,7 +135,7 @@ export function isNodeKind(value: unknown): value is NodeKind {
 /** Var olan adımın türü: paralel/koşul/bitiş tipten; reddi kapalı onay → görev; diğerleri onay. */
 export function nodeKindOf(step: WorkflowStep): NodeKind {
   if (step.type === 'parallel' || step.type === 'condition' || step.type === 'end'
-      || step.type === 'action' || step.type === 'notify') return step.type;
+      || step.type === 'action' || step.type === 'notify' || step.type === 'timer') return step.type;
   return step.form?.allowReject === false ? 'task' : 'approval';
 }
 
@@ -169,6 +180,9 @@ export function createStep(kind: NodeKind, options: NewStepOptions): WorkflowSte
     case 'action':
       // Tek boş satır: alan ve değer kullanıcıdan (eksikler sorun olarak görünür).
       return { key, type: 'action', name, sets: [{ column: '', mode: 'value', value: '' }], next: null };
+    case 'timer':
+      // Bir günlük bekleme; tarih alanına kadar beklemek düzenleyiciden seçilir.
+      return { key, type: 'timer', name, timer: { mode: 'duration', amount: 1, unit: 'days' }, next: null };
     case 'notify':
       // Varsayılan alıcı kaydı oluşturan; konu kullanıcıdan.
       return {

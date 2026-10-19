@@ -21,6 +21,8 @@ import { WORKFLOW_NODE_MIME } from '../../shared/workflow-canvas/workflow-canvas
 })
 export class WorkflowPaletteComponent {
   readonly disabled = input(false);
+  /** Bu şirkette kullanılamayan türler (ör. Bekleme — migrasyon 022 yok). */
+  readonly unavailable = input<ReadonlySet<NodeKind>>(new Set());
 
   readonly add = output<NodeKind>();
 
@@ -31,8 +33,12 @@ export class WorkflowPaletteComponent {
     { titleKey: 'workflow.palette.flow', kinds: NODE_KINDS.filter(k => k.category === 'flow') }
   ];
 
+  isUnavailable(kind: NodeKind): boolean {
+    return this.unavailable().has(kind);
+  }
+
   onDragStart(event: DragEvent, kind: NodeKind): void {
-    if (this.disabled() || !event.dataTransfer) {
+    if (this.disabled() || this.isUnavailable(kind) || !event.dataTransfer) {
       event.preventDefault();
       return;
     }

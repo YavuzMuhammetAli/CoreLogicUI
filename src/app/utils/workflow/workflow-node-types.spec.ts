@@ -15,7 +15,8 @@ describe('workflow-node-types', () => {
     expect(NODE_KINDS.every(k => k.labelKey && k.icon)).toBeTrue();
     expect(nodeKindInfo('task').type).toBe('approval');
     expect(isNodeKind('parallel')).toBeTrue();
-    expect(isNodeKind('timer')).toBeFalse();
+    expect(isNodeKind('timer')).toBeTrue();
+    expect(isNodeKind('subprocess')).toBeFalse();
   });
 
   it('var olan adımın türünü tanır: reddi kapalı onay = görev', () => {

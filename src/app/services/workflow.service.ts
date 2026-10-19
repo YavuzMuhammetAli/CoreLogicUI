@@ -5,6 +5,7 @@ import { ResponseModel } from '../models/responseModel';
 import { ListResponseModel } from '../models/responseModelList';
 import { DataResponseModel } from '../models/dataResponseModel';
 import {
+  WorkflowCapabilities,
   WorkflowDefinition,
   WorkflowValidationResult,
   WorkflowSimulateRequest,
@@ -102,6 +103,11 @@ export class WorkflowService {
    */
   simulate(request: WorkflowSimulateRequest): Observable<DataResponseModel<WorkflowSimulation>> {
     return this.http.post<DataResponseModel<WorkflowSimulation>>(`${this.baseUrl}/simulate`, request);
+  }
+
+  /** Bu şirkette kullanılabilen düğümler (Bekleme → migrasyon 022). */
+  capabilities(): Observable<DataResponseModel<WorkflowCapabilities>> {
+    return this.http.get<DataResponseModel<WorkflowCapabilities>>(`${this.baseUrl}/capabilities`);
   }
 
   publish(id: number): Observable<ResponseModel> {

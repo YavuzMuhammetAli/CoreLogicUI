@@ -98,6 +98,12 @@
           }
           <p class="field-help">{{ 'workflow.notify.inspectorHelp' | t }}</p>
         </div>
+      } @else if (step.type === 'timer') {
+        <div class="inspector-section">
+          <span class="inspector-section-title">{{ 'workflow.timer.title' | t }}</span>
+          <p class="inspector-muted">{{ timerText(step) }}</p>
+          <p class="field-help">{{ 'workflow.timer.inspectorHelp' | t }}</p>
+        </div>
       } @else if (step.type === 'end') {
         <div class="field">
           <label for="ins-outcome">{{ 'workflow.end.outcome' | t }}</label>

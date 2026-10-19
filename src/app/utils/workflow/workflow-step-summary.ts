@@ -34,7 +34,8 @@ export function assignmentSummary(step: WorkflowStep, lookup: SummaryLookup): st
     case 'parallel':  return lookup.t('workflow.build.branchCount', { n: (step.branches ?? []).length });
     case 'condition':
     case 'action':
-    case 'notify':    return lookup.t('workflow.node.automatic');
+    case 'notify':
+    case 'timer':     return lookup.t('workflow.node.automatic');
     case 'end':       return '—';
     default:          return assignmentText(step.assignment, lookup);
   }
@@ -48,6 +49,7 @@ export function stepSummary(step: WorkflowStep, lookup: SummaryLookup): string {
   }
   if (step.type === 'action') return actionSummary(step, lookup);
   if (step.type === 'notify') return recipientsSummary(step.notify?.recipients ?? [], lookup);
+  if (step.type === 'timer') return timerSummary(step, lookup);
 
   const parts = [assignmentSummary(step, lookup)];
   const due = step.type === 'parallel' ? null : step.sla?.dueHours;
@@ -86,4 +88,22 @@ export function recipientsSummary(recipients: ReadonlyArray<WorkflowRecipient>, 
   if (recipients.length === 0) return MISSING;
   const first = recipientText(recipients[0], lookup);
   return recipients.length > 1 ? `${first} +${recipients.length - 1}` : first;
+}
+
+/** Bekleme özeti: "2 gün", "Bitis tarihine kadar", "Bitis − 24 sa". */
+export function timerSummary(step: WorkflowStep, lookup: SummaryLookup): string {
+  const timer = step.timer;
+  if (!timer) return MISSING;
+
+  if (timer.mode === 'untilField') {
+    if (!timer.field) return MISSING;
+    const offset = Number(timer.offsetHours ?? 0);
+    if (!offset) return lookup.t('workflow.timer.summaryUntil', { field: timer.field });
+    return lookup.t(offset < 0 ? 'workflow.timer.summaryBefore' : 'workflow.timer.summaryAfter',
+      { field: timer.field, n: Math.abs(offset) });
+  }
+
+  const amount = Number(timer.amount ?? 0);
+  if (!(amount > 0)) return MISSING;
+  return lookup.t(`workflow.timer.unit.${timer.unit ?? 'hours'}`, { n: amount });
 }
