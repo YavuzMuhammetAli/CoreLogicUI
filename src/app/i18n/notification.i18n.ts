@@ -42,5 +42,7 @@ export const NOTIFICATION_I18N: Translations = {
     tr: 'Süreç reddedildi: {name}',
     en: 'Process was rejected: {name}'
   },
+  // Bildirim düğümü: başlık düğümün konusu (akış tasarımcısında yazılır).
+  'notification.kind.StepNotification': { tr: '{name}', en: '{name}' },
   'notification.kind.default': { tr: '{name}', en: '{name}' }
 };

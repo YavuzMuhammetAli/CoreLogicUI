@@ -316,7 +316,8 @@ export class WorkflowCanvasComponent {
         pending.push({
           // Port kimliği anahtarda: koşulun iki durumu aynı hedefe gidebilir.
           key: `${source.key}->${port.target}:${port.port}`,
-          label: port.kind === 'neutral' ? (port.label ?? labels.neutral) : labels[port.kind],
+          // Otomatik eylemin tek "sonraki" çıkışı etiketsiz çizilir — "Diğer" yanıltırdı.
+          label: port.port === 'next' ? '' : port.kind === 'neutral' ? (port.label ?? labels.neutral) : labels[port.kind],
           isRejection: port.kind === 'reject',
           from: source.key,
           to: port.target,
@@ -618,6 +619,7 @@ export class WorkflowCanvasComponent {
 
   /** Port düğmesinin ekran okuyucu metni — koşul yolunda durumun etiketi. */
   portAria(port: CanvasPort): string {
+    if (port.port === 'next') return this.languageService.t('workflow.canvas.portNext');
     if (port.kind === 'neutral') {
       return this.languageService.t('workflow.canvas.portCase', {
         label: port.label ?? this.languageService.t('workflow.canvas.edgeDefault')

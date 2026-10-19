@@ -96,6 +96,9 @@
               @if (row.exit) {
                 <span class="sim-exit">→ {{ row.exit }}</span>
               }
+              @if (row.note) {
+                <span class="sim-note">{{ row.note }}</span>
+              }
             </li>
           }
         </ol>

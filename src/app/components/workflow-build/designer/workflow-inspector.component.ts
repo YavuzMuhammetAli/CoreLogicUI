@@ -5,6 +5,8 @@ import {
   WorkflowAssignmentMode,
   WorkflowEndOutcome,
   WorkflowJoinMode,
+  WorkflowRecipient,
+  WorkflowSetField,
   WorkflowStep
 } from '../../../models/workflow.model';
 import { Role } from '../../../models/role';
@@ -13,7 +15,7 @@ import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { LanguageService } from '../../../services/language.service';
 import { ExitKind, ExitPort, caseKeyOf, exitsOf, sameKey } from '../../../utils/workflow/workflow-exits';
 import { NodeKindInfo, nodeKindInfo, nodeKindOf } from '../../../utils/workflow/workflow-node-types';
-import { SummaryLookup, assignmentText } from '../../../utils/workflow/workflow-step-summary';
+import { SummaryLookup, assignmentText, recipientText } from '../../../utils/workflow/workflow-step-summary';
 import { WorkflowDesignerStore } from './workflow-designer.store';
 import { connect, findStep, labelStep, patchStep, renameStep } from './workflow-design.commands';
 import { selectNodes } from './workflow-selection';
@@ -261,6 +263,30 @@ export class WorkflowInspectorComponent {
       case 'reject':  return 'workflow.build.terminalRejected';
       default:        return 'workflow.inspector.choose';
     }
+  }
+
+  /** Alan güncelle satırının panel özeti: "= Onaylandı", "formül", "temizlenir". */
+  setSummary(set: WorkflowSetField): string {
+    switch (set.mode) {
+      case 'clear':   return this.languageService.t('workflow.action.modeClear');
+      case 'formula': return this.languageService.t('workflow.action.modeFormula');
+      default:        return `= ${set.value ?? ''}`;
+    }
+  }
+
+  /** Bildirim alıcısının adı (rol/kişi listesinden). */
+  recipientLabel(recipient: WorkflowRecipient): string {
+    if (recipient.kind === 'stepAssignees') {
+      const step = this.store.graph().steps.find(s => sameKey(s.key, recipient.stepKey));
+      return this.languageService.t('workflow.recipient.stepAssigneesOf', { step: step?.name ?? recipient.stepKey ?? '—' });
+    }
+    const roles = new Map(this.roles().map(role => [role.id, role.name]));
+    const users = new Map(this.users().map(user => [user.id, `${user.firstName} ${user.lastName}`]));
+    return recipientText(recipient, {
+      roleName: id => roles.get(id) ?? null,
+      userName: id => users.get(id) ?? null,
+      t: (key, params) => this.languageService.t(key, params)
+    });
   }
 
   /** Koşul durumunun panel özeti: satır sayısı ya da formül. */

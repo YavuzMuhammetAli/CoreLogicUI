@@ -15,6 +15,14 @@
             <app-condition-editor [step]="draft" [columns]="columns()" [targets]="targets()"
                                   [stepKeys]="stepKeys()" [readonly]="readonly()"
                                   (stepChange)="onSpecialStep($event)" />
+          } @else if (draft.type === 'action') {
+            <app-action-editor [step]="draft" [columns]="columns()" [targets]="targets()"
+                               [stepKeys]="stepKeys()" [readonly]="readonly()"
+                               (stepChange)="onSpecialStep($event)" />
+          } @else if (draft.type === 'notify') {
+            <app-notify-editor [step]="draft" [columns]="columns()" [targets]="targets()"
+                               [humanSteps]="humanSteps()" [roles]="roles()" [users]="users()"
+                               [readonly]="readonly()" (stepChange)="onSpecialStep($event)" />
           } @else {
             <app-end-editor [step]="draft" [statusLabel]="statusLabel()" [readonly]="readonly()"
                             (draftChange)="onEndDraft($event)" />

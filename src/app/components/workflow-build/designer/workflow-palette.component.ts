@@ -27,6 +27,7 @@ export class WorkflowPaletteComponent {
   /** Gruplar: insan adımları, akışı yönlendiren adımlar. */
   readonly groups = [
     { titleKey: 'workflow.palette.human', kinds: NODE_KINDS.filter(k => k.category === 'human') },
+    { titleKey: 'workflow.palette.automation', kinds: NODE_KINDS.filter(k => k.category === 'automation') },
     { titleKey: 'workflow.palette.flow', kinds: NODE_KINDS.filter(k => k.category === 'flow') }
   ];
 

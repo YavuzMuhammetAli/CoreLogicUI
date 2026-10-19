@@ -1,4 +1,4 @@
-import { WorkflowAssignment, WorkflowStep } from '../../models/workflow.model';
+import { WorkflowAssignment, WorkflowRecipient, WorkflowStep } from '../../models/workflow.model';
 
 /**
  * Adımın tek satırlık özeti (atama, süre) — SAF. Adım listesi, düğüm kartı ve
@@ -32,7 +32,9 @@ export function assignmentText(assignment: WorkflowAssignment | null | undefined
 export function assignmentSummary(step: WorkflowStep, lookup: SummaryLookup): string {
   switch (step.type) {
     case 'parallel':  return lookup.t('workflow.build.branchCount', { n: (step.branches ?? []).length });
-    case 'condition': return lookup.t('workflow.node.automatic');
+    case 'condition':
+    case 'action':
+    case 'notify':    return lookup.t('workflow.node.automatic');
     case 'end':       return '—';
     default:          return assignmentText(step.assignment, lookup);
   }
@@ -44,9 +46,44 @@ export function stepSummary(step: WorkflowStep, lookup: SummaryLookup): string {
   if (step.type === 'end') {
     return lookup.t(step.outcome === 'rejected' ? 'workflow.node.endRejected' : 'workflow.node.endCompleted');
   }
+  if (step.type === 'action') return actionSummary(step, lookup);
+  if (step.type === 'notify') return recipientsSummary(step.notify?.recipients ?? [], lookup);
 
   const parts = [assignmentSummary(step, lookup)];
   const due = step.type === 'parallel' ? null : step.sla?.dueHours;
   if (due && due > 0) parts.push(lookup.t('workflow.node.hours', { n: due }));
   return parts.join(' · ');
+}
+
+/** Alan güncelle özeti: tek alanda "Durum = Onaylandı", çoğunda alan sayısı. */
+export function actionSummary(step: WorkflowStep, lookup: SummaryLookup): string {
+  const sets = (step.sets ?? []).filter(set => set.column);
+  if (sets.length === 0) return MISSING;
+  if (sets.length > 1) return lookup.t('workflow.node.fieldCount', { n: sets.length });
+
+  const [set] = sets;
+  switch (set.mode) {
+    case 'clear':   return lookup.t('workflow.action.summaryClear', { field: set.column });
+    case 'formula': return lookup.t('workflow.action.summaryFormula', { field: set.column });
+    default:        return `${set.column} = ${set.value ?? ''}`;
+  }
+}
+
+/** Alıcının görünen adı: "Kaydı oluşturan", rol/kişi adı, "Finans Onayı görevlileri". */
+export function recipientText(recipient: WorkflowRecipient, lookup: SummaryLookup): string {
+  switch (recipient.kind) {
+    case 'creator':       return lookup.t('workflow.recipient.creator');
+    case 'starter':       return lookup.t('workflow.recipient.starter');
+    case 'role':          return recipient.id ? lookup.roleName(Number(recipient.id)) ?? MISSING : MISSING;
+    case 'user':          return recipient.id ? lookup.userName(Number(recipient.id)) ?? MISSING : MISSING;
+    case 'stepAssignees': return lookup.t('workflow.recipient.stepAssigneesOf', { step: recipient.stepKey || MISSING });
+    default:              return MISSING;
+  }
+}
+
+/** Kart özeti: ilk alıcı, fazlası "+2". */
+export function recipientsSummary(recipients: ReadonlyArray<WorkflowRecipient>, lookup: SummaryLookup): string {
+  if (recipients.length === 0) return MISSING;
+  const first = recipientText(recipients[0], lookup);
+  return recipients.length > 1 ? `${first} +${recipients.length - 1}` : first;
 }

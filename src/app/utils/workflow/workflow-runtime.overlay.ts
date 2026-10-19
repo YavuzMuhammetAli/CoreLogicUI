@@ -29,7 +29,8 @@ function dataOf(event: WorkflowEvent): Record<string, unknown> {
  *
  * - Adıma giriş (StepEntered) izi kurar; ondan önceki karar o adıma giden
  *   kenarı belirler: görev onayı/reddi (paralelde tamamlanma/herhangi biri
- *   reddederse), koşul değerlendirmesi ve yönetici atlaması porttan gelir.
+ *   reddederse), koşul değerlendirmesi ve yönetici atlaması porttan gelir;
+ *   alan güncelle / bildirim "sonraki" çıkışından.
  * - Dal iptali (branchCancelled) karar sayılmaz.
  * - Geri alma (RolledBack) izi hedef adıma kadar keser — sonrası "olmamış" sayılır.
  * - Sürecin bulunduğu adım "şu an", olaydaysa "hata"; Bitiş düğümünde sonlandıysa "bitiş".
@@ -68,6 +69,11 @@ export function buildRuntimeOverlay(
       case 'TaskSkipped':
         // Paralelde kalan dalların iptali karar değildir; yönetici atlaması onay gibi ilerletir.
         if (key && dataOf(event)['reason'] !== 'branchCancelled') pending = { from: key, port: exitFor(key, true) };
+        break;
+      // Alan güncelle / bildirim tamamlandı → tek "sonraki" çıkışından devam.
+      case 'FieldsUpdated':
+      case 'NotificationQueued':
+        if (key) pending = { from: key, port: 'next' };
         break;
       case 'ConditionEvaluated':
       case 'StepSkipped': {

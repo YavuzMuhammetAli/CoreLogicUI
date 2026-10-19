@@ -25,6 +25,8 @@ interface PathRow {
   seq: number;
   name: string;
   exit: string | null;
+  /** Otomatik eylemin özeti: yazılan alanlar ya da bildirim konusu. */
+  note: string | null;
 }
 
 /**
@@ -85,7 +87,14 @@ export class WorkflowSimulatePanelComponent {
     const steps = this.graph().steps;
     return result.path.map(entry => {
       const step = steps.find(s => s.key.toLowerCase() === entry.stepKey.toLowerCase());
-      return { seq: entry.seq, name: step?.name || entry.stepKey, exit: this.exitText(step?.cases, entry.port) };
+      // Alan güncelle / bildirimin tek çıkışı var; "→ Sonra" yerine ne yaptığı yazılır.
+      const automaticAction = entry.port === 'next';
+      return {
+        seq: entry.seq,
+        name: step?.name || entry.stepKey,
+        exit: automaticAction ? null : this.exitText(step?.cases, entry.port),
+        note: entry.note ?? null
+      };
     });
   });
 

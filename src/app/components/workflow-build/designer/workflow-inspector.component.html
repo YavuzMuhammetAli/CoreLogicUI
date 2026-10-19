@@ -70,6 +70,34 @@
           </ol>
           <p class="field-help">{{ 'workflow.case.inspectorHelp' | t }}</p>
         </div>
+      } @else if (step.type === 'action') {
+        <div class="inspector-section">
+          <span class="inspector-section-title">{{ 'workflow.action.fields' | t }}</span>
+          <ul class="inspector-list">
+            @for (set of step.sets ?? []; track $index) {
+              <li><span>{{ set.column || '—' }}</span><span class="inspector-muted">{{ setSummary(set) }}</span></li>
+            } @empty {
+              <li><span class="inspector-muted">{{ 'workflow.action.noFields' | t }}</span></li>
+            }
+          </ul>
+          <p class="field-help">{{ 'workflow.action.inspectorHelp' | t }}</p>
+        </div>
+      } @else if (step.type === 'notify') {
+        <div class="inspector-section">
+          <span class="inspector-section-title">{{ 'workflow.notify.recipients' | t }}</span>
+          <ul class="inspector-list">
+            @for (recipient of step.notify?.recipients ?? []; track $index) {
+              <li><span>{{ recipientLabel(recipient) }}</span></li>
+            } @empty {
+              <li><span class="inspector-muted">{{ 'workflow.notify.noRecipients' | t }}</span></li>
+            }
+          </ul>
+          @if (step.notify?.subject) {
+            <span class="inspector-section-title">{{ 'workflow.notify.subject' | t }}</span>
+            <p class="inspector-muted">{{ step.notify?.subject }}</p>
+          }
+          <p class="field-help">{{ 'workflow.notify.inspectorHelp' | t }}</p>
+        </div>
       } @else if (step.type === 'end') {
         <div class="field">
           <label for="ins-outcome">{{ 'workflow.end.outcome' | t }}</label>

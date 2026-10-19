@@ -1,0 +1,141 @@
+<div class="editor stack">
+  <section class="editor-section">
+    <span class="eyebrow">{{ 'workflow.build.sectionGeneral' | t }}</span>
+    <div class="field-row">
+      <div class="field">
+        <label for="act-name">{{ 'workflow.build.stepName' | t }}</label>
+        <input id="act-name" class="input" type="text" [value]="draft().name" [disabled]="readonly()"
+               (input)="onName($event)" />
+      </div>
+      <div class="field">
+        <label for="act-key">{{ 'workflow.build.stepKey' | t }}</label>
+        <input id="act-key" class="input input-mono" type="text" [value]="draft().key" [disabled]="readonly()"
+               (change)="onKey($event)" aria-describedby="act-key-help" />
+        <span id="act-key-help" class="field-help">{{ 'workflow.build.stepKeyHelp' | t }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="editor-section">
+    <div class="editor-section-head">
+      <span class="eyebrow">{{ 'workflow.action.fields' | t }}</span>
+      <span class="field-help">{{ 'workflow.action.fieldsHelp' | t }}</span>
+    </div>
+
+    @for (set of sets(); track $index; let i = $index) {
+      <div class="case-card">
+        <div class="action-row">
+          @if (columns().length > 0) {
+            <select class="input" [disabled]="readonly()" (change)="onColumn(i, $event)"
+                    [attr.aria-label]="'workflow.action.field' | t" [attr.aria-invalid]="!set.column ? true : null">
+              @if (!isKnownColumn(set.column)) {
+                <option [value]="set.column" selected>{{ set.column || ('workflow.inspector.choose' | t) }}</option>
+              }
+              @for (column of writable(); track column.columnName) {
+                <option [value]="column.columnName" [selected]="column.columnName.toLowerCase() === set.column.toLowerCase()">{{ columnLabel(column) }}</option>
+              }
+            </select>
+          } @else {
+            <input class="input" type="text" [value]="set.column" [disabled]="readonly()"
+                   [attr.aria-label]="'workflow.action.field' | t" (change)="onColumn(i, $event)" />
+          }
+
+          <select class="input" [disabled]="readonly()" (change)="onMode(i, $event)"
+                  [attr.aria-label]="'workflow.action.mode' | t">
+            @for (mode of modes; track mode.value) {
+              <option [value]="mode.value" [selected]="modeOf(set) === mode.value">{{ mode.labelKey | t }}</option>
+            }
+          </select>
+
+          @if (!readonly()) {
+            <button type="button" class="btn btn-ghost btn-sm editor-danger" (click)="removeSet(i)"
+                    [attr.aria-label]="'common.delete' | t" [title]="'common.delete' | t">✕</button>
+          }
+        </div>
+
+        @switch (modeOf(set)) {
+          @case ('value') {
+            @switch (inputKind(set)) {
+              @case ('number') {
+                <input class="input" type="number" step="any" [value]="set.value ?? ''" [disabled]="readonly()"
+                       [attr.aria-label]="'workflow.action.value' | t" (input)="onValue(i, $event)" />
+              }
+              @case ('date') {
+                <input class="input" type="date" [value]="set.value ?? ''" [disabled]="readonly()"
+                       [attr.aria-label]="'workflow.action.value' | t" (input)="onValue(i, $event)" />
+              }
+              @case ('boolean') {
+                <select class="input" [disabled]="readonly()" (change)="onValue(i, $event)"
+                        [attr.aria-label]="'workflow.action.value' | t">
+                  <option value="" [selected]="!set.value">{{ 'workflow.inspector.choose' | t }}</option>
+                  <option value="true" [selected]="set.value === 'true'">{{ 'common.yes' | t }}</option>
+                  <option value="false" [selected]="set.value === 'false'">{{ 'common.no' | t }}</option>
+                </select>
+              }
+              @case ('enum') {
+                <select class="input" [disabled]="readonly()" (change)="onValue(i, $event)"
+                        [attr.aria-label]="'workflow.action.value' | t">
+                  <option value="" [selected]="!set.value">{{ 'workflow.inspector.choose' | t }}</option>
+                  @for (option of enumOptions(set); track option) {
+                    <option [value]="option" [selected]="set.value === option">{{ option }}</option>
+                  }
+                </select>
+              }
+              @default {
+                <input class="input" type="text" [value]="set.value ?? ''" [disabled]="readonly()"
+                       [attr.aria-label]="'workflow.action.value' | t" [placeholder]="'workflow.action.valuePlaceholder' | t"
+                       (input)="onValue(i, $event)" />
+              }
+            }
+          }
+          @case ('formula') {
+            <div class="field">
+              <textarea class="input input-mono case-expression" rows="2" [value]="set.value ?? ''" [disabled]="readonly()"
+                        [attr.aria-label]="'workflow.action.formula' | t" [placeholder]="'workflow.action.formulaPlaceholder' | t"
+                        [attr.aria-describedby]="'act-expr-help-' + i" (input)="onValue(i, $event)"></textarea>
+              @if (checks()[i]; as check) {
+                @if (check.error === 'empty') {
+                  <span [id]="'act-expr-help-' + i" class="field-help">{{ 'workflow.action.formulaHelp' | t }}</span>
+                } @else if (check.error) {
+                  <span [id]="'act-expr-help-' + i" class="field-error" role="alert">{{ 'workflow.case.formulaError' | t: { code: check.error } }}</span>
+                } @else if (check.sequence) {
+                  <span [id]="'act-expr-help-' + i" class="field-error" role="alert">{{ 'workflow.case.formulaSequence' | t }}</span>
+                } @else if (check.unknown.length > 0) {
+                  <span [id]="'act-expr-help-' + i" class="field-error" role="alert">{{ 'workflow.case.formulaUnknown' | t: { fields: check.unknown.join(', ') } }}</span>
+                } @else {
+                  <span [id]="'act-expr-help-' + i" class="field-help">{{ 'workflow.action.formulaHelp' | t }}</span>
+                }
+              }
+            </div>
+          }
+          @default {
+            <p class="field-help">{{ 'workflow.action.clearHelp' | t }}</p>
+          }
+        }
+
+        @if (isDuplicate(set)) {
+          <span class="field-error" role="alert">{{ 'workflow.action.duplicate' | t: { field: set.column } }}</span>
+        }
+      </div>
+    } @empty {
+      <p class="field-help">{{ 'workflow.action.noFields' | t }}</p>
+    }
+
+    @if (!readonly()) {
+      <button type="button" class="btn btn-secondary btn-sm case-add-row" (click)="addSet()">+ {{ 'workflow.action.add' | t }}</button>
+    }
+  </section>
+
+  <section class="editor-section">
+    <div class="field">
+      <label for="act-next">{{ 'workflow.action.next' | t }}</label>
+      <select id="act-next" class="input" [disabled]="readonly()" (change)="onNext($event)"
+              [attr.aria-invalid]="!draft().next ? true : null">
+        <option value="" [selected]="!draft().next">{{ 'workflow.inspector.choose' | t }}</option>
+        @for (target of targets(); track target.key) {
+          <option [value]="target.key" [selected]="target.key.toLowerCase() === (draft().next ?? '').toLowerCase()">{{ target.label }}</option>
+        }
+      </select>
+    </div>
+  </section>
+</div>

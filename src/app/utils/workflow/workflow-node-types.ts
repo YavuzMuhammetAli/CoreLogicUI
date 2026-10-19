@@ -8,13 +8,13 @@ import { WorkflowStep, WorkflowStepType } from '../../models/workflow.model';
  * onay adımıdır (motor `approval` olarak koşar); kullanıcı için ayrı bir kavram
  * olduğu için ayrı tür olarak sunulur.
  */
-export type NodeKind = 'approval' | 'task' | 'parallel' | 'condition' | 'end';
+export type NodeKind = 'approval' | 'task' | 'parallel' | 'condition' | 'action' | 'notify' | 'end';
 
 /** Kartın renk şeridi — tasarım sisteminin durum renkleri. */
 export type NodeTone = 'accent' | 'success' | 'warn' | 'danger' | 'neutral';
 
-/** Paletteki grup: insan adımları ve akışı yönlendiren adımlar. */
-export type NodeCategory = 'human' | 'flow';
+/** Paletteki grup: insan adımları, otomatik eylemler ve akışı yönlendiren adımlar. */
+export type NodeCategory = 'human' | 'automation' | 'flow';
 
 export interface NodeKindInfo {
   kind: NodeKind;
@@ -27,7 +27,7 @@ export interface NodeKindInfo {
   defaultNameKey: string;
   tone: NodeTone;
   category: NodeCategory;
-  /** Görev açmadan motorun ilerlettiği adım (koşul). */
+  /** Görev açmadan motorun ilerlettiği adım (koşul, alan güncelle, bildirim). */
   automatic: boolean;
   /** 24×24 viewBox'ta stroke ikon yolu (`currentColor`). */
   icon: string;
@@ -79,6 +79,28 @@ export const NODE_KINDS: ReadonlyArray<NodeKindInfo> = [
     icon: 'M12 2l10 10-10 10L2 12z'
   },
   {
+    kind: 'action',
+    type: 'action',
+    labelKey: 'workflow.node.action',
+    descriptionKey: 'workflow.node.actionHelp',
+    defaultNameKey: 'workflow.node.actionName',
+    tone: 'accent',
+    category: 'automation',
+    automatic: true,
+    icon: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'
+  },
+  {
+    kind: 'notify',
+    type: 'notify',
+    labelKey: 'workflow.node.notify',
+    descriptionKey: 'workflow.node.notifyHelp',
+    defaultNameKey: 'workflow.node.notifyName',
+    tone: 'warn',
+    category: 'automation',
+    automatic: true,
+    icon: 'M4 4h16v12H5.2L4 17.2zM4 8l8 5 8-5'
+  },
+  {
     kind: 'end',
     type: 'end',
     labelKey: 'workflow.node.end',
@@ -101,7 +123,8 @@ export function isNodeKind(value: unknown): value is NodeKind {
 
 /** Var olan adımın türü: paralel/koşul/bitiş tipten; reddi kapalı onay → görev; diğerleri onay. */
 export function nodeKindOf(step: WorkflowStep): NodeKind {
-  if (step.type === 'parallel' || step.type === 'condition' || step.type === 'end') return step.type;
+  if (step.type === 'parallel' || step.type === 'condition' || step.type === 'end'
+      || step.type === 'action' || step.type === 'notify') return step.type;
   return step.form?.allowReject === false ? 'task' : 'approval';
 }
 
@@ -120,6 +143,8 @@ export interface NewStepOptions {
   branchNames?: [string, string];
   /** Koşulun ilk durumunun etiketi ("Evet"). */
   caseLabel?: string;
+  /** Bildirimin varsayılan konusu. */
+  subject?: string;
 }
 
 /**
@@ -141,6 +166,16 @@ export function createStep(kind: NodeKind, options: NewStepOptions): WorkflowSte
       };
     case 'end':
       return { key, type: 'end', name, outcome: 'completed' };
+    case 'action':
+      // Tek boş satır: alan ve değer kullanıcıdan (eksikler sorun olarak görünür).
+      return { key, type: 'action', name, sets: [{ column: '', mode: 'value', value: '' }], next: null };
+    case 'notify':
+      // Varsayılan alıcı kaydı oluşturan; konu kullanıcıdan.
+      return {
+        key, type: 'notify', name,
+        notify: { recipients: [{ kind: 'creator' }], channels: [], subject: options.subject ?? '', body: '' },
+        next: null
+      };
     case 'parallel': {
       const [first, second] = options.branchNames ?? ['1', '2'];
       return {

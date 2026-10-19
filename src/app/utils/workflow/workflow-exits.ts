@@ -15,7 +15,7 @@ import {
  * Port adları backend `WorkflowPorts` / `WorkflowExits` ile AYNIDIR —
  * doğrulama bulguları (`WorkflowIssue.port`) ve olay verisi bu adlarla gelir.
  */
-export type ExitPort = 'approve' | 'reject' | 'complete' | 'anyReject' | 'default' | `case:${string}`;
+export type ExitPort = 'approve' | 'reject' | 'complete' | 'anyReject' | 'default' | 'next' | `case:${string}`;
 
 /**
  * Canvas'taki port türü: olumlu (onay/tamamlanma), olumsuz (red) ya da nötr
@@ -82,6 +82,11 @@ export function exitsOf(step: WorkflowStep): WorkflowExit[] {
     case 'end':
       return [];
 
+    // Alan güncelle / bildirim: tek "sonraki" çıkışı; hedefsiz kalırsa doğrulama hatası.
+    case 'action':
+    case 'notify':
+      return [{ port: 'next', kind: 'neutral', target: step.next || null, fallback: null, enabled: true, label: null }];
+
     default:
       return [
         {
@@ -115,6 +120,10 @@ export function setExit(step: WorkflowStep, port: ExitPort, target: string | nul
     const cases = step.cases!.slice();
     cases[index] = { ...cases[index], to: value };
     return { ...step, cases };
+  }
+
+  if (step.type === 'action' || step.type === 'notify') {
+    return port === 'next' && (step.next || null) !== value ? { ...step, next: value } : step;
   }
 
   const isParallel = step.type === 'parallel';

@@ -103,4 +103,22 @@ describe('workflow-exits', () => {
       expect(caseKeyOf('default')).toBeNull();
     });
   });
+
+  describe('alan güncelle / bildirim', () => {
+    const action: WorkflowStep = { key: 'yaz', type: 'action', name: 'Yaz', sets: [], next: 'son' };
+
+    it('tek nötr "sonraki" çıkışı; hedefsizse terminale düşmez', () => {
+      expect(exitsOf(action)).toEqual([
+        { port: 'next', kind: 'neutral', target: 'son', fallback: null, enabled: true, label: null }
+      ]);
+      expect(exitsOf({ ...action, type: 'notify', next: null })[0].target).toBeNull();
+    });
+
+    it('setExit yalnız next yazar; mapRefs onu da taşır', () => {
+      expect(setExit(action, 'next', 'finans').next).toBe('finans');
+      expect(setExit(action, 'approve', 'finans')).toBe(action);
+      expect(setExit(action, 'next', 'son')).toBe(action);
+      expect(mapRefs(action, key => key === 'son' ? null : key).next).toBeNull();
+    });
+  });
 });

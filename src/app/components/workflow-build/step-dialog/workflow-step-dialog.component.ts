@@ -19,6 +19,8 @@ import { sameKey } from '../../../utils/workflow/workflow-exits';
 import { LanguageService } from '../../../services/language.service';
 import { ConditionEditorComponent, StepTarget } from '../editors/condition-editor.component';
 import { EndDraft, EndEditorComponent } from '../editors/end-editor.component';
+import { ActionEditorComponent } from '../editors/action-editor.component';
+import { NotifyEditorComponent } from '../editors/notify-editor.component';
 import { keyProblem } from '../designer/inspector-form';
 
 /** Form alanı tipi seçenekleri — model kolon tipleriyle aynı sözlükten dar bir alt küme. */
@@ -43,7 +45,10 @@ export interface StepDialogResult {
 @Component({
   selector: 'app-workflow-step-dialog',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslatePipe, ConditionEditorComponent, EndEditorComponent],
+  imports: [
+    CommonModule, ReactiveFormsModule, TranslatePipe,
+    ConditionEditorComponent, EndEditorComponent, ActionEditorComponent, NotifyEditorComponent
+  ],
   templateUrl: './workflow-step-dialog.component.html',
   styleUrl: './workflow-step-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -65,8 +70,8 @@ export class WorkflowStepDialogComponent implements OnInit {
   readonly stepKeys = input<string[]>([]);
   /** Akışın bağlı olduğu modelin kolonları — kayıt alanı seçicisi. Model seçilmemişse boş. */
   readonly columns = input<PublishedColumn[]>([]);
-  /** Adımların adları — koşul düzenleyicisinin hedef seçicisi "Ad (anahtar)" göstersin. */
-  readonly steps = input<Array<{ key: string; name: string }>>([]);
+  /** Adımların adları (ve tipleri) — hedef seçicisi "Ad (anahtar)" göstersin; bildirim insan adımlarını seçsin. */
+  readonly steps = input<Array<{ key: string; name: string; type?: string }>>([]);
 
   readonly saved = output<StepDialogResult>();
   readonly cancelled = output<void>();
@@ -75,10 +80,14 @@ export class WorkflowStepDialogComponent implements OnInit {
   readonly originalKey = computed(() => this.step()?.key ?? '');
 
   /**
-   * Koşul ve Bitiş kendi düzenleyicisiyle açılır (onay/paralel reaktif formu
-   * onlara uymuyor); düzenleyici adımın kopyasını yayar, Kaydet belgeye yazar.
+   * Koşul, Bitiş, Alan güncelle ve Bildirim kendi düzenleyicisiyle açılır
+   * (onay/paralel reaktif formu onlara uymuyor); düzenleyici adımın kopyasını
+   * yayar, Kaydet belgeye yazar.
    */
-  readonly special = computed(() => this.step()?.type === 'condition' || this.step()?.type === 'end');
+  readonly special = computed(() => {
+    const type = this.step()?.type;
+    return type === 'condition' || type === 'end' || type === 'action' || type === 'notify';
+  });
   readonly specialDraft = signal<WorkflowStep | null>(null);
   readonly specialLabel = signal('');
   readonly specialError = signal<string | null>(null);
@@ -93,6 +102,12 @@ export class WorkflowStepDialogComponent implements OnInit {
         return { key, label: name ? `${name} (${key})` : key };
       });
   });
+
+  /** Bildirimin "adım görevlileri" seçimi: görev açan adımlar (onay, görev, paralel). */
+  readonly humanSteps = computed<StepTarget[]>(() =>
+    this.steps()
+      .filter(s => s.type === 'approval' || s.type === 'parallel')
+      .map(s => ({ key: s.key, label: `${s.name} (${s.key})` })));
 
   readonly assignmentModeOptions = ASSIGNMENT_MODE_OPTIONS;
   readonly timeoutPolicyOptions = TIMEOUT_POLICY_OPTIONS;
@@ -218,7 +233,7 @@ export class WorkflowStepDialogComponent implements OnInit {
     this.specialError.set(null);
   }
 
-  /** Koşul / Bitiş kaydı: anahtar kuralı panelle aynı; değişiklik yoksa belge değişmez. */
+  /** Özel düzenleyicili adımların kaydı: anahtar kuralı panelle aynı; değişiklik yoksa belge değişmez. */
   private saveSpecial(): void {
     const draft = this.specialDraft();
     const original = this.step();

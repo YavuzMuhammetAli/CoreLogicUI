@@ -68,6 +68,25 @@ describe('workflow-runtime.overlay', () => {
     expect(overlay.edges).toEqual([]);
   });
 
+  it('alan güncelle ve bildirim "sonraki" kenarını çizer', () => {
+    const automation: WorkflowGraph = {
+      startStep: 'yaz',
+      steps: [
+        { key: 'yaz', type: 'action', name: 'Yaz', sets: [], next: 'haber' },
+        { key: 'haber', type: 'notify', name: 'Haber', next: 'son' },
+        { key: 'son', type: 'end', name: 'Son', outcome: 'completed' }
+      ],
+      entityStatusMap: {}
+    };
+    const overlay = buildRuntimeOverlay(automation, [
+      ev('InstanceStarted', 'yaz'), ev('StepEntered', 'yaz'), ev('FieldsUpdated', 'yaz'),
+      ev('StepEntered', 'haber'), ev('NotificationQueued', 'haber'), ev('StepEntered', 'son'), ev('InstanceCompleted', 'son')
+    ], { status: 'Completed', currentStepKey: null });
+
+    expect(overlay.nodes).toEqual({ yaz: 'visited', haber: 'visited', son: 'end' });
+    expect(overlay.edges).toEqual([edgeId('yaz', 'next'), edgeId('haber', 'next')]);
+  });
+
   it('olaydaki otomatik adım failed; atlama varsayılan kenarı çizer', () => {
     const failed = buildRuntimeOverlay(graph, [
       ...start, ev('TaskCompleted', 'mudur'), ev('StepEntered', 'onaylar'),

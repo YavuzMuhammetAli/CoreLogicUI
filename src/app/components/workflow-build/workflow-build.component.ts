@@ -545,7 +545,8 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
       name: t(nodeKindInfo(kind).defaultNameKey),
       completeLabel: t('workflow.node.taskComplete'),
       branchNames: [t('workflow.node.branchName', { n: 1 }), t('workflow.node.branchName', { n: 2 })],
-      caseLabel: t('workflow.case.firstLabel')
+      caseLabel: t('workflow.case.firstLabel'),
+      subject: t('workflow.notify.defaultSubject')
     });
 
     this.store.dispatch('', doc => {
@@ -964,6 +965,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   ): [string, string] {
     const t = (key: string) => this.languageService.t(key);
     if (type === 'end') return ['—', '—'];
+    if (type === 'action' || type === 'notify') return [exits[0]?.target || '—', '—'];
     if (type === 'condition') {
       const paths = exits.map(e => `${e.label ?? t('workflow.canvas.edgeDefault')} → ${e.target ?? '—'}`);
       return [paths.join(' · '), '—'];
@@ -971,9 +973,9 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     return [approve || t('workflow.build.terminalCompleted'), reject || t('workflow.build.terminalRejected')];
   }
 
-  /** Pop-up'ın hedef seçicisi için adım adları. */
+  /** Pop-up'ın hedef seçicisi için adım adları (tip: bildirimin görevli seçimi). */
   readonly stepOptions = computed(() =>
-    this.store.graph().steps.map(step => ({ key: step.key, name: step.name })));
+    this.store.graph().steps.map(step => ({ key: step.key, name: step.name, type: step.type })));
 
   onSelectionChange(selection: CanvasSelection): void {
     this.store.selection.set(selection);

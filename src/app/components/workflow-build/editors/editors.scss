@@ -105,3 +105,72 @@
 .case-add-row { justify-self: start; }
 
 .case-expression { resize: vertical; min-height: 56px; }
+
+// ── Alan güncelle ──────────────────────────────────────────────────────────
+
+// Alan | kaynak | sil
+.action-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 36px;
+  gap: var(--space-2);
+  align-items: center;
+
+  @media (max-width: 768px) {
+    grid-template-columns: minmax(0, 1fr) 36px;
+
+    > :not(button) { grid-column: 1; }
+  }
+}
+
+// ── Bildirim ───────────────────────────────────────────────────────────────
+
+.recipient-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recipient-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-1) 2px var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-warm);
+  font-size: var(--text-sm);
+  color: var(--fg);
+
+  .btn { padding: 0 var(--space-1); min-height: 0; line-height: 1.4; }
+}
+
+// Tür | seçim | ekle
+.recipient-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+
+  @media (max-width: 768px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.channel-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.placeholder-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+
+  .btn { font-family: var(--font-mono, monospace); font-size: var(--text-xs); }
+}
+
+.notify-body { resize: vertical; min-height: 96px; }

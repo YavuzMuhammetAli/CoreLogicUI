@@ -321,7 +321,48 @@ export interface WorkflowForm {
   allowReject?: boolean;
 }
 
-export type WorkflowStepType = 'approval' | 'parallel' | 'condition' | 'end';
+export type WorkflowStepType = 'approval' | 'parallel' | 'condition' | 'end' | 'action' | 'notify';
+
+/** Alan güncelle satırının değer kaynağı — backend WorkflowSetModes ile aynı. */
+export type WorkflowSetMode = 'value' | 'formula' | 'clear';
+
+/** Alan güncelle düğümünün tek satırı. */
+export interface WorkflowSetField {
+  column: string;
+  mode?: WorkflowSetMode | null;
+  /** Sabit değer (metin) ya da formül; clear'da yok. */
+  value?: string | null;
+}
+
+/** Bildirim alıcısı türü — backend WorkflowRecipientKinds ile aynı. */
+export type WorkflowRecipientKind = 'creator' | 'starter' | 'role' | 'user' | 'stepAssignees';
+
+export interface WorkflowRecipient {
+  kind: WorkflowRecipientKind;
+  /** role → rol, user → kullanıcı kimliği. */
+  id?: number | null;
+  /** stepAssignees → adım anahtarı. */
+  stepKey?: string | null;
+}
+
+/** Bildirim kanalı (backend IWorkflowNotificationChannel.Name). */
+export type WorkflowNotifyChannel = 'inapp' | 'email';
+
+export const NOTIFY_CHANNELS: ReadonlyArray<WorkflowNotifyChannel> = ['inapp', 'email'];
+
+/** Bildirim düğümünün ayarları; kanal listesi boşsa yapılandırılmış hepsi. */
+export interface WorkflowNotifyConfig {
+  recipients: WorkflowRecipient[];
+  channels?: WorkflowNotifyChannel[];
+  subject?: string | null;
+  body?: string | null;
+}
+
+/** Bildirim şablonunun sabit yer tutucuları (kayıt alanları `record.{Kolon}`). */
+export const NOTIFY_FIXED_PLACEHOLDERS: ReadonlyArray<string> = ['workflow.name', 'step.name', 'instance.id', 'link'];
+
+export const NOTIFY_SUBJECT_MAX = 200;
+export const NOTIFY_BODY_MAX = 2000;
 
 /** Koşul durumundaki satırların birleşimi. */
 export type WorkflowCaseMatch = 'all' | 'any';
@@ -397,6 +438,13 @@ export interface WorkflowStep {
   defaultTo?: string | null;
   // ── Yalnızca type = end ───────────────────────────────────────────────────
   outcome?: WorkflowEndOutcome | null;
+  // ── Yalnızca type = action / notify ───────────────────────────────────────
+  /** Alan güncelle: yazılacak alanlar, sırayla. */
+  sets?: WorkflowSetField[];
+  /** Bildirim gönder: alıcılar, kanallar, şablon. */
+  notify?: WorkflowNotifyConfig | null;
+  /** Otomatik eylemden sonra gidilecek adım (zorunlu). */
+  next?: string | null;
 
   /**
    * Canvas'ta elle taşınmış konum. YOKSA otomatik yerleşim kullanılır —
@@ -489,6 +537,8 @@ export interface WorkflowSimStep {
   port?: string | null;
   caseKey?: string | null;
   decision?: string | null;
+  /** Otomatik eylemin özeti: yazılan alanlar ya da bildirim konusu. */
+  note?: string | null;
 }
 
 export interface WorkflowSimulation {
