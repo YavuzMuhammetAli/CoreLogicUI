@@ -555,6 +555,13 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.issue.timer.unavailable': { tr: 'Bekleme bu şirkette kullanılamıyor: veritabanı güncellemesi (migrasyon 022) gerekli.', en: 'Wait is not available for this company: a database upgrade (migration 022) is required.' },
 
   // ── Olgunlaştırma (Faz 11): paket, şablon, sürüm farkı, durdur, kota ───────
+  'workflow.inspector.flowSettings': { tr: 'Akış ayarları', en: 'Workflow settings' },
+  'workflow.inspector.trigger': { tr: 'Tetikleyici', en: 'Trigger' },
+  'workflow.inspector.triggerConditions': { tr: 'Tetik koşulu', en: 'Trigger conditions' },
+  'workflow.inspector.startStep': { tr: 'Başlangıç adımı', en: 'Start step' },
+  'workflow.inspector.enabled': { tr: 'Etkin', en: 'Enabled' },
+  'workflow.inspector.editTrigger': { tr: 'Tetikleyiciyi düzenle', en: 'Edit trigger' },
+  'workflow.inspector.viewTrigger': { tr: 'Tetikleyiciyi görüntüle', en: 'View trigger' },
   'workflow.package.export': { tr: 'Dışa aktar', en: 'Export' },
   'workflow.package.exportHint': { tr: 'Ekrandaki tasarımı (kaydedilmemiş değişiklikler dahil) dosya olarak indirir.', en: 'Downloads the design on screen (including unsaved changes) as a file.' },
   'workflow.package.import': { tr: 'İçe aktar', en: 'Import' },

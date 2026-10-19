@@ -64,6 +64,8 @@ export class WorkflowInspectorComponent {
   readonly makeStart = output<string>();
   readonly duplicate = output<void>();
   readonly remove = output<void>();
+  /** Akışın tetikleyicisini düzenle (Tetikleyici sekmesine geçer). */
+  readonly openTrigger = output<void>();
 
   readonly assignmentModes = ASSIGNMENT_MODE_OPTIONS;
   readonly joinModes = JOIN_MODE_OPTIONS;
@@ -108,6 +110,18 @@ export class WorkflowInspectorComponent {
     return step && exit
       ? { step, port: ref.port, kind: exit.kind, target: exit.target ?? '' }
       : null;
+  });
+
+  /** Seçim yokken gösterilen akış özeti: tetik, koşul sayısı, etkinlik, başlangıç. */
+  readonly flow = computed(() => {
+    const doc = this.store.doc();
+    const start = doc.graph.steps.find(step => sameKey(step.key, doc.graph.startStep));
+    return {
+      trigger: doc.meta.triggerEvent,
+      conditions: doc.conditions.length,
+      enabled: doc.meta.isEnabled,
+      start: start?.name || doc.graph.startStep || ''
+    };
   });
 
   readonly multiCount = computed(() => {

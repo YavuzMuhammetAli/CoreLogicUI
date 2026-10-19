@@ -258,6 +258,20 @@
     </header>
     <div class="inspector-body">
       <p class="inspector-text">{{ (readonly() ? 'workflow.inspector.emptyReadonly' : 'workflow.inspector.empty') | t }}</p>
+
+      <!-- Akış ayarları: tetikleyici Başlangıç hapının "öncesi" — seçim yokken burada özetlenir. -->
+      <div class="inspector-section">
+        <span class="inspector-section-title">{{ 'workflow.inspector.flowSettings' | t }}</span>
+        <ul class="inspector-list">
+          <li><span>{{ 'workflow.inspector.trigger' | t }}</span><span class="inspector-muted">{{ 'workflow.trigger.' + flow().trigger | t }}</span></li>
+          <li><span>{{ 'workflow.inspector.triggerConditions' | t }}</span><span class="inspector-muted">{{ flow().conditions }}</span></li>
+          <li><span>{{ 'workflow.inspector.startStep' | t }}</span><span class="inspector-muted">{{ flow().start || '—' }}</span></li>
+          <li><span>{{ 'workflow.inspector.enabled' | t }}</span><span class="inspector-muted">{{ (flow().enabled ? 'common.yes' : 'common.no') | t }}</span></li>
+        </ul>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="openTrigger.emit()">
+          {{ (readonly() ? 'workflow.inspector.viewTrigger' : 'workflow.inspector.editTrigger') | t }}
+        </button>
+      </div>
     </div>
   }
 </aside>
