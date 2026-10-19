@@ -133,6 +133,12 @@ export interface WorkflowInstance {
   definitionId: number;
   definitionVersion: number;
   definitionName: string;
+  /** Akışın sürümler arası sabit kodu. */
+  definitionCode?: string;
+  /** Sürecin BAŞLADIĞI sürümün tanımı — yalnız tekil okumada dolu (şema bununla çizilir). */
+  definitionJson?: string | null;
+  /** Olay (incident): süreç bir otomatik adımda hata verip bekliyor. */
+  hasIncident?: boolean;
   entityType: string;
   entityId: number;
   status: WorkflowInstanceStatus;
@@ -170,6 +176,16 @@ export interface WorkflowTask {
   workflowName: string;
   /** Gecikme sunucuda hesaplanır — istemci saati yanlış olabilir. */
   isOverdue: boolean;
+}
+
+/** Süreç listesi filtresi (admin, GET /WorkflowInstance/list sayfalı mod). */
+export interface WorkflowInstanceQuery {
+  status?: WorkflowInstanceStatus | '';
+  incident?: boolean;
+  model?: string;
+  code?: string;
+  page: number;
+  pageSize: number;
 }
 
 /** Olay günlüğü zincir doğrulama sonucu. */

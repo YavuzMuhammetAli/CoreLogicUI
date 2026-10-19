@@ -14,8 +14,10 @@ import {
   WorkflowChain,
   WorkflowInstance,
   WorkflowStepInfo,
-  WorkflowTask
+  WorkflowTask,
+  WorkflowInstanceQuery
 } from '../models/workflow.model';
+import { PagedResponseModel } from './published-model.service';
 import { environment } from '../../environments/environment';
 
 /**
@@ -113,6 +115,16 @@ export class WorkflowInstanceService {
   get(id: number): Observable<DataResponseModel<WorkflowInstance>> {
     return this.http.get<DataResponseModel<WorkflowInstance>>(
       `${this.baseUrl}/get`, { params: new HttpParams().set('id', id) });
+  }
+
+  /** Süreç listesi — filtreli, sayfalı, en yeni önce (admin). */
+  listPaged(query: WorkflowInstanceQuery): Observable<PagedResponseModel<WorkflowInstance>> {
+    let params = new HttpParams().set('page', query.page).set('pageSize', query.pageSize);
+    if (query.status) params = params.set('status', query.status);
+    if (query.incident) params = params.set('incident', true);
+    if (query.model) params = params.set('model', query.model);
+    if (query.code) params = params.set('code', query.code);
+    return this.http.get<PagedResponseModel<WorkflowInstance>>(`${this.baseUrl}/list`, { params });
   }
 
   list(status?: string): Observable<ListResponseModel<WorkflowInstance>> {

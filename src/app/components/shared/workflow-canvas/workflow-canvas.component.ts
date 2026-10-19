@@ -213,6 +213,9 @@ export class WorkflowCanvasComponent {
   /** İçerik ilk geldiğinde şema sığdırılsın mı (saklı kamera varsa hayır). */
   readonly fitOnOpen = input(true);
 
+  /** Araç çubuğu ipucunun çeviri anahtarı — verilmezse düzenleme / salt-okunur varsayılanı. */
+  readonly hintKey = input<string | null>(null);
+
   /** Kartların tip/özet/sorun bilgisi (anahtar küçük harfli). Yoksa kart anahtarı gösterir. */
   readonly nodeMeta = input<Readonly<Record<string, CanvasNodeMeta>>>({});
 

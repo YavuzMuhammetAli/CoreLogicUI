@@ -67,11 +67,59 @@
           </div>
         </dl>
 
-        @if (inst.errorMessage) {
+        @if (inst.errorMessage && !inst.hasIncident) {
           <div class="alert alert-danger" role="alert">{{ inst.errorMessage }}</div>
         }
       </div>
     </div>
+
+    <!-- Olay bandı: süreç bir otomatik adımda hata verip bekliyor (Running + hata). -->
+    @if (inst.hasIncident) {
+      <div class="alert alert-danger incident-band" role="alert">
+        <div class="incident-text">
+          <strong>{{ 'workflow.incident.title' | t:{ step: incidentStepName } }}</strong>
+          <span>{{ inst.errorMessage }}</span>
+          @if (!isAdmin) {
+            <span class="incident-note">{{ 'workflow.incident.adminOnly' | t }}</span>
+          }
+        </div>
+        @if (isAdmin) {
+          <div class="cluster incident-actions">
+            <button type="button" class="btn btn-secondary btn-sm"
+                    [disabled]="retrying || skipping" (click)="retryIncident()">
+              {{ 'workflow.incident.retry' | t }}
+            </button>
+            <button type="button" class="btn btn-danger btn-sm"
+                    [disabled]="retrying || skipping" (click)="askSkip()">
+              {{ 'workflow.incident.skip' | t }}
+            </button>
+          </div>
+        }
+      </div>
+    }
+
+    @if (graph(); as g) {
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">{{ 'workflow.runtime.diagram' | t }}</h2>
+        </div>
+        <div class="panel-body">
+          <app-workflow-canvas
+            [graph]="g"
+            [readonly]="true"
+            hintKey="workflow.runtime.hint"
+            [overlay]="overlay()"
+            [nodeMeta]="nodeMeta()" />
+          <ul class="runtime-legend" [attr.aria-label]="'workflow.runtime.legend' | t">
+            <li><span class="legend-swatch legend-swatch--visited" aria-hidden="true"></span>{{ 'workflow.runtime.passed' | t }}</li>
+            <li><span class="legend-swatch legend-swatch--current" aria-hidden="true"></span>{{ 'workflow.runtime.waiting' | t }}</li>
+            <li><span class="legend-swatch legend-swatch--failed" aria-hidden="true"></span>{{ 'workflow.runtime.failed' | t }}</li>
+            <li><span class="legend-swatch legend-swatch--end" aria-hidden="true"></span>{{ 'workflow.runtime.ended' | t }}</li>
+            <li><span class="legend-line" aria-hidden="true"></span>{{ 'workflow.runtime.takenPath' | t }}</li>
+          </ul>
+        </div>
+      </div>
+    }
 
     <!--
       Rollback yönetici müdahalesi. Terminal durumdaki süreçlerde de gösterilir —
@@ -173,6 +221,15 @@
   [busy]="rollingBack"
   (confirmed)="confirmRollback()"
   (cancelled)="cancelRollback()" />
+
+<app-confirm-dialog
+  [open]="pendingSkip"
+  [title]="'workflow.incident.skipConfirmTitle' | t"
+  [message]="skipMessage"
+  [confirmLabel]="'workflow.incident.skip' | t"
+  [busy]="skipping"
+  (confirmed)="confirmSkip()"
+  (cancelled)="cancelSkip()" />
 
 <app-confirm-dialog
   [open]="pendingCancel"

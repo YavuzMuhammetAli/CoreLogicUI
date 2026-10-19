@@ -669,6 +669,8 @@ export const WORKFLOW_I18N: Translations = {
   'task.detail.back': { tr: 'Görevlerime dön', en: 'Back to my tasks' },
   'task.detail.record': { tr: 'İlgili kayıt', en: 'Related record' },
   'task.detail.openRecord': { tr: 'Kaydı aç', en: 'Open record' },
+  'task.detail.process': { tr: 'Süreç', en: 'Process' },
+  'task.detail.viewProcess': { tr: 'Süreci görüntüle', en: 'View process' },
   'task.detail.form': { tr: 'Onay formu', en: 'Approval form' },
   'task.detail.comment': { tr: 'Açıklama', en: 'Comment' },
   'task.detail.approve': { tr: 'Onayla', en: 'Approve' },
@@ -766,6 +768,50 @@ export const WORKFLOW_I18N: Translations = {
   },
   'workflow.instance.loadFailed': { tr: 'Süreç yüklenemedi.', en: 'Process could not be loaded.' },
   'workflow.instance.serverError': { tr: 'Sunucuya ulaşılamadı.', en: 'Could not reach the server.' },
+
+  // ── Süreç şeması (çalışan süreç katmanı) ──────────────────────────────────
+  'workflow.runtime.diagram': { tr: 'Süreç şeması', en: 'Process diagram' },
+  'workflow.runtime.legend': { tr: 'Şema renkleri', en: 'Diagram colors' },
+  'workflow.runtime.hint': {
+    tr: 'Şema sürecin başladığı sürümden çizilir; renkler izlenen yolu gösterir. Yakınlaşmak için Ctrl + tekerlek, kaydırmak için boş zemini sürükleyin.',
+    en: 'The diagram is drawn from the version the process started on; colors show the path taken. Ctrl + wheel to zoom, drag the empty background to pan.'
+  },
+  'workflow.runtime.passed': { tr: 'Geçildi', en: 'Passed' },
+  'workflow.runtime.waiting': { tr: 'Bekliyor', en: 'Waiting' },
+  'workflow.runtime.waitingFor': { tr: 'Bekliyor: {who}', en: 'Waiting: {who}' },
+  'workflow.runtime.failed': { tr: 'Hata', en: 'Error' },
+  'workflow.runtime.ended': { tr: 'Sonlandı', en: 'Ended' },
+  'workflow.runtime.notReached': { tr: 'Ulaşılmadı', en: 'Not reached' },
+  'workflow.runtime.takenPath': { tr: 'İzlenen yol', en: 'Path taken' },
+
+  // ── Olay (incident) bandı ─────────────────────────────────────────────────
+  'workflow.incident.title': {
+    tr: '"{step}" adımı hata verdi — süreç bekliyor',
+    en: 'Step "{step}" failed — the process is waiting'
+  },
+  'workflow.incident.adminOnly': {
+    tr: 'Yöneticiniz hatayı giderip süreci sürdürebilir.',
+    en: 'An administrator can fix the error and resume the process.'
+  },
+  'workflow.incident.retry': { tr: 'Yeniden dene', en: 'Retry' },
+  'workflow.incident.skip': { tr: 'Adımı atla', en: 'Skip step' },
+  'workflow.incident.retried': { tr: 'Adım yeniden çalıştırıldı.', en: 'The step was run again.' },
+  'workflow.incident.skipped': { tr: 'Adım atlandı, süreç devam ediyor.', en: 'Step skipped, the process continues.' },
+  'workflow.incident.skipConfirmTitle': { tr: 'Adımı atla', en: 'Skip step' },
+  'workflow.incident.skipConfirm': {
+    tr: '"{step}" adımı çalıştırılmadan atlanacak ve süreç varsayılan çıkışından devam edecek.',
+    en: 'Step "{step}" will be skipped without running and the process will continue through its default exit.'
+  },
+
+  // ── Süreç listesi (admin) ─────────────────────────────────────────────────
+  'workflow.instances.title': { tr: 'Süreçler', en: 'Processes' },
+  'workflow.instances.all': { tr: 'Tümü', en: 'All' },
+  'workflow.instances.workflow': { tr: 'Akış', en: 'Workflow' },
+  'workflow.instances.model': { tr: 'Model', en: 'Model' },
+  'workflow.instances.incidentOnly': { tr: 'Yalnız hata bekleyenler', en: 'Only processes with errors' },
+  'workflow.instances.incident': { tr: 'Hata', en: 'Error' },
+  'workflow.instances.empty': { tr: 'Bu filtreye uyan süreç yok.', en: 'No processes match this filter.' },
+  'workflow.instances.count': { tr: 'Toplam {total} süreç', en: '{total} processes in total' },
 
   // ── workflow-versions (sürüm geçmişi) ─────────────────────────────────────
   'workflow.versions.title': { tr: 'Sürüm Geçmişi', en: 'Version History' },

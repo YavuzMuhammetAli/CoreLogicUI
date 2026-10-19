@@ -1,6 +1,6 @@
 <div class="canvas-toolbar">
   <p class="canvas-hint">
-    {{ (locked() ? 'workflow.canvas.hintReadonly' : 'workflow.canvas.hint') | t }}
+    {{ (hintKey() ?? (locked() ? 'workflow.canvas.hintReadonly' : 'workflow.canvas.hint')) | t }}
     @if (!locked()) {
       <app-help-hint [text]="'workflow.canvas.shortcuts' | t" placement="below"
                      [label]="'workflow.canvas.shortcutsLabel' | t" />

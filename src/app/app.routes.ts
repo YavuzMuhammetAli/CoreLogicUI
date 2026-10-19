@@ -224,6 +224,13 @@ export const routes: Routes = [
       // backend'de IWorkflowAccessPolicy ile verilir; yönetici işlemleri ekranda
       // isAdmin ile gizlenir.
       {
+        // Süreç listesi (admin) — sabit segment ":id"den ÖNCE.
+        path: 'workflows/instances',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/workflow-instances/workflow-instances.component').then(m => m.WorkflowInstancesComponent)
+      },
+      {
         path: 'workflows/instances/:id',
         loadComponent: () =>
           import('./components/workflow-instance/workflow-instance.component').then(m => m.WorkflowInstanceComponent)

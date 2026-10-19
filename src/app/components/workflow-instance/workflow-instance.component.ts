@@ -1,20 +1,29 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { WorkflowInstanceService } from '../../services/workflow-task.service';
 import {
-  WorkflowChain, WorkflowEvent, WorkflowInstance, WorkflowStepInfo, WorkflowTask
+  WorkflowChain, WorkflowEvent, WorkflowGraph, WorkflowInstance, WorkflowStepInfo, WorkflowTask, parseDefinition
 } from '../../models/workflow.model';
 import { LanguageService } from '../../services/language.service';
 import { NotificationService } from '../../services/notification.service';
 import { PermissionService } from '../../services/permission.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
+import { CanvasNodeMeta, WorkflowCanvasComponent } from '../shared/workflow-canvas/workflow-canvas.component';
+import { WorkflowOverlay } from '../../utils/workflow/workflow-overlay';
+import { buildRuntimeOverlay } from '../../utils/workflow/workflow-runtime.overlay';
+import { nodeKindInfo, nodeKindOf, nodeTone } from '../../utils/workflow/workflow-node-types';
 import { markDirty } from '../../utils/change-detection';
 import { formatDate } from '../../utils/locale-format';
 
 /**
- * Süreç detayı — zaman çizelgesi, görevler ve zincir doğrulama.
+ * Süreç detayı — şema üstünde yol, zaman çizelgesi, görevler ve zincir doğrulama.
+ *
+ * Şema sürecin BAŞLADIĞI sürümün tanımından çizilir (sonradan yayınlanan
+ * sürüm bu süreci etkilemez); geçilen adımlar ve oklar olay günlüğünden
+ * boyanır. Olaydaki (incident) süreçte yönetici "Yeniden dene" (o adıma
+ * geri alma = otomatik adımı yeniden koşturma) ya da "Adımı atla" der.
  *
  * Görevler adım anahtarına göre gruplanır: paralel adımda aynı StepKey altında
  * birden çok dal görevi bulunur ve düz bir liste "aynı adım iki kez açılmış" gibi
@@ -23,7 +32,7 @@ import { formatDate } from '../../utils/locale-format';
 @Component({
   selector: 'app-workflow-instance',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, ConfirmDialogComponent],
+  imports: [CommonModule, RouterLink, TranslatePipe, ConfirmDialogComponent, WorkflowCanvasComponent],
   templateUrl: './workflow-instance.component.html',
   styleUrl: './workflow-instance.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -53,6 +62,27 @@ export class WorkflowInstanceComponent implements OnInit {
   rollbackTarget = '';
   rollingBack = false;
   pendingRollback = false;
+
+  // ── Şema ──────────────────────────────────────────────────────────────────
+  /** Şema hesapları dil değişiminde de yenilensin diye signal. */
+  private readonly loaded = signal<WorkflowInstance | null>(null);
+  readonly graph = computed<WorkflowGraph | null>(() => parseDefinition(this.loaded()?.definitionJson));
+  readonly overlay = computed<WorkflowOverlay | null>(() => {
+    const instance = this.loaded();
+    const graph = this.graph();
+    return instance && graph ? buildRuntimeOverlay(graph, instance.timeline ?? [], instance) : null;
+  });
+  readonly nodeMeta = computed<Record<string, CanvasNodeMeta>>(() => {
+    this.languageService.lang();
+    const instance = this.loaded();
+    const graph = this.graph();
+    return instance && graph ? this.runtimeMeta(graph, instance, this.overlay()) : {};
+  });
+
+  // ── Olay (incident) ───────────────────────────────────────────────────────
+  retrying = false;
+  skipping = false;
+  pendingSkip = false;
 
   get isAdmin(): boolean {
     return this.permissionService.isAdmin();
@@ -95,6 +125,7 @@ export class WorkflowInstanceComponent implements OnInit {
           return;
         }
         this.instance = res.data;
+        this.loaded.set(res.data);
         this.stepGroups = this.groupByStep(res.data.tasks ?? []);
         if (this.isAdmin) this.loadSteps(id);
       },
@@ -184,6 +215,65 @@ export class WorkflowInstanceComponent implements OnInit {
     return this.languageService.t('workflow.instance.rollbackConfirm', { step: this.rollbackTarget });
   }
 
+  /** Olaydaki adımın görünen adı — yoksa anahtarı. */
+  get incidentStepName(): string {
+    const key = this.instance?.currentStepKey ?? '';
+    const step = this.graph()?.steps.find(s => s.key.toLowerCase() === key.toLowerCase());
+    return step?.name || key;
+  }
+
+  /**
+   * Yeniden dene = olaydaki adıma geri alma: otomatik adım aynı transaction'da
+   * yeniden koşar. Kayıt düzeltildiyse ilerler, hata sürüyorsa sunucu yeni
+   * hatayı döner ve süreç olayda kalır. Onay istemez — geri alınacak bir
+   * ilerleme yok (süreç zaten o adımda).
+   */
+  retryIncident(): void {
+    const instance = this.instance;
+    if (!instance?.currentStepKey) return;
+
+    this.retrying = true;
+    this.instanceService.rollback(instance.id, instance.currentStepKey).pipe(markDirty(this.cdr)).subscribe({
+      next: res => {
+        this.retrying = false;
+        if (res.success) this.notification.success(this.languageService.t('workflow.incident.retried'));
+        else this.notification.warn(res.message ?? '');
+        this.load(instance.id);
+      },
+      error: err => {
+        this.retrying = false;
+        this.notification.warn(err?.error?.message ?? this.languageService.t('workflow.instance.serverError'));
+      }
+    });
+  }
+
+  askSkip(): void { this.pendingSkip = true; }
+  cancelSkip(): void { this.pendingSkip = false; }
+
+  confirmSkip(): void {
+    const instance = this.instance;
+    this.pendingSkip = false;
+    if (!instance) return;
+
+    this.skipping = true;
+    this.instanceService.skipStep(instance.id).pipe(markDirty(this.cdr)).subscribe({
+      next: res => {
+        this.skipping = false;
+        if (res.success) this.notification.success(res.message || this.languageService.t('workflow.incident.skipped'));
+        else this.notification.warn(res.message ?? '');
+        this.load(instance.id);
+      },
+      error: err => {
+        this.skipping = false;
+        this.notification.warn(err?.error?.message ?? this.languageService.t('workflow.instance.serverError'));
+      }
+    });
+  }
+
+  get skipMessage(): string {
+    return this.languageService.t('workflow.incident.skipConfirm', { step: this.incidentStepName });
+  }
+
   askCancel(): void { this.pendingCancel = true; }
   cancelCancel(): void { this.pendingCancel = false; }
 
@@ -211,6 +301,54 @@ export class WorkflowInstanceComponent implements OnInit {
   }
 
   // ── Görünüm yardımcıları ──────────────────────────────────────────────────
+
+  /**
+   * Düğüm kartlarının alt satırı: tasarımcıdaki atama özeti yerine sürecin o
+   * adımdaki durumu (geçildi / bekliyor: kim / hata / ulaşılmadı).
+   */
+  private runtimeMeta(
+    graph: WorkflowGraph, instance: WorkflowInstance, overlay: WorkflowOverlay | null
+  ): Record<string, CanvasNodeMeta> {
+    const t = (key: string, params?: Record<string, string | number>) => this.languageService.t(key, params);
+    const meta: Record<string, CanvasNodeMeta> = {};
+
+    for (const step of graph.steps) {
+      const key = step.key.toLowerCase();
+      const info = nodeKindInfo(nodeKindOf(step));
+      const state = overlay?.nodes[key] ?? null;
+      let summary: string;
+      switch (state) {
+        case 'current': {
+          const who = this.waitingFor(instance.tasks ?? [], key);
+          summary = who ? t('workflow.runtime.waitingFor', { who }) : t('workflow.runtime.waiting');
+          break;
+        }
+        case 'failed':  summary = t('workflow.runtime.failed'); break;
+        case 'visited': summary = t('workflow.runtime.passed'); break;
+        case 'end':     summary = t('workflow.runtime.ended'); break;
+        default:        summary = t('workflow.runtime.notReached');
+      }
+      meta[key] = {
+        kindLabel: t(info.labelKey),
+        tone: nodeTone(step),
+        icon: info.icon,
+        summary,
+        errors: state === 'failed' ? 1 : 0,
+        warnings: 0,
+        issueTitle: state === 'failed' ? (instance.errorMessage ?? t('workflow.runtime.failed')) : ''
+      };
+    }
+    return meta;
+  }
+
+  /** Adımda bekleyen görevlerin atandığı rol/kişi — paralelde birden çok. */
+  private waitingFor(tasks: WorkflowTask[], stepKey: string): string {
+    const names = tasks
+      .filter(task => task.status === 'Pending' && task.stepKey.toLowerCase() === stepKey)
+      .map(task => task.assignedRoleName || (task.assignedUserId ? '#' + task.assignedUserId : ''))
+      .filter(Boolean);
+    return [...new Set(names)].join(', ');
+  }
 
   eventLabel(event: WorkflowEvent): string {
     return this.languageService.t('workflow.event.' + event.eventType);

@@ -35,6 +35,10 @@
             </dd>
           </div>
           <div>
+            <dt>{{ 'task.detail.process' | t }}</dt>
+            <dd><a [routerLink]="['/workflows/instances', t.instanceId]">{{ 'task.detail.viewProcess' | t }}</a></dd>
+          </div>
+          <div>
             <dt>{{ 'task.list.colAssigned' | t }}</dt>
             <dd>{{ t.assignedRoleName || ('#' + (t.assignedUserId ?? '')) }}</dd>
           </div>

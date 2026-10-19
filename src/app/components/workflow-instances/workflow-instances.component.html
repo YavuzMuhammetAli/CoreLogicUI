@@ -1,0 +1,125 @@
+<div class="page-header">
+  <span class="eyebrow">{{ 'workflow.instances.title' | t }}</span>
+  <div class="cluster">
+    <a routerLink="/workflows" class="btn btn-ghost btn-sm">{{ 'workflow.instance.back' | t }}</a>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-body">
+    <div class="field-row instances-filters">
+      <div class="field">
+        <label for="inst-status">{{ 'workflow.instance.status' | t }}</label>
+        <select id="inst-status" class="input" (change)="onStatus($event)">
+          <option value="" [selected]="status() === ''">{{ 'workflow.instances.all' | t }}</option>
+          @for (s of statuses; track s) {
+            <option [value]="s" [selected]="status() === s">{{ 'workflow.instance.' + s | t }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="inst-code">{{ 'workflow.instances.workflow' | t }}</label>
+        <select id="inst-code" class="input" (change)="onCode($event)">
+          <option value="" [selected]="code() === ''">{{ 'workflow.instances.all' | t }}</option>
+          @for (c of codes(); track c.code) {
+            <option [value]="c.code" [selected]="code() === c.code">{{ c.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="inst-model">{{ 'workflow.instances.model' | t }}</label>
+        <select id="inst-model" class="input" (change)="onModel($event)">
+          <option value="" [selected]="model() === ''">{{ 'workflow.instances.all' | t }}</option>
+          @for (m of models(); track m) {
+            <option [value]="m" [selected]="model() === m">{{ m }}</option>
+          }
+        </select>
+      </div>
+      <div class="field instances-incident">
+        <label class="checkbox-label">
+          <input type="checkbox" [checked]="incidentOnly()" (change)="onIncident($event)" />
+          {{ 'workflow.instances.incidentOnly' | t }}
+        </label>
+      </div>
+    </div>
+  </div>
+</div>
+
+@if (error(); as message) {
+  <div class="alert alert-danger" role="alert">{{ message }}</div>
+}
+
+<div class="panel instances-table-panel">
+  @if (loading() && items().length === 0) {
+    <div class="empty-state"><span class="spinner" [attr.aria-label]="'common.loading' | t"></span></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state"><p>{{ 'workflow.instances.empty' | t }}</p></div>
+  } @else {
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>{{ 'workflow.instances.workflow' | t }}</th>
+            <th>{{ 'task.detail.record' | t }}</th>
+            <th>{{ 'workflow.instance.status' | t }}</th>
+            <th>{{ 'workflow.instance.currentStep' | t }}</th>
+            <th>{{ 'workflow.instance.startedAt' | t }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr>
+              <td class="td-muted">{{ item.id }}</td>
+              <td>
+                <a class="row-link" [routerLink]="['/workflows/instances', item.id]">{{ item.definitionName || '—' }}</a>
+                <span class="td-muted"> · v{{ item.definitionVersion }}</span>
+              </td>
+              <td><a [routerLink]="['/models', item.entityType, item.entityId]">{{ item.entityType }} #{{ item.entityId }}</a></td>
+              <td>
+                <span class="badge" [class]="'badge ' + statusClass(item.status)">{{ 'workflow.instance.' + item.status | t }}</span>
+                @if (item.hasIncident) {
+                  <span class="badge badge-danger" [title]="item.errorMessage ?? ''">{{ 'workflow.instances.incident' | t }}</span>
+                }
+              </td>
+              <td><code class="instances-step">{{ item.currentStepKey || '—' }}</code></td>
+              <td class="td-muted">{{ when(item.startedAt) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-footer">
+      <span class="td-muted">{{ 'workflow.instances.count' | t: { total: total() } }}</span>
+      @if (totalPages() > 1) {
+        <nav class="pagination" [attr.aria-label]="'audit.paginationAriaLabel' | t">
+          <button class="page-btn" type="button" (click)="goToPage(pageIndex() - 1)"
+                  [disabled]="pageIndex() === 1" [attr.aria-label]="'audit.prevPage' | t">‹</button>
+          @if (visiblePages()[0] > 1) {
+            <button class="page-btn" type="button" (click)="goToPage(1)">1</button>
+            @if (visiblePages()[0] > 2) { <span class="page-ellipsis">…</span> }
+          }
+          @for (p of visiblePages(); track p) {
+            <button class="page-btn" [class.page-btn--active]="p === pageIndex()" type="button"
+                    (click)="goToPage(p)" [attr.aria-current]="p === pageIndex() ? 'page' : null">{{ p }}</button>
+          }
+          @if (visiblePages()[visiblePages().length - 1] < totalPages()) {
+            @if (visiblePages()[visiblePages().length - 1] < totalPages() - 1) { <span class="page-ellipsis">…</span> }
+            <button class="page-btn" type="button" (click)="goToPage(totalPages())">{{ totalPages() }}</button>
+          }
+          <button class="page-btn" type="button" (click)="goToPage(pageIndex() + 1)"
+                  [disabled]="pageIndex() === totalPages()" [attr.aria-label]="'audit.nextPage' | t">›</button>
+        </nav>
+      }
+      <div class="page-size-selector">
+        <label class="sr-only" for="inst-page-size">{{ 'audit.pageSizeAriaLabel' | t }}</label>
+        <select id="inst-page-size" (change)="changePageSize(+$any($event.target).value)">
+          @for (opt of pageSizeOptions; track opt) {
+            <option [value]="opt" [selected]="opt === pageSize()">{{ 'audit.pageSizeOption' | t: { count: opt } }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  }
+</div>
