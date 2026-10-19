@@ -47,6 +47,12 @@
                       <a [routerLink]="['/workflows', version.id, 'edit']" class="btn btn-ghost btn-sm">
                         {{ (version.status === 'Draft' ? 'common.edit' : 'workflow.versions.view') | t }}
                       </a>
+                      @if (previousOf(version)) {
+                        <button type="button" class="btn btn-ghost btn-sm" (click)="compare(version)"
+                                [attr.aria-pressed]="comparison?.version?.id === version.id">
+                          {{ 'workflow.diff.compare' | t }}
+                        </button>
+                      }
                       @if (version.status === 'Published' && !hasDraft) {
                         <button type="button" class="btn btn-secondary btn-sm"
                                 [disabled]="busy"
@@ -66,4 +72,41 @@
       }
     </div>
   </div>
+
+  @if (comparison; as c) {
+    <div class="panel versions-diff">
+      <div class="panel-head">
+        <h2 class="panel-title">{{ 'workflow.diff.title' | t: { from: versionLabel(c.previous), to: versionLabel(c.version) } }}</h2>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="closeComparison()" [attr.aria-label]="'common.close' | t">✕</button>
+      </div>
+      <div class="panel-body stack">
+        @if (c.empty) {
+          <p class="field-help">{{ 'workflow.diff.none' | t }}</p>
+        } @else {
+          <ul class="diff-summary">
+            @if (c.diff.added.length > 0) {
+              <li><span class="legend-swatch legend-swatch--added" aria-hidden="true"></span>
+                {{ 'workflow.diff.added' | t }}: {{ namesOf(c.diff.added) }}</li>
+            }
+            @if (c.diff.changed.length > 0) {
+              <li><span class="legend-swatch legend-swatch--changed" aria-hidden="true"></span>
+                {{ 'workflow.diff.changed' | t }}: {{ namesOf(c.diff.changed) }}</li>
+            }
+            @if (c.diff.removed.length > 0) {
+              <li><span class="legend-swatch legend-swatch--removed" aria-hidden="true"></span>
+                {{ 'workflow.diff.removed' | t }}: {{ removedNames(c.diff) }}</li>
+            }
+            @if (c.diff.startChanged) {
+              <li>{{ 'workflow.diff.startChanged' | t }}</li>
+            }
+          </ul>
+        }
+        <app-workflow-canvas
+          [graph]="c.graph"
+          [readonly]="true"
+          hintKey="workflow.diff.hint"
+          [overlay]="c.empty ? null : c.overlay" />
+      </div>
+    </div>
+  }
 }

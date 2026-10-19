@@ -2,7 +2,10 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject }
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { WorkflowService } from '../../services/workflow.service';
-import { WorkflowDefinition } from '../../models/workflow.model';
+import { WorkflowDefinition, WorkflowGraph, parseDefinition } from '../../models/workflow.model';
+import { WorkflowCanvasComponent } from '../shared/workflow-canvas/workflow-canvas.component';
+import { WorkflowDiff, diffGraphs, diffOverlay, hasDifferences } from '../../utils/workflow/workflow-diff';
+import { WorkflowOverlay } from '../../utils/workflow/workflow-overlay';
 import { LanguageService } from '../../services/language.service';
 import { NotificationService } from '../../services/notification.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
@@ -19,7 +22,7 @@ import { formatDate } from '../../utils/locale-format';
 @Component({
   selector: 'app-workflow-versions',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, RouterLink, TranslatePipe, WorkflowCanvasComponent],
   templateUrl: './workflow-versions.component.html',
   styleUrl: './workflow-versions.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -62,6 +65,56 @@ export class WorkflowVersionsComponent implements OnInit {
   }
 
   busy = false;
+
+  /** Açık karşılaştırma: seçilen sürüm, bir öncekiyle farkı şemada. */
+  comparison: {
+    version: WorkflowDefinition;
+    previous: WorkflowDefinition;
+    graph: WorkflowGraph;
+    diff: WorkflowDiff;
+    overlay: WorkflowOverlay;
+    empty: boolean;
+  } | null = null;
+
+  /** Bir önceki sürüm: daha küçük numaralı en yüksek yayın (taslakta en son yayın). */
+  previousOf(version: WorkflowDefinition): WorkflowDefinition | null {
+    const candidates = this.versions.filter(v =>
+      v.id !== version.id && v.version > 0 && (version.version === 0 || v.version < version.version));
+    return candidates.reduce<WorkflowDefinition | null>((best, v) => !best || v.version > best.version ? v : best, null);
+  }
+
+  compare(version: WorkflowDefinition): void {
+    const previous = this.previousOf(version);
+    const graph = parseDefinition(version.definitionJson);
+    const before = previous ? parseDefinition(previous.definitionJson) : null;
+    if (!previous || !graph || !before) {
+      this.comparison = null;
+      return;
+    }
+
+    const diff = diffGraphs(before, graph);
+    this.comparison = { version, previous, graph, diff, overlay: diffOverlay(diff), empty: !hasDifferences(diff) };
+  }
+
+  closeComparison(): void {
+    this.comparison = null;
+  }
+
+  versionLabel(version: WorkflowDefinition): string {
+    return version.version > 0
+      ? 'v' + version.version
+      : this.languageService.t('workflow.list.draftVersion', { n: this.nextVersion });
+  }
+
+  /** Yeni sürümdeki adların listesi ("Müdür Onayı, Finans"). */
+  namesOf(keys: ReadonlyArray<string>): string {
+    const steps = this.comparison?.graph.steps ?? [];
+    return keys.map(key => steps.find(s => s.key.toLowerCase() === key.toLowerCase())?.name || key).join(', ');
+  }
+
+  removedNames(diff: WorkflowDiff): string {
+    return diff.removed.map(step => step.name || step.key).join(', ');
+  }
 
   /** Açık taslak varsa yeni sürüm butonu gizlenir; taslağın "Düzenle"si yeterli. */
   get hasDraft(): boolean {

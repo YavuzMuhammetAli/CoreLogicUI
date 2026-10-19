@@ -4,7 +4,7 @@ import { WorkflowSimulation } from '../../models/workflow.model';
  * Şema üstü yol katmanı — tuval aynı katmanı üç kaynaktan çizer: simülasyon
  * (8b), çalışan süreç (Faz 9) ve sürüm farkı (Faz 11). SAF.
  */
-export type OverlayNodeState = 'visited' | 'current' | 'failed' | 'end';
+export type OverlayNodeState = 'visited' | 'current' | 'failed' | 'end' | 'added' | 'changed';
 
 export interface WorkflowOverlay {
   /** Adım anahtarı (küçük harf) → durum. */

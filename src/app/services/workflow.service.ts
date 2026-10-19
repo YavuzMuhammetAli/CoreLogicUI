@@ -6,6 +6,7 @@ import { ListResponseModel } from '../models/responseModelList';
 import { DataResponseModel } from '../models/dataResponseModel';
 import {
   WorkflowCapabilities,
+  WorkflowUsage,
   WorkflowDefinition,
   WorkflowValidationResult,
   WorkflowSimulateRequest,
@@ -103,6 +104,18 @@ export class WorkflowService {
    */
   simulate(request: WorkflowSimulateRequest): Observable<DataResponseModel<WorkflowSimulation>> {
     return this.http.post<DataResponseModel<WorkflowSimulation>>(`${this.baseUrl}/simulate`, request);
+  }
+
+  /** Yayındaki akışı durdur / sürdür — yeni sürüm açmaz, açık süreçler sürer. */
+  setEnabled(id: number, enabled: boolean): Observable<ResponseModel> {
+    return this.http.post<ResponseModel>(
+      `${this.baseUrl}/setEnabled`, null, { params: new HttpParams().set('id', id).set('enabled', enabled) })
+      .pipe(tap(() => this.invalidateListCache()));
+  }
+
+  /** Plan kotası: tanım sayısı ve bu dönemin çalıştırmaları. */
+  usage(): Observable<DataResponseModel<WorkflowUsage>> {
+    return this.http.get<DataResponseModel<WorkflowUsage>>(`${this.baseUrl}/usage`);
   }
 
   /** Bu şirkette kullanılabilen düğümler (Bekleme → migrasyon 022). */

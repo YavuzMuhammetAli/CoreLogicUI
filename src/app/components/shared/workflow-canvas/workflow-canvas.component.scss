@@ -125,6 +125,9 @@
 .canvas-node[data-overlay='current'] { border-color: var(--warn); border-width: 2.5px; background: var(--warn-bg); }
 .canvas-node[data-overlay='failed'] { border-color: var(--danger); border-width: 2.5px; background: var(--danger-bg); }
 .canvas-node[data-overlay='end'] { border-color: var(--success); border-width: 2.5px; background: var(--success-bg); }
+// Sürüm farkı: eklenen / değişen adım.
+.canvas-node[data-overlay='added'] { border-color: var(--success); border-width: 2.5px; border-style: dashed; background: var(--success-bg); }
+.canvas-node[data-overlay='changed'] { border-color: var(--warn); border-width: 2.5px; border-style: dashed; background: var(--warn-bg); }
 
 // ── Başlangıç ve bitiş ──────────────────────────────────────────────────────
 

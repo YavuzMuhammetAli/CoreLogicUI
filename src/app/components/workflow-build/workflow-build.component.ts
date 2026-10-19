@@ -69,6 +69,9 @@ import {
 } from './designer/workflow-design.commands';
 import { DesignClipboard, copySteps, pasteSteps } from './designer/workflow-clipboard';
 import { EdgeRef, isNodeSelected, selectNodes } from './designer/workflow-selection';
+import { WORKFLOW_TEMPLATES, WorkflowTemplate } from '../../utils/workflow/workflow-templates';
+import { packageFileName, serializePackage, toPackage } from '../../utils/workflow/workflow-package';
+import { downloadText } from '../../utils/download';
 
 type TabId = 'steps' | 'canvas' | 'trigger';
 
@@ -597,6 +600,44 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
    * migrasyon 022). Okunamazsa kısıt konmaz: yayın sunucuda zaten denetleniyor.
    */
   readonly unavailableKinds = signal<ReadonlySet<NodeKind>>(new Set());
+
+  // ── Şablonlar ve dışa aktarım ─────────────────────────────────────────────
+
+  readonly templates = WORKFLOW_TEMPLATES;
+
+  /**
+   * Boş yeni akışı şablonla doldurur. Rol/kolon seçimleri bilerek boş gelir;
+   * sorun paneli neyin tamamlanacağını gösterir. Tek geri al adımıdır.
+   */
+  applyTemplate(template: WorkflowTemplate): void {
+    if (this.readonlyMode()) return;
+    const t = (key: string) => this.languageService.t(key);
+    const graph = template.build(t);
+
+    this.store.dispatch('', doc => ({
+      ...doc,
+      graph,
+      meta: { ...doc.meta, name: doc.meta.name || t(template.nameKey) }
+    }));
+    this.syncFormFromDoc();
+    this.syncStartStep();
+  }
+
+  /** Ekrandaki (kaydedilmemiş değişiklikler dahil) tasarımı paket olarak indirir. */
+  exportDesign(): void {
+    const payload = docToPayload(this.store.doc(), this.editingId);
+    downloadText(
+      serializePackage(toPackage({
+        name: payload.name ?? '',
+        code: payload.code ?? '',
+        modelName: payload.modelName ?? '',
+        triggerEvent: payload.triggerEvent ?? 'manual',
+        triggerConditionJson: payload.triggerConditionJson ?? null,
+        isEnabled: payload.isEnabled ?? true,
+        definitionJson: payload.definitionJson ?? '{}'
+      })),
+      packageFileName(payload.code || 'akis'));
+  }
 
   private loadCapabilities(): void {
     this.workflowService.capabilities().subscribe({

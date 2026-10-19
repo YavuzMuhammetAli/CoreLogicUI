@@ -8,7 +8,7 @@ doğrulama arasında kopukluk bırakmamak.
 | `models.json` | 50 model, 520 kolon, 18 publish dalgası |
 | `relationships.json` | 6 `RelationshipDefinition` |
 | `roles.json` | 10 rol + model bazlı izin bitmaskları |
-| `workflows.json` | 7 workflow tanımı ([08](../08-workflow-tasarimi.md)'in JSON'ları) |
+| `workflows.json` | 4 workflow tanımı. Satın alma talebi onayı **tek koşullu akış** (`PR_ONAY`) — eski 4 kademe tanımı (`PR_ONAY_K1..K4`) koşul düğümleriyle birleştirildi (İş Akışı v2, 2026-10-19); [08](../08-workflow-tasarimi.md) kademe gerekçesini anlatır |
 | `publish-all.ps1` | Tenant açar, 18 dalgayı sırayla yayınlar, ölçüm toplar |
 
 ---

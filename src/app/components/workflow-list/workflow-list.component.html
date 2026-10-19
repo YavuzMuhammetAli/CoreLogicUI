@@ -13,6 +13,15 @@
       </svg>
       {{ 'workflow.list.deleted' | t }}
     </a>
+    <!-- İçe aktar: gizli dosya seçici, etiket düğme gibi görünür (klavyeyle de açılır). -->
+    <label class="btn btn-secondary btn-sm wf-import" [class.wf-import--busy]="importing">
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+      </svg>
+      {{ 'workflow.package.import' | t }}
+      <input type="file" accept="application/json,.json" class="sr-only" [disabled]="importing"
+             (change)="onImportFile($event)" />
+    </label>
     <a routerLink="/workflows/new" class="btn btn-primary">
       <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M12 5v14M5 12h14" />
@@ -21,6 +30,17 @@
     </a>
   </div>
 </div>
+
+@if (usage; as u) {
+  <div class="wf-usage" role="status">
+    @if (u.entitled) {
+      <span>{{ 'workflow.usage.definitions' | t }}: <strong>{{ quotaText(u.definitionsUsed, u.definitionLimit) }}</strong></span>
+      <span>{{ 'workflow.usage.runs' | t }}: <strong>{{ quotaText(u.runsUsed, u.runLimit) }}</strong></span>
+    } @else {
+      <span>{{ 'workflow.usage.notEntitled' | t }}</span>
+    }
+  </div>
+}
 
 @if (loading) {
   <div class="panel">
@@ -89,6 +109,11 @@
                       <a [routerLink]="['/workflows', workflow.id, 'edit']" class="btn btn-ghost btn-sm">
                         {{ 'workflow.versions.view' | t }}
                       </a>
+                      <button type="button" class="btn btn-ghost btn-sm"
+                              [disabled]="busyId === workflow.id"
+                              (click)="toggleEnabled(workflow)">
+                        {{ (workflow.isEnabled ? 'workflow.list.pause' : 'workflow.list.resume') | t }}
+                      </button>
                       @if (!hasDraft(workflow.code)) {
                         <button type="button" class="btn btn-secondary btn-sm"
                                 [disabled]="busyId === workflow.id"
@@ -97,6 +122,9 @@
                         </button>
                       }
                     }
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="exportWorkflow(workflow)">
+                      {{ 'workflow.package.export' | t }}
+                    </button>
                     <button type="button" class="btn btn-ghost btn-sm wf-danger"
                             [disabled]="busyId === workflow.id"
                             (click)="askDelete(workflow)">

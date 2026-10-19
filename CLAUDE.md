@@ -22,6 +22,8 @@ Users can:
 - Veritabanı yedekleme zamanlaması, sistem e-postası (SMTP) ve abonelik planını yönetmek (admin, `/parameters`)
 - Yapay zekaya işini anlatıp model/rapor/dashboard önerileri almak, beğendiklerini içeri aktarıp yayınlamak (admin, `/ai`)
 - Uygulama arayüz dilini değiştirmek (TR/EN topbar toggle)
+- Görsel tasarımcıyla iş akışı kurmak (onay, görev, paralel, koşul, alan güncelle, bildirim, bekleme, bitiş), simüle etmek, yayınlamak; çalışan süreci şema üzerinde izlemek (admin, `/workflows`)
+- Kendisine atanan görevleri görmek ve karar vermek (`/tasks`)
 
 ## Tech Stack
 
@@ -98,6 +100,17 @@ CoreLogicUI-master/
         │   ├── dashboard-build/             # Dashboard builder (widget grid yerleşimi)
         │   ├── dashboard/                   # Dashboard çalıştırma/görüntüleme
         │   ├── chart/                       # ApexCharts tabanlı grafik component'i (rapor/dashboard tarafından kullanılır)
+        │   ├── workflow-list/               # Akış listesi — durdur/sürdür, dışa/içe aktar, plan kotası şeridi (admin)
+        │   ├── workflow-build/              # Görsel tasarımcı (admin) — bkz. "İş Akışı Tasarımcısı"
+        │   │   ├── designer/                #   Signal store (belge+geçmiş+seçim+kamera), saf komutlar, palet, sağ panel,
+        │   │   │                            #   sorun paneli, simülasyon paneli, pano/seçim yardımcıları (spec'li)
+        │   │   ├── editors/                 #   Düğüm düzenleyicileri: koşul, bitiş, alan güncelle, bildirim, bekleme
+        │   │   └── step-dialog/             #   Adım pop-up'ı ("Tüm ayarlar…"; telefonda tek düzenleme yolu)
+        │   ├── workflow-versions/           # Sürüm geçmişi + "Öncekiyle karşılaştır" (şema üstünde fark) (admin)
+        │   ├── workflow-instances/          # Süreç listesi — durum/akış/model/"hata bekleyenler" filtresi, sayfalı (admin)
+        │   ├── workflow-instance/           # Süreç detayı — şema + yol katmanı, olay bandı (Yeniden dene/Adımı atla)
+        │   ├── deleted-workflows/           # Silinen akışlar (admin)
+        │   ├── my-tasks/ · task-detail/     # Görevlerim ve görev karar ekranı (authGuard)
         │   └── shared/
         │       ├── column-visibility/      # Admin-managed model kolon görünürlüğü (liste/detay/alt-model sekmeleri)
         │       ├── confirm-dialog/         # Onay diyaloğu — native confirm() YERİNE her zaman bu kullanılır
@@ -108,6 +121,8 @@ CoreLogicUI-master/
         │       ├── record-form-dialog/     # İç içe kayıt ekleme/düzenleme pop-up'ı (model-detail kullanır)
         │       ├── model-autocomplete/     # Model adı seçimi (combobox, klavye + ARIA) — ilişki hedefi seçiminde
         │       ├── entity-graph/           # Entity ilişki grafiği (inline SVG; geometri entity-graph.layout.ts'te, saf + test edilebilir)
+        │       ├── workflow-canvas/        # Akış tuvali — HTML düğüm + SVG dik açılı kenar, kamera, sürükle/bağla/lasso,
+        │       │                           #   klavye, sağ tık menüsü, `overlay` girdisi (simülasyon / süreç / sürüm farkı)
         │       ├── task-decision-form/     # Görev karar formu (ek alanlar + açıklama + Onayla/Reddet, ara onay diyaloğu YOK) — görev detayı; şema yardımcıları task-form.util.ts
         │       ├── task-action-dialog/     # Kayıt ekranındaki adım butonunun diyaloğu (ek karar alanları / red açıklaması)
         │       └── notification-bell/      # Topbar zili — okunmamış rozeti (30 sn poll) + bildirim listesi (/UserNotification)
@@ -135,6 +150,10 @@ CoreLogicUI-master/
         │   ├── lookup-label.service.ts          # Lookup id → etiket çözümleme (önbellekli)
         │   ├── record-metadata.service.ts       # Kayıt formu meta verisi (kolon kuralları/şema)
         │   ├── theme.service.ts                 # Açık/koyu tema tercihini yönetir (localStorage)
+        │   ├── workflow.service.ts              # /Workflow — tanım CRUD, validate, simulate, publish, new-version,
+        │   │                                    #   setEnabled, usage (kota), capabilities (Bekleme → 022)
+        │   ├── workflow-task.service.ts         # /WorkflowTask + /WorkflowInstance — görevler, süreçler (list sayfalı),
+        │   │                                    #   rollback, skipStep, cancel, verifyChain
         │   ├── notification.service.ts          # Global toast/uyarı bildirimleri (guard'lar dahil)
         │   └── user-notification.service.ts     # /UserNotification — kalıcı uygulama içi bildirimler (zil); toast DEĞİL
         ├── utils/
@@ -144,12 +163,17 @@ CoreLogicUI-master/
         │   ├── identifier.ts                    # Model/alan adı: etiket → ad üretimi (Türkçe harf), ad doğrulayıcıları, LabelNameSync (spec'li)
         │   ├── locale-format.ts                 # Aktif dile göre sayı/tarih biçimlendirme (sabit 'tr-TR' KULLANMA)
         │   ├── pagination.ts                    # Saf: sayfalama penceresi (pageWindow, en fazla 5 düğme, spec'li)
+        │   ├── download.ts                      # downloadBlob / downloadText (rapor dışa aktarımı, akış paketi)
+        │   ├── workflow/                        # Akış çekirdeği, SAF + spec'li: exits (port sözlüğü — backend WorkflowExits
+        │   │                                    #   ikizi), node-types (katalog), step-summary, overlay + runtime.overlay,
+        │   │                                    #   diff (sürüm farkı), package (dışa/içe aktarım), templates (hazır şablonlar)
         │   └── auto-value/                      # Otomatik değer: formül dili (expression.ts), planlayıcı (auto-value.ts),
         │                                        #   form bağlayıcısı (auto-value-form.ts) + backend'le ORTAK vektörler (spec'li)
         ├── guards/
         │   ├── auth.guard.ts                  # JWT varlığını kontrol eder
         │   ├── admin.guard.ts                  # Yalnızca admin — PermissionService.ensureLoaded() + isAdmin()
-        │   └── model-permission.guard.ts       # Factory: modelPermissionGuard('read'|'create'|'update'|'delete')
+        │   ├── model-permission.guard.ts       # Factory: modelPermissionGuard('read'|'create'|'update'|'delete')
+        │   └── unsaved-changes.guard.ts        # canDeactivate — kaydedilmemiş tasarımdan ayrılırken onay diyaloğu
         ├── interceptors/
         │   ├── auth.interceptor.ts            # Authorization: Bearer header ekler
         │   ├── language.interceptor.ts         # Accept-Language header ekler (LanguageService'den okur)
@@ -228,6 +252,15 @@ CoreLogicUI-master/
   /dashboard/new            → DashboardBuildComponent
   /dashboard/deleted        → DeletedDashboardsComponent       (adminGuard) ⚠️ "deleted" sabit seg. ":id"'den önce
   /dashboard/:id            → DashboardComponent
+  /tasks                    → MyTasksComponent                 (authGuard yeterli — Görevlerim)
+  /tasks/:id                → TaskDetailComponent              (görev ataması/okuma izni sunucuda denetlenir)
+  /workflows                → WorkflowListComponent            (adminGuard)
+  /workflows/new            → WorkflowBuildComponent           (adminGuard, canDeactivate: unsavedChangesGuard)
+  /workflows/deleted        → DeletedWorkflowsComponent        (adminGuard) ⚠️ sabit segmentler ":id"den önce
+  /workflows/instances      → WorkflowInstancesComponent       (adminGuard — süreç listesi)
+  /workflows/instances/:id  → WorkflowInstanceComponent        (guard YOK — erişim sunucuda IWorkflowAccessPolicy)
+  /workflows/versions/:code → WorkflowVersionsComponent        (adminGuard)
+  /workflows/:id/edit       → WorkflowBuildComponent           (adminGuard, canDeactivate: unsavedChangesGuard)
 **                          → redirect → /login
 ```
 
@@ -545,6 +578,70 @@ Akış **`manual`** tetiklenir: formu oluşturan kişi ya yalnız **Kaydet**'e b
   bitince aynı kayıt için yeni bir onUpdate akışı başlardı.
 - Görevlinin kaydı açabilmesi için modelde **Read** izni gerekir (görev tabanlı okuma izni yok).
 
+## İş Akışı Tasarımcısı ve Düğüm Tipleri
+
+`/workflows/:id/edit` — palet (sol) · tuval (orta) · özellik paneli (sağ). Telefonda tuval yok:
+Adımlar listesi + pop-up düzenleyiciler.
+
+**Tek doğruluk kaynağı** tasarım belgesidir (`designer/workflow-designer.store.ts`, signal):
+`{ meta, conditions, graph, extras }` — `extras` tanımın bilmediğimiz alanlarını taşır, kayıtta aynen
+geri yazılır. Değişiklikler saf komutlarla (`workflow-design.commands.ts`), geçmiş 600 ms birleştirmeli
+(Ctrl+Z/Y). Kaydet sayfada kalır; iki admin aynı taslakta → `LastModifiedOn` iyimser kilidi. Taslak
+hatalarıyla kaydedilir, yayın doğrulamayı zorlar. Canlı doğrulama konumdan bağımsız anahtar üzerinden.
+
+| Düğüm (`type`) | Çıkışlar (port) | Ne yapar |
+|---|---|---|
+| Onay `approval` | `approve` / `reject` | Görev açar; boş hedef → tamamlandı/reddedildi |
+| Görev | `approve` | Reddi kapalı onay (`form.allowReject=false`); buton "Tamamla" |
+| Paralel `parallel` | `complete` / `anyReject` | Tek kutuda dallar; all/any, red önceliklidir |
+| Koşul `condition` | `case:{anahtar}` … / `default` | Sıralı durumlar (satır ya da formül), ilk eşleşen; yoksa varsayılan |
+| Alan güncelle `action` | `next` | Kayda sabit/formül/temizle yazar — `IWorkflowRecordWriter` yolu |
+| Bildirim `notify` | `next` | Zil + e-posta; alıcı: oluşturan/başlatan/rol/kişi/adım görevlileri |
+| Bekleme `timer` | `next` | Süre ya da kayıttaki tarihe kadar (İstanbul saati) — migrasyon **022** |
+| Bitiş `end` | — | Sonuçla (tamamlandı/reddedildi) bitirir; kayıt durumu boşalmaz |
+
+Port sözlüğü iki yerde, birebir aynı: `utils/workflow/workflow-exits.ts` ↔ backend `WorkflowExits`.
+Yeni düğüm tipi önce bu ikisine eklenir. Bildirim şablonunda yer tutucular: `{{record.Alan}}`,
+`{{workflow.name}}`, `{{step.name}}`, `{{instance.id}}`, `{{link}}` (metin düz yazı; e-postada HTML'e kaçırılır).
+
+**Motor:** saf `WorkflowStateMachine` (düğüm başına) + `WorkflowRunner` (otomatik adımları aynı işlemde
+zincirler; kaydı her adımdan önce yeniden okur; 64 adım sınırı). Simülasyon (`POST /Workflow/simulate`)
+gerçek motor fonksiyonlarını bellekte koşturur; şema üstünde yol olarak boyanır.
+
+### Olay (incident) modeli
+
+Otomatik adım hata verirse (formül, tip uyuşmazlığı, kayıt doğrulaması, hedefsiz yol, 022'siz Bekleme)
+süreç **Failed olmaz**: Running kalır, `ErrorMessage` dolar, `CurrentStepKey` hatalı düğümde, `StepFailed`
+olayı düşer; onaycının kararı geri alınmaz. Süreç ekranındaki olay bandından yönetici **Yeniden dene**
+(o adıma geri alma — adım aynı yerde yine hata verirse işlem geri alınır ve güncel hata döner) ya da
+**Adımı atla** (koşulda varsayılan, eylemlerde sonraki yol) der. Liste filtresi: "Yalnız hata bekleyenler".
+
+### Bekleme ve zamanlayıcı (migrasyon 022)
+
+`WorkflowTimer` tablosu adıma girişle aynı transaction'da yazılır; geri alma/iptal aynı transaction'da
+iptal eder. `WorkflowWorker` (10 sn) DB sürümü ≥ 22 olan tenant'larda vadesi geleni `UPDLOCK, READPAST`
+ile sahiplenir → süreç kilidi → "hâlâ o adımda mı" (değilse bayat, iptal) → runner. Hata 1/5/15/60 dk
+geri çekilir, 5. hatada olay. Restart sonrası kaçırılan vade bir sonraki turda bir kez ateşlenir.
+022'siz tenant'ta palette Bekleme pasiftir (`GET /Workflow/capabilities`), taslak kaydedilir, yayın
+`timer.unavailable` ile reddedilir. Tablo EF modeline eklenmedi (ham SQL DAL) — yükseltilmemiş tenant'ta
+EF sorguları etkilenmesin.
+
+> **Restart tuzağı:** tenant'ın derlenmiş modelleri ilk UI isteğinde (`loadAssembly`) belleğe yüklenir.
+> Akışı worker ilerletiyorsa (Bekleme, kayıt tetiği → Alan güncelle) o istek hiç gelmemiş olabilir;
+> `WorkflowRecordWriter` derlemeyi gerekirse kendisi yükler. Tip isteyen yeni worker yolları da yüklemeli.
+
+### Süreç izleme, sürümler, taşınabilirlik
+
+- Süreç ekranı şemayı sürecin **başladığı sürümden** çizer; geçilen adım/oklar olay günlüğünden
+  (`utils/workflow/workflow-runtime.overlay.ts`), geri alma izi keser. Bekleyen Bekleme "… tarihine kadar".
+- Sürüm geçmişinde "Öncekiyle karşılaştır": eklenen (yeşil), değişen (sarı), kaldırılan (liste); konum fark sayılmaz.
+- Dışa/içe aktarım: `corelogic.workflow` v1 JSON paketi; içe aktarılan akış her zaman yeni **taslak**,
+  kod çakışırsa `_2` soneki; rol/kişi atamaları hedefte geçersiz kalabilir (sorun panelinde görünür).
+- Yeni boş akışta hazır şablonlar (Satın alma onayı, İzin talebi, Masraf onayı) — rol ve kolonlar bilerek boş.
+- Listede **Durdur/Sürdür** (`POST /Workflow/setEnabled`, yeni sürüm açmaz) ve plan kotası şeridi (`GET /Workflow/usage`).
+- Tetik koşulları koşul düğümüyle aynı karşılaştırmayı kullanır (iki taraf tarihse tarih olarak);
+  okunamayan tetik JSON'ı hiç eşleşmez. Yalnız yükseltme süresi tanımlı SLA artık tetiklenir.
+
 ## Otomatik Değer Atama
 
 Kolon popup'ındaki (`/build/:typeName`) **Otomatik Değer** bölümünde bir alana formül bağlanır;
@@ -829,3 +926,9 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
 12. **`ai_tokens_per_month` anahtarı üç yerde tekrarlanıyor** — backend `FeatureKeys`, UI `FEATURE_KEY_ORDER`, konsol `FEATURE_KEYS`. Yeni bir plan özelliği eklenirse üçü birden güncellenmeli
 13. **PlatformConfig sürümleme yok** — `PUT /api/platform/v1/config/{key}` eklendi (beyaz liste + sunucu tarafı `IsSecret` + maske koruması + audit), ancak değer geçmişi/geri alma tutulmuyor; audit yalnızca "kim ne zaman hangi anahtarı değiştirdi" diyor, eski değeri saklamıyor (bilinçli — sır sızdırmamak için)
 14. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez. Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir
+15. **Akış tasarımcısında mini harita ve hizala/dağıt yok** — v2 planının Faz 11'inde opsiyoneldi, yapılmadı
+16. **Kayıt tetiği güncel değere bakar** — outbox satırı işlenirken tetik koşulu kaydın O ANKİ değerine
+    karşı değerlendirilir (yazıldığı anki değil). Bir akış kaydı değiştirdikten sonra işlenen `onCreate`
+    satırı, değişmiş değerle ikinci bir akışı başlatabilir (uçtan uca testte görüldü)
+17. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
+

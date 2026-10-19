@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject }
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { WorkflowService } from '../../services/workflow.service';
-import { WorkflowDefinition } from '../../models/workflow.model';
+import { WorkflowDefinition, WorkflowUsage } from '../../models/workflow.model';
+import { downloadText } from '../../utils/download';
+import { freeCode, packageFileName, parsePackage, serializePackage, toPackage } from '../../utils/workflow/workflow-package';
 import { LanguageService } from '../../services/language.service';
 import { NotificationService } from '../../services/notification.service';
 import { PermissionService } from '../../services/permission.service';
@@ -42,13 +44,100 @@ export class WorkflowListComponent implements OnInit {
   /** confirm-dialog'u açan bekleyen silme isteği. */
   pendingDelete: WorkflowDefinition | null = null;
 
+  /** Plan kotası — okunamazsa şerit gösterilmez. */
+  usage: WorkflowUsage | null = null;
+  importing = false;
+
   get isAdmin(): boolean {
     return this.permissionService.isAdmin();
   }
 
   ngOnInit(): void {
     this.load();
+    this.loadUsage();
   }
+
+  private loadUsage(): void {
+    this.workflowService.usage().pipe(markDirty(this.cdr)).subscribe({
+      next: res => { this.usage = res.success ? res.data ?? null : null; },
+      error: () => { this.usage = null; }
+    });
+  }
+
+  /** "3 / 5" ya da sınırsızsa yalnız kullanım. */
+  quotaText(used: number, limit: number | null | undefined): string {
+    return limit == null ? String(used) : `${used} / ${limit}`;
+  }
+
+  // ── Durdur / sürdür ───────────────────────────────────────────────────────
+
+  /** Yayındaki akışın tetiğini durdurur ya da sürdürür; açık süreçler etkilenmez. */
+  toggleEnabled(workflow: WorkflowDefinition): void {
+    this.busyId = workflow.id;
+    this.workflowService.setEnabled(workflow.id, !workflow.isEnabled).pipe(markDirty(this.cdr)).subscribe({
+      next: res => {
+        this.busyId = null;
+        if (res.success) {
+          this.notification.success(res.message ?? '');
+          this.load();
+        } else {
+          this.notification.warn(res.message ?? this.languageService.t('workflow.list.loadFailed'));
+        }
+      },
+      error: err => {
+        this.busyId = null;
+        this.notification.warn(err?.error?.message ?? this.languageService.t('workflow.list.serverError'));
+      }
+    });
+  }
+
+  // ── Dışa / içe aktarım ────────────────────────────────────────────────────
+
+  exportWorkflow(workflow: WorkflowDefinition): void {
+    downloadText(serializePackage(toPackage(workflow)), packageFileName(workflow.code));
+  }
+
+  /**
+   * Paket her zaman yeni bir TASLAK olarak eklenir; kod çakışırsa sonek alır.
+   * Rol/kişi atamaları hedef şirkette geçersiz olabilir — tasarımcı bunları
+   * sorun olarak gösterir.
+   */
+  onImportFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    file.text().then(text => {
+      const parsed = parsePackage(text);
+      if (!parsed.ok) {
+        this.notification.warn(this.languageService.t(`workflow.package.error.${parsed.error}`));
+        return;
+      }
+
+      const code = freeCode(parsed.workflow.code, this.allCodes);
+      this.importing = true;
+      this.cdr.markForCheck();
+      this.workflowService.define({ ...parsed.workflow, code }).pipe(markDirty(this.cdr)).subscribe({
+        next: res => {
+          this.importing = false;
+          if (res.success && res.data) {
+            this.notification.success(this.languageService.t('workflow.package.imported', { code }));
+            this.router.navigate(['/workflows', res.data, 'edit']);
+          } else {
+            this.notification.warn(res.message ?? this.languageService.t('workflow.package.error.fields'));
+          }
+        },
+        error: err => {
+          this.importing = false;
+          this.notification.warn(err?.error?.message ?? this.languageService.t('workflow.list.serverError'));
+        }
+      });
+    });
+  }
+
+  /** Arşiv dahil tüm kodlar — içe aktarılan akış mevcut bir kodun üstüne yazılmasın. */
+  private allCodes: string[] = [];
 
   load(): void {
     this.loading = true;
@@ -62,6 +151,7 @@ export class WorkflowListComponent implements OnInit {
 
           // Taslağın hangi sürüm olacağını göstermek için Code başına en yüksek
           // yayın numarası — arşiv satırları gizlenmeden ÖNCE hesaplanır.
+          this.allCodes = [...new Set(all.map(w => w.code))];
           this.maxVersionByCode = new Map();
           for (const w of all) {
             this.maxVersionByCode.set(w.code, Math.max(this.maxVersionByCode.get(w.code) ?? 0, w.version));

@@ -344,6 +344,17 @@ export interface WorkflowTimerConfig {
 /** Bekleme en fazla bu kadar gün sürebilir (backend MaxDuration). */
 export const TIMER_MAX_DAYS = 366;
 
+/** Plan kotası (GET /Workflow/usage) — limit null ise sınırsız. */
+export interface WorkflowUsage {
+  entitled: boolean;
+  definitionLimit?: number | null;
+  definitionsUsed: number;
+  runLimit?: number | null;
+  runsUsed: number;
+  periodStart: string;
+  periodEnd: string;
+}
+
 /** Tenant'ın kullanabildiği akış özellikleri (GET /Workflow/capabilities). */
 export interface WorkflowCapabilities {
   /** Bekleme düğümü — migrasyon 022. */

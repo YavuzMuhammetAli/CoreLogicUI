@@ -9,6 +9,9 @@
   </span>
   <div class="cluster">
     <a routerLink="/workflows" class="btn btn-ghost btn-sm">{{ 'common.cancel' | t }}</a>
+    <button type="button" class="btn btn-ghost btn-sm" (click)="exportDesign()" [title]="'workflow.package.exportHint' | t">
+      {{ 'workflow.package.export' | t }}
+    </button>
     <!-- Simülasyon geniş ekranda (tuvalin yanında); telefonda tuval yok. -->
     <button type="button" class="btn btn-ghost btn-sm simulate-btn" [class.simulate-btn--active]="simulating()"
             (click)="simulating() ? closeSimulation() : openSimulation()">
@@ -76,6 +79,22 @@
 }
 
 <form [formGroup]="form" class="flow">
+  @if (isNew && !readonlyMode() && store.graph().steps.length === 0) {
+    <div class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">{{ 'workflow.template.title' | t }}</h2>
+      </div>
+      <div class="panel-body template-grid">
+        @for (template of templates; track template.id) {
+          <button type="button" class="template-card" [attr.data-template]="template.id" (click)="applyTemplate(template)">
+            <strong>{{ template.nameKey | t }}</strong>
+            <span>{{ template.descriptionKey | t }}</span>
+          </button>
+        }
+      </div>
+    </div>
+  }
+
   <div class="panel">
     <div class="panel-body stack">
       <div class="form-grid">

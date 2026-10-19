@@ -7,6 +7,7 @@ import { AppChartComponent } from '../chart/chart.component';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { formatNumber } from '../../utils/locale-format';
+import { downloadBlob } from '../../utils/download';
 
 /** Aggregate fonksiyonlarının KPI kartı başlığında kullanılan i18n anahtarları (bkz. report.i18n.ts 'report.aggregateShort.*'). */
 const AGGREGATE_LABEL_KEYS: Record<AggregateFunction, string> = {
@@ -173,7 +174,7 @@ export class ReportViewerComponent implements OnInit {
     this.reportService.exportExcel(this.id).subscribe({
       next: blob => {
         this.exporting.set(null);
-        this.downloadBlob(blob, `rapor-${this.id}.xlsx`);
+        downloadBlob(blob, `rapor-${this.id}.xlsx`);
       },
       error: () => {
         this.exporting.set(null);
@@ -188,7 +189,7 @@ export class ReportViewerComponent implements OnInit {
     this.reportService.exportPdf(this.id).subscribe({
       next: blob => {
         this.exporting.set(null);
-        this.downloadBlob(blob, `rapor-${this.id}.pdf`);
+        downloadBlob(blob, `rapor-${this.id}.pdf`);
       },
       error: () => {
         this.exporting.set(null);
@@ -197,13 +198,4 @@ export class ReportViewerComponent implements OnInit {
     });
   }
 
-  private downloadBlob(blob: Blob, filename: string): void {
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.click();
-    // Hemen iptal edilirse Android Chrome indirmeyi başlatamadan URL'yi kaybedebilir.
-    setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-  }
 }
