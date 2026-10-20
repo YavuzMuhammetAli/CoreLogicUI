@@ -7,19 +7,14 @@ import { PublishedColumn, PublishedModelService } from '../../../services/publis
 import { RecordMetadataService, TypeMeta } from '../../../services/record-metadata.service';
 import { LanguageService } from '../../../services/language.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
-import { HelpHintComponent } from '../help-hint/help-hint.component';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
-import { LookupPickerComponent } from '../lookup-picker/lookup-picker.component';
-import {
-  inputTypeFor, isImage, imageSrc, fieldValue, parseEnumValues, downloadFile,
-  toInputValue, stepFor
-} from '../../model-data/model-data.util';
+import { RecordFieldComponent } from '../record-field/record-field.component';
+import { fieldValue, toInputValue } from '../../model-data/model-data.util';
 import {
   StagedNode, DataRow, createStagedNode, childrenOf, upsertChild, removeChild,
   validatorsFor, fkColumnFor, normalizeRow
 } from '../../model-detail/staged-tree.util';
 import { markDirty } from '../../../utils/change-detection';
-import { fileSizeError, formatFileSize } from '../../../utils/file-size';
 import { AutoValueFormBinding } from '../../../utils/auto-value/auto-value-form';
 import { AutoValueRule, buildAutoValuePlan } from '../../../utils/auto-value/auto-value';
 
@@ -55,9 +50,8 @@ interface ChildTabView {
     CommonModule,
     ReactiveFormsModule,
     TranslatePipe,
-    HelpHintComponent,
     ConfirmDialogComponent,
-    LookupPickerComponent,
+    RecordFieldComponent,
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     forwardRef(() => RecordFormDialogComponent)
   ],
@@ -114,11 +108,6 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
   nestedTypeName = '';
   nestedIsEdit = false;
 
-  /** file input'ları için seçilen dosya adları (indirme etiketinde kullanılır). */
-  fileNames: Record<string, string> = {};
-  /** Boyut sınırı nedeniyle reddedilen dosyaların hata metni (kolon → mesaj). */
-  fileErrors: Record<string, string> = {};
-
   /** altTipAdı → seçili satırların geçici localId'leri (toplu silme için). */
   selected: Record<string, Set<number>> = {};
   /** altTipAdı → silinemeyen satırların hata özeti. */
@@ -130,12 +119,8 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
   bulkBusy = false;
 
   // Util delegasyonları (şablondan çağrılır)
-  inputTypeFor = inputTypeFor;
-  stepFor = stepFor;
-  isImage = isImage;
-  imageSrc = imageSrc;
-  parseEnumValues = parseEnumValues;
   childrenOf = childrenOf;
+
   ngOnInit(): void {
     this.metadata.meta$(this.node.typeName).pipe(markDirty(this.cdr)).subscribe(meta => {
       this.meta = meta;
@@ -230,84 +215,9 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
     return col.label?.trim() || col.columnName;
   }
 
-  isRequired(col: PublishedColumn): boolean {
-    const rule = this.meta?.rules.get(col.columnName);
-    return rule ? rule.isRequired : col.isNullable === false;
-  }
-
-  /**
-   * Bir alanın gösterilecek hata metni. `pattern` hatasında şema builder'da yazılan
-   * "Regex Mesajı" tercih edilir — kullanıcıya en anlamlı açıklama odur.
-   */
-  errorFor(col: PublishedColumn): string | null {
-    const c = this.ctrl(col.columnName);
-    if (!c || !c.touched || !c.errors) return null;
-    const label = this.colLabel(col);
-    const rule = this.meta?.rules.get(col.columnName);
-
-    if (c.errors['required']) return this.languageService.t('model.detail.fieldRequired', { label });
-    if (c.errors['pattern']) {
-      return rule?.regexMessage?.trim()
-        || this.languageService.t('model.detail.fieldPattern', { label });
-    }
-    if (c.errors['minlength']) {
-      return this.languageService.t('model.detail.fieldMinLength', { label, min: rule?.minLength ?? 0 });
-    }
-    if (c.errors['maxlength']) {
-      return this.languageService.t('model.detail.fieldMaxLength', { label, max: rule?.maxLength ?? 0 });
-    }
-    if (c.errors['min']) {
-      return this.languageService.t('model.detail.fieldMin', { label, min: rule?.min ?? 0 });
-    }
-    if (c.errors['max']) {
-      return this.languageService.t('model.detail.fieldMax', { label, max: rule?.max ?? 0 });
-    }
-    if (c.errors['maxFileSize']) {
-      const err = c.errors['maxFileSize'] as { limitKb: number; actualBytes: number };
-      const lang = this.languageService.lang();
-      return this.languageService.t('model.detail.fieldMaxFileSize', {
-        label,
-        actual: formatFileSize(err.actualBytes, lang),
-        limit: formatFileSize(err.limitKb * 1024, lang)
-      });
-    }
-    return null;
-  }
-
   // Lookup seçenekleri artık burada yüklenmiyor: app-lookup-picker kendi verisini
   // tembel çeker (50'şer) ve aramayı sunucuda yapar. Eskiden hedef tablonun TÜM
   // satırları önden yükleniyordu.
-
-  // ─── Dosya alanları ─────────────────────────────────────────────────────────
-
-  onFileSelected(event: Event, col: PublishedColumn): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-    const columnName = col.columnName;
-
-    // Boyut, dosya OKUNMADAN kontrol edilir; aşıyorsa önceki değer korunur.
-    const sizeError = fileSizeError(
-      file, col.dataType, this.meta?.rules.get(columnName)?.maxLength ?? col.maxLength, this.languageService.lang());
-    if (sizeError) {
-      this.fileErrors[columnName] = this.languageService.t(sizeError.key, { label: this.colLabel(col), ...sizeError.params });
-      input.value = '';
-      return;
-    }
-    delete this.fileErrors[columnName];
-
-    this.fileNames[columnName] = file.name;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const b64 = (reader.result as string).split(',')[1] ?? (reader.result as string);
-      this.ctrl(columnName).setValue(b64);
-    };
-    reader.readAsDataURL(file);
-  }
-
-  download(b64: string, columnName: string): void {
-    downloadFile(b64, columnName, this.fileNames);
-  }
 
   // ─── Alt model sekmeleri ────────────────────────────────────────────────────
 

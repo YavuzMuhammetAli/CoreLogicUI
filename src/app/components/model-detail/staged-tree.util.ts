@@ -3,6 +3,7 @@ import { DynamicTreeNodeDto, PublishedColumn } from '../../services/published-mo
 import { PublishedColumnSchema, PublishedTableSchema } from '../../services/published-table.service';
 import { fieldValue, sanitizePayload } from '../model-data/model-data.util';
 import { isFileType, maxFileSizeValidator } from '../../utils/file-size';
+import { isColumnRequired } from '../../utils/record-field/column-required';
 
 /** Dinamik tablo satırı — alan adı → değer. */
 export type DataRow = Record<string, unknown>;
@@ -202,9 +203,8 @@ export function validatorsFor(
 ): ValidatorFn[] {
   const validators: ValidatorFn[] = [];
 
-  // Zorunluluk: getModels() `isNullable`, getSchema() `isRequired` döner — ikisi de kabul edilir.
-  const required = rule ? rule.isRequired : col.isNullable === false;
-  if (required) validators.push(Validators.required);
+  // Zorunluluk: getModels() `isNullable`, getSchema() `isRequired` döner — karar tek yerde.
+  if (isColumnRequired(col, rule)) validators.push(Validators.required);
 
   // image/file: maxLength = boyut sınırı (KB). Kural yoksa da platform tavanı uygulanır.
   if (isFileType(col.dataType)) {

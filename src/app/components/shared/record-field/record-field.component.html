@@ -1,0 +1,77 @@
+<label [attr.for]="inputId()">
+  {{ label() }}
+  @if (required()) { <span class="req">*</span> }
+  @if (description()) {
+    <app-help-hint [text]="description()"
+      [label]="'model.detail.fieldDescriptionAria' | t:{ description: description() }" />
+  }
+  @if (autoValueRule(); as rule) {
+    <app-help-hint variant="formula" glyph="ƒx" [text]="rule.expression"
+      [label]="'model.detail.autoValue.badgeAria' | t:{ expression: rule.expression }" />
+  }
+  <span class="col-type-tag">{{ column().dataType }}</span>
+</label>
+
+@if (column().dataType === 'lookup') {
+  <!-- Tembel yüklemeli seçici: açılışta 50 kayıt, kaydırdıkça 50'şer, arama sunucuda.
+       Kontrol değeri ham FK id'sidir. -->
+  <app-lookup-picker
+    [inputId]="inputId()"
+    [typeName]="column().lookupTargetTable ?? ''"
+    [displayColumn]="column().lookupDisplayColumn"
+    [formControl]="formControl()">
+  </app-lookup-picker>
+} @else if (column().dataType === 'enum') {
+  <select class="input" [id]="inputId()" [formControl]="formControl()"
+    [attr.aria-invalid]="invalid() || null"
+    [attr.aria-describedby]="errorText() ? errorId() : null">
+    <option value="">{{ 'model.detail.selectOption' | t }}</option>
+    @for (val of enumValues(); track val) {
+      <option [value]="val">{{ val }}</option>
+    }
+  </select>
+} @else if (inputType() === 'checkbox') {
+  <label class="checkbox-label" [attr.for]="inputId()">
+    <input [id]="inputId()" type="checkbox" [formControl]="formControl()">
+    {{ label() }}
+  </label>
+} @else if (inputType() === 'file') {
+  <!-- Dosya girişi form kontrolüne bağlanamaz: değer seçimde base64 olarak yazılır. -->
+  <input [id]="inputId()" type="file" class="file-input"
+    [disabled]="control().disabled"
+    [attr.accept]="column().dataType === 'image' ? 'image/*' : null"
+    (change)="onFileSelected($event)">
+  @if (fileError(); as fileErr) {
+    <span class="field-error" role="alert">{{ fileErr }}</span>
+  }
+  @if (value(); as current) {
+    @if (isImage(current)) {
+      <img class="file-preview" [src]="imageSrc($any(current))" [attr.alt]="'model.detail.preview' | t">
+    } @else {
+      <div class="file-row">
+        <span class="eyebrow">{{ 'model.detail.fileExists' | t }}</span>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="download()">{{ 'model.detail.download' | t }}</button>
+      </div>
+    }
+  }
+} @else {
+  <input
+    class="input"
+    [id]="inputId()"
+    [type]="inputType()"
+    [formControl]="formControl()"
+    [attr.step]="stepAttr()"
+    [attr.required]="required() || null"
+    [attr.aria-invalid]="invalid() || null"
+    [attr.aria-describedby]="errorText() ? errorId() : null">
+}
+
+<!-- SEQ: numara kayıt anında sunucuda verilir -->
+@if (autoValuePending()) {
+  <span class="field-help">{{ 'model.detail.autoValue.pending' | t }}</span>
+}
+
+<!-- Şema kurallarından (regex/uzunluk/aralık) türetilen istemci doğrulaması -->
+@if (errorText(); as err) {
+  <span [id]="errorId()" class="field-error" role="alert">{{ err }}</span>
+}

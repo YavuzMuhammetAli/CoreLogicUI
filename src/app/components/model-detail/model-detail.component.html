@@ -203,87 +203,14 @@
         <form [formGroup]="editForm" (ngSubmit)="submitEdit()" novalidate>
           <div class="edit-fields-grid">
             @for (col of visibleParentColumns; track col.columnName) {
-              <div class="field" [class.field--step]="isStepColumn(col)">
-                <label [attr.for]="'edit-' + col.columnName">
-                  {{ colLabel(col) }}
-                  @if (!col.isNullable) { <span style="color:var(--danger)">*</span> }
-                  @if (col.description?.trim()) {
-                    <app-help-hint [text]="col.description ?? ''"
-                      [label]="'model.detail.fieldDescriptionAria' | t:{ description: col.description ?? '' }" />
-                  }
-                  @if (autoValueRule(col); as rule) {
-                    <app-help-hint variant="formula" glyph="ƒx" [text]="rule.expression"
-                      [label]="'model.detail.autoValue.badgeAria' | t:{ expression: rule.expression }" />
-                  }
-                  <span class="col-type-tag">{{ col.dataType }}</span>
-                </label>
-
-                @if (col.dataType === 'lookup') {
-                  <!-- Tembel yüklemeli seçici: açılışta 50 kayıt, kaydırdıkça 50'şer,
-                       arama sunucuda. Kontrol değeri eskisi gibi ham FK id'sidir. -->
-                  <app-lookup-picker
-                    [inputId]="'edit-' + col.columnName"
-                    [typeName]="col.lookupTargetTable ?? ''"
-                    [displayColumn]="col.lookupDisplayColumn"
-                    [formControlName]="col.columnName">
-                  </app-lookup-picker>
-                } @else if (col.dataType === 'enum') {
-                  <select class="input" [id]="'edit-' + col.columnName" [formControlName]="col.columnName">
-                    <option value="">{{ 'model.detail.selectOption' | t }}</option>
-                    @for (val of parseEnumValues(col.enumValues); track val) {
-                      <option [value]="val">{{ val }}</option>
-                    }
-                  </select>
-                } @else if (inputTypeFor(col.dataType) === 'checkbox') {
-                  <label class="checkbox-label" [attr.for]="'edit-' + col.columnName">
-                    <input [id]="'edit-' + col.columnName" type="checkbox" [formControlName]="col.columnName">
-                    {{ colLabel(col) }}
-                  </label>
-                } @else if (inputTypeFor(col.dataType) === 'file') {
-                  <input [id]="'edit-' + col.columnName" type="file"
-                    [disabled]="isColumnLocked(col)"
-                    [attr.accept]="col.dataType === 'image' ? 'image/*' : null"
-                    (change)="onEditFileSelected($event, col)"
-                    style="display:block;margin-bottom:var(--space-2)">
-                  @if (fileErrors[col.columnName]; as fileErr) {
-                    <span class="field-error" role="alert">{{ fileErr }}</span>
-                  }
-                  @if (getEditControl(col.columnName).value) {
-                    @if (isImage(getEditControl(col.columnName).value)) {
-                      <img [src]="imageSrc(getEditControl(col.columnName).value)" [attr.alt]="'model.detail.preview' | t"
-                        style="max-height:100px;max-width:100%;border-radius:6px;border:1px solid var(--border);object-fit:contain;display:block;margin-bottom:var(--space-2)">
-                    } @else {
-                      <div style="display:flex;align-items:center;gap:var(--space-2)">
-                        <span class="eyebrow">{{ 'model.detail.fileExists' | t }}</span>
-                        <button type="button" class="btn btn-ghost btn-sm"
-                          (click)="downloadParentFile(getEditControl(col.columnName).value, col.columnName)">{{ 'model.detail.download' | t }}</button>
-                      </div>
-                    }
-                  }
-                } @else {
-                  <input
-                    class="input"
-                    [id]="'edit-' + col.columnName"
-                    [type]="inputTypeFor(col.dataType)"
-                    [formControlName]="col.columnName"
-                    [attr.step]="stepFor(col.dataType)"
-                    [attr.required]="!col.isNullable || null"
-                    [attr.aria-invalid]="getEditControl(col.columnName).touched && getEditControl(col.columnName).invalid"
-                    [attr.aria-describedby]="parentFieldError(col) ? 'edit-err-' + col.columnName : null">
-                }
-
-                <!-- SEQ: numara kayıt anında sunucuda verilir -->
-                @if (isAutoValuePending(col)) {
-                  <span class="field-help">{{ 'model.detail.autoValue.pending' | t }}</span>
-                }
-
-                <!-- Şema kurallarından (regex/uzunluk/aralık) türetilen istemci doğrulaması -->
-                @if (parentFieldError(col); as err) {
-                  <span [id]="'edit-err-' + col.columnName" class="field-error" role="alert">
-                    {{ err }}
-                  </span>
-                }
-              </div>
+              <app-record-field
+                [column]="col"
+                [control]="getEditControl(col.columnName)"
+                [rule]="parentRule(col)"
+                idPrefix="edit-"
+                [step]="isStepColumn(col)"
+                [autoValueRule]="autoValueRule(col)"
+                [autoValuePending]="isAutoValuePending(col)" />
             }
           </div>
 

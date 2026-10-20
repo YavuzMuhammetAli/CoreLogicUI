@@ -18,11 +18,10 @@ import { RecordMetadataService } from '../../services/record-metadata.service';
 import { PublishedColumnSchema } from '../../services/published-table.service';
 import { RecordFormDialogComponent } from '../shared/record-form-dialog/record-form-dialog.component';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
-import { LookupPickerComponent } from '../shared/lookup-picker/lookup-picker.component';
+import { RecordFieldComponent } from '../shared/record-field/record-field.component';
 import { WorkflowPanelComponent } from '../shared/workflow-panel/workflow-panel.component';
 import { TaskActionDialogComponent, TaskActionResult } from '../shared/task-action-dialog/task-action-dialog.component';
 import { WorkflowViewDialogComponent } from '../shared/workflow-view-dialog/workflow-view-dialog.component';
-import { HelpHintComponent } from '../shared/help-hint/help-hint.component';
 import { WorkflowInstanceService, WorkflowTaskService } from '../../services/workflow-task.service';
 import { NotificationService } from '../../services/notification.service';
 import { MyRecordTask, RecordWorkflowState, StartableWorkflow, WorkflowInstance } from '../../models/workflow.model';
@@ -42,21 +41,18 @@ import {
   pendingCount as treePendingCount
 } from './staged-tree.util';
 import {
-  inputTypeFor,
   isImage,
   imageSrc,
   isBase64Value,
   downloadFile,
   sanitizePayload,
   fieldValue,
-  parseEnumValues,
-  toInputValue,
-  stepFor
+  toInputValue
 } from '../model-data/model-data.util';
 import { markDirty } from '../../utils/change-detection';
 import { AutoValueFormBinding } from '../../utils/auto-value/auto-value-form';
 import { AutoValueRule, buildAutoValuePlan } from '../../utils/auto-value/auto-value';
-import { fileSizeError, formatFileSize } from '../../utils/file-size';
+import { mustStayVisible } from '../../utils/record-field/column-required';
 
 type DataRow = Record<string, unknown>;
 
@@ -106,8 +102,8 @@ interface TabState {
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, ColumnVisibilityComponent,
-    TranslatePipe, RecordFormDialogComponent, ConfirmDialogComponent, LookupPickerComponent,
-    WorkflowPanelComponent, TaskActionDialogComponent, WorkflowViewDialogComponent, HelpHintComponent
+    TranslatePipe, RecordFormDialogComponent, ConfirmDialogComponent, RecordFieldComponent,
+    WorkflowPanelComponent, TaskActionDialogComponent, WorkflowViewDialogComponent
   ],
   templateUrl: './model-detail.component.html',
   styleUrls: ['./model-detail.component.scss'],
@@ -175,9 +171,6 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   editLoading = false;
   editMsg: string | null = null;
   editOk: boolean | null = null;
-  private editFileNames: Record<string, string> = {};
-  /** Seçilip boyut sınırı nedeniyle reddedilen dosyaların hata metni (kolon → mesaj). */
-  fileErrors: Record<string, string> = {};
 
   // Alt modeller (sekmeler)
   childModelNames: string[] = [];
@@ -243,12 +236,9 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
   // ─── Util delegasyonları ─────────────────────────────────────────────────────
 
-  inputTypeFor   = inputTypeFor;
   isImage        = isImage;
   imageSrc       = imageSrc;
   isBase64Value  = isBase64Value;
-  parseEnumValues = parseEnumValues;
-  stepFor        = stepFor;
 
   // ─── Lookup etiketleri (tablo hücreleri için) ───────────────────────────────
   //
@@ -284,10 +274,6 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return this.lookupLabels.label(target, col.lookupDisplayColumn, Number(value)) ?? String(value);
   }
 
-  downloadParentFile(b64: string, colName: string): void {
-    downloadFile(b64, colName, this.editFileNames);
-  }
-
   downloadTabFile(b64: string, colName: string, state: TabState): void {
     downloadFile(b64, colName, state.fileNames);
   }
@@ -304,8 +290,6 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.editForm = null;
     this.editMsg = null;
     this.editOk = null;
-    this.editFileNames = {};
-    this.fileErrors = {};
     this.childModelNames = [];
     this.activeTab = '';
     this.allModels = [];
@@ -457,8 +441,9 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
   /**
    * Formda render edilecek kolonlar: admin ayarına göre filtrelenmiş, ancak zorunlu
-   * (isNullable=false) kolonlar her zaman dahil edilir — aksi halde form geçersiz kalır
-   * ve güncellemede gizli alan payload'dan düşüp null'lanabilir.
+   * kolonlar her zaman dahil edilir — aksi halde form geçersiz kalır ve Kaydet, gizli
+   * alandaki hata yüzünden sessizce hiçbir şey yapmaz. Zorunluluk şema kuralından okunur
+   * (bkz. mustStayVisible): `isNullable` metin/dosya kolonlarında hep true gelir.
    * Not: editForm her zaman TÜM kolonlarla kurulur (openEditMode/buildNewForm); bu getter
    * sadece render'ı filtreler, form bütünlüğünü etkilemez.
    */
@@ -468,12 +453,15 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     // Adımın doldurulacak kolonları da her zaman görünür: admin detay görünümünden
     // gizlemiş olsa bile görevli o alanı doldurmadan adımı ilerletemez.
     return this.parentColumns.filter(c =>
-      !c.isNullable || visible.has(c.columnName) || this.isStepColumn(c));
+      mustStayVisible(c, this.parentRules.get(c.columnName)) || visible.has(c.columnName) || this.isStepColumn(c));
   }
 
   /** Kolon görünürlüğü popover'ı için kolon listesi — zorunlu alanlar gizlenemez */
   get parentColumnVisibilityItems(): ColumnVisibilityItem[] {
-    return this.parentColumns.map(c => ({ name: c.columnName, required: !c.isNullable }));
+    return this.parentColumns.map(c => ({
+      name: c.columnName,
+      required: mustStayVisible(c, this.parentRules.get(c.columnName))
+    }));
   }
 
   /** Popover'ın o anki etkin seçimi — ayar yoksa tüm kolonlar işaretli gösterilir */
@@ -614,8 +602,6 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.loadParentRules(build);      // kurallar gelince doğrulayıcılarla yeniden kurulur
     this.editMsg = null;
     this.editOk = null;
-    this.editFileNames = {};
-    this.fileErrors = {};
     this.showEditForm = true;
   }
 
@@ -637,41 +623,12 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.loadParentRules(build);
     this.editMsg = null;
     this.editOk = null;
-    this.editFileNames = {};
-    this.fileErrors = {};
     this.showEditForm = true;
   }
 
-  /**
-   * Bir üst-form alanının gösterilecek hata metni. `pattern` hatasında kolonun
-   * kendi "Regex Mesajı" tercih edilir — kullanıcıya en anlamlı açıklama odur.
-   */
-  parentFieldError(col: PublishedColumn): string | null {
-    const c = this.editForm?.get(col.columnName);
-    if (!c || !c.touched || !c.errors) return null;
-    const label = this.colLabel(col);
-    const rule = this.parentRules.get(col.columnName);
-
-    if (c.errors['required']) return this.languageService.t('model.detail.fieldRequired', { label });
-    if (c.errors['pattern']) {
-      return rule?.regexMessage?.trim() || this.languageService.t('model.detail.fieldPattern', { label });
-    }
-    if (c.errors['minlength']) return this.languageService.t('model.detail.fieldMinLength', { label, min: rule?.minLength ?? 0 });
-    if (c.errors['maxlength']) return this.languageService.t('model.detail.fieldMaxLength', { label, max: rule?.maxLength ?? 0 });
-    if (c.errors['min']) return this.languageService.t('model.detail.fieldMin', { label, min: rule?.min ?? 0 });
-    if (c.errors['max']) return this.languageService.t('model.detail.fieldMax', { label, max: rule?.max ?? 0 });
-    if (c.errors['maxFileSize']) return this.fileSizeErrorText(label, c.errors['maxFileSize']);
-    return null;
-  }
-
-  /** Validator'ın `maxFileSize` hatasını okunur metne çevirir. */
-  private fileSizeErrorText(label: string, err: { limitKb: number; actualBytes: number }): string {
-    const lang = this.languageService.lang();
-    return this.languageService.t('model.detail.fieldMaxFileSize', {
-      label,
-      actual: formatFileSize(err.actualBytes, lang),
-      limit: formatFileSize(err.limitKb * 1024, lang)
-    });
+  /** Bir üst-form kolonunun şema kuralı (alan bileşenine geçirilir); yüklenmemişse undefined. */
+  parentRule(col: PublishedColumn): PublishedColumnSchema | undefined {
+    return this.parentRules.get(col.columnName);
   }
 
   /**
@@ -775,31 +732,6 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
         this.deleting = false;
       }
     });
-  }
-
-  onEditFileSelected(event: Event, col: PublishedColumn): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-    const colName = col.columnName;
-
-    // Boyut, dosya OKUNMADAN kontrol edilir; aşıyorsa önceki değer korunur.
-    const sizeError = fileSizeError(
-      file, col.dataType, this.parentRules.get(colName)?.maxLength ?? col.maxLength, this.languageService.lang());
-    if (sizeError) {
-      this.fileErrors[colName] = this.languageService.t(sizeError.key, { label: this.colLabel(col), ...sizeError.params });
-      input.value = '';
-      return;
-    }
-    delete this.fileErrors[colName];
-
-    this.editFileNames[colName] = file.name;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const b64 = (reader.result as string).split(',')[1] ?? reader.result as string;
-      this.editForm?.get(colName)?.setValue(b64);
-    };
-    reader.readAsDataURL(file);
   }
 
   getEditControl(col: string) {
@@ -1516,11 +1448,6 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   isStepColumn(col: PublishedColumn): boolean {
     const name = col.columnName.toLowerCase();
     return this.myStepTasks.some(t => t.recordFields.some(f => f.column.toLowerCase() === name));
-  }
-
-  /** Alan kilitli mi — form kontrolü olmayan dosya girişi için. */
-  isColumnLocked(col: PublishedColumn): boolean {
-    return !!this.editForm?.get(col.columnName)?.disabled;
   }
 
   approveLabelOf(task: MyRecordTask): string {

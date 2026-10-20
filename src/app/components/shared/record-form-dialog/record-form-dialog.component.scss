@@ -73,35 +73,6 @@
   gap: var(--space-4);
 }
 
-.col-type-tag {
-  margin-left: var(--space-2);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--muted);
-  text-transform: lowercase;
-}
-
-.record-file-input {
-  display: block;
-  margin-bottom: var(--space-2);
-  font-size: var(--text-sm);
-}
-
-.record-file-preview {
-  max-height: 80px;
-  max-width: 100%;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  object-fit: contain;
-  display: block;
-}
-
-.record-file-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
 /* ── Alt model bölümü ─────────────────────────────────────────────────────── */
 
 .record-children {
@@ -248,10 +219,6 @@ tr.row-selected td {
 @media (max-width: 768px) {
   .record-fields {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .record-fields .field label {
-    overflow-wrap: anywhere;
   }
 
   .dialog-panel .panel-head {

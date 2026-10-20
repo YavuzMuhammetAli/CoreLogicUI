@@ -11,7 +11,7 @@ import {
   record,
   redo,
   undo
-} from './workflow-design.history';
+} from '../../../utils/design-history';
 
 /**
  * Akış tasarım ekranının durumu — tasarım belgesi, geri al/yinele geçmişi,

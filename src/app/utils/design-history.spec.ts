@@ -1,6 +1,6 @@
-import { canRedo, canUndo, createHistory, record, redo, undo } from './workflow-design.history';
+import { canRedo, canUndo, createHistory, record, redo, undo } from './design-history';
 
-describe('workflow-design.history', () => {
+describe('design-history', () => {
   it('kayıt geri alınır ve yinelenir', () => {
     let h = createHistory('a');
     h = record(h, 'b', '', 1000);

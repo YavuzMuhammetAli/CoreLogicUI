@@ -49,94 +49,13 @@
         <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
           <div class="record-fields">
             @for (col of editableColumns(meta); track col.columnName) {
-              <div class="field">
-                <label [attr.for]="'rf-' + depth + '-' + col.columnName">
-                  {{ colLabel(col) }}
-                  @if (isRequired(col)) { <span class="req">*</span> }
-                  @if (col.description?.trim()) {
-                    <!-- `below`: dialog paneli overflow-y:auto — yukarı açılan balon kırpılır -->
-                    <app-help-hint [text]="col.description ?? ''" placement="below" />
-                  }
-                  @if (autoValueRule(col); as rule) {
-                    <app-help-hint variant="formula" glyph="ƒx" [text]="rule.expression"
-                      [label]="'model.detail.autoValue.badgeAria' | t:{ expression: rule.expression }" />
-                  }
-                  <span class="col-type-tag">{{ col.dataType }}</span>
-                </label>
-
-                @if (col.dataType === 'lookup') {
-                  <!-- Tembel yüklemeli seçici: 50'şer kayıt, arama sunucuda. -->
-                  <app-lookup-picker
-                    [inputId]="'rf-' + depth + '-' + col.columnName"
-                    [typeName]="col.lookupTargetTable ?? ''"
-                    [displayColumn]="col.lookupDisplayColumn"
-                    [formControlName]="col.columnName">
-                  </app-lookup-picker>
-                } @else if (col.dataType === 'enum') {
-                  <select
-                    class="input"
-                    [id]="'rf-' + depth + '-' + col.columnName"
-                    [formControlName]="col.columnName">
-                    <option value="">{{ 'model.detail.selectOption' | t }}</option>
-                    @for (val of parseEnumValues(col.enumValues); track val) {
-                      <option [value]="val">{{ val }}</option>
-                    }
-                  </select>
-                } @else if (inputTypeFor(col.dataType) === 'checkbox') {
-                  <label class="checkbox-label" [attr.for]="'rf-' + depth + '-' + col.columnName">
-                    <input
-                      [id]="'rf-' + depth + '-' + col.columnName"
-                      type="checkbox"
-                      [formControlName]="col.columnName">
-                    {{ colLabel(col) }}
-                  </label>
-                } @else if (inputTypeFor(col.dataType) === 'file') {
-                  <input
-                    [id]="'rf-' + depth + '-' + col.columnName"
-                    type="file"
-                    [attr.accept]="col.dataType === 'image' ? 'image/*' : null"
-                    (change)="onFileSelected($event, col)"
-                    class="record-file-input">
-                  @if (fileErrors[col.columnName]; as fileErr) {
-                    <span class="field-error" role="alert">{{ fileErr }}</span>
-                  }
-                  @if (ctrl(col.columnName).value) {
-                    @if (isImage(ctrl(col.columnName).value)) {
-                      <img
-                        [src]="imageSrc(ctrl(col.columnName).value)"
-                        [attr.alt]="'model.detail.preview' | t"
-                        class="record-file-preview">
-                    } @else {
-                      <div class="record-file-row">
-                        <span class="eyebrow">{{ 'model.detail.fileExists' | t }}</span>
-                        <button type="button" class="btn btn-ghost btn-sm"
-                                (click)="download(ctrl(col.columnName).value, col.columnName)">
-                          {{ 'model.detail.download' | t }}
-                        </button>
-                      </div>
-                    }
-                  }
-                } @else {
-                  <input
-                    class="input"
-                    [id]="'rf-' + depth + '-' + col.columnName"
-                    [type]="inputTypeFor(col.dataType)"
-                    [formControlName]="col.columnName"
-                    [attr.step]="stepFor(col.dataType)"
-                    [attr.aria-invalid]="ctrl(col.columnName).touched && ctrl(col.columnName).invalid ? true : null"
-                    [attr.aria-describedby]="errorFor(col) ? 'rf-err-' + depth + '-' + col.columnName : null">
-                }
-
-                @if (isAutoValuePending(col)) {
-                  <span class="field-help">{{ 'model.detail.autoValue.pending' | t }}</span>
-                }
-
-                @if (errorFor(col); as err) {
-                  <span [id]="'rf-err-' + depth + '-' + col.columnName" class="field-error" role="alert">
-                    {{ err }}
-                  </span>
-                }
-              </div>
+              <app-record-field
+                [column]="col"
+                [control]="ctrl(col.columnName)"
+                [rule]="meta.rules.get(col.columnName)"
+                [idPrefix]="'rf-' + depth + '-'"
+                [autoValueRule]="autoValueRule(col)"
+                [autoValuePending]="isAutoValuePending(col)" />
             }
           </div>
         </form>

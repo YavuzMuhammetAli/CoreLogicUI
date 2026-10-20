@@ -331,17 +331,6 @@ tr.row-selected td {
   margin-left: auto;
 }
 
-/* ── Col type tag ──────────────────────────────────────────────────────────── */
-
-.col-type-tag {
-  display: inline-block;
-  font-size: 10px;
-  font-family: var(--font-mono);
-  color: var(--muted);
-  font-weight: 400;
-  margin-left: var(--space-1);
-}
-
 /* ── Responsive ────────────────────────────────────────────────────────────── */
 
 @media (max-width: 768px) {
@@ -417,12 +406,4 @@ tr.row-selected td {
   color: var(--muted);
 }
 
-// Sırası gelen kişinin dolduracağı alanlar — kilitli formda gözle bulunabilsin.
-.field--step {
-  position: relative;
-  padding: var(--space-2) var(--space-3);
-  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-3));
-  border-radius: var(--radius-md);
-  background: color-mix(in oklab, var(--accent) 6%, transparent);
-  box-shadow: inset 3px 0 0 var(--accent);
-}
+// Adım alanı vurgusu (.field--step) app-record-field'ın kendi stilinde.
