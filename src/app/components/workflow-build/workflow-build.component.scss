@@ -203,6 +203,58 @@
   .designer-inspector { display: none; }
 }
 
+// ── Tam ekran ───────────────────────────────────────────────────────────────
+
+// Yukarıdaki dar ekran kurallarından SONRA durur: tam ekranda palet | tuval | panel
+// her genişlikte yan yana. Katman üst çubuk (40), kenar çubuğu (100) ve zilin (200)
+// üstünde; sağ tık menüsü (900), diyaloglar (1000) ve yardım baloncuğunun (1200) altında.
+.designer--fullscreen {
+  position: fixed;
+  inset: 0;
+  // .tab-panel'in .stack aralığı (margin-block-start) sabit kutuyu da aşağı itip
+  // üst çubuğu gösteriyordu.
+  margin: 0;
+  z-index: 800;
+  padding: var(--space-4);
+  background: var(--bg);
+  grid-template-columns: 156px minmax(0, 1fr) 300px;
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  overscroll-behavior: contain;
+}
+
+.designer--fullscreen.designer--readonly {
+  grid-template-columns: minmax(0, 1fr) 300px;
+}
+
+// Panel kutusu 640px yerine hücrenin tamamını kullanır (değişken panelin SCSS'inde).
+.designer--fullscreen .designer-inspector {
+  grid-column: auto;
+  min-height: 0;
+  --wf-panel-max-height: 100%;
+}
+
+.designer--fullscreen .designer-palette {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+// Layout'un bildirim banner'ının tam ekrandaki karşılığı — tuvalin üstünde ortada.
+.fullscreen-toast {
+  position: fixed;
+  top: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 850;
+  max-width: min(480px, calc(100vw - 2 * var(--space-4)));
+  box-shadow: var(--elev-raised);
+}
+
+// Simüle et gibi: telefonda tuval yalnız bakmak için, tam ekran gerekmez.
+.fullscreen-btn {
+  @media (max-width: 768px) { display: none; }
+}
+
 // Tuval dokunmatikte zor (küçük portlar, çift dokunuşla açma); aynı işler Adımlar
 // sekmesinden ve adım diyaloğundan yapılabildiği için telefonda yalnız yönlendirme notu.
 .canvas-mobile-notice {

@@ -191,7 +191,8 @@ type Gesture =
   imports: [TranslatePipe, HelpHintComponent],
   templateUrl: './workflow-canvas.component.html',
   styleUrl: './workflow-canvas.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.canvas--fill]': 'fillHeight()' }
 })
 export class WorkflowCanvasComponent {
   readonly graph = input<WorkflowGraph | null>(null);
@@ -215,6 +216,12 @@ export class WorkflowCanvasComponent {
 
   /** Araç çubuğu ipucunun çeviri anahtarı — verilmezse düzenleme / salt-okunur varsayılanı. */
   readonly hintKey = input<string | null>(null);
+
+  /**
+   * Sabit 560px yerine bulunduğu hücreyi doldur (tasarımcının tam ekranı). Kamera
+   * etkilenmez: sığdırma/yakınlaştırma viewport ölçüsünü her çağrıda yeniden okur.
+   */
+  readonly fillHeight = input(false);
 
   /** Kartların tip/özet/sorun bilgisi (anahtar küçük harfli). Yoksa kart anahtarı gösterir. */
   readonly nodeMeta = input<Readonly<Record<string, CanvasNodeMeta>>>({});

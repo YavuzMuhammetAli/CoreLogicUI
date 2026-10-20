@@ -230,7 +230,11 @@
       <div class="tab-panel stack" role="tabpanel">
         <!-- Yalnız dar ekranda görünür (bkz. .canvas-mobile-notice) -->
         <div class="alert alert-info canvas-mobile-notice" role="note">{{ 'workflow.build.canvasMobileNotice' | t }}</div>
-        <div class="designer" [class.designer--readonly]="readonlyMode()">
+        <div class="designer" [class.designer--readonly]="readonlyMode()" [class.designer--fullscreen]="fullscreen()">
+          <!-- Tam ekranda layout'un bildirim banner'ı katmanın altında kalıyor; aynısı burada. -->
+          @if (fullscreen() && notification.current(); as message) {
+            <div class="alert alert-{{ message.type }} fullscreen-toast" role="status">{{ message.message }}</div>
+          }
           @if (!readonlyMode()) {
             <app-workflow-palette class="designer-palette" [unavailable]="unavailableKinds()" (add)="onPaletteAdd($event)" />
           }
@@ -242,6 +246,7 @@
             [selectedNodes]="store.selection().nodes"
             [selectedEdge]="store.selection().edge"
             [readonly]="readonlyMode()"
+            [fillHeight]="fullscreen()"
             [camera]="store.camera() ?? identityCamera"
             (cameraChange)="store.camera.set($event)"
             [fitOnOpen]="store.camera() === null"
@@ -250,7 +255,32 @@
             (layoutReset)="onLayoutReset()"
             (edgeCreated)="onEdgeCreated($event)"
             (menuAction)="onMenuAction($event)"
-            (nodeOpened)="openStep($event)" />
+            (nodeOpened)="openStep($event)">
+            <!-- Tuval araç çubuğunda, Ekrana sığdır'ın yanında. -->
+            <div canvasTools class="cluster">
+              @if (fullscreen()) {
+                <!-- Başlıktaki Simüle et'in aynısı; tam ekranda başlık örtülü. -->
+                <button type="button" class="btn btn-ghost btn-sm" [class.simulate-btn--active]="simulating()"
+                        (click)="simulating() ? closeSimulation() : openSimulation()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4l13 8-13 8z" /></svg>
+                  {{ 'workflow.simulate.open' | t }}
+                </button>
+              }
+              <button type="button" class="btn btn-secondary btn-sm fullscreen-btn"
+                      [attr.aria-pressed]="fullscreen()" (click)="toggleFullscreen()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  @if (fullscreen()) {
+                    <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
+                  } @else {
+                    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                  }
+                </svg>
+                {{ (fullscreen() ? 'workflow.build.exitFullscreen' : 'workflow.build.fullscreen') | t }}
+              </button>
+            </div>
+          </app-workflow-canvas>
           @if (simulating()) {
             <app-workflow-simulate-panel
               class="designer-inspector"
@@ -269,7 +299,7 @@
               (makeStart)="makeStart($event)"
               (duplicate)="duplicateSelection()"
               (remove)="deleteSelection()"
-              (openTrigger)="activeTab.set('trigger')" />
+              (openTrigger)="setTab('trigger')" />
           }
         </div>
       </div>

@@ -4,7 +4,7 @@
 .sim {
   display: flex;
   flex-direction: column;
-  max-height: 640px;
+  max-height: var(--wf-panel-max-height, 640px); // tam ekranda tasarımcı 100% verir
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 10px);
   background: var(--surface);

@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, Injector, OnInit, PLATFORM_ID,
+  ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, HostListener, Injector, OnInit, PLATFORM_ID,
   afterNextRender, computed, effect, inject, signal, untracked, viewChild
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
@@ -151,7 +151,8 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   private readonly roleService = inject(RoleAdminService);
   private readonly userService = inject(UserAdminService);
   private readonly languageService = inject(LanguageService);
-  private readonly notification = inject(NotificationService);
+  /** Şablon da okur: tam ekranda layout'un bildirim banner'ı katmanın altında kalıyor. */
+  readonly notification = inject(NotificationService);
 
   readonly store = inject(WorkflowDesignerStore);
 
@@ -228,6 +229,9 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
 
   /** Simülasyon paneli açık mı (özellik panelinin yerini alır). */
   readonly simulating = signal(false);
+
+  /** Tasarım alanı (palet + tuval + panel) tam ekranda mı. */
+  readonly fullscreen = signal(false);
 
   /** Son simülasyonun şemadaki yolu; belge anlamca değişince silinir (eskimiş yol yanıltır). */
   readonly simOverlay = signal<WorkflowOverlay | null>(null);
@@ -341,6 +345,11 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   private lastModifiedOn: string | null = null;
 
   constructor() {
+    // Tam ekrandayken sayfadan ayrılınca tarayıcı tam ekranda kalmasın.
+    inject(DestroyRef).onDestroy(() => {
+      if (this.fullscreen()) this.exitFullscreen();
+    });
+
     // Başlangıç adımı belgede birçok yoldan değişir (silme, yeniden adlandırma —
     // özellik paneli dahil, geri alma); başlıktaki seçici her zaman belgeyi göstersin.
     effect(() => {
@@ -803,6 +812,37 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     this.simOverlay.set(result ? simulationOverlay(result) : null);
   }
 
+  // ── Tam ekran ─────────────────────────────────────────────────────────────
+
+  toggleFullscreen(): void {
+    if (this.fullscreen()) this.exitFullscreen(); else this.enterFullscreen();
+  }
+
+  /**
+   * İki katman: tasarım alanı sabit konumla uygulamayı örter (her zaman), tarayıcı
+   * tam ekranı da desteklenirse istenir. Tarayıcı tam ekranı tasarım kutusuna DEĞİL
+   * belgenin tamamına istenir: adım pop-up'ı, onay diyalogları ve sağ tık menüsü
+   * kutunun dışında render ediliyor, yalnız kutu tam ekran olsaydı görünmezlerdi.
+   */
+  private enterFullscreen(): void {
+    this.fullscreen.set(true);
+    if (!isPlatformBrowser(this.platformId) || document.fullscreenElement) return;
+    // Desteklemeyen tarayıcıda (iPhone) ya da reddedilirse uygulama içi katman yeter.
+    document.documentElement.requestFullscreen?.().catch(() => { /* katman yeterli */ });
+  }
+
+  exitFullscreen(): void {
+    this.fullscreen.set(false);
+    if (!isPlatformBrowser(this.platformId) || !document.fullscreenElement) return;
+    document.exitFullscreen().catch(() => { /* zaten çıkılmış */ });
+  }
+
+  /** Esc ya da tarayıcının kendi düğmesiyle çıkıldı: katman da kapansın. */
+  @HostListener('document:fullscreenchange')
+  onFullscreenChange(): void {
+    if (!document.fullscreenElement && this.fullscreen()) this.fullscreen.set(false);
+  }
+
   // ── Sorunlar ──────────────────────────────────────────────────────────────
 
   /** Başlıktaki sorun düğmesi: listeyi açar ve görünür alana getirir. */
@@ -979,6 +1019,9 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   }
 
   setTab(tab: TabId): void {
+    // Tasarım alanı yalnız tuval sekmesinde çizilir; katman kaybolurken tarayıcı
+    // tam ekranı açık kalmasın.
+    if (tab !== 'canvas' && this.fullscreen()) this.exitFullscreen();
     this.activeTab.set(tab);
   }
 
@@ -1173,10 +1216,19 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
       case 'paste':      this.paste(); break;
       case 'duplicate':  this.duplicateSelection(); break;
       case 'selectAll':  this.selectAll(); break;
-      case 'escape':
+      case 'escape': {
+        // Önce seçim ve menü kapanır, sonra tam ekran. Tarayıcı tam ekranında Esc'i
+        // tarayıcı yakalar; bu yol tam ekran API'si olmayan tarayıcılar için.
+        const selection = this.store.selection();
+        const idle = selection.nodes.length === 0 && !selection.edge && !canvas?.menu();
+        if (idle && this.fullscreen()) {
+          this.exitFullscreen();
+          break;
+        }
         this.store.selection.set(selectNodes([]));
         canvas?.closeMenu();
         break;
+      }
       case 'open': {
         if (isActivationTarget(event.target)) return;
         const key = this.store.selection().nodes[0];

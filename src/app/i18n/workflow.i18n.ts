@@ -53,6 +53,8 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.build.titleView': { tr: 'Akışı Görüntüle', en: 'View Workflow' },
   'workflow.build.newVersion': { tr: 'Yeni Sürüm Oluştur', en: 'Create New Version' },
   'workflow.build.openDraft': { tr: 'Taslağa Git', en: 'Go to Draft' },
+  'workflow.build.fullscreen': { tr: 'Tam ekran', en: 'Full screen' },
+  'workflow.build.exitFullscreen': { tr: 'Tam ekrandan çık', en: 'Exit full screen' },
   'workflow.build.draftOfVersion': { tr: 'v{n} taslağı', en: 'v{n} draft' },
   'workflow.build.publishedReadonlyHint': {
     tr: 'Bu sürüm (v{n}) yayınlandı ve değiştirilemez. Düzenlemek için yeni sürüm oluşturun; yayınladığınızda sonraki sürüm olur, çalışan süreçler kendi sürümleriyle devam eder.',

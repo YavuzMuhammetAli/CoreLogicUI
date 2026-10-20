@@ -53,6 +53,20 @@
   cursor: grabbing;
 }
 
+// Tam ekran (fillHeight): host hücresini doldurur, viewport araç çubuğundan kalan
+// yüksekliği alır. Özgüllük yukarıdaki sabit/mobil yüksekliği ezer.
+:host(.canvas--fill) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+:host(.canvas--fill) .canvas-viewport {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+
 .canvas-world {
   position: absolute;
   top: 0;
