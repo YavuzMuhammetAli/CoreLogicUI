@@ -5,6 +5,7 @@ import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { DataResponseModel } from '../models/dataResponseModel';
 import { CompanyRegisterDto, ProvisionStatus } from '../models/provision.model';
+import { initialsFromFullName } from '../utils/user-initials';
 
 export interface LoginDto {
   email: string;
@@ -80,38 +81,48 @@ export class AuthService {
    * Kullanıcı yönetimi ekranı "bu benim hesabım mı" kontrolü için kullanır.
    */
   getCurrentUserId(): number | null {
-    const token = this.storage?.getItem('access_token');
-    if (!token) return null;
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const raw = payload['nameid']
-        ?? payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'];
-      const parsed = Number(raw);
-      return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-    } catch {
-      return null;
-    }
+    const payload = this.readPayload();
+    if (!payload) return null;
+    const raw = payload['nameid'] ?? payload[`${AuthService.ClaimNs}nameidentifier`];
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }
 
   /** JWT payload'ını çözümleyip kullanıcı bilgisini döndürür (tenant claim'leri dahil). */
   getUserFromToken(): { name: string; email: string; initials: string; tenantId: string | null; companyId: string | null } | null {
+    const payload = this.readPayload();
+    if (!payload) return null;
+    // Backend token'ı `new JwtSecurityToken(claims)` ile kurar; claim'ler kısa adlara
+    // eşlenmez, URI anahtarıyla gelir. Kısa adlar da okunur (eşleyen bir handler'a karşı).
+    const name: string = (payload['unique_name'] ?? payload['name']
+      ?? payload[`${AuthService.ClaimNs}name`] ?? '').trim();
+    const email: string = (payload['email']
+      ?? payload[`${AuthService.ClaimNs}emailaddress`] ?? '').trim();
+    // Multi-tenant claim'leri — backend JwtHelper.SetClaims her token'a ekler
+    const tenantId: string | null = payload['tenant_id'] ?? null;
+    const companyId: string | null = payload['company_id'] ?? null;
+    // Ad yoksa e-postanın @ öncesi kısmını görünen ad olarak kullan
+    const display = name || email.split('@')[0] || '';
+    const initials = initialsFromFullName(name, email);
+    return { name: display, email, initials, tenantId, companyId };
+  }
+
+  /** .NET ClaimTypes önekleri (ClaimTypes.Name, Email, NameIdentifier). */
+  private static readonly ClaimNs = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/';
+
+  /**
+   * Oturum token'ının payload'ı; token yoksa ya da çözülemezse null.
+   *
+   * JWT base64url kodludur: düz `atob` '-' / '_' içeren token'da hata fırlatır, UTF-8
+   * çözmediği için de "Kullanıcı" gibi adlar bozuk gelirdi.
+   */
+  private readPayload(): Record<string, any> | null {
     const token = this.storage?.getItem('access_token');
     if (!token) return null;
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const name: string = payload['unique_name'] ?? payload['name'] ?? '';
-      const email: string = payload['email'] ?? '';
-      // Multi-tenant claim'leri — backend JwtHelper.SetClaims her token'a ekler
-      const tenantId: string | null = payload['tenant_id'] ?? null;
-      const companyId: string | null = payload['company_id'] ?? null;
-      // Ad yoksa e-postanın @ öncesi kısmını görünen ad olarak kullan
-      const display = name || email.split('@')[0] || '';
-      const source = name || email;
-      const parts = name.trim().split(' ').filter(Boolean);
-      const initials = parts.length >= 2
-        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-        : source.slice(0, 2).toUpperCase();
-      return { name: display, email, initials, tenantId, companyId };
+      const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      return JSON.parse(new TextDecoder().decode(bytes));
     } catch {
       return null;
     }

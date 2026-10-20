@@ -8,6 +8,7 @@ import { UserProfile } from '../../models/userProfile';
 import { environment } from '../../../environments/environment';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { markDirty } from '../../utils/change-detection';
+import { userInitials } from '../../utils/user-initials';
 
 /** Şifre tekrar eşleşme validasyonu */
 function passwordsMatch(control: AbstractControl) {
@@ -134,7 +135,7 @@ export class UserProfileComponent implements OnInit {
         if (res.success && res.data) {
           const p = this.profile();
           if (p) {
-            this.profile.set({ ...p, photoUrl: res.data });
+            this.applyProfile({ ...p, photoUrl: res.data });
             this.photoPreview.set(this.resolvePhotoUrl(res.data));
           }
           this.notif.success(this.languageService.t('profile.photoUpdated'));
@@ -164,7 +165,7 @@ export class UserProfileComponent implements OnInit {
         this.photoUploading.set(false);
         if (res.success) {
           const p = this.profile();
-          if (p) this.profile.set({ ...p, photoUrl: null });
+          if (p) this.applyProfile({ ...p, photoUrl: null });
           this.photoPreview.set(null);
           this.notif.success(this.languageService.t('profile.photoDeleted'));
         } else {
@@ -199,7 +200,7 @@ export class UserProfileComponent implements OnInit {
           // Profil verisini güncelle
           const p = this.profile();
           if (p) {
-            this.profile.set({
+            this.applyProfile({
               ...p,
               firstName: firstName ?? '',
               lastName:  lastName  ?? '',
@@ -259,13 +260,19 @@ export class UserProfileComponent implements OnInit {
     return `${environment.apiBaseUrl}${url}`;
   }
 
-  /** Profildeki ad ve soyadın baş harfleri */
+  /** Profildeki ad ve soyadın baş harfleri (topbar ile aynı kural) */
   get initials(): string {
     const p = this.profile();
-    if (!p) return '?';
-    const fn = (p.firstName?.[0] ?? '').toUpperCase();
-    const ln = (p.lastName?.[0]  ?? '').toUpperCase();
-    return fn + ln || p.email?.[0]?.toUpperCase() || '?';
+    return p ? userInitials(p.firstName, p.lastName, p.email) : '?';
+  }
+
+  /**
+   * Kaydedilen değişikliği hem bu ekrana hem paylaşılan profile yazar —
+   * topbar avatarı (fotoğraf / baş harfler / ad) sayfa yenilenmeden güncellenir.
+   */
+  private applyProfile(p: UserProfile): void {
+    this.profile.set(p);
+    this.profileSvc.setCurrent(p);
   }
 
   /** Tarih string'ini okunabilir biçime çevirir */

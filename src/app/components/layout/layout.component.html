@@ -278,7 +278,7 @@
           }
         </button>
 
-        @if (currentUser) {
+        @if (currentUser(); as user) {
           <!-- Profil dropdown tetikleyicisi -->
           <div class="profile-menu-wrap" #profileMenuRef>
             <button
@@ -290,18 +290,18 @@
               [attr.aria-label]="'layout.openProfileMenuAria' | t">
 
               <!-- Avatar: fotoğraf varsa img, yoksa baş harfler -->
-              @if (currentUser.photoUrl) {
+              @if (user.photoUrl) {
                 <img
-                  [src]="currentUser.photoUrl"
+                  [src]="user.photoUrl"
                   [alt]="'layout.profilePhotoAlt' | t"
                   class="user-avatar user-avatar-img">
               } @else {
-                <span class="user-avatar" aria-hidden="true">{{ currentUser.initials }}</span>
+                <span class="user-avatar" aria-hidden="true">{{ user.initials }}</span>
               }
 
               <div class="user-info">
-                <span class="user-name">{{ currentUser.name }}</span>
-                <span class="user-email">{{ currentUser.email }}</span>
+                <span class="user-name">{{ user.name }}</span>
+                <span class="user-email">{{ user.email }}</span>
               </div>
 
               <!-- Chevron ikonu -->
@@ -328,18 +328,18 @@
                 <!-- Üst bilgi başlığı -->
                 <div class="dropdown-header">
                   <div class="dropdown-avatar-wrap">
-                    @if (currentUser.photoUrl) {
+                    @if (user.photoUrl) {
                       <img
-                        [src]="currentUser.photoUrl"
+                        [src]="user.photoUrl"
                         alt=""
                         class="dropdown-avatar dropdown-avatar-img">
                     } @else {
-                      <span class="dropdown-avatar" aria-hidden="true">{{ currentUser.initials }}</span>
+                      <span class="dropdown-avatar" aria-hidden="true">{{ user.initials }}</span>
                     }
                   </div>
                   <div class="dropdown-user-info">
-                    <span class="dropdown-name">{{ currentUser.name }}</span>
-                    <span class="dropdown-email">{{ currentUser.email }}</span>
+                    <span class="dropdown-name">{{ user.name }}</span>
+                    <span class="dropdown-email">{{ user.email }}</span>
                   </div>
                 </div>
 

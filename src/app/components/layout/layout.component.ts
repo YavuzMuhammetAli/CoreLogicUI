@@ -18,7 +18,8 @@ import { WorkflowTaskService } from '../../services/workflow-task.service';
 import { NotificationBellComponent } from '../shared/notification-bell/notification-bell.component';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { markDirty } from '../../utils/change-detection';
-import { signal } from '@angular/core';
+import { userInitials } from '../../utils/user-initials';
+import { computed, signal } from '@angular/core';
 
 @Component({
   selector: 'app-layout',
@@ -49,8 +50,27 @@ export class LayoutComponent implements OnInit, OnDestroy {
     this.sidebarOpen.set(!e.matches);
   };
 
-  /** Giriş yapmış kullanıcının kısa profil bilgisi */
-  currentUser: { name: string; email: string; initials: string; photoUrl?: string | null } | null = null;
+  /** Token'dan okunan kullanıcı — profil gelene kadar (ya da gelmezse) gösterilir. */
+  private readonly tokenUser = signal<{ name: string; email: string; initials: string } | null>(null);
+
+  /**
+   * Topbar'daki profil çipi. /Profile/me verisi varsa o kullanılır: ad/soyad
+   * profil ekranıyla aynı baş harfleri verir, fotoğraf eklenip silinince de
+   * UserProfileService.current üzerinden anında güncellenir.
+   */
+  readonly currentUser = computed<{ name: string; email: string; initials: string; photoUrl: string | null } | null>(() => {
+    const token = this.tokenUser();
+    if (!token) return null;
+    const me = this.userProfile.current();
+    if (!me) return { ...token, photoUrl: null };
+    const name = `${me.firstName ?? ''} ${me.lastName ?? ''}`.trim();
+    return {
+      name: name || token.name,
+      email: me.email || token.email,
+      initials: userInitials(me.firstName, me.lastName, me.email || token.email),
+      photoUrl: this.userProfile.resolvePhotoUrl(me.photoUrl)
+    };
+  });
 
   /** Profil dropdown açık mı? */
   menuOpen = false;
@@ -98,7 +118,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Token'dan temel kullanıcı bilgisini al (anlık, SSR-safe)
     const tokenUser = this.auth.getUserFromToken();
-    this.currentUser = tokenUser;
+    this.tokenUser.set(tokenUser);
 
     if (!isPlatformBrowser(this.platformId)) return;
 
@@ -132,17 +152,13 @@ export class LayoutComponent implements OnInit, OnDestroy {
     // ya da sayfa yenilemesinden sonra) tercihlerini böylece kazanır.
     this.syncLanguagePreference();
 
-    // Profil fotoğrafını backend'den çek; başarısız olursa token verisi yeterli
+    // Profili (ad/soyad + fotoğraf) backend'den çek; getMe() sonucu
+    // UserProfileService.current'a yazar, currentUser oradan hesaplanır.
+    // Önce temizle: önceki oturumun fotoğrafı/harfleri yeni girişte görünmesin.
+    // Başarısız olursa token verisi yeterli.
+    this.userProfile.clearCurrent();
     if (tokenUser) {
-      this.userProfile.getMe().pipe(markDirty(this.cdr)).subscribe({
-        next: res => {
-          if (res.success && res.data) {
-            this.currentUser = {
-              ...tokenUser,
-              photoUrl: this.userProfile.resolvePhotoUrl(res.data.photoUrl)
-            };
-          }
-        },
+      this.userProfile.getMe().subscribe({
         error: () => { /* sessizce atla; token verisi görüntüleniyor */ }
       });
     }

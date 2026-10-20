@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { UserProfile, ProfileUpdateDto, ChangePasswordDto } from '../models/userProfile';
 import { ResponseModel } from '../models/responseModel';
@@ -10,11 +10,33 @@ import { DataResponseModel } from '../models/dataResponseModel';
 export class UserProfileService {
   private readonly baseUrl = `${environment.apiBaseUrl}/Profile`;
 
+  /**
+   * Oturumdaki kullanıcının son bilinen profili — null ise henüz yüklenmedi.
+   * Topbar avatarı bunu okur; profil ekranı fotoğraf/ad değişince günceller ki
+   * sağ üst köşe sayfa yenilenmeden yeni hâli göstersin.
+   */
+  private readonly _current = signal<UserProfile | null>(null);
+  readonly current = this._current.asReadonly();
+
   constructor(private http: HttpClient) {}
 
   /** Giriş yapmış kullanıcının profilini döndürür (GET /Profile/me). */
   getMe(): Observable<DataResponseModel<UserProfile>> {
-    return this.http.get<DataResponseModel<UserProfile>>(`${this.baseUrl}/me`);
+    return this.http.get<DataResponseModel<UserProfile>>(`${this.baseUrl}/me`).pipe(
+      tap(res => {
+        if (res.success && res.data) this._current.set(res.data);
+      })
+    );
+  }
+
+  /** Profil ekranında kaydedilen değişikliği paylaşılan profile yansıtır. */
+  setCurrent(profile: UserProfile): void {
+    this._current.set(profile);
+  }
+
+  /** Paylaşılan profili temizler (yeni oturum kabuğu açılırken). */
+  clearCurrent(): void {
+    this._current.set(null);
   }
 
   /** Profil bilgilerini günceller (PUT /Profile/update). */
