@@ -24,6 +24,7 @@ Users can:
 - Uygulama arayüz dilini değiştirmek (TR/EN topbar toggle)
 - Görsel tasarımcıyla iş akışı kurmak (onay, görev, paralel, koşul, alan güncelle, bildirim, bekleme, bitiş), simüle etmek, yayınlamak; çalışan süreci şema üzerinde izlemek (admin, `/workflows`)
 - Kendisine atanan görevleri görmek ve karar vermek (`/tasks`)
+- Yayınlanmış bir modelin kayıt formunu (sekme/bölüm/12 kolonluk ızgara) ve liste kolonlarını (sıra/genişlik) sürükle-bırakla tasarlamak, taslak olarak kaydedip yayınlamak (admin, `/build/:typeName/screen`)
 
 ## Tech Stack
 
@@ -111,9 +112,14 @@ CoreLogicUI-master/
         │   ├── workflow-instance/           # Süreç detayı — şema + yol katmanı, olay bandı (Yeniden dene/Adımı atla)
         │   ├── deleted-workflows/           # Silinen akışlar (admin)
         │   ├── my-tasks/ · task-detail/     # Görevlerim ve görev karar ekranı (authGuard)
+        │   ├── screen-designer/             # Ekran Tasarımı (admin) — bkz. "Ekran Tasarımı"
+        │   │   └── designer/                #   Form tasarımcısı (palet · tuval · özellikler), liste tasarımcısı,
+        │   │                                #   depo (geri al/yinele), saf komutlar, isabet hesabı, kısayollar (spec'li)
         │   └── shared/
         │       ├── column-visibility/      # Admin-managed model kolon görünürlüğü (liste/detay/alt-model sekmeleri)
         │       ├── confirm-dialog/         # Onay diyaloğu — native confirm() YERİNE her zaman bu kullanılır
+        │       ├── record-field/           # Kayıt formunun TEK alanı (etiket süsleri, tipe göre kontrol, dosya, hata) — kayıt sayfası, pop-up ve tasarımcı ortak
+        │       ├── record-layout/          # Alanları yayındaki ekran tasarımına göre çizer (sekme/bölüm/12 kolon); tasarım yoksa eski otomatik ızgara
         │       ├── deleted-list/           # "Silinenler" ekranlarının ortak gövdesi (model/taslak/rapor/dashboard)
         │       ├── datatype-help/          # Veri tipi + ilişki kılavuz diyaloğu (içerik: datatype-help.data.ts)
         │       ├── help-hint/              # Alan yanındaki küçük yardım baloncuğu
@@ -153,6 +159,7 @@ CoreLogicUI-master/
         │   ├── theme.service.ts                 # Açık/koyu tema tercihini yönetir (localStorage)
         │   ├── workflow.service.ts              # /Workflow — tanım CRUD, validate, simulate, publish, new-version,
         │   │                                    #   setEnabled, usage (kota), capabilities (Bekleme → 022)
+        │   ├── screen-layout.service.ts         # /ModelScreenLayout — ekran tasarımı (published yardımcı istek; state/saveDraft/publish/discardDraft/reset admin)
         │   ├── workflow-task.service.ts         # /WorkflowTask + /WorkflowInstance — görevler, süreçler (list sayfalı),
         │   │                                    #   rollback, skipStep, cancel, verifyChain
         │   ├── notification.service.ts          # Global toast/uyarı bildirimleri (guard'lar dahil)
@@ -165,6 +172,10 @@ CoreLogicUI-master/
         │   ├── locale-format.ts                 # Aktif dile göre sayı/tarih biçimlendirme (sabit 'tr-TR' KULLANMA)
         │   ├── pagination.ts                    # Saf: sayfalama penceresi (pageWindow, en fazla 5 düğme, spec'li)
         │   ├── download.ts                      # downloadBlob / downloadText (rapor dışa aktarımı, akış paketi)
+        │   ├── design-history.ts                # Geri al/yinele geçmişi (generic, 600 ms birleştirme) — akış ve ekran tasarımcısı ortak
+        │   ├── record-field/                    # isColumnRequired/mustStayVisible (zorunluluğun tek karar noktası), alan hata metni
+        │   ├── screen-layout/                   # Ekran tasarımı çekirdeği, SAF + spec'li: belge tipleri, backend'le ORTAK doğrulama
+        │   │                                    #   (screen-layout.vectors.json), parse/normalize, form planı, duyarlı kademe, liste kolonları, ilk taslak
         │   ├── workflow/                        # Akış çekirdeği, SAF + spec'li: exits (port sözlüğü — backend WorkflowExits
         │   │                                    #   ikizi), node-types (katalog), step-summary, overlay + runtime.overlay,
         │   │                                    #   diff (sürüm farkı), package (dışa/içe aktarım), templates (hazır şablonlar)
@@ -195,6 +206,7 @@ CoreLogicUI-master/
         │   ├── parameter.i18n.ts              # Parametreler ekranı (yedekleme · e-posta · abonelik)
         │   ├── ai.i18n.ts                     # Yapay Zeka asistanı (sohbet, öneri kartları, durumlar)
         │   ├── notification.i18n.ts           # Topbar bildirim zili (notification.kind.* = backend WorkflowNotifyKinds)
+        │   ├── screen.i18n.ts                 # Ekran tasarımı (screen.* — layout.* app shell'e ait); screen.issue.{kod} doğrulama metinleri
         │   └── shared.i18n.ts                 # Paylaşılan diyalog metinleri
         ├── pipes/
         │   └── translate.pipe.ts              # TranslatePipe — şablonlarda `{{ 'key' | t }}` şeklinde kullanılır
@@ -212,7 +224,8 @@ CoreLogicUI-master/
             ├── report.model.ts                  # ReportDefinition, ReportFilter/Aggregate/Sort, ChartType vb.
             ├── dashboard.model.ts                # DashboardDefinition, DashboardWidget, DashboardRunResult vb.
             ├── relationship.model.ts             # RelationshipType/Definition, ValidationIssue, EntityGraph, PublishPreview
-            └── ai.model.ts                       # Sohbet/mesaj/öneri tipleri, öneri payload şekilleri, SSE olay union'ı
+            ├── ai.model.ts                       # Sohbet/mesaj/öneri tipleri, öneri payload şekilleri, SSE olay union'ı
+            └── screen-layout.model.ts            # /ModelScreenLayout DTO'ları (yerleşim API'de ham JSON metni)
 ```
 
 ## Routing
@@ -228,6 +241,7 @@ CoreLogicUI-master/
   /models/:typeName/:id     → ModelDetailComponent           (modelPermissionGuard('read'))
   /build                    → FormBuildComponent             (adminGuard — model şema listesi)
   /build/new                → TableDetailComponent           (adminGuard, data.mode='new' — yeni şema oluştur)
+  /build/:typeName/screen   → ScreenDesignerComponent        (adminGuard, canDeactivate: unsavedChangesGuard; ?view=list)
   /build/:typeName          → TableDetailComponent           (adminGuard — mevcut şemayı düzenle)
   /drafts                   → DraftModelsComponent           (adminGuard)
   /drafts/deleted           → DeletedDraftsComponent         (adminGuard)
@@ -323,6 +337,7 @@ Tüm servisler `@Injectable({ providedIn: 'root' })`, `inject(HttpClient)` (veya
 | `ModelUsageService` | HTTP yok — model kullanım özeti: hangi raporlar/dashboardlar bu modeli kullanıyor |
 | `ThemeService` | HTTP yok — açık/koyu tema tercihi, `localStorage` |
 | `NotificationService` | HTTP yok — global toast/uyarı, guard'lar dahil kullanılır |
+| `ScreenLayoutService` | `/ModelScreenLayout` — `published` (kayıt ekranları; yardımcı istek, 403 yerine boş döner), `state`/`saveDraft`/`publish`/`discardDraft`/`reset` (admin). Yayındaki yerleşimi ekranlar `RecordMetadataService.formLayout$/listLayout$` ile okur (5 dk önbellek, `invalidateLayout`) |
 | `UserNotificationService` | `/UserNotification` — `my`, `unreadCount`, `markRead`, `markAllRead` (kullanıcı kendi bildirimleri; satırları backend `InAppNotificationChannel` yazar, tablo tenant migrasyonu `018`) |
 
 > `ModelRegistryService` kaldırıldı — model kaydı artık backend'deki `PublishedModelService`
@@ -705,6 +720,55 @@ değil `roundAway` (1.005 → 1.01), sayı → metin en kısa gidiş-dönüş + 
 > AI önerilerinde otomatik değer. `PublishedModelManager.Update` hâlâ `DynamicEntityValidator`'ı
 > çağırmıyor (önceden var olan boşluk).
 
+## Ekran Tasarımı
+
+`/build/:typeName/screen` (adminGuard) — admin, **yayınlanmış** bir modelin kayıt formunu ve liste
+kolonlarını kod yazmadan düzenler. Girişler: şema ekranı başlığı (yalnız yayınlanmış model), model
+kartları, kayıt ve liste ekranlarının başlıkları. Tasarım modelin şemasından AYRIDIR: C# sınıfına,
+tabloya ya da derlemeye dokunmaz; tasarımcı yalnız **sunumu** değiştirir (genişlik, satır başı, gösterim
+biçimi, başlıklar). Etiket, zorunluluk ve kurallar şemadadır — ikinci bir kural kaynağı istemci ile
+sunucuyu ayrıştırırdı.
+
+**Depolama ve yaşam döngüsü** (tenant migrasyonu **023**, `ModelScreenLayout`): model + görünüm
+(`form` | `list`) başına tek satır, `DraftJson` + `PublishedJson`. Kaydet taslağı yazar, kullanıcılar
+yalnız yayındakini görür; Yayınla sunucuda modelin GÜNCEL şemasına karşı yeniden doğrulanır; sürüm
+geçmişi tutulmaz (ürün kararı). İyimser kilit `LastModifiedOn`; çakışmada tasarımcı "Yeniden yükle" bandı
+gösterir. 023'süz tenant'ta ekranlar varsayılan görünümle çalışır, tasarımcı kaydedemez.
+
+**Belge (schemaVersion 1):** form → `tabs[] → sections[] → items[]` (`field` · `spacer` · `divider` ·
+`note`; alanlarda `span` 1–12, `newRow`, `widget: multiline|radio`) + `hiddenColumns`; liste →
+`columns[{column, width?}]` (yerleştirilen kolon görünür; ID her zaman başta, akış durumu sonda).
+
+**Doğrulama iki tarafta, tek davranış.** `utils/screen-layout/screen-layout.validate.ts` ↔ backend
+`Business/Concrete/ScreenLayout/ScreenLayoutValidator.cs`; ortak vektörler `screen-layout.vectors.json`
+iki repoda birebir kopyadır (`Tests/Business.Tests/ScreenLayout/`). Yapısal sorun (okunamaz, sınır,
+kimlik, span…) taslağı da reddeder; anlamsal sorun (silinmiş kolon, zorunlu alan gizli, boş sekme,
+tipe uymayan gösterim) taslakta uyarı, yayında hata; "yerleştirilmemiş kolon" hep bilgi. Kural değiştiren
+her düzenleme iki dosyaya birlikte yapılır ve vektör eklenir.
+
+**Çalışma anı** (`shared/record-layout`, kayıt sayfası + alt kayıt pop-up'ı + listeler):
+- Yayınlanmış yerleşim yoksa bugünkü görünüm aynen; varsa "Kolonlar" (`ModelColumnSetting`) ayarının
+  yerini alır — o görünümde popover yerine "Ekranı tasarla" çıkar.
+- Tasarımdan SONRA eklenen kolonlar formun sonuna eklenir (zorunlu yeni alan kaybolup formu kilitlemesin),
+  admin "tasarım güncel değil" uyarısı görür. Zorunlu ve iş akışı adımı alanları gizli olsa da çizilir;
+  pop-up FK/ID'yi hiç çizmez; silinmiş kolon atlanır.
+- Pasif sekme ve kapalı bölüm `hidden` ile gizlenir (alanlar canlı kalır). Kaydet geçersiz formda durunca
+  ilk hatalı alanın sekmesine geçilir, bölümü açılır, alana odaklanılır; sekmede hata rozeti.
+- Genişlik kademesi ekranın değil **kabın** genişliğinden (ResizeObserver): ≥720 px tasarlanan span,
+  480–719 yarım/tam, <480 tam satır. CSS container query bilinçli kullanılmadı (lookup açılır listesinin
+  `position: fixed` konumunu bozabilir).
+- Liste genişlikleri `<colgroup>` + sabit tablo düzeniyle (`.data-table--sized`).
+
+**Tasarımcı:** form tuvali gerçek alan bileşenini (`app-record-field`, `inert`) 12 kolonluk ızgarada
+çizer; sürükle-bırak Pointer Events ile (kütüphane yok), bırakınca tek komut = tek geri al adımı; sağ
+kenar tutamacı genişliği kolon adımına oturtur. Önizleme belgeyi çalışma anı bileşeniyle masaüstü /
+tablet / telefon genişliğinde çizer. Kısayollar: Ctrl+Z/Y/S, Alt+↑/↓ taşı, Alt+←/→ genişlik, Delete, Esc.
+Telefonda tuval yerine yapı listesi. İlk taslak bugünkü görünümden (mevcut "Kolonlar" ayarı dahil) tohumlanır.
+
+> **Zorunluluk tek yerden:** `utils/record-field/column-required.ts`. Backend `CoreLogicTypeMap.IsNullable`
+> her referans tipi (string/file/image) için `true` döner; görünürlük eskiden `!isNullable`'a baktığı için
+> zorunlu metin alanı "Kolonlar" ayarıyla gizlenebiliyor ve Kaydet sessizce dönüyordu.
+
 ## Yapay Zeka Modülü (G4)
 
 `/ai` (adminGuard) — kullanıcı işini düz metinle anlatır, Claude karşılığında **model
@@ -944,4 +1008,8 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
     karşı değerlendirilir (yazıldığı anki değil). Bir akış kaydı değiştirdikten sonra işlenen `onCreate`
     satırı, değişmiş değerle ikinci bir akışı başlatabilir (uçtan uca testte görüldü)
 17. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
+18. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
+19. **Sunucu mesajları İngilizceye dönmüyor** — `language.interceptor` `Accept-Language: en` gönderiyor, backend `UseRequestLocalization` yalnız `tr-TR`/`en-US` tanıyor (`en` eşleşmez → varsayılan Türkçe). Ya interceptor `en-US` göndermeli ya backend `en`/`tr`'yi de desteklemeli (2026-10-20'de bulundu, düzeltilmedi)
+20. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
+21. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor
 
