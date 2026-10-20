@@ -296,6 +296,8 @@ provideHttpClient(withFetch(), withInterceptors([authInterceptor, errorIntercept
 - **`provideHttpClient` zaten yapılandırılmış** — yeniden ekleme.
 - `authInterceptor`: `localStorage('access_token')` JWT'yi alır, `Authorization: Bearer` header'ı ekler.
 - `languageInterceptor`: `localStorage('lang')` dil tercihini alır, `Accept-Language` header'ı ekler.
+  Yalnız dil kodu gider (`en`/`tr`); backend `Core/Utilities/Localization/AppCultures` bunu desteklenen
+  kültüre (`en-US`/`tr-TR`) çevirir — ASP.NET'in varsayılan sağlayıcısı `en`'i `en-US` ile eşleştirmiyordu.
 - `errorInterceptor`: HTTP hataları yakalar. 401 → `/login`, 403 → `/models` yönlendirmesi yapar.
   **Yardımcı istekler** (sayfanın asıl verisi olmayan, başarısız olunca sessizce düşebilen:
   `loadAssembly`, form kuralları, lookup seçenek/etiketleri) `SKIP_FORBIDDEN_REDIRECT`
@@ -1009,7 +1011,6 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
     satırı, değişmiş değerle ikinci bir akışı başlatabilir (uçtan uca testte görüldü)
 17. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
 18. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
-19. **Sunucu mesajları İngilizceye dönmüyor** — `language.interceptor` `Accept-Language: en` gönderiyor, backend `UseRequestLocalization` yalnız `tr-TR`/`en-US` tanıyor (`en` eşleşmez → varsayılan Türkçe). Ya interceptor `en-US` göndermeli ya backend `en`/`tr`'yi de desteklemeli (2026-10-20'de bulundu, düzeltilmedi)
-20. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
-21. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor
+19. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
+20. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor
 
