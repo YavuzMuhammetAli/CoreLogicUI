@@ -1,0 +1,4031 @@
+{
+  "_note": "Ekran tasarımı doğrulama vektörleri — CoreLogicUI src/app/utils/screen-layout ve CoreLogic Tests/Business.Tests/ScreenLayout altında BİREBİR kopya. Değiştiren iki tarafı birlikte günceller.",
+  "facts": [
+    {
+      "name": "Plaka",
+      "dataType": "string",
+      "mustStayVisible": true
+    },
+    {
+      "name": "Marka",
+      "dataType": "string",
+      "mustStayVisible": false
+    },
+    {
+      "name": "ModelYili",
+      "dataType": "int",
+      "mustStayVisible": false
+    },
+    {
+      "name": "Tur",
+      "dataType": "enum",
+      "mustStayVisible": false
+    },
+    {
+      "name": "Aciklama",
+      "dataType": "string",
+      "mustStayVisible": false
+    },
+    {
+      "name": "Durum",
+      "dataType": "enum",
+      "mustStayVisible": true
+    }
+  ],
+  "cases": [
+    {
+      "name": "geçerli form — sorun yok",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "collapsible": true,
+                "collapsed": true,
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  },
+                  {
+                    "kind": "spacer",
+                    "id": "x1",
+                    "span": 4
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "x2"
+                  },
+                  {
+                    "kind": "note",
+                    "id": "x3",
+                    "text": "Plaka büyük harfle yazılır.",
+                    "tone": "warn",
+                    "span": 12,
+                    "newRow": true
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": []
+    },
+    {
+      "name": "gizli opsiyonel kolon yerleştirilmiş sayılmaz ama uyarı da üretmez",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": [
+          "Marka"
+        ]
+      },
+      "expected": []
+    },
+    {
+      "name": "yerleştirilmemiş kolonlar bilgi uyarısıdır (yayında da)",
+      "viewType": "form",
+      "mode": "publish",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": [
+          "Marka"
+        ]
+      },
+      "expected": [
+        {
+          "code": "unplacedColumn",
+          "severity": "warning",
+          "column": "ModelYili"
+        },
+        {
+          "code": "unplacedColumn",
+          "severity": "warning",
+          "column": "Tur"
+        },
+        {
+          "code": "unplacedColumn",
+          "severity": "warning",
+          "column": "Aciklama"
+        }
+      ]
+    },
+    {
+      "name": "zorunlu kolon gizlenemez — taslakta uyarı",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": [
+          "Plaka"
+        ]
+      },
+      "expected": [
+        {
+          "code": "requiredHidden",
+          "severity": "warning",
+          "column": "Plaka"
+        }
+      ]
+    },
+    {
+      "name": "zorunlu kolon gizlenemez — yayında hata",
+      "viewType": "form",
+      "mode": "publish",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": [
+          "Plaka"
+        ]
+      },
+      "expected": [
+        {
+          "code": "requiredHidden",
+          "severity": "error",
+          "column": "Plaka"
+        }
+      ]
+    },
+    {
+      "name": "bilinmeyen kolon",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f9",
+                    "column": "Silindi",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "unknownColumn",
+          "severity": "warning",
+          "column": "Silindi"
+        }
+      ]
+    },
+    {
+      "name": "bilinmeyen gizli kolon",
+      "viewType": "form",
+      "mode": "publish",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": [
+          "Eski"
+        ]
+      },
+      "expected": [
+        {
+          "code": "unknownColumn",
+          "severity": "error",
+          "column": "Eski"
+        }
+      ]
+    },
+    {
+      "name": "aynı kolon iki kez yerleştirilemez",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f7",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f8",
+                    "column": "Plaka",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "duplicateColumn",
+          "severity": "warning",
+          "column": "Plaka"
+        }
+      ]
+    },
+    {
+      "name": "yerleştirilen kolon gizli listede olamaz",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": [
+          "Marka",
+          "Marka"
+        ]
+      },
+      "expected": [
+        {
+          "code": "duplicateColumn",
+          "severity": "warning",
+          "column": "Marka"
+        }
+      ]
+    },
+    {
+      "name": "widget kolon tipine uymalı",
+      "viewType": "form",
+      "mode": "publish",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 6,
+                    "widget": "multiline",
+                    "rows": 3
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "widgetType",
+          "severity": "error",
+          "targetId": "f2",
+          "column": "Marka"
+        },
+        {
+          "code": "widgetType",
+          "severity": "error",
+          "targetId": "f3",
+          "column": "ModelYili"
+        }
+      ]
+    },
+    {
+      "name": "boş sekme taslakta uyarı, boş bölüm hep uyarı",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t2",
+            "title": "Ekler",
+            "sections": [
+              {
+                "id": "s2",
+                "title": "Bölüm",
+                "items": []
+              }
+            ]
+          },
+          {
+            "id": "t3",
+            "title": "",
+            "sections": []
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "emptySection",
+          "severity": "warning",
+          "targetId": "s2"
+        },
+        {
+          "code": "emptyTab",
+          "severity": "warning",
+          "targetId": "t2"
+        },
+        {
+          "code": "emptyTab",
+          "severity": "warning",
+          "targetId": "t3"
+        }
+      ]
+    },
+    {
+      "name": "boş sekme yayında hata",
+      "viewType": "form",
+      "mode": "publish",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t2",
+            "title": "Ekler",
+            "sections": [
+              {
+                "id": "s2",
+                "title": "Bölüm",
+                "items": []
+              }
+            ]
+          },
+          {
+            "id": "t3",
+            "title": "",
+            "sections": []
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "emptySection",
+          "severity": "warning",
+          "targetId": "s2"
+        },
+        {
+          "code": "emptyTab",
+          "severity": "error",
+          "targetId": "t2"
+        },
+        {
+          "code": "emptyTab",
+          "severity": "error",
+          "targetId": "t3"
+        }
+      ]
+    },
+    {
+      "name": "span 1-12 tam sayı olmalı",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  },
+                  {
+                    "kind": "spacer",
+                    "id": "x1",
+                    "span": 0
+                  },
+                  {
+                    "kind": "spacer",
+                    "id": "x2",
+                    "span": 13
+                  },
+                  {
+                    "kind": "spacer",
+                    "id": "x3",
+                    "span": 6.5
+                  },
+                  {
+                    "kind": "spacer",
+                    "id": "x4"
+                  },
+                  {
+                    "kind": "note",
+                    "id": "x5",
+                    "text": "",
+                    "tone": "info",
+                    "span": "6"
+                  },
+                  {
+                    "kind": "spacer",
+                    "id": "x6",
+                    "span": 12.0
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "spanRange",
+          "severity": "error",
+          "targetId": "x1"
+        },
+        {
+          "code": "spanRange",
+          "severity": "error",
+          "targetId": "x2"
+        },
+        {
+          "code": "spanRange",
+          "severity": "error",
+          "targetId": "x3"
+        },
+        {
+          "code": "spanRange",
+          "severity": "error",
+          "targetId": "x4"
+        },
+        {
+          "code": "spanRange",
+          "severity": "error",
+          "targetId": "x5"
+        }
+      ]
+    },
+    {
+      "name": "kimlik deseni ve tekilliği",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "a b"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "s1"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  },
+                  {
+                    "kind": "divider"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "badId",
+          "severity": "error",
+          "targetId": "a b"
+        },
+        {
+          "code": "duplicateId",
+          "severity": "error",
+          "targetId": "s1"
+        },
+        {
+          "code": "badId",
+          "severity": "error",
+          "targetId": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        },
+        {
+          "code": "badId",
+          "severity": "error"
+        }
+      ]
+    },
+    {
+      "name": "bilinmeyen öğe türü",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  },
+                  {
+                    "kind": "chart",
+                    "id": "c1"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "badKind",
+          "severity": "error",
+          "targetId": "c1"
+        }
+      ]
+    },
+    {
+      "name": "satır sayısı 2-20",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 6,
+                    "widget": "multiline",
+                    "rows": 1
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "rowsRange",
+          "severity": "error",
+          "targetId": "f5"
+        }
+      ]
+    },
+    {
+      "name": "not tonu ve uzunluğu",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  },
+                  {
+                    "kind": "note",
+                    "id": "n1",
+                    "text": "a",
+                    "tone": "danger",
+                    "span": 12
+                  },
+                  {
+                    "kind": "note",
+                    "id": "n2",
+                    "text": "ççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççç",
+                    "tone": "info",
+                    "span": 12
+                  },
+                  {
+                    "kind": "note",
+                    "id": "n3",
+                    "text": "çççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççç",
+                    "span": 12
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "badTone",
+          "severity": "error",
+          "targetId": "n1"
+        },
+        {
+          "code": "textTooLong",
+          "severity": "error",
+          "targetId": "n2"
+        },
+        {
+          "code": "badTone",
+          "severity": "error",
+          "targetId": "n3"
+        }
+      ]
+    },
+    {
+      "name": "başlık en fazla 120 karakter",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "şşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşşş",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "ğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğğ",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  }
+                ]
+              },
+              {
+                "id": "s2",
+                "title": "ıııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııııı",
+                "items": [
+                  {
+                    "kind": "divider",
+                    "id": "d1"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "textTooLong",
+          "severity": "error",
+          "targetId": "t1"
+        },
+        {
+          "code": "textTooLong",
+          "severity": "error",
+          "targetId": "s1"
+        }
+      ]
+    },
+    {
+      "name": "sekmesiz form",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "noTabs",
+          "severity": "error"
+        },
+        {
+          "code": "unplacedColumn",
+          "severity": "warning",
+          "column": "Plaka"
+        },
+        {
+          "code": "unplacedColumn",
+          "severity": "warning",
+          "column": "Marka"
+        },
+        {
+          "code": "unplacedColumn",
+          "severity": "warning",
+          "column": "ModelYili"
+        },
+        {
+          "code": "unplacedColumn",
+          "severity": "warning",
+          "column": "Tur"
+        },
+        {
+          "code": "unplacedColumn",
+          "severity": "warning",
+          "column": "Aciklama"
+        },
+        {
+          "code": "unplacedColumn",
+          "severity": "warning",
+          "column": "Durum"
+        }
+      ]
+    },
+    {
+      "name": "en fazla 12 sekme",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t0",
+            "title": "S0",
+            "sections": [
+              {
+                "id": "s0",
+                "items": [
+                  {
+                    "kind": "divider",
+                    "id": "d0"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f0",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "ModelYili",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "Tur",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Aciklama",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Durum",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t1",
+            "title": "S1",
+            "sections": [
+              {
+                "id": "s1",
+                "items": [
+                  {
+                    "kind": "divider",
+                    "id": "d1"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t2",
+            "title": "S2",
+            "sections": [
+              {
+                "id": "s2",
+                "items": [
+                  {
+                    "kind": "divider",
+                    "id": "d2"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t3",
+            "title": "S3",
+            "sections": [
+              {
+                "id": "s3",
+                "items": [
+                  {
+                    "kind": "divider",
+                    "id": "d3"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t4",
+            "title": "S4",
+            "sections": [
+              {
+                "id": "s4",
+                "items": [
+                  {
+                    "kind": "divider",
+                    "id": "d4"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t5",
+            "title": "S5",
+            "sections": [
+              {
+                "id": "s5",
+                "items": [
+                  {
+                    "kind": "divider",
+                    "id": "d5"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t6",
+            "title": "S6",
+            "sections": [
+              {
+                "id": "s6",
+                "items": [
+                  {
+                    "kind": "divider",
+                    "id": "d6"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t7",
+            "title": "S7",
+            "sections": [
+              {
+                "id": "s7",
+                "items": [
+                  {
+                    "kind": "divider",
+                    "id": "d7"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t8",
+            "title": "S8",
+            "sections": [
+              {
+                "id": "s8",
+                "items": [
+                  {
+                    "kind": "divider",
+                    "id": "d8"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t9",
+            "title": "S9",
+            "sections": [
+              {
+                "id": "s9",
+                "items": [
+                  {
+                    "kind": "divider",
+                    "id": "d9"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t10",
+            "title": "S10",
+            "sections": [
+              {
+                "id": "s10",
+                "items": [
+                  {
+                    "kind": "divider",
+                    "id": "d10"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t11",
+            "title": "S11",
+            "sections": [
+              {
+                "id": "s11",
+                "items": [
+                  {
+                    "kind": "divider",
+                    "id": "d11"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t12",
+            "title": "S12",
+            "sections": [
+              {
+                "id": "s12",
+                "items": [
+                  {
+                    "kind": "divider",
+                    "id": "d12"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "limit",
+          "severity": "error"
+        }
+      ]
+    },
+    {
+      "name": "en fazla 400 öğe",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d0"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d1"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d2"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d3"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d4"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d5"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d6"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d7"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d8"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d9"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d10"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d11"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d12"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d13"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d14"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d15"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d16"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d17"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d18"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d19"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d20"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d21"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d22"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d23"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d24"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d25"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d26"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d27"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d28"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d29"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d30"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d31"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d32"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d33"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d34"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d35"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d36"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d37"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d38"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d39"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d40"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d41"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d42"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d43"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d44"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d45"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d46"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d47"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d48"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d49"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d50"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d51"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d52"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d53"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d54"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d55"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d56"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d57"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d58"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d59"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d60"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d61"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d62"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d63"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d64"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d65"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d66"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d67"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d68"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d69"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d70"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d71"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d72"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d73"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d74"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d75"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d76"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d77"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d78"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d79"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d80"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d81"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d82"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d83"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d84"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d85"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d86"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d87"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d88"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d89"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d90"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d91"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d92"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d93"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d94"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d95"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d96"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d97"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d98"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d99"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d100"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d101"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d102"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d103"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d104"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d105"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d106"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d107"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d108"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d109"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d110"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d111"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d112"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d113"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d114"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d115"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d116"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d117"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d118"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d119"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d120"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d121"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d122"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d123"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d124"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d125"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d126"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d127"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d128"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d129"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d130"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d131"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d132"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d133"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d134"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d135"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d136"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d137"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d138"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d139"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d140"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d141"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d142"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d143"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d144"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d145"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d146"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d147"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d148"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d149"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d150"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d151"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d152"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d153"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d154"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d155"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d156"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d157"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d158"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d159"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d160"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d161"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d162"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d163"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d164"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d165"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d166"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d167"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d168"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d169"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d170"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d171"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d172"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d173"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d174"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d175"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d176"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d177"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d178"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d179"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d180"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d181"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d182"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d183"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d184"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d185"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d186"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d187"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d188"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d189"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d190"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d191"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d192"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d193"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d194"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d195"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d196"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d197"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d198"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d199"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d200"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d201"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d202"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d203"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d204"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d205"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d206"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d207"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d208"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d209"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d210"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d211"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d212"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d213"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d214"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d215"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d216"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d217"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d218"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d219"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d220"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d221"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d222"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d223"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d224"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d225"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d226"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d227"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d228"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d229"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d230"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d231"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d232"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d233"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d234"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d235"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d236"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d237"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d238"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d239"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d240"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d241"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d242"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d243"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d244"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d245"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d246"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d247"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d248"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d249"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d250"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d251"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d252"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d253"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d254"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d255"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d256"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d257"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d258"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d259"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d260"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d261"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d262"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d263"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d264"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d265"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d266"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d267"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d268"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d269"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d270"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d271"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d272"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d273"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d274"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d275"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d276"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d277"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d278"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d279"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d280"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d281"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d282"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d283"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d284"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d285"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d286"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d287"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d288"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d289"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d290"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d291"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d292"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d293"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d294"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d295"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d296"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d297"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d298"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d299"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d300"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d301"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d302"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d303"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d304"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d305"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d306"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d307"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d308"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d309"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d310"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d311"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d312"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d313"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d314"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d315"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d316"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d317"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d318"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d319"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d320"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d321"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d322"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d323"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d324"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d325"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d326"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d327"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d328"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d329"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d330"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d331"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d332"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d333"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d334"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d335"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d336"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d337"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d338"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d339"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d340"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d341"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d342"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d343"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d344"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d345"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d346"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d347"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d348"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d349"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d350"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d351"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d352"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d353"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d354"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d355"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d356"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d357"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d358"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d359"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d360"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d361"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d362"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d363"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d364"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d365"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d366"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d367"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d368"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d369"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d370"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d371"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d372"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d373"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d374"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d375"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d376"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d377"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d378"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d379"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d380"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d381"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d382"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d383"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d384"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d385"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d386"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d387"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d388"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d389"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d390"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d391"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d392"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d393"
+                  },
+                  {
+                    "kind": "divider",
+                    "id": "d394"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "limit",
+          "severity": "error"
+        }
+      ]
+    },
+    {
+      "name": "şema sürümü 1 olmalı",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 2,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "unreadable",
+          "severity": "error"
+        }
+      ]
+    },
+    {
+      "name": "bozuk JSON",
+      "viewType": "form",
+      "mode": "draft",
+      "raw": "{\"schemaVersion\":1,\"tabs\":",
+      "expected": [
+        {
+          "code": "unreadable",
+          "severity": "error"
+        }
+      ]
+    },
+    {
+      "name": "tabs dizi olmalı",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": {}
+      },
+      "expected": [
+        {
+          "code": "unreadable",
+          "severity": "error"
+        }
+      ]
+    },
+    {
+      "name": "başlık metin olmalı",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": 5,
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "unreadable",
+          "severity": "error"
+        }
+      ]
+    },
+    {
+      "name": "kolonsuz alan öğesi",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f9",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "unreadable",
+          "severity": "error"
+        }
+      ]
+    },
+    {
+      "name": "bilinmeyen widget",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f9",
+                    "column": "Marka",
+                    "span": 6,
+                    "widget": "slider"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "unreadable",
+          "severity": "error"
+        }
+      ]
+    },
+    {
+      "name": "gizli kolon listesi metin dizisi olmalı",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": [
+          1
+        ]
+      },
+      "expected": [
+        {
+          "code": "unreadable",
+          "severity": "error"
+        }
+      ]
+    },
+    {
+      "name": "katlanır bayrağı mantıksal olmalı",
+      "viewType": "form",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "collapsible": "evet",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 4,
+                    "newRow": true
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 4,
+                    "widget": "radio"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 12,
+                    "widget": "multiline",
+                    "rows": 4
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "unreadable",
+          "severity": "error"
+        }
+      ]
+    },
+    {
+      "name": "geçerli liste",
+      "viewType": "list",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "columns": [
+          {
+            "column": "Plaka",
+            "width": 160
+          },
+          {
+            "column": "Marka"
+          },
+          {
+            "column": "Durum",
+            "width": null
+          }
+        ]
+      },
+      "expected": []
+    },
+    {
+      "name": "kolonsuz liste taslakta uyarı",
+      "viewType": "list",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "columns": []
+      },
+      "expected": [
+        {
+          "code": "noColumns",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "name": "kolonsuz liste yayında hata",
+      "viewType": "list",
+      "mode": "publish",
+      "layout": {
+        "schemaVersion": 1,
+        "columns": []
+      },
+      "expected": [
+        {
+          "code": "noColumns",
+          "severity": "error"
+        }
+      ]
+    },
+    {
+      "name": "liste genişliği 60-800 tam sayı",
+      "viewType": "list",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "columns": [
+          {
+            "column": "Plaka",
+            "width": 59
+          },
+          {
+            "column": "Marka",
+            "width": 801
+          },
+          {
+            "column": "Tur",
+            "width": 120.5
+          },
+          {
+            "column": "Durum",
+            "width": "100"
+          },
+          {
+            "column": "Aciklama",
+            "width": 800
+          }
+        ]
+      },
+      "expected": [
+        {
+          "code": "widthRange",
+          "severity": "error",
+          "column": "Plaka"
+        },
+        {
+          "code": "widthRange",
+          "severity": "error",
+          "column": "Marka"
+        },
+        {
+          "code": "widthRange",
+          "severity": "error",
+          "column": "Tur"
+        },
+        {
+          "code": "widthRange",
+          "severity": "error",
+          "column": "Durum"
+        }
+      ]
+    },
+    {
+      "name": "liste tekrar ve bilinmeyen kolon",
+      "viewType": "list",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "columns": [
+          {
+            "column": "Plaka"
+          },
+          {
+            "column": "Plaka"
+          },
+          {
+            "column": "Yok"
+          }
+        ]
+      },
+      "expected": [
+        {
+          "code": "duplicateColumn",
+          "severity": "warning",
+          "column": "Plaka"
+        },
+        {
+          "code": "unknownColumn",
+          "severity": "warning",
+          "column": "Yok"
+        }
+      ]
+    },
+    {
+      "name": "liste kolonu nesne olmalı",
+      "viewType": "list",
+      "mode": "draft",
+      "layout": {
+        "schemaVersion": 1,
+        "columns": [
+          "Plaka"
+        ]
+      },
+      "expected": [
+        {
+          "code": "unreadable",
+          "severity": "error"
+        }
+      ]
+    }
+  ]
+}

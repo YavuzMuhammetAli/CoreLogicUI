@@ -3,6 +3,9 @@ import { Observable, forkJoin, of } from 'rxjs';
 import { map, shareReplay, catchError } from 'rxjs/operators';
 import { PublishedModelService, PublishedColumn } from './published-model.service';
 import { PublishedColumnSchema } from './published-table.service';
+import { ScreenLayoutService } from './screen-layout.service';
+import { FormLayout, ListLayout, ScreenViewType } from '../utils/screen-layout/screen-layout.model';
+import { parseFormLayout, parseListLayout } from '../utils/screen-layout/screen-layout.parse';
 
 /** Bir model tipinin form kurmak için gereken tüm meta verisi. */
 export interface TypeMeta {
@@ -31,12 +34,15 @@ export interface TypeMeta {
 @Injectable({ providedIn: 'root' })
 export class RecordMetadataService {
   private readonly publishedModel = inject(PublishedModelService);
+  private readonly screenLayouts = inject(ScreenLayoutService);
 
   /** typeName → kolonlar (tek bir /models çağrısından indekslenir). */
   private columnsIndex$?: Observable<Map<string, PublishedColumn[]>>;
   private readonly rulesCache = new Map<string, Observable<Map<string, PublishedColumnSchema>>>();
   private readonly childCache = new Map<string, Observable<string[]>>();
   private readonly metaCache = new Map<string, Observable<TypeMeta>>();
+  /** `${typeName}|${viewType}` → yayındaki yerleşim (süreli önbellek, bkz. layout$). */
+  private readonly layoutCache = new Map<string, { at: number; layout$: Observable<FormLayout | ListLayout | null> }>();
 
   /**
    * Tüm modellerin kolonları. `/PublishedModel/models` tek çağrıda hepsini döndürdüğü
@@ -122,6 +128,50 @@ export class RecordMetadataService {
       this.metaCache.set(typeName, cached);
     }
     return cached;
+  }
+
+  // ─── Ekran tasarımı (yayındaki yerleşim) ───────────────────────────────────
+
+  /**
+   * Yerleşim önbelleği süresi. Tasarım başka bir oturumda yayınlanabilir; sonsuz önbellek
+   * kullanıcıyı sayfa yenileyene dek eski düzende tutardı. Aynı oturumdaki yayın ise
+   * `invalidateLayout` ile anında düşürülür.
+   */
+  static readonly LAYOUT_TTL_MS = 5 * 60 * 1000;
+
+  /** Modelin yayındaki form yerleşimi; yoksa (ya da okunamazsa) null → varsayılan görünüm. */
+  formLayout$(typeName: string): Observable<FormLayout | null> {
+    return this.layout$(typeName, 'form') as Observable<FormLayout | null>;
+  }
+
+  /** Modelin yayındaki liste yerleşimi; yoksa null → eski kolon görünürlüğü ayarı. */
+  listLayout$(typeName: string): Observable<ListLayout | null> {
+    return this.layout$(typeName, 'list') as Observable<ListLayout | null>;
+  }
+
+  /** Tasarımcı yayınladıktan / sıfırladıktan sonra çağırır — açık ekranlar yeni düzeni okusun. */
+  invalidateLayout(typeName: string): void {
+    this.layoutCache.delete(`${typeName}|form`);
+    this.layoutCache.delete(`${typeName}|list`);
+  }
+
+  private layout$(typeName: string, viewType: ScreenViewType): Observable<FormLayout | ListLayout | null> {
+    const key = `${typeName}|${viewType}`;
+    const now = Date.now();
+    const cached = this.layoutCache.get(key);
+    if (cached && now - cached.at < RecordMetadataService.LAYOUT_TTL_MS) return cached.layout$;
+
+    const layout$ = this.screenLayouts.getPublished(typeName, viewType).pipe(
+      map(res => {
+        const json = res.success ? res.data?.layoutJson : null;
+        return viewType === 'form' ? parseFormLayout(json) : parseListLayout(json);
+      }),
+      // Modül kurulu değil / ağ hatası: ekran varsayılan görünümle çalışır.
+      catchError(() => of(null)),
+      shareReplay(1)
+    );
+    this.layoutCache.set(key, { at: now, layout$ });
+    return layout$;
   }
 
   // NOT: Lookup dropdown önbelleği buradan KALDIRILDI.
