@@ -82,7 +82,7 @@ export class UserPermissionListComponent implements OnInit {
 
   private countPermittedModels(perms: ModelPermission[] | undefined): number {
     return (perms ?? []).filter(p =>
-      p.canRead || p.canCreate || p.canUpdate || p.canDelete || p.canShowInNav || p.canOwnOnly
+      p.canRead || p.canCreate || p.canUpdate || p.canDelete || p.canShowInNav || p.canOwnOnly || p.canViewWorkflow
     ).length;
   }
 

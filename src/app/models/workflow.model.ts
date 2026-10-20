@@ -144,6 +144,8 @@ export interface WorkflowInstance {
   status: WorkflowInstanceStatus;
   currentStepKey?: string | null;
   startedBy?: number | null;
+  /** Başlatanın görünen adı — yalnız tekil okumada dolu. */
+  startedByName?: string | null;
   startedAt: string;
   completedAt?: string | null;
   errorMessage?: string | null;
@@ -170,6 +172,12 @@ export interface WorkflowTask {
   comment?: string | null;
   completedBy?: number | null;
   completedAt?: string | null;
+  // Görünen adlar — yalnız süreç detayında (WorkflowInstance/get) dolu; sıradan
+  // kullanıcı /User ve /Role uçlarını çağıramaz.
+  assignedUserName?: string | null;
+  completedByName?: string | null;
+  /** Role atanmış, hâlâ bekleyen görevde rolün aktif üyeleri (kimin onayı bekleniyor). */
+  candidates?: string[] | null;
   createdOn: string;
   entityType: string;
   entityId: number;

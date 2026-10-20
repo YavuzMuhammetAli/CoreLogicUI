@@ -28,6 +28,11 @@
                 <code class="instance-step">{{ instance.currentStepKey }}</code>
               }
               <span class="instance-time">{{ when(instance.startedAt) }}</span>
+              <button type="button" class="btn btn-ghost btn-sm instance-view"
+                      (click)="viewRequested.emit(instance.id)"
+                      [attr.aria-label]="'workflow.panel.viewDiagramAria' | t:{ name: instance.definitionName }">
+                {{ 'workflow.panel.viewDiagram' | t }}
+              </button>
             </li>
           }
         </ul>

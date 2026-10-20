@@ -171,7 +171,7 @@
                           {{ task.name }}
                           @if (task.branchKey) { <code class="branch-tag">{{ task.branchKey }}</code> }
                         </td>
-                        <td>{{ task.assignedRoleName || ('#' + (task.assignedUserId ?? '')) }}</td>
+                        <td>{{ assigneeOf(task) }}</td>
                         <td>
                           <span class="badge" [class]="'badge ' + taskStatusClass(task.status)">
                             {{ 'workflow.task.' + task.status | t }}
@@ -179,7 +179,9 @@
                         </td>
                         <td>{{ when(task.completedAt) }}</td>
                         <td>
-                          @if (task.completedAt && !task.completedBy) {
+                          @if (task.completedBy) {
+                            {{ task.completedByName || ('#' + task.completedBy) }}
+                          } @else if (task.completedAt) {
                             <span class="badge badge-meta">{{ 'workflow.instance.bySystem' | t }}</span>
                           }
                         </td>

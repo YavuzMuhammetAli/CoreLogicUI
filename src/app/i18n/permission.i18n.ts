@@ -87,6 +87,11 @@ export const PERMISSION_I18N: Translations = {
   'role.detail.permDelete': { tr: 'Silme', en: 'Delete' },
   'role.detail.permShowInNav': { tr: 'Navigasyonda göster', en: 'Show in navigation' },
   'role.detail.permOwnOnly': { tr: 'Sadece kendi kayıtları', en: 'Own records only' },
+  'role.detail.permViewWorkflow': { tr: 'Akışı görüntüle', en: 'View workflow' },
+  'role.detail.permViewWorkflowHint': {
+    tr: 'Kayıt ekranında iş akışının ilerlediği adımları, kimin onayladığını ve kimin onayının beklendiğini görür. Okuma izniyle birlikte geçerlidir. Akışı başlatan ve akışta görevi olan kişiler bu izin olmadan da görür.',
+    en: 'Sees on the record screen how far the workflow has progressed, who approved and whose approval is pending. Applies together with Read. The person who started the workflow and anyone with a task in it can see it without this permission.'
+  },
   'role.detail.savingEllipsis': { tr: 'Kaydediliyor…', en: 'Saving…' },
   'role.detail.savingAriaLabel': { tr: 'Kaydediliyor', en: 'Saving' },
   'role.detail.saveModelPermissions': { tr: 'Bu Model İzinlerini Kaydet', en: 'Save This Model’s Permissions' },
@@ -98,6 +103,7 @@ export const PERMISSION_I18N: Translations = {
   'role.detail.summaryDelete': { tr: 'Sil', en: 'Delete' },
   'role.detail.summaryNav': { tr: 'Nav', en: 'Nav' },
   'role.detail.summaryOwn': { tr: 'Kendi', en: 'Own' },
+  'role.detail.summaryWorkflow': { tr: 'Akış', en: 'Workflow' },
 
   // role-detail.component.ts — bildirim/validasyon mesajları
   'role.detail.nameEmpty': { tr: 'Rol adı boş olamaz.', en: 'Role name cannot be empty.' },
@@ -168,6 +174,11 @@ export const PERMISSION_I18N: Translations = {
   'permission.detail.permDelete': { tr: 'Silme', en: 'Delete' },
   'permission.detail.permShowInNav': { tr: 'Navigasyonda göster', en: 'Show in navigation' },
   'permission.detail.permOwnOnly': { tr: 'Sadece kendi kayıtları', en: 'Own records only' },
+  'permission.detail.permViewWorkflow': { tr: 'Akışı görüntüle', en: 'View workflow' },
+  'permission.detail.permViewWorkflowHint': {
+    tr: 'Kayıt ekranında iş akışının ilerlediği adımları, kimin onayladığını ve kimin onayının beklendiğini görür. Okuma izniyle birlikte geçerlidir. Akışı başlatan ve akışta görevi olan kişiler bu izin olmadan da görür.',
+    en: 'Sees on the record screen how far the workflow has progressed, who approved and whose approval is pending. Applies together with Read. The person who started the workflow and anyone with a task in it can see it without this permission.'
+  },
   'permission.detail.savingEllipsis': { tr: 'Kaydediliyor…', en: 'Saving…' },
   'permission.detail.saveModelPermissions': { tr: 'Bu Model İzinlerini Kaydet', en: 'Save This Model’s Permissions' },
 
@@ -178,6 +189,7 @@ export const PERMISSION_I18N: Translations = {
   'permission.detail.summaryDelete': { tr: 'Sil', en: 'Delete' },
   'permission.detail.summaryNav': { tr: 'Nav', en: 'Nav' },
   'permission.detail.summaryOwn': { tr: 'Kendi', en: 'Own' },
+  'permission.detail.summaryWorkflow': { tr: 'Akış', en: 'Workflow' },
 
   // user-permission-detail.component.ts — bildirim/validasyon mesajları
   'permission.detail.notFound': { tr: 'Kullanıcı bulunamadı.', en: 'User not found.' },

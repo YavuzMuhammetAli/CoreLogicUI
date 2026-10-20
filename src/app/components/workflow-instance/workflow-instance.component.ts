@@ -361,9 +361,16 @@ export class WorkflowInstanceComponent implements OnInit {
   private waitingFor(tasks: WorkflowTask[], stepKey: string): string {
     const names = tasks
       .filter(task => task.status === 'Pending' && task.stepKey.toLowerCase() === stepKey)
-      .map(task => task.assignedRoleName || (task.assignedUserId ? '#' + task.assignedUserId : ''))
+      .map(task => this.assigneeOf(task))
       .filter(Boolean);
     return [...new Set(names)].join(', ');
+  }
+
+  /** Görevin atandığı rol ya da kişi — ad yoksa kimlik. */
+  assigneeOf(task: WorkflowTask): string {
+    if (task.assignedRoleName) return task.assignedRoleName;
+    if (task.assignedUserId) return task.assignedUserName || '#' + task.assignedUserId;
+    return '';
   }
 
   eventLabel(event: WorkflowEvent): string {

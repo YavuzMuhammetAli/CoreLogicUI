@@ -107,6 +107,20 @@
           }
         }
 
+        <!-- Akışı görüntüle: kaydın en yeni süreci, yalnız ilerlediği yere kadar.
+             Yalnız sunucunun bu kullanıcıya gösterdiği süreç varsa çıkar. -->
+        @if (latestInstanceId) {
+          <button type="button" class="btn btn-secondary btn-sm" (click)="openWorkflowView(latestInstanceId)">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="5" rx="1"/>
+              <rect x="14" y="16" width="7" height="5" rx="1"/>
+              <path d="M6.5 8v4.5a2 2 0 0 0 2 2h9v1.5"/>
+            </svg>
+            {{ 'workflow.view.open' | t }}
+          </button>
+        }
+
         <!-- "{Akış} Başlat": kaydeder (gerekiyorsa) ve akışı başlatır. -->
         @for (workflow of startableWorkflows; track workflow.code) {
           <button
@@ -645,9 +659,14 @@
 -->
 @if (!isNew && recordId > 0 && typeName) {
   <div class="record-workflow">
-    <app-workflow-panel #wfPanel [entityType]="typeName" [entityId]="recordId" />
+    <app-workflow-panel #wfPanel [entityType]="typeName" [entityId]="recordId"
+                        (instancesLoaded)="onWorkflowInstances($event)"
+                        (viewRequested)="openWorkflowView($event)" />
   </div>
 }
+
+<!-- ══ AKIŞI GÖRÜNTÜLE (yalnız ilerlenen yol + kim onayladı / bekliyor) ══════ -->
+<app-workflow-view-dialog [instanceId]="viewInstanceId" (closed)="closeWorkflowView()" />
 
 <!-- ══ ADIM EYLEM DİYALOĞU (ek karar alanları / red açıklaması) ══════════════ -->
 <app-task-action-dialog

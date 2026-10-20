@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { WorkflowInstanceService } from '../../../services/workflow-task.service';
@@ -31,6 +31,15 @@ export class WorkflowPanelComponent implements OnInit {
   readonly entityType = input.required<string>();
   readonly entityId = input.required<number>();
 
+  /**
+   * Kullanıcının görebildiği süreçler (en yeni önce) — kayıt başlığındaki "Akışı
+   * görüntüle" düğmesi bunu dinler. Liste sunucuda süzülür (IWorkflowAccessPolicy);
+   * modül yoksa ya da yetki yoksa boş gelir.
+   */
+  readonly instancesLoaded = output<WorkflowInstance[]>();
+  /** Satırdaki "Şema" — o sürecin yalnız ilerlenen yolu diyalogda açılmalı. */
+  readonly viewRequested = output<number>();
+
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly instanceService = inject(WorkflowInstanceService);
   private readonly languageService = inject(LanguageService);
@@ -57,10 +66,12 @@ export class WorkflowPanelComponent implements OnInit {
           } else {
             this.unavailable = true;
           }
+          this.instancesLoaded.emit(this.instances);
         },
         error: () => {
           this.loading = false;
           this.unavailable = true;
+          this.instancesLoaded.emit([]);
         }
       });
   }

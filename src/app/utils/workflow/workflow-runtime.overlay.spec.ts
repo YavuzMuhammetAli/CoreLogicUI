@@ -57,6 +57,36 @@ describe('workflow-runtime.overlay', () => {
     expect(overlay.edges).toEqual([edgeId('mudur', 'reject')]);
   });
 
+  it('hedefsiz çıkışla biten sürecin son kararı kenar sayılır', () => {
+    const open: WorkflowGraph = {
+      startStep: 'mudur',
+      steps: [
+        { key: 'mudur', type: 'approval', name: 'Müdür', onApprove: 'finans', onReject: null },
+        { key: 'finans', type: 'approval', name: 'Finans', onApprove: null, onReject: null }
+      ],
+      entityStatusMap: {}
+    };
+
+    const completed = buildRuntimeOverlay(open, [
+      ...start, ev('TaskCompleted', 'mudur'), ev('StepEntered', 'finans'), ev('TaskCompleted', 'finans'),
+      ev('InstanceCompleted', 'finans')
+    ], { status: 'Completed', currentStepKey: null });
+    expect(completed.edges).toEqual([edgeId('mudur', 'approve'), edgeId('finans', 'approve')]);
+
+    const rejected = buildRuntimeOverlay(open, [
+      ...start, ev('TaskRejected', 'mudur'), ev('InstanceRejected', 'mudur')
+    ], { status: 'Rejected', currentStepKey: null });
+    expect(rejected.nodes).toEqual({ mudur: 'visited' });
+    expect(rejected.edges).toEqual([edgeId('mudur', 'reject')]);
+  });
+
+  it('çalışan süreçte bekleyen karar kenar üretmez', () => {
+    const overlay = buildRuntimeOverlay(graph, [
+      ...start, ev('TaskCompleted', 'mudur'), ev('StepEntered', 'onaylar'), ev('TaskCompleted', 'onaylar', { branch: 'f' })
+    ], { status: 'Running', currentStepKey: 'onaylar' });
+    expect(overlay.edges).toEqual([edgeId('mudur', 'approve')]);
+  });
+
   it('geri alma izi hedefe kadar keser', () => {
     const overlay = buildRuntimeOverlay(graph, [
       ...start, ev('TaskCompleted', 'mudur'), ev('StepEntered', 'onaylar'),

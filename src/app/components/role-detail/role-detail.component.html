@@ -393,6 +393,11 @@
                       <input type="checkbox" [(ngModel)]="row.canOwnOnly" (change)="markDirty(row)">
                       {{ 'role.detail.permOwnOnly' | t }}
                     </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" [(ngModel)]="row.canViewWorkflow" (change)="markDirty(row)">
+                      {{ 'role.detail.permViewWorkflow' | t }}
+                      <app-help-hint [text]="'role.detail.permViewWorkflowHint' | t" />
+                    </label>
                   </div>
 
                   <div class="perm-footer">

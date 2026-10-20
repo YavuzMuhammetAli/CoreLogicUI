@@ -44,6 +44,10 @@
   color: var(--muted);
 }
 
+.instance-view {
+  flex: 0 0 auto;
+}
+
 @media (max-width: 768px) {
   .instance-time { margin-left: 0; flex-basis: 100%; }
 }

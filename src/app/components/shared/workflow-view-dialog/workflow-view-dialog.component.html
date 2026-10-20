@@ -1,0 +1,97 @@
+@if (instanceId() !== null) {
+  <div class="dialog-overlay" (click)="close()">
+    <div class="dialog-panel panel" role="dialog" aria-modal="true" aria-labelledby="wf-view-title"
+         (click)="$event.stopPropagation()">
+      <div class="panel-head view-head">
+        <div class="view-title">
+          <span class="eyebrow">{{ 'workflow.view.eyebrow' | t }}</span>
+          @if (instance(); as i) {
+            <h3 id="wf-view-title">
+              {{ i.definitionName }} <span class="view-version">v{{ i.definitionVersion }}</span>
+            </h3>
+            <div class="view-meta cluster">
+              <span class="badge" [class]="'badge ' + statusClass(i.status)">{{ 'workflow.instance.' + i.status | t }}</span>
+              <span class="view-started">{{ startedLine }}</span>
+            </div>
+          } @else {
+            <h3 id="wf-view-title">{{ 'workflow.view.open' | t }}</h3>
+          }
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="close()" [attr.aria-label]="'common.close' | t">✕</button>
+      </div>
+
+      <div class="panel-body view-body">
+        @if (loading()) {
+          <div class="empty-state"><span class="spinner" [attr.aria-label]="'common.loading' | t"></span></div>
+        } @else if (error()) {
+          <div class="alert alert-danger" role="alert">{{ error() }}</div>
+        } @else if (graph()) {
+          <app-workflow-canvas
+            class="view-canvas"
+            [graph]="graph()"
+            [readonly]="true"
+            [pathOnly]="true"
+            [fillHeight]="true"
+            hintKey="workflow.view.hint"
+            [overlay]="overlay()"
+            [nodeMeta]="nodeMeta()"
+            [selectedNodes]="selected()"
+            (nodeHover)="onNodeHover($event)"
+            (selectionChange)="onSelection($event)"
+            (cameraChange)="onCameraChange()" />
+          <ul class="runtime-legend" [attr.aria-label]="'workflow.runtime.legend' | t">
+            <li><span class="legend-swatch legend-swatch--visited" aria-hidden="true"></span>{{ 'workflow.runtime.passed' | t }}</li>
+            <li><span class="legend-swatch legend-swatch--current" aria-hidden="true"></span>{{ 'workflow.runtime.waiting' | t }}</li>
+            <li><span class="legend-swatch legend-swatch--failed" aria-hidden="true"></span>{{ 'workflow.runtime.failed' | t }}</li>
+            <li><span class="legend-swatch legend-swatch--end" aria-hidden="true"></span>{{ 'workflow.runtime.ended' | t }}</li>
+            <li><span class="legend-line" aria-hidden="true"></span>{{ 'workflow.runtime.takenPath' | t }}</li>
+          </ul>
+        } @else {
+          <div class="alert alert-danger" role="alert">{{ 'workflow.view.loadFailed' | t }}</div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Adım ipucu: fixed — diyaloğun overflow'una takılmaz; ölçülene dek görünmez. -->
+  @if (tip(); as view) {
+    <div class="step-tip" #tip role="tooltip"
+         [class.step-tip--ready]="tipPos() !== null"
+         [style.top.px]="tipPos()?.top ?? 0"
+         [style.left.px]="tipPos()?.left ?? 0">
+      <div class="step-tip-head">
+        <strong class="step-tip-title">{{ view.title }}</strong>
+        <span class="badge" [class]="'badge badge-' + view.stateTone">{{ view.state }}</span>
+      </div>
+      <span class="step-tip-kind">{{ view.kind }}</span>
+
+      @if (view.lines.length === 0) {
+        <p class="step-tip-empty">{{ 'workflow.view.noDetail' | t }}</p>
+      } @else {
+        <ul class="step-tip-lines">
+          @for (line of view.lines; track $index) {
+            <li class="step-tip-line" [attr.data-tone]="line.tone">
+              <div class="step-tip-line-head">
+                <span class="step-tip-label">{{ line.label }}</span>
+                @if (line.who) { <span class="step-tip-who">{{ line.who }}</span> }
+              </div>
+              @if (line.when || line.branch) {
+                <div class="step-tip-sub">
+                  {{ line.branch }}@if (line.when && line.branch) { · }{{ line.when }}
+                </div>
+              }
+              @if (line.people?.length) {
+                <div class="step-tip-people">
+                  {{ line.people!.join(', ') }}
+                  @if (line.more) { <span class="step-tip-more">{{ 'workflow.view.andMore' | t:{ count: line.more } }}</span> }
+                </div>
+              }
+              @if (line.note) { <div class="step-tip-sub">{{ line.note }}</div> }
+              @if (line.comment) { <blockquote class="step-tip-comment">{{ line.comment }}</blockquote> }
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+}

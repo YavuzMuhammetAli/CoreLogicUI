@@ -9,6 +9,7 @@ import { PublishedModelService, PublishedModel } from '../../services/published-
 import { AppUser } from '../../models/appUser';
 import { ModelPermission } from '../../services/permission.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { HelpHintComponent } from '../shared/help-hint/help-hint.component';
 import { LanguageService } from '../../services/language.service';
 import { markDirty } from '../../utils/change-detection';
 import { pageWindow } from '../../utils/pagination';
@@ -24,6 +25,8 @@ export interface PermissionRow {
   canShowInNav: boolean;
   /** Kullanıcı yalnızca kendi oluşturduğu kayıtları görebilir/değiştirebilir. */
   canOwnOnly:   boolean;
+  /** Kayıttaki iş akışını (ilerlenen yol + kim onayladı/bekliyor) görebilir mi? */
+  canViewWorkflow: boolean;
   /** Değiştirildi mi? Yalnızca değişen satırlar backend'e gönderilir */
   dirty: boolean;
 }
@@ -31,7 +34,7 @@ export interface PermissionRow {
 @Component({
   selector: 'app-user-permission-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, HelpHintComponent],
   templateUrl: './user-permission-detail.component.html',
   styleUrls: ['./user-permission-detail.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -196,6 +199,7 @@ export class UserPermissionDetailComponent implements OnInit {
             canDelete:    p?.canDelete    ?? false,
             canShowInNav: p?.canShowInNav ?? false,
             canOwnOnly:   p?.canOwnOnly   ?? false,
+            canViewWorkflow: p?.canViewWorkflow ?? false,
             dirty: false
           };
         });
@@ -246,6 +250,7 @@ export class UserPermissionDetailComponent implements OnInit {
     if (row.canDelete)    labels.push(this.languageService.t('permission.detail.summaryDelete'));
     if (row.canShowInNav) labels.push(this.languageService.t('permission.detail.summaryNav'));
     if (row.canOwnOnly)   labels.push(this.languageService.t('permission.detail.summaryOwn'));
+    if (row.canViewWorkflow) labels.push(this.languageService.t('permission.detail.summaryWorkflow'));
     return labels;
   }
 

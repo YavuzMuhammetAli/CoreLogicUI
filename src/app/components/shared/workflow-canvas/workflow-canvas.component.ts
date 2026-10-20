@@ -232,7 +232,20 @@ export class WorkflowCanvasComponent {
    */
   readonly overlay = input<WorkflowOverlay | null>(null);
 
+  /**
+   * Yalnız yol: overlay'deki adımlar ve izlenen kenarlar çizilir, ulaşılmayanlar
+   * HİÇ çizilmez (kayıt ekranındaki "Akışı görüntüle"). Konumlar yine tüm grafiğin
+   * yerleşiminden gelir — şema tasarımcıdaki yerinde durur, yalnız eksik görünür.
+   */
+  readonly pathOnly = input(false);
+
   private readonly overlayEdges = computed(() => new Set(this.overlay()?.edges ?? []));
+
+  /** Yalnız-yol modunda gösterilecek adımlar (küçük harfli); null → hepsi. */
+  private readonly visibleKeys = computed<ReadonlySet<string> | null>(() => {
+    const overlay = this.overlay();
+    return this.pathOnly() && overlay ? new Set(Object.keys(overlay.nodes)) : null;
+  });
 
   /**
    * Düğümler taşındı — konumlar tanıma TEK değişiklikte yazılmalı. İlk elle
@@ -248,6 +261,11 @@ export class WorkflowCanvasComponent {
   /** "Otomatik düzenle" — elle verilmiş konumlar silinmeli. */
   readonly layoutReset = output<void>();
   readonly menuAction = output<CanvasMenuAction>();
+  /**
+   * Fare düğümün üstüne geldi (anahtar) / ayrıldı (null) — ayrıntı ipucu için.
+   * Yalnız fare: dokunmatikte hover yok, orada dokunuş seçimi (selectionChange) kullanılır.
+   */
+  readonly nodeHover = output<string | null>();
 
   private readonly platformId = inject(PLATFORM_ID);
   private readonly languageService = inject(LanguageService);
@@ -286,8 +304,15 @@ export class WorkflowCanvasComponent {
    */
   private readonly autoLayout = computed(() => layoutWorkflow(this.graph()));
 
-  readonly nodes = computed<CanvasNode[]>(() =>
+  private readonly positionedNodes = computed<CanvasNode[]>(() =>
     resolveNodePositions(this.graph(), this.autoLayout().nodes, this.liveOffsets()));
+
+  /** Çizilen düğümler — yalnız-yol modunda ulaşılmayanlar düşer (kenar/uç/sınır buradan türer). */
+  readonly nodes = computed<CanvasNode[]>(() => {
+    const all = this.positionedNodes();
+    const visible = this.visibleKeys();
+    return visible ? all.filter(node => visible.has(node.key.toLowerCase())) : all;
+  });
 
   private readonly nodesByKey = computed(() =>
     new Map(this.nodes().map(node => [node.key.toLowerCase(), node])));
@@ -311,11 +336,16 @@ export class WorkflowCanvasComponent {
       neutral: this.languageService.t('workflow.canvas.edgeDefault')
     };
     const pending: Array<Omit<CanvasEdge, 'geometry'> & { request: EdgeRequest }> = [];
+    // Yalnız-yol modunda izlenmeyen kenar rotalamadan ÖNCE düşer: görünmeyen
+    // kenarlar kanal ayırıp görünenleri gereksiz yere dolaştırmasın.
+    const takenOnly = this.visibleKeys() !== null;
+    const taken = this.overlayEdges();
 
     for (const source of nodes) {
       for (const port of source.ports) {
         // Hedefsiz çıkış kenar değil uç işaretidir (bkz. stubs).
         if (!port.target) continue;
+        if (takenOnly && !taken.has(edgeId(source.key, port.port))) continue;
 
         const target = byKey.get(port.target.toLowerCase());
         if (!target) continue;
@@ -345,9 +375,12 @@ export class WorkflowCanvasComponent {
    * (onay/tamamlanma yeşil, red kırmızı). Hedefi silinmiş (bulunamayan) çıkış
    * burada değil, doğrulama panelinde görünür.
    */
-  readonly stubs = computed<CanvasStub[]>(() =>
-    this.nodes().flatMap(node => node.ports
-      .filter(port => !port.target)
+  readonly stubs = computed<CanvasStub[]>(() => {
+    // Yalnız-yol modunda yalnız sürecin bittiği uç (izlenen hedefsiz çıkış) çizilir.
+    const takenOnly = this.visibleKeys() !== null;
+    const taken = this.overlayEdges();
+    return this.nodes().flatMap(node => node.ports
+      .filter(port => !port.target && (!takenOnly || taken.has(edgeId(node.key, port.port))))
       .map(port => ({
         key: `${node.key}:${port.port}`,
         from: node.key,
@@ -356,7 +389,8 @@ export class WorkflowCanvasComponent {
         x: node.x + port.offset,
         y1: node.y + node.height,
         y2: node.y + node.height + STUB_LENGTH
-      }))));
+      })));
+  });
 
   /** Başlangıç hapı — başlangıç adımı varsa onun üstünde. */
   readonly start = computed<CanvasStart | null>(() => {
@@ -622,6 +656,30 @@ export class WorkflowCanvasComponent {
 
   isEdgeTaken(edge: CanvasEdge): boolean {
     return this.overlayEdges().has(edgeId(edge.from, edge.exitPort));
+  }
+
+  /** Süreç bu hedefsiz çıkıştan bitti mi — uç işareti soluklaşmaz. */
+  isStubTaken(stub: CanvasStub): boolean {
+    return this.overlayEdges().has(edgeId(stub.from, stub.port));
+  }
+
+  // ── Düğüm üstü ipucu (salt-okunur görünümler) ─────────────────────────────
+
+  onNodePointerEnter(event: PointerEvent, node: CanvasNode): void {
+    if (event.pointerType === 'mouse') this.nodeHover.emit(node.key);
+  }
+
+  onNodePointerLeave(event: PointerEvent): void {
+    if (event.pointerType === 'mouse') this.nodeHover.emit(null);
+  }
+
+  /** Düğüm kartının ekrandaki kutusu — ipucunu yanına konumlamak için; çizili değilse null. */
+  nodeScreenRect(key: string): DOMRect | null {
+    const viewport = this.viewportRef()?.nativeElement;
+    if (!viewport) return null;
+    const element = Array.from(viewport.querySelectorAll<HTMLElement>('.canvas-node'))
+      .find(el => el.dataset['key']?.toLowerCase() === key.toLowerCase());
+    return element?.getBoundingClientRect() ?? null;
   }
 
   /** Port düğmesinin ekran okuyucu metni — koşul yolunda durumun etiketi. */

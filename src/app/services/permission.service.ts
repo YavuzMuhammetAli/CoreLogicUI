@@ -14,6 +14,8 @@ export interface ModelPermission {
   canShowInNav: boolean;
   /** Kullanıcı yalnızca kendi oluşturduğu (CreatedBy==userId) kayıtları görebilir/değiştirebilir. */
   canOwnOnly: boolean;
+  /** Kayıttaki iş akışını görebilir mi (karar sunucuda — IWorkflowAccessPolicy). */
+  canViewWorkflow: boolean;
 }
 
 export interface MyPermissionsResponse {

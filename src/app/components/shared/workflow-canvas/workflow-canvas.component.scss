@@ -126,9 +126,12 @@
 
 .canvas-viewport--overlay {
   .canvas-edge:not(.canvas-edge--taken) { opacity: 0.25; }
-  .canvas-stub, .canvas-stub-add { opacity: 0.35; }
+  .canvas-stub:not(.canvas-stub--taken), .canvas-stub-add { opacity: 0.35; }
   .canvas-node:not([data-overlay]) { opacity: 0.45; }
 }
+
+// Sürecin bittiği uç: izlenen kenarla aynı ağırlıkta.
+.canvas-stub.canvas-stub--taken line { stroke-width: 3; opacity: 1; }
 
 .canvas-edge--taken {
   path { stroke: var(--accent); stroke-width: 3; opacity: 1; stroke-dasharray: none; }

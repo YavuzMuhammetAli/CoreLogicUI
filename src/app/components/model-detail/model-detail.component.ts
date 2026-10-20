@@ -21,10 +21,11 @@ import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.
 import { LookupPickerComponent } from '../shared/lookup-picker/lookup-picker.component';
 import { WorkflowPanelComponent } from '../shared/workflow-panel/workflow-panel.component';
 import { TaskActionDialogComponent, TaskActionResult } from '../shared/task-action-dialog/task-action-dialog.component';
+import { WorkflowViewDialogComponent } from '../shared/workflow-view-dialog/workflow-view-dialog.component';
 import { HelpHintComponent } from '../shared/help-hint/help-hint.component';
 import { WorkflowInstanceService, WorkflowTaskService } from '../../services/workflow-task.service';
 import { NotificationService } from '../../services/notification.service';
-import { MyRecordTask, RecordWorkflowState, StartableWorkflow } from '../../models/workflow.model';
+import { MyRecordTask, RecordWorkflowState, StartableWorkflow, WorkflowInstance } from '../../models/workflow.model';
 import { buildRecordValues, lockedColumns, missingRequired } from './workflow-lock.util';
 import { LookupLabelService } from '../../services/lookup-label.service';
 import {
@@ -106,7 +107,7 @@ interface TabState {
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, ColumnVisibilityComponent,
     TranslatePipe, RecordFormDialogComponent, ConfirmDialogComponent, LookupPickerComponent,
-    WorkflowPanelComponent, TaskActionDialogComponent, HelpHintComponent
+    WorkflowPanelComponent, TaskActionDialogComponent, WorkflowViewDialogComponent, HelpHintComponent
   ],
   templateUrl: './model-detail.component.html',
   styleUrls: ['./model-detail.component.scss'],
@@ -145,6 +146,14 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   private pendingStart: string | null = null;
   /** Adım eylem diyaloğu (ek karar alanları / red açıklaması). */
   actionDialog: { task: MyRecordTask; decision: 'approve' | 'reject'; error: string | null } | null = null;
+  /**
+   * Kaydın kullanıcıya görünen en yeni süreci (sürüyor ya da bitmiş) — "Akışı
+   * görüntüle" düğmesi. Süreç paneli yükler; görme kararı sunucuda
+   * (Okuma + Akışı görüntüle izni, başlatan ya da görevli).
+   */
+  latestInstanceId: number | null = null;
+  /** Açık "Akışı görüntüle" diyaloğunun süreci; null → kapalı. */
+  viewInstanceId: number | null = null;
 
   typeName = '';
   recordId = 0;
@@ -313,6 +322,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.wfBusy = null;
     this.pendingStart = null;
     this.actionDialog = null;
+    this.latestInstanceId = null;
+    this.viewInstanceId = null;
   }
 
   // ─── Veri yükleme ───────────────────────────────────────────────────────────
@@ -1665,6 +1676,19 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
   closeActionDialog(): void {
     if (!this.wfBusy) this.actionDialog = null;
+  }
+
+  /** Süreç paneli yüklendi (ilk açılış ya da başlatma/karar sonrası tazeleme). */
+  onWorkflowInstances(instances: WorkflowInstance[]): void {
+    this.latestInstanceId = instances[0]?.id ?? null;
+  }
+
+  openWorkflowView(instanceId: number): void {
+    this.viewInstanceId = instanceId;
+  }
+
+  closeWorkflowView(): void {
+    this.viewInstanceId = null;
   }
 
   /** Diyalog başlığı/butonu — adımın ilgili etiketi. */

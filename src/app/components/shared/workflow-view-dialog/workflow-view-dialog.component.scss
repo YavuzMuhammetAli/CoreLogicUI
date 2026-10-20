@@ -1,0 +1,245 @@
+/* ── Akışı görüntüle ───────────────────────────────────────────────────────────
+   Kabuk adım pop-up'ıyla aynı (host kutu üretmez, overlay fixed); tuval gövdenin
+   kalan yüksekliğini doldurur (fillHeight). */
+
+:host {
+  display: contents;
+}
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+
+  @media (max-width: 768px) {
+    padding: var(--space-2);
+  }
+}
+
+.dialog-panel {
+  width: 100%;
+  max-width: 1040px;
+  /* Sabit yükseklik: tuval kendi içinde kayar, panel içerikle büyüyüp küçülmez. */
+  height: min(780px, calc(100vh - 2 * var(--space-4)));
+  /* dvh = görünen alan; vh mobilde tarayıcı çubuklarını da sayar */
+  height: min(780px, calc(100dvh - 2 * var(--space-4)));
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--elev-high);
+
+  @media (max-width: 768px) {
+    height: calc(100dvh - 2 * var(--space-2));
+  }
+}
+
+// Kapat düğmesi başlığın yanında kalır — global .panel-head dar ekranda sarılıyor.
+.view-head {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.view-title {
+  flex: 1 1 auto;
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+
+  h3 {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.view-version {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.view-meta {
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.view-started {
+  color: var(--fg-2);
+}
+
+.view-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.view-canvas {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+// ── Şema lejantı (renkler tuvaldeki yol katmanıyla aynı — workflow-instance ile ortak görünüm) ──
+
+.runtime-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-xs);
+  color: var(--fg-2);
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+}
+
+.legend-swatch {
+  width: 14px;
+  height: 10px;
+  border-radius: 3px;
+  border: 2px solid var(--border);
+
+  &--visited { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 8%, var(--surface)); }
+  &--current { border-color: var(--warn); background: var(--warn-bg); }
+  &--failed  { border-color: var(--danger); background: var(--danger-bg); }
+  &--end     { border-color: var(--success); background: var(--success-bg); }
+}
+
+.legend-line {
+  width: 18px;
+  height: 0;
+  border-top: 3px solid var(--accent);
+  border-radius: 2px;
+}
+
+// ── Adım ipucu ──────────────────────────────────────────────────────────────
+// Diyaloğun (1000) üstünde, help-hint ile aynı katman. Fareyi engellemez:
+// düğümden ayrılınca kapanır, altındaki şemayı kaydırmaya engel olmaz.
+
+.step-tip {
+  position: fixed;
+  z-index: 1200;
+  width: min(320px, calc(100vw - 2 * var(--space-4)));
+  max-height: calc(100dvh - 2 * var(--space-2));
+  overflow: hidden;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 10px);
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: var(--elev-high);
+  font-size: var(--text-sm);
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+
+  &--ready {
+    visibility: visible;
+    opacity: 1;
+    transition: opacity 120ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &--ready { transition: none; }
+  }
+}
+
+.step-tip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.step-tip-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.step-tip-kind {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.step-tip-empty {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.step-tip-lines {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step-tip-line {
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--border);
+
+  &[data-tone='success'] { border-left-color: var(--success); }
+  &[data-tone='danger']  { border-left-color: var(--danger); }
+  &[data-tone='warn']    { border-left-color: var(--warn); }
+}
+
+.step-tip-line-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+}
+
+.step-tip-label {
+  font-weight: 600;
+}
+
+.step-tip-who {
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+
+.step-tip-sub {
+  font-size: var(--text-xs);
+  color: var(--fg-2);
+}
+
+.step-tip-people {
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+
+.step-tip-more {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.step-tip-comment {
+  margin: var(--space-1) 0 0;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--surface-warm);
+  font-size: var(--text-xs);
+  color: var(--fg-2);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}

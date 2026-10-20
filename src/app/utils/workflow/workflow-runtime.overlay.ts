@@ -34,6 +34,7 @@ function dataOf(event: WorkflowEvent): Record<string, unknown> {
  * - Dal iptali (branchCancelled) karar sayılmaz.
  * - Geri alma (RolledBack) izi hedef adıma kadar keser — sonrası "olmamış" sayılır.
  * - Sürecin bulunduğu adım "şu an", olaydaysa "hata"; Bitiş düğümünde sonlandıysa "bitiş".
+ * - Hedefsiz çıkışla bittiyse o çıkış da kenar listesine girer (tuvalde uç işareti).
  */
 export function buildRuntimeOverlay(
   graph: WorkflowGraph, timeline: ReadonlyArray<WorkflowEvent>, instance: RuntimeInstance
@@ -98,6 +99,13 @@ export function buildRuntimeOverlay(
   for (const entry of trail) {
     nodes[entry.step] = 'visited';
     if (entry.edge) edges.push(entry.edge);
+  }
+
+  // Hedefsiz çıkışla biten süreç (boş onay/red hedefi → tamamlandı/reddedildi):
+  // son karar hiçbir adıma girişle kapanmadı; o çıkışın ucu da izlenen yoldur.
+  const finished = instance.status === 'Completed' || instance.status === 'Rejected';
+  if (finished && pending && pending.from === trail[trail.length - 1]?.step) {
+    edges.push(edgeId(pending.from, pending.port));
   }
 
   const current = instance.currentStepKey?.toLowerCase();

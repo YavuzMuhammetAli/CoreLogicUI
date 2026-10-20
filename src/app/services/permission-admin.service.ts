@@ -17,7 +17,9 @@ export const PermissionFlag = {
   All:           15,
   Navigation:    16,
   /** Kullanıcı yalnızca kendi oluşturduğu kayıtları görebilir/değiştirebilir. */
-  OwnOnly:       32
+  OwnOnly:       32,
+  /** Kayıttaki iş akışını (ilerlenen yol + kim onayladı/bekliyor) görür. Read ile birlikte. */
+  ViewWorkflow:  64
 } as const;
 
 /** ModelPermission'ı bitwise action int'ine dönüştürür */
@@ -28,6 +30,7 @@ export function toActionInt(p: {
   canDelete: boolean;
   canShowInNav: boolean;
   canOwnOnly: boolean;
+  canViewWorkflow: boolean;
 }): number {
   let action = 0;
   if (p.canRead)      action |= PermissionFlag.Read;
@@ -36,6 +39,7 @@ export function toActionInt(p: {
   if (p.canDelete)    action |= PermissionFlag.Delete;
   if (p.canShowInNav) action |= PermissionFlag.Navigation;
   if (p.canOwnOnly)   action |= PermissionFlag.OwnOnly;
+  if (p.canViewWorkflow) action |= PermissionFlag.ViewWorkflow;
   return action;
 }
 

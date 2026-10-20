@@ -125,6 +125,7 @@ CoreLogicUI-master/
         │       │                           #   klavye, sağ tık menüsü, `overlay` girdisi (simülasyon / süreç / sürüm farkı)
         │       ├── task-decision-form/     # Görev karar formu (ek alanlar + açıklama + Onayla/Reddet, ara onay diyaloğu YOK) — görev detayı; şema yardımcıları task-form.util.ts
         │       ├── task-action-dialog/     # Kayıt ekranındaki adım butonunun diyaloğu (ek karar alanları / red açıklaması)
+        │       ├── workflow-view-dialog/   # "Akışı görüntüle" — yalnız ilerlenen yol + düğüm ipucu (kim onayladı / bekliyor)
         │       └── notification-bell/      # Topbar zili — okunmamış rozeti (30 sn poll) + bildirim listesi (/UserNotification)
         ├── services/
         │   ├── auth.service.ts               # /Auth login/register, JWT → localStorage
@@ -577,6 +578,18 @@ Akış **`manual`** tetiklenir: formu oluşturan kişi ya yalnız **Kaydet**'e b
 - Akışın kendi yazımları `WorkflowTriggerSuppression` ile outbox üretmez — aksi halde süreç
   bitince aynı kayıt için yeni bir onUpdate akışı başlardı.
 - Görevlinin kaydı açabilmesi için modelde **Read** izni gerekir (görev tabanlı okuma izni yok).
+- **Akışı görüntüle:** kayıt başlığındaki düğme (`shared/workflow-view-dialog`) kaydın en yeni
+  sürecini **yalnız ilerlediği yere kadar** çizer: tuvalin `pathOnly` girdisi ulaşılmayan adımı ve
+  izlenmeyen kenarı hiç çizmez (konumlar tüm grafiğin yerleşiminden gelir). Düğüm üstünde (telefonda
+  dokununca) kim onayladı/reddetti + açıklama, bekleyen adımda kişi ya da rol + rolün aktif üyeleri
+  (`utils/workflow/workflow-step-history.ts`). Adlar `/WorkflowInstance/get`'te sunucudan gelir
+  (`assignedUserName`, `completedByName`, `candidates`, `startedByName` — `IWorkflowPeopleResolver`).
+- **Görme izni = yeni model izni `ViewWorkflow` (bit 64)**, kullanıcı/rol izin ekranlarında
+  "Akışı görüntüle". `IWorkflowAccessPolicy`: admin · başlatan · görevli/karar veren her zaman görür;
+  diğerleri **Read + ViewWorkflow** ister (yalnız Read artık süreç/görev okuma uçlarını AÇMAZ —
+  Süreç paneli dahil). `recordState` (kilit/adım düğmeleri) Read ile çalışmaya devam eder.
+  `ModelPermissionDto` UI'ın okuduğu `canOwnOnly` adını da yazar (önceden yalnız `ownRecordsOnly`
+  gidiyordu; izin ekranında kutu hep boş gelip kayıtta bit siliniyordu).
 
 ## İş Akışı Tasarımcısı ve Düğüm Tipleri
 

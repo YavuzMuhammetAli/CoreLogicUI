@@ -17,6 +17,7 @@ import { LanguageService } from '../../services/language.service';
 import { markDirty } from '../../utils/change-detection';
 import { pageWindow } from '../../utils/pagination';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
+import { HelpHintComponent } from '../shared/help-hint/help-hint.component';
 
 /** Açılış sayfası dropdown'unda gösterilen sabit hedefler key'i — etiketler LanguageService.t() ile çözülür */
 const FIXED_LANDING_PAGE_KEYS: { value: string; labelKey: string }[] = [
@@ -36,6 +37,8 @@ export interface RolePermissionRow {
   canShowInNav: boolean;
   /** Rol üyesi yalnızca kendi oluşturduğu kayıtları görebilir/değiştirebilir. */
   canOwnOnly:   boolean;
+  /** Rol üyesi kayıttaki iş akışını (ilerlenen yol + kim onayladı/bekliyor) görebilir mi? */
+  canViewWorkflow: boolean;
   /** Değiştirildi mi? Yalnızca değişen satırlar backend'e gönderilir */
   dirty: boolean;
 }
@@ -43,7 +46,7 @@ export interface RolePermissionRow {
 @Component({
   selector: 'app-role-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ConfirmDialogComponent],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ConfirmDialogComponent, HelpHintComponent],
   templateUrl: './role-detail.component.html',
   styleUrls: ['./role-detail.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -403,6 +406,7 @@ export class RoleDetailComponent implements OnInit {
             canDelete:    p?.canDelete    ?? false,
             canShowInNav: p?.canShowInNav ?? false,
             canOwnOnly:   p?.canOwnOnly   ?? false,
+            canViewWorkflow: p?.canViewWorkflow ?? false,
             dirty: false
           };
         });
@@ -453,6 +457,7 @@ export class RoleDetailComponent implements OnInit {
     if (row.canDelete)    labels.push(this.languageService.t('role.detail.summaryDelete'));
     if (row.canShowInNav) labels.push(this.languageService.t('role.detail.summaryNav'));
     if (row.canOwnOnly)   labels.push(this.languageService.t('role.detail.summaryOwn'));
+    if (row.canViewWorkflow) labels.push(this.languageService.t('role.detail.summaryWorkflow'));
     return labels;
   }
 
