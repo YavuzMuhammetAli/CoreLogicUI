@@ -1,0 +1,191 @@
+<div class="designer" [class.designer--fullscreen]="fullscreen()">
+  <div class="page-header">
+    <span class="eyebrow">{{ 'screen.designer.title' | t }} · {{ modelLabel() }}</span>
+    @if (!loading() && !loadError()) {
+      <div class="designer-actions">
+        @if (currentStore().dirty()) {
+          <span class="unsaved" role="status">● {{ 'screen.designer.unsaved' | t }}</span>
+        }
+        <button type="button" class="btn btn-ghost btn-sm" (click)="undo()" [disabled]="!currentStore().canUndo()"
+          [attr.aria-label]="'screen.designer.undo' | t" [attr.title]="'screen.designer.undo' | t">
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg>
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="redo()" [disabled]="!currentStore().canRedo()"
+          [attr.aria-label]="'screen.designer.redo' | t" [attr.title]="'screen.designer.redo' | t">
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 15-6.7L21 13"/></svg>
+        </button>
+        @if (view() === 'form' && !narrow()) {
+          <button type="button" class="btn btn-sm" [class.btn-primary]="preview()" [class.btn-secondary]="!preview()"
+            (click)="togglePreview()" [attr.aria-pressed]="preview()">{{ 'screen.designer.preview' | t }}</button>
+        }
+        @if (!narrow()) {
+          <button type="button" class="btn btn-ghost btn-sm" (click)="toggleFullscreen()" [attr.aria-pressed]="fullscreen()">
+            {{ (fullscreen() ? 'screen.designer.exitFullscreen' : 'screen.designer.fullscreen') | t }}
+          </button>
+        }
+        <button type="button" class="btn btn-secondary btn-sm" (click)="save()" [disabled]="!!busy() || !moduleInstalled()">
+          @if (busy() === 'save') { <span class="spinner" aria-hidden="true"></span> }
+          {{ 'screen.designer.save' | t }}
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" (click)="publish()" [disabled]="!canPublish()"
+          [attr.title]="errorCount() > 0 ? ('screen.designer.publishBlocked' | t:{ count: errorCount() }) : null">
+          @if (busy() === 'publish') { <span class="spinner" aria-hidden="true"></span> }
+          {{ 'screen.designer.publish' | t }}
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- Tam ekranda uygulamanın bildirim bandı katmanın altında kalır; aynısı burada. -->
+  @if (fullscreen() && notification.current(); as message) {
+    <div class="alert alert-{{ message.type }} fullscreen-toast" role="status">{{ message.message }}</div>
+  }
+
+  @if (loading()) {
+    <div class="panel">
+      <div class="empty-state">
+        <span class="spinner" style="width: 32px; height: 32px;" [attr.aria-label]="'screen.designer.loading' | t"></span>
+      </div>
+    </div>
+  } @else if (loadError()) {
+    <div class="alert alert-danger" role="alert">
+      <span>{{ loadError() }}</span>
+      <a class="btn btn-ghost btn-sm" routerLink="/build">{{ 'screen.designer.backToModels' | t }}</a>
+    </div>
+  } @else {
+    @if (!moduleInstalled()) {
+      <div class="alert alert-warn" role="status">{{ 'screen.designer.moduleNotInstalled' | t }}</div>
+    }
+    @if (conflict()) {
+      <div class="alert alert-warn conflict" role="alert">
+        <span>{{ 'screen.designer.conflict' | t }}</span>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="reloadAfterConflict()">{{ 'screen.designer.reload' | t }}</button>
+      </div>
+    }
+
+    <div class="designer-bar">
+      <div class="segmented" role="tablist" [attr.aria-label]="'screen.designer.viewAria' | t">
+        <button type="button" role="tab" [attr.aria-selected]="view() === 'form'" (click)="setView('form')">
+          {{ 'screen.designer.viewForm' | t }}
+          @if (formStore.dirty()) { <span class="dirty-dot" aria-hidden="true"></span> }
+        </button>
+        <button type="button" role="tab" [attr.aria-selected]="view() === 'list'" (click)="setView('list')">
+          {{ 'screen.designer.viewList' | t }}
+          @if (listStore.dirty()) { <span class="dirty-dot" aria-hidden="true"></span> }
+        </button>
+      </div>
+
+      @if (notSaved()) {
+        <span class="badge badge-meta">{{ 'screen.designer.statusNotSaved' | t }}</span>
+      } @else if (!currentState()?.publishedVersion) {
+        <span class="badge badge-warn">{{ 'screen.designer.statusDraftOnly' | t }}</span>
+      } @else if (hasUnpublished()) {
+        <span class="badge badge-warn">{{ 'screen.designer.statusChanged' | t:{ version: currentState()?.publishedVersion ?? 0 } }}</span>
+      } @else {
+        <span class="badge badge-success">{{ 'screen.designer.statusPublished' | t:{ version: currentState()?.publishedVersion ?? 0 } }}</span>
+      }
+
+      @if (preview() && view() === 'form') {
+        <div class="segmented segmented--small" role="group" [attr.aria-label]="'screen.designer.previewWidth' | t">
+          <button type="button" [attr.aria-pressed]="previewFrame() === 'desktop'" (click)="previewFrame.set('desktop')">{{ 'screen.designer.frameDesktop' | t }}</button>
+          <button type="button" [attr.aria-pressed]="previewFrame() === 'tablet'" (click)="previewFrame.set('tablet')">{{ 'screen.designer.frameTablet' | t }}</button>
+          <button type="button" [attr.aria-pressed]="previewFrame() === 'phone'" (click)="previewFrame.set('phone')">{{ 'screen.designer.framePhone' | t }}</button>
+        </div>
+      }
+
+      <span class="bar-spacer"></span>
+
+      <a class="btn btn-ghost btn-sm" [routerLink]="view() === 'form' ? ['/models', typeName(), 'new'] : ['/models', typeName()]">
+        {{ 'screen.designer.openScreen' | t }}
+      </a>
+      @if (currentState()?.exists && currentState()?.publishedVersion && hasUnpublished()) {
+        <button type="button" class="btn btn-ghost btn-sm" (click)="confirmDiscard.set(true)" [disabled]="!!busy()">
+          {{ 'screen.designer.discard' | t }}
+        </button>
+      }
+      @if (currentState()?.exists) {
+        <button type="button" class="btn btn-ghost btn-sm" (click)="confirmReset.set(true)" [disabled]="!!busy()">
+          {{ 'screen.designer.reset' | t }}
+        </button>
+      }
+    </div>
+
+    @if (notSaved()) {
+      <div class="alert alert-info" role="note">{{ 'screen.designer.notSavedNotice' | t }}</div>
+    }
+
+    @if (view() === 'form') {
+      <app-form-designer
+        [store]="formStore"
+        [columns]="columns()"
+        [rules]="rules()"
+        [facts]="facts()"
+        [issues]="formIssues()"
+        [typeName]="typeName()"
+        [preview]="preview()"
+        [previewWidth]="previewWidth()"
+        [narrow]="narrow()" />
+    } @else {
+      <app-list-designer
+        [store]="listStore"
+        [columns]="columns()"
+        [typeName]="typeName()"
+        [narrow]="narrow()" />
+    }
+
+    <!-- Sorunlar: yayını engelleyenler (hata) ve bilgi notları (uyarı) -->
+    <section class="panel issues">
+      <button type="button" class="issues-head" (click)="issuesOpen.set(!issuesOpen())" [attr.aria-expanded]="issuesOpen()">
+        <span class="eyebrow">{{ 'screen.designer.issues' | t }}</span>
+        <span class="cluster">
+          @if (errorCount() > 0) { <span class="badge badge-danger">{{ 'screen.designer.errorCount' | t:{ count: errorCount() } }}</span> }
+          @if (issues().length - errorCount() > 0) {
+            <span class="badge badge-warn">{{ 'screen.designer.warningCount' | t:{ count: issues().length - errorCount() } }}</span>
+          }
+          @if (issues().length === 0) { <span class="badge badge-success">{{ 'screen.designer.noIssuesBadge' | t }}</span> }
+        </span>
+      </button>
+      @if (issuesOpen() && issues().length > 0) {
+        <ul class="issue-list">
+          @for (issue of issues(); track $index) {
+            <li class="issue">
+              <span class="badge" [class.badge-danger]="issue.severity === 'error'" [class.badge-warn]="issue.severity === 'warning'">
+                {{ ('screen.designer.severity.' + issue.severity) | t }}
+              </span>
+              <button type="button" class="issue-text" (click)="pickIssue(issue)">{{ issueText(issue) }}</button>
+              @if (canFix(issue)) {
+                <button type="button" class="btn btn-ghost btn-sm" (click)="fix(issue)">
+                  {{ ('screen.designer.fix.' + issue.code) | t }}
+                </button>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</div>
+
+<app-confirm-dialog
+  [open]="confirmDiscard()"
+  [title]="'screen.designer.discardTitle' | t"
+  [message]="'screen.designer.discardMessage' | t"
+  [busy]="busy() === 'discard'"
+  (confirmed)="discard()"
+  (cancelled)="confirmDiscard.set(false)" />
+
+<app-confirm-dialog
+  [open]="confirmReset()"
+  [title]="'screen.designer.resetTitle' | t"
+  [message]="'screen.designer.resetMessage' | t"
+  [busy]="busy() === 'reset'"
+  (confirmed)="reset()"
+  (cancelled)="confirmReset.set(false)" />
+
+<app-confirm-dialog
+  [open]="confirmLeave()"
+  [title]="'screen.designer.leaveTitle' | t"
+  [message]="'screen.designer.leaveMessage' | t"
+  [confirmLabel]="'screen.designer.leaveConfirm' | t"
+  (confirmed)="answerLeave(true)"
+  (cancelled)="answerLeave(false)" />

@@ -1,0 +1,255 @@
+@if (preview()) {
+  <!-- Önizleme: belge kayıt ekranının kendi bileşeniyle, seçilen genişlikte çizilir -->
+  <div class="preview-stage">
+    <div class="preview-frame" [style.max-width.px]="previewWidth()">
+      <app-record-layout
+        [form]="sampleForm()"
+        [columns]="columns()"
+        [rules]="rules()"
+        [layout]="doc()"
+        idPrefix="pv-" />
+    </div>
+  </div>
+} @else if (narrow()) {
+  <!-- Telefon: sürükle-bırak yerine yapı listesi -->
+  <div class="alert alert-info structure-notice" role="note">{{ 'screen.designer.narrowNotice' | t }}</div>
+  <div class="flow">
+    @for (tab of doc().tabs; track tab.id; let ti = $index) {
+      <section class="panel">
+        <div class="panel-head">
+          <h3 class="structure-tab-title">{{ tab.title || ('screen.form.untitledTab' | t:{ n: ti + 1 }) }}</h3>
+        </div>
+        <div class="panel-body structure-body">
+          @for (section of tab.sections; track section.id) {
+            <div class="structure-section">
+              <span class="eyebrow">{{ section.title || ('screen.designer.untitledSection' | t) }}</span>
+              <ul class="structure-items">
+                @for (item of section.items; track item.id) {
+                  <li class="structure-item">
+                    <span class="structure-label">
+                      @switch (item.kind) {
+                        @case ('field') { {{ itemLabel(item) }} }
+                        @case ('spacer') { {{ 'screen.designer.spacer' | t }} }
+                        @case ('divider') { {{ 'screen.designer.divider' | t }} }
+                        @case ('note') { {{ 'screen.designer.note' | t }} }
+                      }
+                    </span>
+                    <span class="structure-actions">
+                      @if (item.kind !== 'divider') {
+                        <select class="input structure-span" [value]="item.span"
+                          (change)="setItemSpan(item.id, +$any($event.target).value)"
+                          [attr.aria-label]="'screen.inspector.width' | t">
+                          @for (span of spanOptions; track span) {
+                            <option [value]="span">{{ span }}/12</option>
+                          }
+                        </select>
+                      }
+                      <button type="button" class="btn btn-ghost btn-sm" (click)="moveBy(item.id, -1)"
+                        [attr.aria-label]="'screen.designer.moveUp' | t">↑</button>
+                      <button type="button" class="btn btn-ghost btn-sm" (click)="moveBy(item.id, 1)"
+                        [attr.aria-label]="'screen.designer.moveDown' | t">↓</button>
+                      <button type="button" class="btn btn-ghost btn-sm" (click)="removeItem(item.id)"
+                        [attr.aria-label]="'screen.inspector.removeFromForm' | t">✕</button>
+                    </span>
+                  </li>
+                }
+              </ul>
+              @if (unplaced().length > 0) {
+                <select class="input" (change)="addColumnTo(section, $any($event.target).value); $any($event.target).value = ''"
+                  [attr.aria-label]="'screen.designer.addField' | t">
+                  <option value="">+ {{ 'screen.designer.addField' | t }}</option>
+                  @for (name of unplaced(); track name) {
+                    <option [value]="name">{{ labelOf(name) }}</option>
+                  }
+                </select>
+              }
+            </div>
+          }
+        </div>
+      </section>
+    }
+  </div>
+} @else {
+  <div class="form-designer">
+
+    <!-- ── Palet ─────────────────────────────────────────────────────────── -->
+    <aside class="palette" [attr.aria-label]="'screen.designer.paletteAria' | t">
+      <input type="search" class="input" [value]="search()" (input)="search.set($any($event.target).value)"
+        [placeholder]="'screen.designer.searchPlaceholder' | t" [attr.aria-label]="'screen.designer.searchPlaceholder' | t">
+
+      <div class="palette-group">
+        <span class="eyebrow palette-title">
+          {{ 'screen.designer.unplaced' | t }}
+          <span class="badge badge-meta">{{ unplaced().length }}</span>
+        </span>
+        @for (name of unplaced(); track name) {
+          <button type="button" class="palette-chip"
+            (pointerdown)="onPalettePointerDown($event, { column: name }, labelOf(name))"
+            (keydown.enter)="addColumn(name)" (keydown.space)="addColumn(name); $event.preventDefault()"
+            [attr.aria-label]="'screen.designer.placeAria' | t:{ name: labelOf(name) }">
+            <span class="palette-chip-label">
+              {{ labelOf(name) }}
+              @if (mustStay().has(name)) { <span class="req" aria-hidden="true">*</span> }
+            </span>
+            <span class="palette-chip-type">{{ column(name).dataType }}</span>
+          </button>
+        } @empty {
+          <p class="palette-empty">{{ 'screen.designer.allPlaced' | t }}</p>
+        }
+      </div>
+
+      @if (hidden().length > 0) {
+        <div class="palette-group">
+          <span class="eyebrow palette-title">
+            {{ 'screen.designer.hidden' | t }}
+            <span class="badge badge-meta">{{ hidden().length }}</span>
+          </span>
+          @for (name of hidden(); track name) {
+            <button type="button" class="palette-chip palette-chip--hidden"
+              (pointerdown)="onPalettePointerDown($event, { column: name }, labelOf(name))"
+              (keydown.enter)="addColumn(name)" (keydown.space)="addColumn(name); $event.preventDefault()"
+              [attr.aria-label]="'screen.designer.placeAria' | t:{ name: labelOf(name) }">
+              <span class="palette-chip-label">{{ labelOf(name) }}</span>
+              <span class="palette-chip-type">{{ column(name).dataType }}</span>
+            </button>
+          }
+        </div>
+      }
+
+      <div class="palette-group">
+        <span class="eyebrow palette-title">{{ 'screen.designer.elements' | t }}</span>
+        <button type="button" class="palette-chip palette-chip--element"
+          (pointerdown)="onElementPointerDown($event, 'spacer')"
+          (keydown.enter)="addElement('spacer')">{{ 'screen.designer.spacer' | t }}</button>
+        <button type="button" class="palette-chip palette-chip--element"
+          (pointerdown)="onElementPointerDown($event, 'divider')"
+          (keydown.enter)="addElement('divider')">{{ 'screen.designer.divider' | t }}</button>
+        <button type="button" class="palette-chip palette-chip--element"
+          (pointerdown)="onElementPointerDown($event, 'note')"
+          (keydown.enter)="addElement('note')">{{ 'screen.designer.note' | t }}</button>
+        <button type="button" class="palette-chip palette-chip--structure" (click)="addSectionToCurrentTab()">
+          + {{ 'screen.designer.addSection' | t }}
+        </button>
+        <button type="button" class="palette-chip palette-chip--structure" (click)="addTab()">
+          + {{ 'screen.designer.addTab' | t }}
+        </button>
+      </div>
+      <p class="palette-help">{{ 'screen.designer.paletteHelp' | t }}</p>
+    </aside>
+
+    <!-- ── Tuval ─────────────────────────────────────────────────────────── -->
+    <div class="canvas" #canvasBody [class.canvas--dragging]="dragging() || !!liveSpan()">
+      <div class="canvas-tabs" role="tablist" [attr.aria-label]="'screen.form.tabsAria' | t">
+        @for (tab of doc().tabs; track tab.id; let i = $index) {
+          <button type="button" role="tab" class="canvas-tab"
+            [attr.data-tab-id]="tab.id"
+            [class.canvas-tab--active]="tab.id === currentTab()?.id"
+            [class.canvas-tab--selected]="isSelected(tab.id)"
+            [class.canvas-tab--drop]="drop()?.tabId === tab.id"
+            [attr.aria-selected]="tab.id === currentTab()?.id"
+            (click)="selectTab(tab.id)">
+            {{ tab.title || ('screen.form.untitledTab' | t:{ n: i + 1 }) }}
+          </button>
+        }
+        <button type="button" class="canvas-tab canvas-tab--add" (click)="addTab()"
+          [attr.aria-label]="'screen.designer.addTab' | t">+</button>
+      </div>
+      @if (doc().tabs.length === 1) {
+        <p class="canvas-hint">{{ 'screen.designer.singleTabHint' | t }}</p>
+      }
+
+      @if (currentTab(); as tab) {
+        @for (section of tab.sections; track section.id) {
+          <section class="canvas-section" [class.canvas-section--selected]="isSelected(section.id)">
+            <button type="button" class="canvas-section-head" (click)="select(section.id)"
+              [attr.aria-pressed]="isSelected(section.id)">
+              @if (section.collapsible) {
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                     [class.chevron-open]="!section.collapsed"><polyline points="9 18 15 12 9 6"/></svg>
+              }
+              <span [class.muted-title]="!section.title">{{ section.title || ('screen.designer.untitledSection' | t) }}</span>
+              @if (section.collapsible) {
+                <span class="badge badge-meta">{{ (section.collapsed ? 'screen.designer.collapsedBadge' : 'screen.designer.collapsibleBadge') | t }}</span>
+              }
+            </button>
+
+            <div class="canvas-grid" [attr.data-section-grid]="section.id">
+              <div class="canvas-guides" aria-hidden="true">
+                @for (c of gridColumns; track c) { <span></span> }
+              </div>
+              @for (item of section.items; track item.id) {
+                <div class="canvas-item"
+                  [attr.data-item-id]="item.id"
+                  [style.grid-column]="gridColumn(item)"
+                  [class.canvas-item--selected]="isSelected(item.id)"
+                  [class.canvas-item--dragging]="draggingItemId() === item.id"
+                  [class.canvas-item--issue]="hasIssue(item)"
+                  tabindex="0"
+                  role="button"
+                  [attr.aria-pressed]="isSelected(item.id)"
+                  [attr.aria-label]="'screen.designer.itemAria' | t:{ name: itemLabel(item) || ('screen.designer.' + item.kind | t), span: spanOf(item) }"
+                  (pointerdown)="onItemPointerDown($event, item)"
+                  (keydown.enter)="select(item.id)">
+                  @if (item.kind === 'field') {
+                    @if (isKnown(item.column)) {
+                      @if (control(item.column); as ctrl) {
+                        <div class="canvas-field" inert>
+                          <app-record-field
+                            [column]="column(item.column)"
+                            [control]="ctrl"
+                            [rule]="rules().get(item.column)"
+                            idPrefix="design-"
+                            [widget]="item.widget ?? null"
+                            [rows]="item.rows ?? null" />
+                        </div>
+                      }
+                    } @else {
+                      <div class="canvas-placeholder canvas-placeholder--danger">
+                        {{ 'screen.designer.unknownField' | t:{ column: item.column } }}
+                      </div>
+                    }
+                  } @else if (item.kind === 'spacer') {
+                    <div class="canvas-placeholder">{{ 'screen.designer.spacer' | t }}</div>
+                  } @else if (item.kind === 'divider') {
+                    <hr class="canvas-divider">
+                  } @else {
+                    <div class="alert canvas-note" [class.alert-info]="item.tone === 'info'" [class.alert-warn]="item.tone === 'warn'">
+                      <span [class.muted-title]="!item.text">{{ item.text || ('screen.designer.emptyNote' | t) }}</span>
+                    </div>
+                  }
+                  @if (item.kind !== 'divider') {
+                    <span class="canvas-span" aria-hidden="true">{{ spanOf(item) }}/12</span>
+                    <span class="canvas-resize" aria-hidden="true" (pointerdown)="onResizePointerDown($event, item)"></span>
+                  }
+                </div>
+              } @empty {
+                <div class="canvas-empty">{{ 'screen.designer.emptySection' | t }}</div>
+              }
+            </div>
+          </section>
+        }
+        <button type="button" class="btn btn-ghost btn-sm" (click)="addSectionToCurrentTab()">
+          + {{ 'screen.designer.addSection' | t }}
+        </button>
+      }
+
+      @if (drop()?.line; as line) {
+        <div class="drop-line" aria-hidden="true"
+          [style.left.px]="line.left" [style.top.px]="line.top" [style.width.px]="line.width" [style.height.px]="line.height"></div>
+      }
+    </div>
+
+    <!-- ── İnceleyici ────────────────────────────────────────────────────── -->
+    <app-form-inspector
+      class="inspector"
+      [store]="store()"
+      [columns]="columns()"
+      [rules]="rules()"
+      [facts]="facts()"
+      [typeName]="typeName()" />
+  </div>
+
+  @if (ghost(); as g) {
+    <div class="drag-ghost" aria-hidden="true" [style.left.px]="g.x + 14" [style.top.px]="g.y + 14">{{ g.label }}</div>
+  }
+}

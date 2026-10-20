@@ -377,6 +377,12 @@ export class TableDetailComponent implements OnDestroy {
   }
 
   /** Başlıkta gösterilecek ad: kayıtlı etiket, yoksa tablo adı. */
+  /** Ekran tasarımı yalnız yayınlanmış modelde anlamlı: kayıt ekranları derlenmiş tipi çizer. */
+  get screenDesignTypeName(): string | null {
+    const name = this.editTypeName;
+    return name && this.publishedModelNames.includes(name) ? name : null;
+  }
+
   get displayModelName(): string {
     return (this.originalLabel ?? '').trim() || this.editTypeName || '';
   }

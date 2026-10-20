@@ -35,10 +35,9 @@
       <div class="panel-actions">
         @if (permission.isAdmin()) {
           <!-- Yayınlanmış ekran tasarımı "Kolonlar" ayarının yerini alır: tek doğruluk kaynağı. -->
-          @if (formLayout) {
-            <a class="btn btn-ghost btn-sm" [routerLink]="['/build', typeName, 'screen']"
-               [attr.aria-label]="'screen.designScreenAria' | t">{{ 'screen.designScreen' | t }}</a>
-          } @else {
+          <a class="btn btn-ghost btn-sm" [routerLink]="['/build', typeName, 'screen']"
+             [attr.aria-label]="'screen.designScreenAria' | t">{{ 'screen.designScreen' | t }}</a>
+          @if (!formLayout) {
             <app-column-visibility
               [columns]="parentColumnVisibilityItems"
               [visible]="effectiveVisibleParentColumnNames"

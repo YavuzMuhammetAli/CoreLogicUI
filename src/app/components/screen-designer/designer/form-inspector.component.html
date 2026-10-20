@@ -1,0 +1,167 @@
+<section class="inspector" [attr.aria-label]="'screen.inspector.title' | t">
+  <header class="inspector-head">
+    <span class="eyebrow">{{ 'screen.inspector.title' | t }}</span>
+  </header>
+
+  <div class="inspector-body">
+    @if (target(); as t) {
+      @if (t.kind === 'item') {
+        @let item = t.item;
+
+        @if (item.kind === 'field') {
+          <div class="inspector-title">
+            <strong>{{ label(item.column) }}</strong>
+            <span class="inspector-meta">{{ item.column }} · {{ column(item.column)?.dataType ?? '?' }}</span>
+            <span class="cluster">
+              @if (mustStayVisible(item.column)) { <span class="badge badge-warn">{{ 'screen.inspector.required' | t }}</span> }
+              @if (rule(item.column)?.autoValueExpression) { <span class="badge badge-meta">ƒx</span> }
+              @if (!column(item.column)) { <span class="badge badge-danger">{{ 'screen.inspector.unknown' | t }}</span> }
+            </span>
+          </div>
+        } @else {
+          <div class="inspector-title">
+            <strong>{{ ('screen.designer.' + item.kind) | t }}</strong>
+          </div>
+        }
+
+        @if (item.kind !== 'divider') {
+          <div class="field">
+            <label>{{ 'screen.inspector.width' | t }}</label>
+            <div class="span-quick" role="group" [attr.aria-label]="'screen.inspector.width' | t">
+              @for (span of quickSpans; track span) {
+                <button type="button" class="btn btn-sm" [class.btn-primary]="item.span === span"
+                  [class.btn-secondary]="item.span !== span" (click)="setSpan(item, span)"
+                  [attr.aria-pressed]="item.span === span">{{ span }}/12</button>
+              }
+            </div>
+            <select class="input" [value]="item.span" (change)="setSpan(item, +value($event))"
+              [attr.aria-label]="'screen.inspector.widthExact' | t">
+              @for (span of spanOptions; track span) {
+                <option [value]="span">{{ 'screen.inspector.spanOption' | t:{ span } }}</option>
+              }
+            </select>
+            <span class="field-help">{{ 'screen.inspector.widthHelp' | t }}</span>
+          </div>
+
+          <label class="checkbox-label">
+            <input type="checkbox" [checked]="!!item.newRow" (change)="patch(item, { newRow: checked($event) })">
+            {{ 'screen.inspector.newRow' | t }}
+          </label>
+        }
+
+        @if (item.kind === 'field' && widgetChoice(item.column); as choice) {
+          <div class="field">
+            <label for="insp-widget">{{ 'screen.inspector.widget' | t }}</label>
+            <select id="insp-widget" class="input" [value]="item.widget ?? ''" (change)="setWidget(item, value($event))">
+              @if (choice === 'string') {
+                <option value="">{{ 'screen.inspector.widgetSingleLine' | t }}</option>
+                <option value="multiline">{{ 'screen.inspector.widgetMultiline' | t }}</option>
+              } @else {
+                <option value="">{{ 'screen.inspector.widgetSelect' | t }}</option>
+                <option value="radio">{{ 'screen.inspector.widgetRadio' | t }}</option>
+              }
+            </select>
+          </div>
+          @if (item.widget === 'multiline') {
+            <div class="field">
+              <label for="insp-rows">{{ 'screen.inspector.rows' | t }}</label>
+              <input id="insp-rows" class="input" type="number" [min]="limits.minRows" [max]="limits.maxRows"
+                [value]="item.rows ?? 3" (change)="patch(item, { rows: +value($event) })">
+            </div>
+          }
+        }
+
+        @if (item.kind === 'note') {
+          <div class="field">
+            <label for="insp-note">{{ 'screen.inspector.noteText' | t }}</label>
+            <textarea id="insp-note" class="input" rows="4" [maxLength]="limits.maxNoteLength"
+              [value]="item.text" (input)="patch(item, { text: value($event) }, 'text')"></textarea>
+          </div>
+          <div class="field">
+            <label for="insp-tone">{{ 'screen.inspector.noteTone' | t }}</label>
+            <select id="insp-tone" class="input" [value]="item.tone" (change)="setTone(item, value($event))">
+              <option value="info">{{ 'screen.inspector.toneInfo' | t }}</option>
+              <option value="warn">{{ 'screen.inspector.toneWarn' | t }}</option>
+            </select>
+          </div>
+        }
+
+        <div class="inspector-actions">
+          <button type="button" class="btn btn-secondary btn-sm" (click)="remove(item)">
+            {{ 'screen.inspector.removeFromForm' | t }}
+          </button>
+          @if (item.kind === 'field') {
+            <button type="button" class="btn btn-ghost btn-sm" (click)="hide(item)" [disabled]="mustStayVisible(item.column)">
+              {{ 'screen.inspector.hide' | t }}
+            </button>
+          }
+        </div>
+        @if (item.kind === 'field') {
+          @if (mustStayVisible(item.column)) {
+            <p class="field-help">{{ 'screen.inspector.requiredHelp' | t }}</p>
+          }
+          <a class="inspector-link" [routerLink]="['/build', typeName()]">{{ 'screen.inspector.editSchema' | t }}</a>
+        }
+      } @else if (t.kind === 'section') {
+        <div class="inspector-title"><strong>{{ 'screen.inspector.section' | t }}</strong></div>
+        <div class="field">
+          <label for="insp-section-title">{{ 'screen.inspector.sectionTitle' | t }}</label>
+          <input id="insp-section-title" class="input" [maxLength]="limits.maxTitleLength" [value]="t.section.title ?? ''"
+            (input)="patchSection(t.section, { title: value($event) }, 'title')">
+        </div>
+        <label class="checkbox-label">
+          <input type="checkbox" [checked]="!!t.section.collapsible" (change)="patchSection(t.section, { collapsible: checked($event) })">
+          {{ 'screen.inspector.collapsible' | t }}
+        </label>
+        @if (t.section.collapsible) {
+          <label class="checkbox-label">
+            <input type="checkbox" [checked]="!!t.section.collapsed" (change)="patchSection(t.section, { collapsed: checked($event) })">
+            {{ 'screen.inspector.collapsed' | t }}
+          </label>
+        }
+        <div class="inspector-actions">
+          <button type="button" class="btn btn-ghost btn-sm" [disabled]="t.index === 0" (click)="moveSection(t.section, -1)">
+            ↑ {{ 'screen.designer.moveUp' | t }}
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" [disabled]="t.index === t.count - 1" (click)="moveSection(t.section, 1)">
+            ↓ {{ 'screen.designer.moveDown' | t }}
+          </button>
+          <button type="button" class="btn btn-danger btn-sm" (click)="removeSection(t.section)">
+            {{ 'screen.inspector.removeSection' | t }}
+          </button>
+        </div>
+        <p class="field-help">{{ 'screen.inspector.removeSectionHelp' | t }}</p>
+      } @else {
+        <div class="inspector-title"><strong>{{ 'screen.inspector.tab' | t }}</strong></div>
+        <div class="field">
+          <label for="insp-tab-title">{{ 'screen.inspector.tabTitle' | t }}</label>
+          <input id="insp-tab-title" class="input" [maxLength]="limits.maxTitleLength" [value]="t.tab.title"
+            (input)="renameTab(t.tab, value($event))">
+        </div>
+        <div class="inspector-actions">
+          <button type="button" class="btn btn-ghost btn-sm" [disabled]="t.index === 0" (click)="moveTab(t.tab, -1)">
+            ← {{ 'screen.inspector.moveLeft' | t }}
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" [disabled]="t.index === t.count - 1" (click)="moveTab(t.tab, 1)">
+            {{ 'screen.inspector.moveRight' | t }} →
+          </button>
+          <button type="button" class="btn btn-danger btn-sm" [disabled]="t.count <= 1" (click)="removeTab(t.tab)">
+            {{ 'screen.inspector.removeTab' | t }}
+          </button>
+        </div>
+        @if (t.count === 1) {
+          <p class="field-help">{{ 'screen.inspector.singleTabHelp' | t }}</p>
+        }
+      }
+    } @else {
+      <div class="inspector-empty">
+        <p>{{ 'screen.inspector.emptyHelp' | t }}</p>
+        <ul>
+          <li>{{ 'screen.inspector.tipDrag' | t }}</li>
+          <li>{{ 'screen.inspector.tipResize' | t }}</li>
+          <li>{{ 'screen.inspector.tipKeyboard' | t }}</li>
+        </ul>
+      </div>
+    }
+  </div>
+</section>

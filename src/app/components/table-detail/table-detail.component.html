@@ -32,6 +32,11 @@
           {{ 'table.detail.backToList' | t }}
         </a>
 
+        @if (screenDesignTypeName; as designName) {
+          <a [routerLink]="['/build', designName, 'screen']" class="btn btn-ghost btn-sm"
+             [attr.aria-label]="'screen.designScreenAria' | t">{{ 'screen.designScreen' | t }}</a>
+        }
+
         <!-- Kaydet -->
         <button
           type="button"

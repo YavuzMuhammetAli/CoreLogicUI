@@ -1,0 +1,147 @@
+@if (narrow()) {
+  <!-- Telefon: sürükle-bırak yerine sıralı liste -->
+  <div class="alert alert-info structure-notice" role="note">{{ 'screen.designer.narrowNotice' | t }}</div>
+  <section class="panel">
+    <div class="panel-body">
+      <ul class="structure-items">
+        @for (entry of doc().columns; track entry.column; let i = $index) {
+          <li class="structure-item">
+            <span class="structure-label" [class.structure-label--unknown]="!isKnown(entry.column)">{{ label(entry.column) }}</span>
+            <span class="structure-actions">
+              <input class="input structure-width" type="number" [min]="limits.minWidth" [max]="limits.maxWidth"
+                [value]="entry.width ?? ''" [placeholder]="'screen.list.auto' | t"
+                (change)="setWidth(entry.column, $any($event.target).value)"
+                [attr.aria-label]="'screen.list.width' | t">
+              <button type="button" class="btn btn-ghost btn-sm" [disabled]="i === 0" (click)="moveBy(entry.column, -1)"
+                [attr.aria-label]="'screen.designer.moveUp' | t">↑</button>
+              <button type="button" class="btn btn-ghost btn-sm" [disabled]="i === doc().columns.length - 1"
+                (click)="moveBy(entry.column, 1)" [attr.aria-label]="'screen.designer.moveDown' | t">↓</button>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="hide(entry.column)"
+                [attr.aria-label]="'screen.list.hide' | t">✕</button>
+            </span>
+          </li>
+        }
+      </ul>
+      @if (hiddenColumns().length > 0) {
+        <select class="input structure-add" (change)="show($any($event.target).value); $any($event.target).value = ''"
+          [attr.aria-label]="'screen.list.addColumn' | t">
+          <option value="">+ {{ 'screen.list.addColumn' | t }}</option>
+          @for (name of hiddenColumns(); track name) {
+            <option [value]="name">{{ label(name) }}</option>
+          }
+        </select>
+      }
+    </div>
+  </section>
+} @else {
+  <div class="list-designer">
+    <aside class="palette" [attr.aria-label]="'screen.list.paletteAria' | t">
+      <span class="eyebrow palette-title">
+        {{ 'screen.list.hiddenColumns' | t }}
+        <span class="badge badge-meta">{{ hiddenColumns().length }}</span>
+      </span>
+      @for (name of hiddenColumns(); track name) {
+        <button type="button" class="palette-chip"
+          (pointerdown)="onPalettePointerDown($event, name)"
+          (keydown.enter)="show(name)" (keydown.space)="show(name); $event.preventDefault()"
+          [attr.aria-label]="'screen.list.showAria' | t:{ name: label(name) }">{{ label(name) }}</button>
+      } @empty {
+        <p class="palette-empty">{{ 'screen.list.allShown' | t }}</p>
+      }
+      <p class="palette-help">{{ 'screen.list.paletteHelp' | t }}</p>
+    </aside>
+
+    <div class="list-canvas" #canvas [class.list-canvas--dragging]="dragging()">
+      <div class="table-wrapper">
+        <table class="data-table list-preview" [style.width.px]="tableWidth()">
+          <colgroup>
+            <col [style.width.px]="idWidth">
+            @for (entry of doc().columns; track entry.column) {
+              <col [style.width.px]="widthOf(entry)">
+            }
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="list-th list-th--fixed">ID</th>
+              @for (entry of doc().columns; track entry.column) {
+                <th class="list-th"
+                  [attr.data-col]="entry.column"
+                  [class.list-th--selected]="selection() === entry.column"
+                  [class.list-th--dragging]="draggingColumn() === entry.column"
+                  [class.list-th--unknown]="!isKnown(entry.column)"
+                  tabindex="0"
+                  [attr.aria-pressed]="selection() === entry.column"
+                  (pointerdown)="onHeaderPointerDown($event, entry.column)"
+                  (keydown.enter)="select(entry.column)">
+                  <span class="list-th-label">{{ label(entry.column) }}</span>
+                  <span class="list-th-width">
+                    @if (explicitWidth(entry); as w) { {{ w }}px } @else { {{ 'screen.list.auto' | t }} }
+                  </span>
+                  <span class="list-resize" aria-hidden="true"
+                    (pointerdown)="onResizePointerDown($event, entry)" (dblclick)="autoWidth(entry.column)"></span>
+                </th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track $index) {
+              <tr>
+                <td class="td-muted">{{ rowId(row) }}</td>
+                @for (entry of doc().columns; track entry.column) {
+                  <td>{{ cell(row, entry.column) }}</td>
+                }
+              </tr>
+            } @empty {
+              <tr>
+                <td class="td-muted" [attr.colspan]="doc().columns.length + 1">
+                  @if (loadingRows()) { {{ 'screen.list.loadingRows' | t }} } @else { {{ 'screen.list.noRows' | t }} }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (dropLine(); as line) {
+        <div class="drop-line" aria-hidden="true" [style.left.px]="line.left" [style.top.px]="line.top" [style.height.px]="line.height"></div>
+      }
+      <p class="list-hint">{{ 'screen.list.hint' | t }}</p>
+    </div>
+
+    <section class="list-inspector" [attr.aria-label]="'screen.inspector.title' | t">
+      <header class="inspector-head"><span class="eyebrow">{{ 'screen.inspector.title' | t }}</span></header>
+      <div class="inspector-body">
+        @if (selectedEntry(); as entry) {
+          <div class="inspector-title">
+            <strong>{{ label(entry.column) }}</strong>
+            <span class="inspector-meta">{{ entry.column }}</span>
+            @if (!isKnown(entry.column)) { <span class="badge badge-danger">{{ 'screen.inspector.unknown' | t }}</span> }
+          </div>
+          <div class="field">
+            <label for="list-width">{{ 'screen.list.width' | t }}</label>
+            <input id="list-width" class="input" type="number" [min]="limits.minWidth" [max]="limits.maxWidth"
+              [value]="entry.width ?? ''" [placeholder]="'screen.list.auto' | t"
+              (change)="setWidth(entry.column, $any($event.target).value)">
+            <span class="field-help">{{ 'screen.list.widthHelp' | t:{ min: limits.minWidth, max: limits.maxWidth } }}</span>
+          </div>
+          <div class="inspector-actions">
+            <button type="button" class="btn btn-ghost btn-sm" [disabled]="!entry.width" (click)="autoWidth(entry.column)">
+              {{ 'screen.list.autoWidth' | t }}
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm" [disabled]="selectedIndex() <= 0" (click)="moveBy(entry.column, -1)">
+              ← {{ 'screen.inspector.moveLeft' | t }}
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm" [disabled]="selectedIndex() >= doc().columns.length - 1"
+              (click)="moveBy(entry.column, 1)">{{ 'screen.inspector.moveRight' | t }} →</button>
+            <button type="button" class="btn btn-secondary btn-sm" (click)="hide(entry.column)">{{ 'screen.list.hide' | t }}</button>
+          </div>
+        } @else {
+          <p class="inspector-empty">{{ 'screen.list.emptyHelp' | t }}</p>
+        }
+      </div>
+    </section>
+  </div>
+
+  @if (ghost(); as g) {
+    <div class="drag-ghost" aria-hidden="true" [style.left.px]="g.x + 14" [style.top.px]="g.y + 14">{{ g.label }}</div>
+  }
+}

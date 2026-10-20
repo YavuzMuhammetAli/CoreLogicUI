@@ -66,6 +66,8 @@
 
           <!-- Silme — düzenleme linkinden ayrı, nested <a> olmasın diye dışarıda -->
           <div class="model-card-actions">
+            <a class="btn btn-ghost btn-sm" [routerLink]="['/build', model.typeName, 'screen']"
+               [attr.aria-label]="'screen.designScreenAria' | t">{{ 'screen.designScreen' | t }}</a>
             <button
               type="button"
               class="btn btn-ghost btn-sm"

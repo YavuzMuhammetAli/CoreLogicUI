@@ -38,10 +38,9 @@
         }
         @if (permissionService.isAdmin()) {
           <!-- Yayınlanmış liste tasarımı "Kolonlar" ayarının yerini alır: tek doğruluk kaynağı. -->
-          @if (listLayout) {
-            <a class="btn btn-ghost btn-sm" [routerLink]="['/build', typeName, 'screen']" [queryParams]="{ view: 'list' }"
-               [attr.aria-label]="'screen.designScreenAria' | t">{{ 'screen.designScreen' | t }}</a>
-          } @else {
+          <a class="btn btn-ghost btn-sm" [routerLink]="['/build', typeName, 'screen']" [queryParams]="{ view: 'list' }"
+             [attr.aria-label]="'screen.designScreenAria' | t">{{ 'screen.designScreen' | t }}</a>
+          @if (!listLayout) {
             <app-column-visibility
               [columns]="columnVisibilityItems"
               [visible]="effectiveVisibleColumnNames"

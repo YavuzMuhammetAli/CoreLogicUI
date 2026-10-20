@@ -73,6 +73,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/table-detail/table-detail.component').then(m => m.TableDetailComponent)
       },
+      // Ekran tasarımı: yayınlanmış modelin form ve liste yerleşimi (?view=list → liste)
+      {
+        path: 'build/:typeName/screen',
+        canActivate: [adminGuard],
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () =>
+          import('./components/screen-designer/screen-designer.component').then(m => m.ScreenDesignerComponent)
+      },
       // ":typeName" mevcut bir modeli/taslağı düzenleme modunda açar
       {
         path: 'build/:typeName',
