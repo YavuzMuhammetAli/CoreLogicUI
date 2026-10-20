@@ -3,8 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { WorkflowService } from '../../services/workflow.service';
 import { WorkflowDefinition, WorkflowUsage } from '../../models/workflow.model';
-import { downloadText } from '../../utils/download';
-import { freeCode, packageFileName, parsePackage, serializePackage, toPackage } from '../../utils/workflow/workflow-package';
+import { freeCode, parsePackage } from '../../utils/workflow/workflow-package';
 import { LanguageService } from '../../services/language.service';
 import { NotificationService } from '../../services/notification.service';
 import { PermissionService } from '../../services/permission.service';
@@ -16,6 +15,8 @@ import { markDirty } from '../../utils/change-detection';
  * İş akışı tanım listesi.
  *
  * Yapı report-list'in aynısı: .page-header + .data-table + empty-state.
+ * Satıra tıklamak tasarımcıyı açar (taslak düzenlenir, yayındaki salt okunur);
+ * Yeni Sürüm ve Dışa aktar orada, listede yalnız satır içi hızlı işlemler kalır.
  * Silme onayı için native confirm() değil shared/confirm-dialog kullanılır.
  */
 @Component({
@@ -91,11 +92,7 @@ export class WorkflowListComponent implements OnInit {
     });
   }
 
-  // ── Dışa / içe aktarım ────────────────────────────────────────────────────
-
-  exportWorkflow(workflow: WorkflowDefinition): void {
-    downloadText(serializePackage(toPackage(workflow)), packageFileName(workflow.code));
-  }
+  // ── İçe aktarım ───────────────────────────────────────────────────────────
 
   /**
    * Paket her zaman yeni bir TASLAK olarak eklenir; kod çakışırsa sonek alır.
@@ -191,29 +188,6 @@ export class WorkflowListComponent implements OnInit {
     });
   }
 
-  /**
-   * Yayınlanmış akıştan düzenlenebilir taslak açar ve tasarımcıya götürür.
-   * Açık taslak varsa sunucu onu döndüğü için çift tıklama çift taslak üretmez.
-   */
-  startNewVersion(workflow: WorkflowDefinition): void {
-    this.busyId = workflow.id;
-
-    this.workflowService.newVersion(workflow.id).pipe(markDirty(this.cdr)).subscribe({
-      next: res => {
-        this.busyId = null;
-        if (res.success && res.data) {
-          this.router.navigate(['/workflows', res.data, 'edit']);
-        } else {
-          this.notification.warn(res.message ?? this.languageService.t('workflow.list.loadFailed'));
-        }
-      },
-      error: err => {
-        this.busyId = null;
-        this.notification.warn(err?.error?.message ?? this.languageService.t('workflow.list.serverError'));
-      }
-    });
-  }
-
   /** Code başına en yüksek yayın numarası (arşiv dahil). */
   private maxVersionByCode = new Map<string, number>();
 
@@ -223,11 +197,6 @@ export class WorkflowListComponent implements OnInit {
 
     const next = (this.maxVersionByCode.get(workflow.code) ?? 0) + 1;
     return this.languageService.t('workflow.list.draftVersion', { n: next });
-  }
-
-  /** O Code için açık taslak varsa "Yeni Sürüm" yerine taslağın "Düzenle"si yeterli. */
-  hasDraft(code: string): boolean {
-    return this.workflows.some(w => w.code === code && w.status === 'Draft');
   }
 
   askDelete(workflow: WorkflowDefinition): void {

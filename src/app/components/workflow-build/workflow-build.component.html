@@ -20,8 +20,9 @@
       {{ 'workflow.simulate.open' | t }}
     </button>
     @if (readonlyMode()) {
+      <!-- Açık taslak varsa sunucu yenisini açmaz, onu döner — etiket bunu söylesin. -->
       <button type="button" class="btn btn-primary" [disabled]="saving" (click)="startNewVersion()">
-        {{ 'workflow.build.newVersion' | t }}
+        {{ (hasOpenDraft ? 'workflow.build.openDraft' : 'workflow.build.newVersion') | t }}
       </button>
     } @else {
       @if (store.dirty()) {

@@ -567,6 +567,15 @@ input[type="checkbox"] {
     white-space: nowrap;
   }
 
+  /* Aksiyon hücresi yukarıdaki 260px + overflow:hidden kuralından muaf: metin için
+     konan kırpma düğmeleri yutuyordu. flex-end yüzünden taşma SOLDAN kesildiği için
+     ilk düğme (ör. "Görüntüle") hiç görünmüyordu. Tablo genişler, .table-wrapper kaydırır. */
+  td.td-actions,
+  td:has(> .td-actions) {
+    max-width: none;
+    overflow: visible;
+  }
+
   /* <td class="td-actions"> ise TABLO HÜCRESİ olarak kalmalı: flex bir <td> hücre
      olmaktan çıkar ve tarayıcı onu komşu hücre-dışı kutularla tek bir anonim
      hücreye birleştirir — düğmeler satırın altına düşer. */

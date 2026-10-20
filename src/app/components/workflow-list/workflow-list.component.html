@@ -73,7 +73,11 @@
           </thead>
           <tbody>
             @for (workflow of workflows; track workflow.id) {
-              <tr>
+              <!-- Satır tasarımcıyı açar: taslak düzenlenir, yayındaki/arşivdeki salt okunur görünür. -->
+              <tr class="clickable-row"
+                  [routerLink]="['/workflows', workflow.id, 'edit']"
+                  role="link"
+                  [attr.aria-label]="'workflow.list.rowAria' | t: { name: workflow.name }">
                 <td>
                   {{ workflow.name }}
                   @if (!workflow.isEnabled) {
@@ -81,7 +85,9 @@
                   }
                 </td>
                 <td>
-                  <a [routerLink]="['/workflows/versions', workflow.code]" class="wf-code-link">
+                  <!-- Satırın kendi bağlantısı ikinci gezinme yapıp sürümler yerine tasarımcıya götürmesin. -->
+                  <a [routerLink]="['/workflows/versions', workflow.code]" class="wf-code-link"
+                     (click)="$event.stopPropagation()">
                     <code class="wf-code">{{ workflow.code }}</code>
                   </a>
                 </td>
@@ -94,43 +100,26 @@
                 </td>
                 <td>{{ versionLabel(workflow) }}</td>
                 <td>{{ workflow.runningInstanceCount || '—' }}</td>
-                <td>
-                  <div class="td-actions" (click)="$event.stopPropagation()">
-                    @if (workflow.status === 'Draft') {
-                      <a [routerLink]="['/workflows', workflow.id, 'edit']" class="btn btn-ghost btn-sm">
-                        {{ 'common.edit' | t }}
-                      </a>
-                      <button type="button" class="btn btn-secondary btn-sm"
-                              [disabled]="busyId === workflow.id"
-                              (click)="publish(workflow)">
-                        {{ 'workflow.list.publish' | t }}
-                      </button>
-                    } @else if (workflow.status === 'Published') {
-                      <a [routerLink]="['/workflows', workflow.id, 'edit']" class="btn btn-ghost btn-sm">
-                        {{ 'workflow.versions.view' | t }}
-                      </a>
-                      <button type="button" class="btn btn-ghost btn-sm"
-                              [disabled]="busyId === workflow.id"
-                              (click)="toggleEnabled(workflow)">
-                        {{ (workflow.isEnabled ? 'workflow.list.pause' : 'workflow.list.resume') | t }}
-                      </button>
-                      @if (!hasDraft(workflow.code)) {
-                        <button type="button" class="btn btn-secondary btn-sm"
-                                [disabled]="busyId === workflow.id"
-                                (click)="startNewVersion(workflow)">
-                          {{ 'workflow.list.newVersion' | t }}
-                        </button>
-                      }
-                    }
-                    <button type="button" class="btn btn-ghost btn-sm" (click)="exportWorkflow(workflow)">
-                      {{ 'workflow.package.export' | t }}
-                    </button>
-                    <button type="button" class="btn btn-ghost btn-sm wf-danger"
+                <!-- Yeni Sürüm ve Dışa aktar tasarımcının başlığında (görüntüleme modunda da). -->
+                <td class="td-actions" (click)="$event.stopPropagation()">
+                  @if (workflow.status === 'Draft') {
+                    <button type="button" class="btn btn-secondary btn-sm"
                             [disabled]="busyId === workflow.id"
-                            (click)="askDelete(workflow)">
-                      {{ 'common.delete' | t }}
+                            (click)="publish(workflow)">
+                      {{ 'workflow.list.publish' | t }}
                     </button>
-                  </div>
+                  } @else if (workflow.status === 'Published') {
+                    <button type="button" class="btn btn-ghost btn-sm"
+                            [disabled]="busyId === workflow.id"
+                            (click)="toggleEnabled(workflow)">
+                      {{ (workflow.isEnabled ? 'workflow.list.pause' : 'workflow.list.resume') | t }}
+                    </button>
+                  }
+                  <button type="button" class="btn btn-ghost btn-sm wf-danger"
+                          [disabled]="busyId === workflow.id"
+                          (click)="askDelete(workflow)">
+                    {{ 'common.delete' | t }}
+                  </button>
                 </td>
               </tr>
             }

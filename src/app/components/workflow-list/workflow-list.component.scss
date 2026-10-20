@@ -29,6 +29,16 @@
   color: var(--fg-2);
 }
 
+// Satırın tamamı tasarımcıyı açar (Görüntüle/Düzenle düğmesi yok).
+.clickable-row {
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+}
+
 .wf-import { cursor: pointer; }
 .wf-import--busy { opacity: 0.6; pointer-events: none; }
 .wf-import:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }

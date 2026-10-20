@@ -329,6 +329,12 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   draftNextVersion: number | null = null;
 
   /**
+   * Salt okunur sürümün zincirinde açık taslak var mı — varsa başlıktaki düğme
+   * "Yeni Sürüm Oluştur" değil "Taslağa Git" der (sunucu yeni taslak açmaz, onu döner).
+   */
+  hasOpenDraft = false;
+
+  /**
    * Taslağın sunucudaki son değişiklik damgası — kayıtta geri gönderilir; arada
    * başka biri kaydettiyse sunucu reddeder (iyimser kilit). Yeni taslakta null.
    */
@@ -706,12 +712,9 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
         this.populate(workflow);
         this.docReady.set(true);
 
-        if (readonly) {
-          // Hata değil bilgi: kullanıcıya yolu ("Yeni Sürüm Oluştur") gösteriyoruz.
-          this.readonlyVersion = workflow.version;
-        } else {
-          this.resolveDraftVersion(workflow.code);
-        }
+        // Hata değil bilgi: kullanıcıya yolu ("Yeni Sürüm Oluştur") gösteriyoruz.
+        if (readonly) this.readonlyVersion = workflow.version;
+        this.resolveVersionInfo(workflow.code, workflow.id);
       },
       error: err => {
         this.loading = false;
@@ -721,17 +724,24 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   }
 
   /**
-   * Taslak yayınlandığında alacağı sürüm numarası — başlıkta "v3 taslağı".
-   * Sürüm yayında verildiği için taslakta 0 durur; zincirin en yükseğinden
-   * hesaplanır. Hiç yayın yoksa (ilk taslak) gösterilmez.
+   * Sürüm zincirinden başlık bilgisi:
+   * - taslakta, yayınlandığında alacağı sürüm numarası ("v3 taslağı"). Sürüm yayında
+   *   verildiği için taslakta 0 durur; zincirin en yükseğinden hesaplanır, hiç yayın
+   *   yoksa (ilk taslak) gösterilmez;
+   * - salt okunurda, zincirde açık taslak olup olmadığı (düğme etiketi).
    */
-  private resolveDraftVersion(code: string): void {
+  private resolveVersionInfo(code: string, currentId: number): void {
     this.workflowService.versions(code).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
-        const max = Math.max(0, ...(res.data ?? []).map(v => v.version));
-        this.draftNextVersion = max > 0 ? max + 1 : null;
+        const versions = res.data ?? [];
+        if (this.readonlyMode()) {
+          this.hasOpenDraft = versions.some(v => v.status === 'Draft' && v.id !== currentId);
+        } else {
+          const max = Math.max(0, ...versions.map(v => v.version));
+          this.draftNextVersion = max > 0 ? max + 1 : null;
+        }
       },
-      error: () => { this.draftNextVersion = null; }
+      error: () => { this.draftNextVersion = null; this.hasOpenDraft = false; }
     });
   }
 
@@ -757,6 +767,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
 
         this.readonlyMode.set(false);
         this.readonlyVersion = null;
+        this.hasOpenDraft = false;
         this.submitError = null;
         this.form.enable({ emitEvent: false });
         this.loadExisting(draftId);
