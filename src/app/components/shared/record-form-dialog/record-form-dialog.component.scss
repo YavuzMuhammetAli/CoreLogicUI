@@ -65,13 +65,7 @@
   font-size: var(--text-sm);
 }
 
-/* ── Alan ızgarası ────────────────────────────────────────────────────────── */
-
-.record-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: var(--space-4);
-}
+/* Alan ızgarası app-record-layout'ta (varsayılan görünüm + ekran tasarımı). */
 
 /* ── Alt model bölümü ─────────────────────────────────────────────────────── */
 
@@ -217,10 +211,6 @@ tr.row-selected td {
 }
 
 @media (max-width: 768px) {
-  .record-fields {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .dialog-panel .panel-head {
     flex-wrap: nowrap;
   }

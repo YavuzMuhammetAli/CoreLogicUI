@@ -18,7 +18,7 @@ import { RecordMetadataService } from '../../services/record-metadata.service';
 import { PublishedColumnSchema } from '../../services/published-table.service';
 import { RecordFormDialogComponent } from '../shared/record-form-dialog/record-form-dialog.component';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
-import { RecordFieldComponent } from '../shared/record-field/record-field.component';
+import { RecordLayoutComponent } from '../shared/record-layout/record-layout.component';
 import { WorkflowPanelComponent } from '../shared/workflow-panel/workflow-panel.component';
 import { TaskActionDialogComponent, TaskActionResult } from '../shared/task-action-dialog/task-action-dialog.component';
 import { WorkflowViewDialogComponent } from '../shared/workflow-view-dialog/workflow-view-dialog.component';
@@ -51,8 +51,10 @@ import {
 } from '../model-data/model-data.util';
 import { markDirty } from '../../utils/change-detection';
 import { AutoValueFormBinding } from '../../utils/auto-value/auto-value-form';
-import { AutoValueRule, buildAutoValuePlan } from '../../utils/auto-value/auto-value';
+import { buildAutoValuePlan } from '../../utils/auto-value/auto-value';
 import { mustStayVisible } from '../../utils/record-field/column-required';
+import { FormLayout, ListLayout } from '../../utils/screen-layout/screen-layout.model';
+import { resolveListColumns } from '../../utils/screen-layout/list-layout.resolve';
 
 type DataRow = Record<string, unknown>;
 
@@ -95,6 +97,8 @@ interface TabState {
   // Alt modelin kendi liste sayfasıyla ('list' viewType) AYNI ayarı paylaşır.
   visibleColumnNames: string[] | null;
   savingColumnVisibility: boolean;
+  /** Alt modelin yayınlanmış liste yerleşimi (ekran tasarımı) — varsa kolon sırası ondan. */
+  listLayout: ListLayout | null;
 }
 
 @Component({
@@ -102,7 +106,7 @@ interface TabState {
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, ColumnVisibilityComponent,
-    TranslatePipe, RecordFormDialogComponent, ConfirmDialogComponent, RecordFieldComponent,
+    TranslatePipe, RecordFormDialogComponent, ConfirmDialogComponent, RecordLayoutComponent,
     WorkflowPanelComponent, TaskActionDialogComponent, WorkflowViewDialogComponent
   ],
   templateUrl: './model-detail.component.html',
@@ -125,6 +129,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
   /** Kaydın altındaki süreç geçmişi paneli — adım/başlatma sonrası tazelenir. */
   @ViewChild('wfPanel') private wfPanel?: WorkflowPanelComponent;
+  /** Üst formun yerleşimi — Kaydet geçersiz formda durunca hatalı alanı gösterir. */
+  @ViewChild(RecordLayoutComponent) private recordLayout?: RecordLayoutComponent;
 
   // ─── Form tabanlı iş akışı ──────────────────────────────────────────────────
   //
@@ -205,6 +211,19 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   // Admin tarafından yönetilen üst form kolon görünürlüğü — null = ayar yok, tümü görünür
   visibleParentColumnNames: string[] | null = null;
   savingColumnVisibility = false;
+
+  // ─── Ekran tasarımı ─────────────────────────────────────────────────────────
+  //
+  // Yayınlanmış form yerleşimi varsa alanlar onun sekme/bölüm/ızgarasına çizilir ve
+  // "Kolonlar" ayarının yerini alır. Yerleşim bileşenine giden kümeler alan olarak
+  // tutulur (getter her turda yeni nesne üretip planı boşuna yeniden hesaplatırdı).
+
+  /** Yayındaki form yerleşimi; null → varsayılan görünüm. */
+  formLayout: FormLayout | null = null;
+  /** Sırası gelen görevlinin dolduracağı kolonlar (gerçek kolon adlarıyla). */
+  stepColumnSet: ReadonlySet<string> = new Set();
+  /** Tasarımda gizli olsa da çizilmesi gereken kolonlar: zorunlular + adım kolonları. */
+  forcedParentColumns: ReadonlySet<string> = new Set();
 
   private routeSub?: Subscription;
 
@@ -301,6 +320,9 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.autoValues = null;
     this.closeRecordDialog();
     this.visibleParentColumnNames = null;
+    this.formLayout = null;
+    this.stepColumnSet = new Set();
+    this.forcedParentColumns = new Set();
     this.wfState = null;
     this.newStartable = [];
     this.wfBusy = null;
@@ -317,13 +339,20 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
     if (this.isNew) {
       // Yeni kayıt modu: model şemasını yükle + alt sekmeleri hazırla
-      this.publishedModel.getModels().pipe(markDirty(this.cdr)).subscribe({
-        next: res => {
+      // Yerleşim de ilk yüklemede okunur: aksi halde form önce varsayılan görünümle çizilip
+      // ardından yerleşime "zıplardı".
+      forkJoin({
+        models: this.publishedModel.getModels(),
+        layout: this.metadata.formLayout$(this.typeName)
+      }).pipe(markDirty(this.cdr)).subscribe({
+        next: ({ models: res, layout }) => {
           this.loadingRecord = false;
+          this.formLayout = layout;
           if (res.success) {
             this.allModels = res.data ?? [];
             this.model = this.allModels.find(m => m.typeName === this.typeName) ?? null;
           }
+          this.refreshLayoutInputs();
           if (this.model) {
             this.buildNewForm();
             // Şema mevcutsa alt sekmeleri de yükle (server'dan veri çekmeden)
@@ -345,15 +374,18 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     // Mevcut kayıt modu: model şeması + kayıt verisi
     forkJoin({
       models: this.publishedModel.getModels(),
-      record: this.publishedModel.get(this.typeName, this.recordId)
+      record: this.publishedModel.get(this.typeName, this.recordId),
+      layout: this.metadata.formLayout$(this.typeName)
     }).pipe(markDirty(this.cdr)).subscribe({
-      next: ({ models, record }) => {
+      next: ({ models, record, layout }) => {
         this.loadingRecord = false;
+        this.formLayout = layout;
 
         if (models.success) {
           this.allModels = models.data ?? [];
           this.model = this.allModels.find(m => m.typeName === this.typeName) ?? null;
         }
+        this.refreshLayoutInputs();
 
         if (record.success && record.data) {
           this.record = record.data as DataRow;
@@ -517,6 +549,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   private loadParentRules(rebuild: () => void): void {
     this.metadata.rules$(this.typeName).pipe(markDirty(this.cdr)).subscribe(rules => {
       this.parentRules = rules;
+      this.refreshLayoutInputs();
       rebuild();
     });
   }
@@ -546,16 +579,6 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     }));
     if (plan.rules.length === 0) return;
     this.autoValues = new AutoValueFormBinding(this.editForm, plan, isNew).start();
-  }
-
-  /** Kolonun otomatik değer kuralı — etiketteki ƒx işareti için. */
-  autoValueRule(col: PublishedColumn): AutoValueRule | undefined {
-    return this.autoValues?.rule(col.columnName);
-  }
-
-  /** Numarası kayıtta verilecek alan (SEQ) — "Kaydedince atanır" ipucu. */
-  isAutoValuePending(col: PublishedColumn): boolean {
-    return !!this.autoValues?.isPending(col.columnName) && !this.getEditControl(col.columnName)?.value;
   }
 
   /**
@@ -626,9 +649,41 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.showEditForm = true;
   }
 
-  /** Bir üst-form kolonunun şema kuralı (alan bileşenine geçirilir); yüklenmemişse undefined. */
-  parentRule(col: PublishedColumn): PublishedColumnSchema | undefined {
-    return this.parentRules.get(col.columnName);
+  /** Üst modelin şema kuralları — yerleşim bileşenine geçirilir (referans kurallar gelince değişir). */
+  get parentRuleMap(): ReadonlyMap<string, PublishedColumnSchema> {
+    return this.parentRules;
+  }
+
+  /** Forma bağlı otomatik değer kuralları — yerleşim bileşenine geçirilir. */
+  get autoValuesBinding(): AutoValueFormBinding | null {
+    return this.autoValues;
+  }
+
+  /** Admin'e tasarımcı bağlantısı (yerleşim bileşenindeki "güncel değil" uyarısı); diğerlerine null. */
+  get designLink(): string[] | null {
+    return this.permission.isAdmin() ? ['/build', this.typeName, 'screen'] : null;
+  }
+
+  /**
+   * Yerleşim bileşeninin kümelerini yeniden kurar: adım kolonları ve gizlenemeyecek kolonlar.
+   * Kurallar, model ya da iş akışı durumu değiştiğinde çağrılır.
+   */
+  private refreshLayoutInputs(): void {
+    const byLower = new Map(this.parentColumns.map(c => [c.columnName.toLowerCase(), c.columnName]));
+    const steps = new Set<string>();
+    for (const task of this.myStepTasks) {
+      for (const field of task.recordFields) {
+        const name = byLower.get(field.column.toLowerCase());
+        if (name) steps.add(name);
+      }
+    }
+    this.stepColumnSet = steps;
+
+    const forced = new Set(steps);
+    for (const col of this.parentColumns) {
+      if (mustStayVisible(col, this.parentRules.get(col.columnName))) forced.add(col.columnName);
+    }
+    this.forcedParentColumns = forced;
   }
 
   /**
@@ -638,6 +693,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   submitEdit(startCode?: string): void {
     if (!this.editForm || this.editForm.invalid || this.editLoading) {
       this.editForm?.markAllAsTouched();
+      // Hatalı alan kapalı bir sekmede/bölümde olabilir — kullanıcı "hiçbir şey olmadı" sanmasın.
+      if (this.editForm?.invalid && !this.editLoading) this.recordLayout?.revealFirstInvalid();
       return;
     }
     this.pendingStart = startCode ?? null;
@@ -734,10 +791,6 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  getEditControl(col: string) {
-    return this.editForm?.get(col)!;
-  }
-
   // ─── Sekme yönetimi ─────────────────────────────────────────────────────────
 
   setTab(name: string): void {
@@ -782,7 +835,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       bulkErrors: [],
       bulkTotal: 0,
       visibleColumnNames: null,
-      savingColumnVisibility: false
+      savingColumnVisibility: false,
+      listLayout: null
     };
   }
 
@@ -829,10 +883,9 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
    * görünümünden bir kolonu gizlese de ekle/düzenle formunda o alan kaybolmaz.
    */
   displayCols(state: TabState): PublishedColumn[] {
-    const cols = this.visibleCols(state);
-    if (!state.visibleColumnNames) return cols;
-    const visible = new Set(state.visibleColumnNames);
-    return cols.filter(c => visible.has(c.columnName));
+    // Yayınlanmış liste yerleşimi varsa sıra ve görünürlük ondan (FK kolonu bu tabloda hiç yok).
+    return resolveListColumns(state.listLayout, this.visibleCols(state), state.visibleColumnNames)
+      .map(r => r.column);
   }
 
   /** Tablo başlıkları — key veri/sıralama anahtarı (ham columnName), label görünen metin. */
@@ -866,6 +919,10 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
           : null;
       },
       error: () => { /* ayar yüklenemezse tüm kolonlar görünür kalır */ }
+    });
+    // Ekran tasarımındaki liste yerleşimi "Kolonlar" ayarının yerini alır (okunamazsa null).
+    this.metadata.listLayout$(state.typeName).pipe(markDirty(this.cdr)).subscribe(layout => {
+      state.listLayout = layout;
     });
   }
 
@@ -1388,11 +1445,13 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       next: res => {
         if (typeName !== this.typeName || id !== this.recordId) return;
         this.wfState = res.success ? res.data : null;
+        this.refreshLayoutInputs();
         this.applyWorkflowLock();
       },
       // Modül kurulu değil / yetki yok: akış opsiyonel, kayıt ekranı normal çalışır.
       error: () => {
         this.wfState = null;
+        this.refreshLayoutInputs();
         this.applyWorkflowLock();
       }
     });
@@ -1580,11 +1639,13 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
         });
         this.editOk = false;
         this.editMsg = this.languageService.t('workflow.record.requiredForStep', { fields: labels.join(', ') });
+        this.recordLayout?.revealFirstInvalid();
         return;
       }
 
       if (this.editForm?.invalid) {
         this.editForm.markAllAsTouched();
+        this.recordLayout?.revealFirstInvalid();
         return;
       }
 

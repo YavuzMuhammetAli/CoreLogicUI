@@ -1,0 +1,159 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+/* `hidden` niteliği tarayıcının `display: none`'ıdır; sınıfın `display: grid`'i onu ezerdi. */
+[hidden] {
+  display: none !important;
+}
+
+/* ── Varsayılan görünüm (yayınlanmış tasarım yokken) ───────────────────────── */
+
+.legacy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+
+  @media (max-width: 768px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── Sekmeler ──────────────────────────────────────────────────────────────── */
+
+.layout-stale {
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.layout-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: var(--space-4);
+  border-bottom: 2px solid var(--border-soft);
+  /* Çok sekme telefona sığmaz: sarılmaz, yatay kayar */
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.layout-tab-btn {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: color var(--motion-fast) var(--ease-standard),
+              border-color var(--motion-fast) var(--ease-standard);
+
+  &:hover { color: var(--fg); }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+
+  &--active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+}
+
+.layout-tab-errors {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 9px;
+  background: var(--danger);
+  color: #fff;
+}
+
+/* ── Bölümler ──────────────────────────────────────────────────────────────── */
+
+.layout-tab {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.layout-section-title,
+.layout-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin: 0 0 var(--space-3);
+  padding: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--fg-2);
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid var(--border-soft);
+  background: none;
+}
+
+.layout-section-toggle {
+  cursor: pointer;
+
+  &:hover { color: var(--fg); }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+    border-radius: var(--radius-sm);
+  }
+}
+
+.layout-chevron {
+  flex-shrink: 0;
+  transition: transform var(--motion-fast) var(--ease-standard);
+
+  &--open { transform: rotate(90deg); }
+}
+
+/* ── 12 kolonluk ızgara ────────────────────────────────────────────────────── */
+
+.layout-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+app-record-field {
+  min-width: 0;
+}
+
+.layout-divider {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 0;
+  border: none;
+  border-top: 1px solid var(--border-soft);
+}
+
+.layout-note {
+  margin: 0;
+
+  span {
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+}

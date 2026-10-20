@@ -1,4 +1,4 @@
-<label [attr.for]="inputId()">
+<label [id]="inputId() + '-label'" [attr.for]="isRadio() ? null : inputId()">
   {{ label() }}
   @if (required()) { <span class="req">*</span> }
   @if (description()) {
@@ -21,6 +21,19 @@
     [displayColumn]="column().lookupDisplayColumn"
     [formControl]="formControl()">
   </app-lookup-picker>
+} @else if (isRadio()) {
+  <!-- Seçenek düğmeleri (ekran tasarımı): ilk düğme alanın kimliğini taşır — hata odağı ona gider. -->
+  <div class="radio-group" role="radiogroup" [attr.aria-labelledby]="inputId() + '-label'"
+    [attr.aria-invalid]="invalid() || null"
+    [attr.aria-describedby]="errorText() ? errorId() : null">
+    @for (val of enumValues(); track val; let first = $first) {
+      <label class="checkbox-label">
+        <!-- [name] radio direktifine gider, DOM'a yazılmaz; [attr.name] tarayıcının grubu (ok tuşlarıyla gezinme) içindir. -->
+        <input type="radio" [id]="first ? inputId() : null" [name]="inputId()" [attr.name]="inputId()" [value]="val" [formControl]="formControl()">
+        {{ val }}
+      </label>
+    }
+  </div>
 } @else if (column().dataType === 'enum') {
   <select class="input" [id]="inputId()" [formControl]="formControl()"
     [attr.aria-invalid]="invalid() || null"
@@ -54,6 +67,15 @@
       </div>
     }
   }
+} @else if (isMultiline()) {
+  <textarea
+    class="input"
+    [id]="inputId()"
+    [rows]="rows() ?? 3"
+    [formControl]="formControl()"
+    [attr.required]="required() || null"
+    [attr.aria-invalid]="invalid() || null"
+    [attr.aria-describedby]="errorText() ? errorId() : null"></textarea>
 } @else {
   <input
     class="input"

@@ -37,12 +37,18 @@
           </button>
         }
         @if (permissionService.isAdmin()) {
-          <app-column-visibility
-            [columns]="columnVisibilityItems"
-            [visible]="effectiveVisibleColumnNames"
-            [saving]="savingColumnVisibility"
-            (save)="onSaveColumnVisibility($event)">
-          </app-column-visibility>
+          <!-- Yayınlanmış liste tasarımı "Kolonlar" ayarının yerini alır: tek doğruluk kaynağı. -->
+          @if (listLayout) {
+            <a class="btn btn-ghost btn-sm" [routerLink]="['/build', typeName, 'screen']" [queryParams]="{ view: 'list' }"
+               [attr.aria-label]="'screen.designScreenAria' | t">{{ 'screen.designScreen' | t }}</a>
+          } @else {
+            <app-column-visibility
+              [columns]="columnVisibilityItems"
+              [visible]="effectiveVisibleColumnNames"
+              [saving]="savingColumnVisibility"
+              (save)="onSaveColumnVisibility($event)">
+            </app-column-visibility>
+          }
           <button class="btn btn-ghost btn-sm" type="button" (click)="toggleVersionPanel()">{{ 'model.data.versions' | t }}</button>
         }
         <button class="btn btn-secondary btn-sm" (click)="loadRows()" type="button" [disabled]="loadingRows">
@@ -106,7 +112,16 @@
         </div>
       } @else if (rows.length > 0) {
         <div class="table-wrapper">
-          <table class="data-table" [attr.aria-label]="'model.data.tableAriaLabel' | t:{ typeName }">
+          <table class="data-table" [class.data-table--sized]="!!listLayout"
+                 [style.width.px]="listLayout ? tableWidth : null"
+                 [attr.aria-label]="'model.data.tableAriaLabel' | t:{ typeName }">
+            @if (listLayout) {
+              <colgroup>
+                @for (width of columnWidths; track $index) {
+                  <col [style.width.px]="width">
+                }
+              </colgroup>
+            }
             <thead>
               <tr>
                 @if (permissionService.can(typeName, 'delete')) {

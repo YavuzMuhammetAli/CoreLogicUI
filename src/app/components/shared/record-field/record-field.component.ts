@@ -13,6 +13,7 @@ import { AutoValueRule } from '../../../utils/auto-value/auto-value';
 import { fileSizeError } from '../../../utils/file-size';
 import { isColumnRequired } from '../../../utils/record-field/column-required';
 import { fieldErrorText } from '../../../utils/record-field/field-error';
+import { FieldWidget } from '../../../utils/screen-layout/screen-layout.model';
 
 /**
  * RecordFieldComponent — dinamik kayıt formunun TEK bir alanı: etiket (zorunlu işareti,
@@ -59,6 +60,10 @@ export class RecordFieldComponent {
   readonly autoValueRule = input<AutoValueRule | undefined>(undefined);
   /** Numarası kayıtta verilecek alan (SEQ) — "Kaydedince atanır" ipucu. */
   readonly autoValuePending = input(false);
+  /** Ekran tasarımındaki gösterim biçimi: çok satırlı metin ya da seçenek düğmeleri. */
+  readonly widget = input<FieldWidget | null>(null);
+  /** Çok satırlı metinde görünen satır sayısı. */
+  readonly rows = input<number | null>(null);
 
   /** Seçilen dosyanın adı — indirmede orijinal adla kaydedilsin. */
   private readonly fileName = signal<string | null>(null);
@@ -74,6 +79,9 @@ export class RecordFieldComponent {
   readonly enumValues = computed(() => parseEnumValues(this.column().enumValues));
   readonly stepAttr = computed(() => stepFor(this.column().dataType));
   readonly description = computed(() => this.column().description?.trim() ?? '');
+  /** Gösterim biçimi yalnız uygun tipte uygulanır (tasarım doğrulaması da bunu ister). */
+  readonly isMultiline = computed(() => this.widget() === 'multiline' && this.column().dataType === 'string');
+  readonly isRadio = computed(() => this.widget() === 'radio' && this.column().dataType === 'enum');
 
   readonly isImage = isImage;
   readonly imageSrc = imageSrc;

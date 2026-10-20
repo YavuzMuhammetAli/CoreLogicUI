@@ -47,17 +47,16 @@
 
         <!-- ── Kaydın kendi alanları ──────────────────────────────────────── -->
         <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-          <div class="record-fields">
-            @for (col of editableColumns(meta); track col.columnName) {
-              <app-record-field
-                [column]="col"
-                [control]="ctrl(col.columnName)"
-                [rule]="meta.rules.get(col.columnName)"
-                [idPrefix]="'rf-' + depth + '-'"
-                [autoValueRule]="autoValueRule(col)"
-                [autoValuePending]="isAutoValuePending(col)" />
-            }
-          </div>
+          <app-record-layout
+            [form]="form"
+            [columns]="meta.columns"
+            [rules]="meta.rules"
+            [layout]="formLayout"
+            [legacyColumns]="editable"
+            [forcedVisible]="forcedColumns"
+            [excluded]="excludedColumns"
+            [idPrefix]="'rf-' + depth + '-'"
+            [autoValues]="autoValues" />
         </form>
 
         <!-- ── Bu kaydın kendi alt modelleri ──────────────────────────────── -->

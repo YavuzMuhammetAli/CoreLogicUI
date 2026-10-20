@@ -69,3 +69,17 @@ tr.row-selected td {
   font-weight: 400;
 }
 
+
+/* Ekran tasarımındaki liste yerleşimi: genişlikler <colgroup>'tan, sabit tablo düzeni.
+   Global `td { max-width: 260px }` burada kolonun kendi genişliğini kısardı. */
+.data-table--sized {
+  table-layout: fixed;
+  min-width: 100%;
+
+  th,
+  td {
+    max-width: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

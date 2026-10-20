@@ -21,6 +21,9 @@ import {
   downloadFile
 } from './model-data.util';
 import { markDirty } from '../../utils/change-detection';
+import { RecordMetadataService } from '../../services/record-metadata.service';
+import { ListLayout } from '../../utils/screen-layout/screen-layout.model';
+import { ResolvedListColumn, resolveListColumns } from '../../utils/screen-layout/list-layout.resolve';
 import { pageWindow } from '../../utils/pagination';
 
 type DataRow = Record<string, unknown>;
@@ -41,6 +44,13 @@ export class ModelDataComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly languageService = inject(LanguageService);
+  private readonly metadata = inject(RecordMetadataService);
+
+  /** Sabit genişlikli tabloda genişliği verilmemiş kolonun ve sabit kolonların genişliği (px). */
+  static readonly AUTO_COLUMN_PX = 160;
+  static readonly ID_COLUMN_PX = 80;
+  static readonly SELECT_COLUMN_PX = 44;
+  static readonly STATUS_COLUMN_PX = 160;
 
   typeName = '';
   model: PublishedModel | undefined;
@@ -66,6 +76,12 @@ export class ModelDataComponent implements OnInit {
   // Admin tarafından yönetilen kolon görünürlüğü — null = ayar yok, tüm kolonlar görünür
   visibleColumnNames: string[] | null = null;
   savingColumnVisibility = false;
+
+  /**
+   * Yayınlanmış liste yerleşimi (ekran tasarımı). Varsa kolon sırası ve genişlikleri ondan
+   * gelir ve "Kolonlar" ayarının yerini alır; yoksa null.
+   */
+  listLayout: ListLayout | null = null;
 
   // Toplu silme durumu
   /**
@@ -113,6 +129,7 @@ export class ModelDataComponent implements OnInit {
     this.pageIndex = 1;
     this.total     = 0;
     this.visibleColumnNames = null;
+    this.listLayout = null;
     this.clearSelection();
   }
 
@@ -127,11 +144,32 @@ export class ModelDataComponent implements OnInit {
     return this.model?.columns ?? [];
   }
 
+  /** Görünür kolonlar ve genişlikleri — liste yerleşimi, yoksa "Kolonlar" ayarı, o da yoksa hepsi. */
+  get resolvedColumns(): ResolvedListColumn[] {
+    return resolveListColumns(this.listLayout, this.columns, this.visibleColumnNames);
+  }
+
   /** Görünür kolonlar — ayar yoksa şema kolonlarının tümü */
   get displayColumns(): PublishedColumn[] {
-    if (!this.visibleColumnNames) return this.columns;
-    const visible = new Set(this.visibleColumnNames);
-    return this.columns.filter(c => visible.has(c.columnName));
+    return this.resolvedColumns.map(r => r.column);
+  }
+
+  /**
+   * Liste yerleşiminde kolon genişlikleri `<colgroup>` ile verilir ve tablo sabit düzende
+   * çizilir (aksi halde tarayıcı genişliği içeriğe göre yeniden dağıtır). Sıra: seçim kutusu,
+   * ID, yerleşimin kolonları, iş akışı durumu.
+   */
+  get columnWidths(): number[] {
+    const widths: number[] = [];
+    if (this.permissionService.can(this.typeName, 'delete')) widths.push(ModelDataComponent.SELECT_COLUMN_PX);
+    widths.push(ModelDataComponent.ID_COLUMN_PX);
+    for (const c of this.resolvedColumns) widths.push(c.width ?? ModelDataComponent.AUTO_COLUMN_PX);
+    if (this.hasWorkflowStatus) widths.push(ModelDataComponent.STATUS_COLUMN_PX);
+    return widths;
+  }
+
+  get tableWidth(): number {
+    return this.columnWidths.reduce((sum, w) => sum + w, 0);
   }
 
   /** Kolon görünürlüğü popover'ı için kolon listesi (liste görünümünde zorunlu kolon yok) */
@@ -173,11 +211,16 @@ export class ModelDataComponent implements OnInit {
 
   /** Model meta verisini backend'den çek, ardından satırları yükle */
   private loadModelMeta(): void {
-    this.publishedModel.getModels().pipe(markDirty(this.cdr)).subscribe({
-      next: res => {
+    // Liste yerleşimi kolonlarla birlikte okunur — tablo önce varsayılan kolonlarla çizilip "zıplamasın".
+    forkJoin({
+      models: this.publishedModel.getModels(),
+      layout: this.metadata.listLayout$(this.typeName)
+    }).pipe(markDirty(this.cdr)).subscribe({
+      next: ({ models: res, layout }) => {
         if (res.success) {
           this.model = (res.data ?? []).find(m => m.typeName === this.typeName);
         }
+        this.listLayout = layout;
         this.loadRows();
       },
       error: () => this.loadRows()

@@ -76,8 +76,10 @@ export interface PlanLocation {
 
 export interface FormRenderPlan {
   readonly tabs: readonly PlanTab[];
-  /** Tasarımda yer almadığı için sona eklenen kolonlar. */
+  /** Sona eklenen kolonlar: tasarımda olmayanlar + gizli olup görünmesi gerekenler. */
   readonly appended: readonly string[];
+  /** Tasarımda ne yerleştirilmiş ne gizlenmiş kolonlar (tasarımdan sonra eklenmiş) — "güncel değil" uyarısı. */
+  readonly unplaced: readonly string[];
   /** Tasarımda olup şemada olmayan kolonlar. */
   readonly unknown: readonly string[];
   /** Kolon → bulunduğu sekme/bölüm (geçersiz alanı göstermek için). */
@@ -138,18 +140,20 @@ export function resolveFormLayout(
   }
 
   const appended: string[] = [];
+  const unplaced: string[] = [];
   if (!design) {
     const hidden = new Set(layout.hiddenColumns);
     for (const column of columns) {
       const name = column.columnName;
       if (placed.has(name) || excluded.has(name)) continue;
-      if (hidden.has(name) && !forced.has(name)) continue;
+      if (!hidden.has(name)) unplaced.push(name);
+      else if (!forced.has(name)) continue;
       appended.push(name);
     }
     if (appended.length > 0) appendSection(tabs, appended, byName, location);
   }
 
-  return { tabs, appended, unknown, location };
+  return { tabs, appended, unplaced, unknown, location };
 }
 
 function planItem(

@@ -40,6 +40,7 @@ describe('form-layout.resolve', () => {
   it('tasarımdan sonra eklenen kolon ilk sekmenin sonuna eklenir', () => {
     const plan = resolveFormLayout(layout({ hiddenColumns: ['SiparisId'] }), columns);
     expect(plan.appended).toEqual(['Yil']);
+    expect(plan.unplaced).toEqual(['Yil']);
     const last = plan.tabs[0].sections[plan.tabs[0].sections.length - 1];
     expect(last.id).toBe(APPENDED_SECTION_ID);
     expect(last.appended).toBeTrue();
@@ -49,6 +50,8 @@ describe('form-layout.resolve', () => {
   it('gizli ama görünmesi gereken kolon (zorunlu / iş akışı adımı) sona eklenir', () => {
     const plan = resolveFormLayout(layout(), columns, { forcedVisible: new Set(['Yil']) });
     expect(plan.appended).toEqual(['Yil']);
+    // Bilinçli gizlenmiş kolon "tasarım güncel değil" sayılmaz.
+    expect(plan.unplaced).toEqual([]);
   });
 
   it('pop-up FK kolonunu hiç çizmez — yerleşimde olsa da', () => {

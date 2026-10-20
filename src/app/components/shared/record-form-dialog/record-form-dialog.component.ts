@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, forwardRef, HostListener, Input, inject, OnDestroy, OnInit, Output } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, forwardRef, HostListener, Input, inject, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
@@ -8,7 +8,7 @@ import { RecordMetadataService, TypeMeta } from '../../../services/record-metada
 import { LanguageService } from '../../../services/language.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
-import { RecordFieldComponent } from '../record-field/record-field.component';
+import { RecordLayoutComponent } from '../record-layout/record-layout.component';
 import { fieldValue, toInputValue } from '../../model-data/model-data.util';
 import {
   StagedNode, DataRow, createStagedNode, childrenOf, upsertChild, removeChild,
@@ -16,7 +16,10 @@ import {
 } from '../../model-detail/staged-tree.util';
 import { markDirty } from '../../../utils/change-detection';
 import { AutoValueFormBinding } from '../../../utils/auto-value/auto-value-form';
-import { AutoValueRule, buildAutoValuePlan } from '../../../utils/auto-value/auto-value';
+import { buildAutoValuePlan } from '../../../utils/auto-value/auto-value';
+import { mustStayVisible } from '../../../utils/record-field/column-required';
+import { FormLayout, ListLayout } from '../../../utils/screen-layout/screen-layout.model';
+import { resolveListColumns } from '../../../utils/screen-layout/list-layout.resolve';
 
 /** Alt model sekmesinin dialog içindeki görünüm durumu. */
 interface ChildTabView {
@@ -26,6 +29,8 @@ interface ChildTabView {
   loaded: boolean;
   loading: boolean;
   error: string | null;
+  /** Alt tipin yayınlanmış liste yerleşimi — varsa tablo kolonları ondan. */
+  listLayout: ListLayout | null;
 }
 
 /**
@@ -51,7 +56,7 @@ interface ChildTabView {
     ReactiveFormsModule,
     TranslatePipe,
     ConfirmDialogComponent,
-    RecordFieldComponent,
+    RecordLayoutComponent,
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     forwardRef(() => RecordFormDialogComponent)
   ],
@@ -97,7 +102,19 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
   loading = true;
   form: FormGroup | null = null;
   /** Forma bağlı otomatik değer kuralları (kural yoksa null). */
-  private autoValues: AutoValueFormBinding | null = null;
+  autoValues: AutoValueFormBinding | null = null;
+
+  /** Bu tipin yayınlanmış form yerleşimi (ekran tasarımı); null → varsayılan görünüm. */
+  formLayout: FormLayout | null = null;
+  /** Formda çizilen kolonlar — FK ve ID hariç (bir kez hesaplanır). */
+  editable: PublishedColumn[] = [];
+  /** Pop-up'ta hiç çizilmeyen kolonlar: ID ve üst kayda bağlayan FK. */
+  excludedColumns: ReadonlySet<string> = new Set();
+  /** Tasarımda gizli olsa da çizilmesi gereken zorunlu kolonlar. */
+  forcedColumns: ReadonlySet<string> = new Set();
+
+  /** Kaydet geçersiz formda durunca hatalı alanı (kapalı sekme/bölüm dahil) gösterir. */
+  @ViewChild(RecordLayoutComponent) private recordLayout?: RecordLayoutComponent;
 
   childTabs: ChildTabView[] = [];
   activeChildTab = '';
@@ -122,13 +139,26 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
   childrenOf = childrenOf;
 
   ngOnInit(): void {
-    this.metadata.meta$(this.node.typeName).pipe(markDirty(this.cdr)).subscribe(meta => {
+    forkJoin({
+      meta: this.metadata.meta$(this.node.typeName),
+      layout: this.metadata.formLayout$(this.node.typeName)
+    }).pipe(markDirty(this.cdr)).subscribe(({ meta, layout }) => {
       this.meta = meta;
+      this.formLayout = layout;
+      this.editable = this.editableColumns(meta);
+      this.excludedColumns = new Set(['ID', 'Id', ...(this.fkColumn ? [this.fkColumn] : [])]);
+      this.forcedColumns = new Set(this.editable
+        .filter(c => mustStayVisible(c, meta.rules.get(c.columnName)))
+        .map(c => c.columnName));
       this.form = this.buildForm(meta);
       this.bindAutoValues(meta, this.form);
       this.childTabs = meta.childTypeNames.map(typeName => ({
-        typeName, meta: null, loaded: false, loading: false, error: null
+        typeName, meta: null, loaded: false, loading: false, error: null, listLayout: null
       }));
+      // Alt tabloların kolonları alt tipin liste yerleşimini izler (okunamazsa varsayılan).
+      for (const tab of this.childTabs) {
+        this.metadata.listLayout$(tab.typeName).pipe(markDirty(this.cdr)).subscribe(l => { tab.listLayout = l; });
+      }
       this.activeChildTab = this.childTabs[0]?.typeName ?? '';
       this.loading = false;
       // Kayıtlı bir kaydı düzenliyorsak ilk sekmenin mevcut alt satırlarını çek.
@@ -176,16 +206,6 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
       : null;
   }
 
-  /** Kolonun otomatik değer kuralı — etiketteki ƒx işareti için. */
-  autoValueRule(col: PublishedColumn): AutoValueRule | undefined {
-    return this.autoValues?.rule(col.columnName);
-  }
-
-  /** Numarası kayıtta verilecek alan (SEQ) — "Kaydedince atanır" ipucu. */
-  isAutoValuePending(col: PublishedColumn): boolean {
-    return !!this.autoValues?.isPending(col.columnName) && !this.form?.get(col.columnName)?.value;
-  }
-
   ngOnDestroy(): void {
     this.autoValues?.stop();
   }
@@ -205,10 +225,6 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
   private isFkColumn(columnName: string): boolean {
     if (columnName === 'ID' || columnName === 'Id') return true;
     return !!this.fkColumn && columnName === this.fkColumn;
-  }
-
-  ctrl(name: string) {
-    return this.form!.get(name)!;
   }
 
   colLabel(col: PublishedColumn): string {
@@ -295,9 +311,11 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
     }
     // Alt tipin FK'sı bu düğümün tipine işaret eder; iş kolonları ad kalıbıyla elenmez.
     const childFk = fkColumnFor(this.node.typeName);
-    return tab.meta.columns
-      .filter(c => c.columnName !== 'ID' && c.columnName !== childFk)
-      .slice(0, 4);
+    const columns = tab.meta.columns.filter(c => c.columnName !== 'ID' && c.columnName !== childFk);
+    // Liste yerleşimi varsa onun sırası (pop-up dar olduğu için en fazla 6 kolon); yoksa ilk 4.
+    return tab.listLayout
+      ? resolveListColumns(tab.listLayout, columns, null).slice(0, 6).map(r => r.column)
+      : columns.slice(0, 4);
   }
 
   /** Alt kolonun FK adı — özyinelemeli dialog'a geçirilir. */
@@ -471,6 +489,7 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
     if (!this.form) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.recordLayout?.revealFirstInvalid();
       return;
     }
     this.autoValues?.runSave();

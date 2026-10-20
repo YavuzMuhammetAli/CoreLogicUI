@@ -93,10 +93,8 @@
 
 /* ── Düzenleme formu ──────────────────────────────────────────────────────── */
 
-.edit-fields-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: var(--space-4);
+/* Alanların ızgarası app-record-layout'ta (varsayılan görünüm + ekran tasarımı). */
+.record-fields {
   margin-bottom: var(--space-4);
 }
 
@@ -334,8 +332,7 @@ tr.row-selected td {
 /* ── Responsive ────────────────────────────────────────────────────────────── */
 
 @media (max-width: 768px) {
-  .field-display-grid,
-  .edit-fields-grid {
+  .field-display-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 

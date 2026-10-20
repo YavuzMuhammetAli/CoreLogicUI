@@ -1,0 +1,111 @@
+@if (plan(); as p) {
+  <!-- Tasarımdan sonra modele eklenen alanlar formun sonuna düştü — yalnız admin görür -->
+  @if (designLink(); as link) {
+    @if (p.unplaced.length > 0) {
+      <div class="alert alert-warn layout-stale" role="status">
+        <span>{{ 'screen.form.staleNotice' | t:{ count: p.unplaced.length } }}</span>
+        <a class="btn btn-ghost btn-sm" [routerLink]="link">{{ 'screen.form.design' | t }}</a>
+      </div>
+    }
+  }
+
+  @if (showTabBar()) {
+    <div class="layout-tabs" role="tablist" [attr.aria-label]="'screen.form.tabsAria' | t">
+      @for (tab of p.tabs; track tab.id; let i = $index) {
+        <button
+          type="button"
+          role="tab"
+          class="layout-tab-btn"
+          [class.layout-tab-btn--active]="tab.id === currentTabId()"
+          [id]="idPrefix() + 'tab-' + tab.id"
+          [attr.aria-selected]="tab.id === currentTabId()"
+          [attr.aria-controls]="idPrefix() + 'panel-' + tab.id"
+          [attr.tabindex]="tab.id === currentTabId() ? 0 : -1"
+          (click)="selectTab(tab.id)"
+          (keydown)="onTabKeydown($event, i)">
+          {{ tab.title || ('screen.form.untitledTab' | t:{ n: i + 1 }) }}
+          @if (tabErrorCount(tab.id); as count) {
+            <span class="layout-tab-errors" [attr.aria-label]="'screen.form.tabErrorsAria' | t:{ count }">{{ count }}</span>
+          }
+        </button>
+      }
+    </div>
+  }
+
+  @for (tab of p.tabs; track tab.id) {
+    <div
+      class="layout-tab"
+      [id]="idPrefix() + 'panel-' + tab.id"
+      [attr.role]="showTabBar() ? 'tabpanel' : null"
+      [attr.aria-labelledby]="showTabBar() ? idPrefix() + 'tab-' + tab.id : null"
+      [hidden]="tab.id !== currentTabId()">
+      @for (section of tab.sections; track section.id) {
+        <section class="layout-section">
+          @if (section.collapsible) {
+            <button
+              type="button"
+              class="layout-section-toggle"
+              [attr.aria-expanded]="isSectionOpen(section)"
+              [attr.aria-controls]="idPrefix() + 'section-' + section.id"
+              (click)="toggleSection(section)">
+              <svg class="layout-chevron" [class.layout-chevron--open]="isSectionOpen(section)" aria-hidden="true"
+                   width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+              <span>{{ section.title || ('screen.form.untitledSection' | t) }}</span>
+            </button>
+          } @else if (section.title) {
+            <h3 class="layout-section-title">{{ section.title }}</h3>
+          }
+
+          <div class="layout-grid" [id]="idPrefix() + 'section-' + section.id" [hidden]="!isSectionOpen(section)">
+            @for (item of section.items; track item.id) {
+              @if (isVisible(item)) {
+                @if (item.kind === 'field') {
+                  @if (control(item.column.columnName); as ctrl) {
+                    <app-record-field
+                      [style.grid-column]="gridColumn(item)"
+                      [column]="item.column"
+                      [control]="ctrl"
+                      [rule]="rules().get(item.column.columnName)"
+                      [idPrefix]="idPrefix()"
+                      [step]="isStep(item.column.columnName)"
+                      [widget]="item.widget"
+                      [rows]="item.rows"
+                      [autoValueRule]="autoValues()?.rule(item.column.columnName)"
+                      [autoValuePending]="!!autoValues()?.isPending(item.column.columnName) && !ctrl.value" />
+                  }
+                } @else if (item.kind === 'spacer') {
+                  <div class="layout-spacer" [style.grid-column]="gridColumn(item)" aria-hidden="true"></div>
+                } @else if (item.kind === 'divider') {
+                  <hr class="layout-divider">
+                } @else {
+                  <div class="alert layout-note" [class.alert-info]="item.tone === 'info'" [class.alert-warn]="item.tone === 'warn'"
+                       [style.grid-column]="gridColumn(item)">
+                    <span>{{ item.text }}</span>
+                  </div>
+                }
+              }
+            }
+          </div>
+        </section>
+      }
+    </div>
+  }
+} @else {
+  <!-- Yayınlanmış tasarım yok: bugünkü görünüm -->
+  <div class="legacy-grid">
+    @for (col of legacyColumns(); track col.columnName) {
+      @if (control(col.columnName); as ctrl) {
+        <app-record-field
+          [column]="col"
+          [control]="ctrl"
+          [rule]="rules().get(col.columnName)"
+          [idPrefix]="idPrefix()"
+          [step]="isStep(col.columnName)"
+          [autoValueRule]="autoValues()?.rule(col.columnName)"
+          [autoValuePending]="!!autoValues()?.isPending(col.columnName) && !ctrl.value" />
+      }
+    }
+  </div>
+}

@@ -34,12 +34,18 @@
       <!-- Sağ üst aksiyonlar: Kolonlar (admin) + Listeye Dön + Kaydet -->
       <div class="panel-actions">
         @if (permission.isAdmin()) {
-          <app-column-visibility
-            [columns]="parentColumnVisibilityItems"
-            [visible]="effectiveVisibleParentColumnNames"
-            [saving]="savingColumnVisibility"
-            (save)="onSaveColumnVisibility($event)">
-          </app-column-visibility>
+          <!-- Yayınlanmış ekran tasarımı "Kolonlar" ayarının yerini alır: tek doğruluk kaynağı. -->
+          @if (formLayout) {
+            <a class="btn btn-ghost btn-sm" [routerLink]="['/build', typeName, 'screen']"
+               [attr.aria-label]="'screen.designScreenAria' | t">{{ 'screen.designScreen' | t }}</a>
+          } @else {
+            <app-column-visibility
+              [columns]="parentColumnVisibilityItems"
+              [visible]="effectiveVisibleParentColumnNames"
+              [saving]="savingColumnVisibility"
+              (save)="onSaveColumnVisibility($event)">
+            </app-column-visibility>
+          }
         }
         <a [routerLink]="['/models', typeName]" class="btn btn-ghost btn-sm">
           <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -201,18 +207,18 @@
           </div>
         }
         <form [formGroup]="editForm" (ngSubmit)="submitEdit()" novalidate>
-          <div class="edit-fields-grid">
-            @for (col of visibleParentColumns; track col.columnName) {
-              <app-record-field
-                [column]="col"
-                [control]="getEditControl(col.columnName)"
-                [rule]="parentRule(col)"
-                idPrefix="edit-"
-                [step]="isStepColumn(col)"
-                [autoValueRule]="autoValueRule(col)"
-                [autoValuePending]="isAutoValuePending(col)" />
-            }
-          </div>
+          <app-record-layout
+            class="record-fields"
+            [form]="editForm"
+            [columns]="parentColumns"
+            [rules]="parentRuleMap"
+            [layout]="formLayout"
+            [legacyColumns]="visibleParentColumns"
+            [forcedVisible]="forcedParentColumns"
+            [stepColumns]="stepColumnSet"
+            idPrefix="edit-"
+            [autoValues]="autoValuesBinding"
+            [designLink]="designLink" />
 
           <!-- Kaydet yalnızca sağ üstte; buradaki mükerrer buton kaldırıldı.
                <form> üzerindeki (ngSubmit) korunur — Enter ile kaydetme çalışır. -->
@@ -306,12 +312,18 @@
                       </button>
                     }
                     @if (permission.isAdmin()) {
-                      <app-column-visibility
-                        [columns]="tabColumnVisibilityItems(state)"
-                        [visible]="effectiveTabVisibleColumnNames(state)"
-                        [saving]="state.savingColumnVisibility"
-                        (save)="onSaveTabColumnVisibility(state, $event)">
-                      </app-column-visibility>
+                      @if (state.listLayout) {
+                        <a class="btn btn-ghost btn-sm" [routerLink]="['/build', state.typeName, 'screen']"
+                           [queryParams]="{ view: 'list' }"
+                           [attr.aria-label]="'screen.designScreenAria' | t">{{ 'screen.designScreen' | t }}</a>
+                      } @else {
+                        <app-column-visibility
+                          [columns]="tabColumnVisibilityItems(state)"
+                          [visible]="effectiveTabVisibleColumnNames(state)"
+                          [saving]="state.savingColumnVisibility"
+                          (save)="onSaveTabColumnVisibility(state, $event)">
+                        </app-column-visibility>
+                      }
                     }
                     @if (!isNew) {
                       <button type="button" class="btn btn-secondary btn-sm" (click)="loadTabRows(state)" [disabled]="state.loading">
