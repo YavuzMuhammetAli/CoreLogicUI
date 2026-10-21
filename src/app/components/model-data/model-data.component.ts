@@ -275,6 +275,11 @@ export class ModelDataComponent implements OnInit {
     });
   }
 
+  /** Başlıkta gösterilecek model adı — model etiketi (ör. "Teklif"), yoksa tablo adı. */
+  get modelTitle(): string {
+    return this.model?.label?.trim() || this.typeName;
+  }
+
   /** UI'da gösterilecek etiket — admin Label tanımlamışsa onu, yoksa ham columnName'i döner. */
   colLabel(col: PublishedColumn): string {
     return col.label?.trim() || col.columnName;

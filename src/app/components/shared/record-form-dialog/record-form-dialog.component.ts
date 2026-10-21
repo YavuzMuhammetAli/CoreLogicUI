@@ -7,6 +7,7 @@ import { PublishedColumn, PublishedModelService } from '../../../services/publis
 import { RecordMetadataService, TypeMeta } from '../../../services/record-metadata.service';
 import { LanguageService } from '../../../services/language.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
+import { ModelLabelPipe } from '../../../pipes/model-label.pipe';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { RecordLayoutComponent } from '../record-layout/record-layout.component';
 import { fieldValue, toInputValue } from '../../model-data/model-data.util';
@@ -55,6 +56,7 @@ interface ChildTabView {
     CommonModule,
     ReactiveFormsModule,
     TranslatePipe,
+    ModelLabelPipe,
     ConfirmDialogComponent,
     RecordLayoutComponent,
     // eslint-disable-next-line @typescript-eslint/no-use-before-define

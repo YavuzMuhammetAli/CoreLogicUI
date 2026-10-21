@@ -1,6 +1,7 @@
 <!-- Sayfa başlığı -->
 <div class="page-header">
-  <span class="eyebrow">{{ typeName }}</span>
+  <!-- Meta gelene kadar boşluk: önce tablo adı yazıp etikete "sıçramasın" -->
+  <span class="eyebrow">@if (!model && loadingRows) { &nbsp; } @else { {{ modelTitle }} }</span>
 </div>
 
 @if (!model && loadingRows) {
@@ -113,7 +114,7 @@
         <div class="table-wrapper">
           <table class="data-table" [class.data-table--sized]="!!listLayout"
                  [style.width.px]="listLayout ? tableWidth : null"
-                 [attr.aria-label]="'model.data.tableAriaLabel' | t:{ typeName }">
+                 [attr.aria-label]="'model.data.tableAriaLabel' | t:{ typeName: modelTitle }">
             @if (listLayout) {
               <colgroup>
                 @for (width of columnWidths; track $index) {

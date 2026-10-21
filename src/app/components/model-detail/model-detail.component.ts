@@ -537,6 +537,16 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return col.label?.trim() || col.columnName;
   }
 
+  /** Başlıkta gösterilecek model adı — model etiketi (ör. "Teklif"), yoksa tablo adı. */
+  get modelTitle(): string {
+    return this.model?.label?.trim() || this.typeName;
+  }
+
+  /** Alt model sekmesinde gösterilecek ad — etiketi varsa o, yoksa tablo adı. */
+  childLabel(typeName: string): string {
+    return this.allModels.find(m => m.typeName === typeName)?.label?.trim() || typeName;
+  }
+
   // ─── Üst kayıt formu ────────────────────────────────────────────────────────
 
   /**

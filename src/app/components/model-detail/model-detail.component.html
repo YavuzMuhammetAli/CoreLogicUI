@@ -2,7 +2,8 @@
 <div class="detail-breadcrumb">
   <a [routerLink]="['/models']" class="bc-link">{{ 'model.detail.breadcrumbModels' | t }}</a>
   <span class="bc-sep">/</span>
-  <a [routerLink]="['/models', typeName]" class="bc-link">{{ typeName }}</a>
+  <!-- Meta gelene kadar boşluk: önce tablo adı yazıp etikete "sıçramasın" -->
+  <a [routerLink]="['/models', typeName]" class="bc-link">@if (!model && loadingRecord) { &nbsp; } @else { {{ modelTitle }} }</a>
   <span class="bc-sep">/</span>
   <span class="bc-current">@if (isNew) { {{ 'model.detail.breadcrumbNew' | t }} } @else { {{ 'model.detail.breadcrumbDetail' | t }} }</span>
 </div>
@@ -27,7 +28,7 @@
     <div class="panel-head record-panel-head">
       <div>
         <h1 class="record-title">
-          @if (isNew) { {{ 'model.detail.newRecordTitle' | t:{ typeName } }} } @else { {{ typeName }} }
+          @if (isNew) { {{ 'model.detail.newRecordTitle' | t:{ typeName: modelTitle } }} } @else { {{ modelTitle }} }
         </h1>
       </div>
 
@@ -272,7 +273,7 @@
               role="tab"
               [attr.aria-selected]="activeTab === name"
               (click)="setTab(name); revealTab($event)">
-              {{ name }}
+              {{ childLabel(name) }}
               @if (tabRowCount(name) > 0) {
                 <span class="tab-badge">{{ tabRowCount(name) }}</span>
               }
@@ -284,8 +285,9 @@
         @for (name of childModelNames; track name) {
           @if (activeTab === name) {
             @let state = tabState(name);
+            @let label = childLabel(name);
             @if (state) {
-              <div class="tab-panel" role="tabpanel" [attr.aria-label]="'model.detail.tabPanelAria' | t:{ name }">
+              <div class="tab-panel" role="tabpanel" [attr.aria-label]="'model.detail.tabPanelAria' | t:{ name: label }">
 
                 <!-- Araç çubuğu: arama + ekle butonu -->
                 <div class="tab-toolbar">
@@ -296,10 +298,10 @@
                     <input
                       type="search"
                       class="input search-input"
-                      [placeholder]="'model.detail.searchInPlaceholder' | t:{ name }"
+                      [placeholder]="'model.detail.searchInPlaceholder' | t:{ name: label }"
                       [value]="state.searchTerm"
                       (input)="state.searchTerm = $any($event.target).value"
-                      [attr.aria-label]="'model.detail.searchAria' | t:{ name }">
+                      [attr.aria-label]="'model.detail.searchAria' | t:{ name: label }">
                   </div>
                   <div class="tab-toolbar-actions">
                     @if (selectedCount(state) > 0 && canChild(name, 'delete')) {
@@ -340,7 +342,7 @@
                         <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                           <path d="M12 5v14M5 12h14"/>
                         </svg>
-                        {{ 'model.detail.newName' | t:{ name } }}
+                        {{ 'model.detail.newName' | t:{ name: label } }}
                       </button>
                     }
                   </div>
@@ -459,8 +461,8 @@
                 @if (!state.loading && !state.error && state.rows.length === 0 && state.staged.length === 0) {
                   <div class="empty-state" style="padding:var(--space-8) var(--space-5)">
                     <div class="empty-icon" aria-hidden="true">📋</div>
-                    <h3>{{ 'model.detail.noChildRecordTitle' | t:{ name } }}</h3>
-                    <p>{{ 'model.detail.noChildRecordMessage' | t:{ name } }}</p>
+                    <h3>{{ 'model.detail.noChildRecordTitle' | t:{ name: label } }}</h3>
+                    <p>{{ 'model.detail.noChildRecordMessage' | t:{ name: label } }}</p>
                     @if (canChild(name, 'create')) {
                       <button type="button" class="btn btn-primary" (click)="openChildAdd(state)">{{ 'model.data.addFirstRecord' | t }}</button>
                     }
@@ -470,7 +472,7 @@
                 <!-- ── Veri Tablosu ─────────────────────────────────────────── -->
                 @if (!state.loading && getDisplayRows(state).length > 0) {
                   <div class="tab-table-wrapper">
-                    <table class="data-table" [attr.aria-label]="'model.detail.tabPanelAria' | t:{ name }">
+                    <table class="data-table" [attr.aria-label]="'model.detail.tabPanelAria' | t:{ name: label }">
                       <thead>
                         <tr>
                           @if (canChild(name, 'delete')) {

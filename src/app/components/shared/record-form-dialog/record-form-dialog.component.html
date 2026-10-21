@@ -3,12 +3,12 @@
     class="dialog-panel panel"
     role="dialog"
     aria-modal="true"
-    [attr.aria-label]="(isEdit ? 'record.dialogEditTitle' : 'record.dialogNewTitle') | t:{ name: node.typeName }">
+    [attr.aria-label]="(isEdit ? 'record.dialogEditTitle' : 'record.dialogNewTitle') | t:{ name: (node.typeName | modelLabel) }">
 
     <div class="panel-head">
       <div class="record-dialog-title-wrap">
         <h2 class="panel-title">
-          {{ (isEdit ? 'record.dialogEditTitle' : 'record.dialogNewTitle') | t:{ name: node.typeName } }}
+          {{ (isEdit ? 'record.dialogEditTitle' : 'record.dialogNewTitle') | t:{ name: (node.typeName | modelLabel) } }}
         </h2>
         <p class="panel-subtitle">
           {{ fkHint ?? ('record.dialogSubtitle' | t) }}
@@ -71,7 +71,7 @@
                   [class.tab-btn--active]="activeChildTab === tab.typeName"
                   [attr.aria-selected]="activeChildTab === tab.typeName"
                   (click)="setChildTab(tab.typeName)">
-                  {{ tab.typeName }}
+                  {{ tab.typeName | modelLabel }}
                   @if (childRows(tab.typeName).length > 0) {
                     <span class="tab-badge">{{ childRows(tab.typeName).length }}</span>
                   }
@@ -99,7 +99,7 @@
                              stroke="currentColor" stroke-width="2.5">
                           <path d="M12 5v14M5 12h14"/>
                         </svg>
-                        {{ 'record.newChild' | t:{ name: tab.typeName } }}
+                        {{ 'record.newChild' | t:{ name: (tab.typeName | modelLabel) } }}
                       </button>
                     </div>
                   </div>
