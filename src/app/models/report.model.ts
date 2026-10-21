@@ -57,9 +57,15 @@ export interface ReportDefinition {
 }
 
 export interface ReportColumnInfo {
+  /** Satır anahtarı: kolon adı ya da aggregate alias'ı (`SUM_NetAmount`, `COUNT_All`). */
   name: string;
   /** form-build CSHARP_TYPE_MAP anahtarları: string|int|float|decimal|datetime|boolean */
   type: string;
+  /**
+   * Başlık: kolonun şema etiketi ya da "Toplam Net Tutar" / "Kayıt sayısı" (sunucuda,
+   * istek diliyle üretilir; Excel/PDF de bunu kullanır). Boşsa `name` gösterilir.
+   */
+  label?: string | null;
 }
 
 /**

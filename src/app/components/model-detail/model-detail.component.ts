@@ -19,12 +19,11 @@ import { PublishedColumnSchema } from '../../services/published-table.service';
 import { RecordFormDialogComponent } from '../shared/record-form-dialog/record-form-dialog.component';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { RecordLayoutComponent } from '../shared/record-layout/record-layout.component';
-import { WorkflowPanelComponent } from '../shared/workflow-panel/workflow-panel.component';
 import { TaskActionDialogComponent, TaskActionResult } from '../shared/task-action-dialog/task-action-dialog.component';
 import { WorkflowViewDialogComponent } from '../shared/workflow-view-dialog/workflow-view-dialog.component';
 import { WorkflowInstanceService, WorkflowTaskService } from '../../services/workflow-task.service';
 import { NotificationService } from '../../services/notification.service';
-import { MyRecordTask, RecordWorkflowState, StartableWorkflow, WorkflowInstance } from '../../models/workflow.model';
+import { MyRecordTask, RecordWorkflowState, StartableWorkflow } from '../../models/workflow.model';
 import { buildRecordValues, lockedColumns, missingRequired } from './workflow-lock.util';
 import { LookupLabelService } from '../../services/lookup-label.service';
 import {
@@ -107,7 +106,7 @@ interface TabState {
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, ColumnVisibilityComponent,
     TranslatePipe, RecordFormDialogComponent, ConfirmDialogComponent, RecordLayoutComponent,
-    WorkflowPanelComponent, TaskActionDialogComponent, WorkflowViewDialogComponent
+    TaskActionDialogComponent, WorkflowViewDialogComponent
   ],
   templateUrl: './model-detail.component.html',
   styleUrls: ['./model-detail.component.scss'],
@@ -127,8 +126,6 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   private readonly instanceService = inject(WorkflowInstanceService);
   private readonly notification = inject(NotificationService);
 
-  /** Kaydın altındaki süreç geçmişi paneli — adım/başlatma sonrası tazelenir. */
-  @ViewChild('wfPanel') private wfPanel?: WorkflowPanelComponent;
   /** Üst formun yerleşimi — Kaydet geçersiz formda durunca hatalı alanı gösterir. */
   @ViewChild(RecordLayoutComponent) private recordLayout?: RecordLayoutComponent;
 
@@ -150,7 +147,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   actionDialog: { task: MyRecordTask; decision: 'approve' | 'reject'; error: string | null } | null = null;
   /**
    * Kaydın kullanıcıya görünen en yeni süreci (sürüyor ya da bitmiş) — "Akışı
-   * görüntüle" düğmesi. Süreç paneli yükler; görme kararı sunucuda
+   * görüntüle" düğmesi (bkz. loadLatestInstance); görme kararı sunucuda
    * (Okuma + Akışı görüntüle izni, başlatan ya da görevli).
    */
   latestInstanceId: number | null = null;
@@ -392,6 +389,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
           // Kayıt geldi — doğrudan düzenleme formunu aç (salt-okunur modu yoktur)
           this.openEditMode();
           this.loadWorkflowState();
+          this.loadLatestInstance();
         } else if (record.success && !record.data) {
           // Kayıt yok ya da kullanıcı göremez (yalnız-kendi-kayıtları kapsamı). Assembly
           // eksikliği burada değil, success=false + AssemblyNotLoaded olarak gelir — eskiden
@@ -1666,9 +1664,23 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     if (!this.wfBusy) this.actionDialog = null;
   }
 
-  /** Süreç paneli yüklendi (ilk açılış ya da başlatma/karar sonrası tazeleme). */
-  onWorkflowInstances(instances: WorkflowInstance[]): void {
-    this.latestInstanceId = instances[0]?.id ?? null;
+  /**
+   * Kaydın en yeni süreci — başlıktaki "Akışı görüntüle" düğmesi. Liste sunucuda
+   * süzülür (IWorkflowAccessPolicy) ve en yeni önce gelir; modül kurulu değilse ya da
+   * kullanıcı göremiyorsa boş döner ve düğme çıkmaz.
+   */
+  private loadLatestInstance(): void {
+    const typeName = this.typeName;
+    const id = this.recordId;
+    if (!id) return;
+
+    this.instanceService.forEntity(typeName, id).pipe(markDirty(this.cdr)).subscribe({
+      next: res => {
+        if (typeName !== this.typeName || id !== this.recordId) return;
+        this.latestInstanceId = res.success ? res.data?.[0]?.id ?? null : null;
+      },
+      error: () => { this.latestInstanceId = null; }
+    });
   }
 
   openWorkflowView(instanceId: number): void {
@@ -1733,15 +1745,15 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Başlatma/adım sonrası: kayıt (akış ve alanlar değişti), süreç durumu ve geçmiş
-   * paneli yeniden okunur. Form kayıttan yeniden kurulur; kilit yeni duruma göre uygulanır.
+   * Başlatma/adım sonrası: kayıt (akış ve alanlar değişti), süreç durumu ve en yeni
+   * süreç ("Akışı görüntüle") yeniden okunur. Form kayıttan yeniden kurulur; kilit yeni duruma göre uygulanır.
    */
   private refreshAfterWorkflow(): void {
     const typeName = this.typeName;
     const id = this.recordId;
 
     this.loadWorkflowState();
-    this.wfPanel?.load();
+    this.loadLatestInstance();
 
     this.publishedModel.get(typeName, id).pipe(markDirty(this.cdr)).subscribe({
       next: res => {

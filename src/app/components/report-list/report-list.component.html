@@ -49,7 +49,7 @@
               <tr>
                 <!-- Ad da açar: telefonda sağdaki "Görüntüle" yatay kaydırma gerektiriyor -->
                 <td><a class="row-link" [routerLink]="['/reports', report.id]">{{ report.name }}</a></td>
-                <td><span class="badge badge-meta">{{ report.modelName }}</span></td>
+                <td><span class="badge badge-meta">{{ report.modelName | modelLabel }}</span></td>
                 <td>{{ report.chartType }}</td>
                 <td>
                   <div class="td-actions">

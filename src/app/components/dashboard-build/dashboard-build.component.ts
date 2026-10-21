@@ -10,6 +10,7 @@ import { DashboardWidget } from '../../models/dashboard.model';
 import { CHART_TYPE_META } from '../chart/chart-types';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { ModelLabelPipe } from '../../pipes/model-label.pipe';
 import { markDirty } from '../../utils/change-detection';
 
 /** Canvas üzerinde düzenlenen widget — kaydedilirken `reportName` ayıklanır (DashboardWidget'ta yok). */
@@ -31,7 +32,7 @@ const ROW_PITCH_PX = 56;
 @Component({
   selector: 'app-dashboard-build',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, ModelLabelPipe],
   templateUrl: './dashboard-build.component.html',
   styleUrls: ['./dashboard-build.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

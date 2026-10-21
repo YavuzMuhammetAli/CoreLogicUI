@@ -23,6 +23,7 @@ import { CHART_TYPE_META, SINGLE_AGGREGATE_CHART_TYPES } from '../chart/chart-ty
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { markDirty } from '../../utils/change-detection';
+import { aggregateAlias, reportColumnLabel } from '../../utils/report-column-label';
 
 /** `labelKey` — şablonda `| t` ile çevrilir (bkz. report.i18n.ts 'report.operator.*'). */
 const OPERATORS: { value: ReportOperator; labelKey: string }[] = [
@@ -189,12 +190,19 @@ export class ReportBuildComponent implements OnInit {
     if (groupByFields.length > 0 || aggregates.length > 0) {
       const aggNames = aggregates
         .filter(a => a.function)
-        .map(a => `${a.function}_${a.field || 'All'}`);
+        .map(a => aggregateAlias(a));
       return [...groupByFields, ...aggNames];
     }
 
     const selected = this.checkedColumnNames(this.selectedColumnsArray);
     return selected.length > 0 ? selected : this.availableColumns.map(c => c.columnName);
+  }
+
+  /** Sıralama listesinde gösterilen başlık — kolon etiketi ya da "Toplam Net Tutar". */
+  fieldLabel(field: string): string {
+    return reportColumnLabel(
+      field, this.availableColumns, this.aggregatesArray.value as ReportAggregate[],
+      (key, params) => this.languageService.t(key, params));
   }
 
   isNumericColumn(columnName: string): boolean {
@@ -255,7 +263,7 @@ export class ReportBuildComponent implements OnInit {
     let columns: ReportColumnInfo[];
     if (groupByNames.length > 0 || aggregates.length > 0) {
       const groupCols = groupByNames.map(name => ({ name, type: this.columnDataType(name) }));
-      const aggCols = aggregates.map(a => ({ name: `${a.function}_${a.field || 'All'}`, type: 'int' }));
+      const aggCols = aggregates.map(a => ({ name: aggregateAlias(a), type: 'int' }));
       columns = [...groupCols, ...aggCols];
     } else if (selected.length > 0) {
       columns = selected.map(name => ({ name, type: this.columnDataType(name) }));
@@ -264,6 +272,9 @@ export class ReportBuildComponent implements OnInit {
     }
 
     if (columns.length === 0) return { columns: [], rows: [] };
+
+    // Başlıklar çalıştırılan raporla aynı görünsün (orada sunucu üretir).
+    columns = columns.map(col => ({ ...col, label: this.fieldLabel(col.name) }));
 
     // İlk kolon sayısalsa grafik kategori ekseni bulamaz — sentetik bir kategori kolonu ekle.
     const categoryLabel = this.languageService.t('report.build.previewCategory');

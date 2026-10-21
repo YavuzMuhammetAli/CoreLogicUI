@@ -119,6 +119,11 @@ function formatCategory(value: unknown, columnType: string, locale: ChartLocaleC
   return String(value);
 }
 
+/** Seri/KPI adı: sunucunun başlığı ("Toplam Net Tutar"); yoksa satır anahtarı. */
+function columnTitle(col: ReportColumnInfo): string {
+  return col.label || col.name;
+}
+
 /** Palet, seri sayısından azsa baştan tekrarlanarak (cycle) genişletilir. */
 function cyclePalette(palette: string[], count: number): string[] {
   if (palette.length === 0 || count <= 0) return [];
@@ -266,7 +271,7 @@ export function buildChartOptions(
         isEmpty: false,
         chart: { type: 'radialBar', height: 360, animations: { enabled: false } },
         series: [pct],
-        labels: [categories[0] || valueCol.name],
+        labels: [categories[0] || columnTitle(valueCol)],
         colors: [palette[0]],
         dataLabels: { enabled: true },
         plotOptions: {
@@ -288,7 +293,7 @@ export function buildChartOptions(
 
     case 'line':
     case 'area': {
-      const series = valueCols.map(col => ({ name: col.name, data: plotRows.map(r => toNumber(r[col.name])) }));
+      const series = valueCols.map(col => ({ name: columnTitle(col), data: plotRows.map(r => toNumber(r[col.name])) }));
       const colors = cyclePalette(palette, series.length);
       return {
         ...empty,
@@ -319,7 +324,7 @@ export function buildChartOptions(
     case 'column':
     case 'bar':
     default: {
-      const series = valueCols.map(col => ({ name: col.name, data: plotRows.map(r => toNumber(r[col.name])) }));
+      const series = valueCols.map(col => ({ name: columnTitle(col), data: plotRows.map(r => toNumber(r[col.name])) }));
       const colors = cyclePalette(palette, series.length);
       // Yatay çubukta her kategori bir satır: sabit yükseklikte 50 kategori ~4px'lik çubuklar
       // demekti. Yükseklik kategori sayısıyla büyür; dar ekranda y etiketleri daraltılır.
@@ -374,7 +379,7 @@ export function buildKpiOutput(
   if (!valueCol) return { ...base, apexType: null, isEmpty: true, kpi: null };
 
   const total = rows.reduce((sum, r) => sum + toNumber(r[valueCol.name]), 0);
-  const kpi: KpiResult = { label: valueCol.name, value: total };
+  const kpi: KpiResult = { label: columnTitle(valueCol), value: total };
 
   if (rows.length <= 1) {
     return { ...base, apexType: null, isEmpty: false, kpi };
@@ -383,7 +388,7 @@ export function buildKpiOutput(
   // Birden çok satır varsa küçük bir sparkline ile eğilimi göster. KPI toplamı (yukarıda)
   // her zaman TÜM satırlardan hesaplanır — yalnızca görsel sparkline noktaları kırpılır.
   const { rows: sparkRows, note: sparkNote } = capRows(rows, MAX_LINE_POINTS, locale);
-  const sparkSeries = [{ name: valueCol.name, data: sparkRows.map(r => toNumber(r[valueCol.name])) }];
+  const sparkSeries = [{ name: columnTitle(valueCol), data: sparkRows.map(r => toNumber(r[valueCol.name])) }];
   return {
     ...base,
     note: sparkNote,

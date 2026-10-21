@@ -58,15 +58,6 @@
   &::-webkit-scrollbar { display: none; }
 }
 
-.publish-hint {
-  flex-basis: 100%;
-  text-align: right;
-
-  @media (max-width: 768px) {
-    text-align: left;
-  }
-}
-
 .tab-btn {
   display: flex;
   flex-shrink: 0;

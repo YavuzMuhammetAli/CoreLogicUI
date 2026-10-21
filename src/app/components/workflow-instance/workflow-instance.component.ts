@@ -9,6 +9,7 @@ import { LanguageService } from '../../services/language.service';
 import { NotificationService } from '../../services/notification.service';
 import { PermissionService } from '../../services/permission.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { ModelLabelPipe } from '../../pipes/model-label.pipe';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { CanvasNodeMeta, WorkflowCanvasComponent } from '../shared/workflow-canvas/workflow-canvas.component';
 import { WorkflowOverlay } from '../../utils/workflow/workflow-overlay';
@@ -32,7 +33,7 @@ import { formatDate, formatDateTime } from '../../utils/locale-format';
 @Component({
   selector: 'app-workflow-instance',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, ConfirmDialogComponent, WorkflowCanvasComponent],
+  imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, ConfirmDialogComponent, WorkflowCanvasComponent],
   templateUrl: './workflow-instance.component.html',
   styleUrl: './workflow-instance.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

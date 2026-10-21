@@ -91,7 +91,7 @@
                     <code class="wf-code">{{ workflow.code }}</code>
                   </a>
                 </td>
-                <td>{{ workflow.modelName }}</td>
+                <td>{{ workflow.modelName | modelLabel }}</td>
                 <td>{{ 'workflow.trigger.' + workflow.triggerEvent | t }}</td>
                 <td>
                   <span class="badge" [class]="'badge ' + statusClass(workflow.status)">

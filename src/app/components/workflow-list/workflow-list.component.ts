@@ -8,6 +8,7 @@ import { LanguageService } from '../../services/language.service';
 import { NotificationService } from '../../services/notification.service';
 import { PermissionService } from '../../services/permission.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { ModelLabelPipe } from '../../pipes/model-label.pipe';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { markDirty } from '../../utils/change-detection';
 
@@ -22,7 +23,7 @@ import { markDirty } from '../../utils/change-detection';
 @Component({
   selector: 'app-workflow-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, ConfirmDialogComponent],
+  imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, ConfirmDialogComponent],
   templateUrl: './workflow-list.component.html',
   styleUrl: './workflow-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

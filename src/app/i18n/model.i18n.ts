@@ -290,7 +290,6 @@ export const MODEL_I18N: Translations = {
   'table.detail.backToList': { tr: 'Listeye Dön', en: 'Back to List' },
   'table.detail.saving': { tr: 'Kaydediliyor...', en: 'Saving...' },
   'table.detail.save': { tr: 'Kaydet', en: 'Save' },
-  'table.detail.publishDisabledHint': { tr: 'Yayınlamak için önce modeli kaydedin', en: 'Save the model first before publishing' },
   'table.detail.publishing': { tr: 'Yayınlanıyor...', en: 'Publishing...' },
   'table.detail.publish': { tr: 'Yayınla', en: 'Publish' },
   'table.detail.modelNameLabel': { tr: 'Model Adı', en: 'Model Name' },

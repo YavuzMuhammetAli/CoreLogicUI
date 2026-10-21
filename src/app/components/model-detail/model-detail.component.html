@@ -588,21 +588,6 @@
     (cancelled)="closeRecordDialog()" />
 }
 
-<!--
-  H: Süreç paneli — yalnızca KAYITLI kayıtlarda. Yeni kayıtta henüz ID yok ve
-  bir sürece bağlanamaz. Panel, workflow modülü kurulu değilse kendini gizler.
-
-  Yalnızca süreç GEÇMİŞİ. Başlatma ve adım kararları kaydın başlığında, Kaydet'in
-  yanındaki butonlardan verilir; sonrasında bu panel tazelenir (refreshAfterWorkflow).
--->
-@if (!isNew && recordId > 0 && typeName) {
-  <div class="record-workflow">
-    <app-workflow-panel #wfPanel [entityType]="typeName" [entityId]="recordId"
-                        (instancesLoaded)="onWorkflowInstances($event)"
-                        (viewRequested)="openWorkflowView($event)" />
-  </div>
-}
-
 <!-- ══ AKIŞI GÖRÜNTÜLE (yalnız ilerlenen yol + kim onayladı / bekliyor) ══════ -->
 <app-workflow-view-dialog [instanceId]="viewInstanceId" (closed)="closeWorkflowView()" />
 

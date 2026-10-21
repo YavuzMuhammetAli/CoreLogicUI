@@ -314,7 +314,8 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   /** Başlık alanları + tetik koşulları. Değeri belgeye yazılır (bkz. pushFormToDoc). */
   form!: FormGroup;
 
-  models: string[] = [];
+  /** Model seçimi: değer tablo adı, görünen metin etiket (yoksa tablo adı). */
+  models: Array<{ typeName: string; label: string }> = [];
   modelColumns: string[] = [];
   /** Kolonların tam meta verisi — adım pop-up'ındaki kayıt alanı seçicisi etiket/tip gösterir. */
   modelColumnMeta: PublishedColumn[] = [];
@@ -604,7 +605,9 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   private loadModels(): void {
     this.publishedModelService.getModels().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
-        if (res.success) this.models = (res.data ?? []).map(m => m.typeName);
+        if (res.success) {
+          this.models = (res.data ?? []).map(m => ({ typeName: m.typeName, label: m.label?.trim() || m.typeName }));
+        }
       },
       error: () => { this.models = []; }
     });

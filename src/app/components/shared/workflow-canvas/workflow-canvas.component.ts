@@ -910,8 +910,8 @@ export class WorkflowCanvasComponent {
     const delta = nudgeDelta(direction, large);
     const moves = selected.map(node => ({
       key: node.key,
-      x: Math.max(0, large ? snapValue(node.x + delta.x, true) : node.x + delta.x),
-      y: Math.max(0, large ? snapValue(node.y + delta.y, true) : node.y + delta.y)
+      x: large ? snapValue(node.x + delta.x, true) : node.x + delta.x,
+      y: large ? snapValue(node.y + delta.y, true) : node.y + delta.y
     }));
 
     // Yeni konum canlı ofsete de yazılır: değişiklik algılama sonraki kareye

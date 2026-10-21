@@ -4,6 +4,7 @@ import { WorkflowInstanceService } from '../../services/workflow-task.service';
 import { WorkflowService } from '../../services/workflow.service';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { ModelLabelPipe } from '../../pipes/model-label.pipe';
 import { WorkflowInstance, WorkflowInstanceStatus } from '../../models/workflow.model';
 import { formatDate } from '../../utils/locale-format';
 import { pageWindow } from '../../utils/pagination';
@@ -24,7 +25,7 @@ const STATUSES: ReadonlyArray<WorkflowInstanceStatus> = ['Running', 'Completed',
 @Component({
   selector: 'app-workflow-instances',
   standalone: true,
-  imports: [RouterLink, TranslatePipe],
+  imports: [RouterLink, TranslatePipe, ModelLabelPipe],
   templateUrl: './workflow-instances.component.html',
   styleUrl: './workflow-instances.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

@@ -5,12 +5,13 @@ import { ReportDefinition } from '../../models/report.model';
 import { PermissionService } from '../../services/permission.service';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { ModelLabelPipe } from '../../pipes/model-label.pipe';
 import { markDirty } from '../../utils/change-detection';
 
 @Component({
   selector: 'app-report-list',
   standalone: true,
-  imports: [RouterLink, TranslatePipe],
+  imports: [RouterLink, TranslatePipe, ModelLabelPipe],
   templateUrl: './report-list.component.html',
   styleUrls: ['./report-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

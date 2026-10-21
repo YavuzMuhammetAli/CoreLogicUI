@@ -62,8 +62,7 @@
           type="button"
           class="btn btn-primary btn-sm"
           (click)="onPublish()"
-          [disabled]="!isSaved || isSaving || isPublishing"
-          [attr.title]="!isSaved ? ('table.detail.publishDisabledHint' | t) : null">
+          [disabled]="!isSaved || isSaving || isPublishing">
           @if (isPublishing) {
             <span class="spinner" aria-hidden="true"></span>
             {{ 'table.detail.publishing' | t }}
@@ -76,11 +75,6 @@
             {{ 'table.detail.publish' | t }}
           }
         </button>
-
-        <!-- Neden kapalı olduğu görünür metin: title dokunmatikte okunamıyor -->
-        @if (!isSaved) {
-          <span class="field-help publish-hint">{{ 'table.detail.publishDisabledHint' | t }}</span>
-        }
       </div>
     </div>
 

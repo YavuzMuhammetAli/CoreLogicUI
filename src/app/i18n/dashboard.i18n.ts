@@ -44,7 +44,6 @@ export const DASHBOARD_I18N: Translations = {
 
   // dashboard.component.html (viewer)
   'dashboard.view.defaultTitle': { tr: 'Dashboard', en: 'Dashboard' },
-  'dashboard.view.newButton': { tr: 'Yeni Dashboard', en: 'New Dashboard' },
   'dashboard.view.loadingAria': { tr: 'Yükleniyor', en: 'Loading' },
   'dashboard.view.noAccess': { tr: 'Bu rapora erişim yetkiniz yok veya rapor silinmiş.', en: 'You do not have access to this report or it has been deleted.' },
   'dashboard.view.noRows': { tr: 'Bu rapor için kayıt bulunamadı.', en: 'No records found for this report.' },

@@ -37,8 +37,8 @@ export function snapValue(value: number, enabled: boolean, grid = GRID_STEP): nu
  * Ekran farkı dünya birimine çevrilir (`/ zoom`); aksi halde uzaklaşınca düğüm
  * imlecin gerisinde kalırdı. Yapıştırma her düğümün KENDİ konumuna uygulanır
  * (grubun ortak ofsetine değil) — zaten ızgaraya oturmuş düğümler birlikte
- * hizalı kalır. Negatif konuma izin verilmez: tuvalin dışına kaçan düğüm geri
- * getirilemezdi.
+ * hizalı kalır. Negatif konum serbesttir: tuval her yöne kaydırılabildiği için
+ * (kamera + "sığdır") çizimin soluna/üstüne de düğüm taşınabilmeli.
  */
 export function dragPositions(
   origins: ReadonlyMap<string, Point>,
@@ -52,8 +52,8 @@ export function dragPositions(
 
   for (const [key, origin] of origins) {
     result.set(key, {
-      x: Math.max(0, snapValue(origin.x + screenDx / scale, snap)),
-      y: Math.max(0, snapValue(origin.y + screenDy / scale, snap))
+      x: snapValue(origin.x + screenDx / scale, snap),
+      y: snapValue(origin.y + screenDy / scale, snap)
     });
   }
 
@@ -120,7 +120,7 @@ function overlaps(a: Box, b: Box, margin: number): boolean {
 /**
  * Bağlı eklenen düğümün yeri: kaynağın, bağlanan portun hizasında altı. Oradaki
  * yer doluysa düğüm genişliği kadar sağa kayarak boş yer aranır (aynı çıkış
- * sırasındaki kardeşler yan yana dizilir). Izgaraya oturur, negatife düşmez.
+ * sırasındaki kardeşler yan yana dizilir). Izgaraya oturur.
  */
 export function placeBelow(
   source: Box,
@@ -146,8 +146,8 @@ export function findFreeSpot(
   others: ReadonlyArray<Box>,
   grid = GRID_STEP
 ): Point {
-  const startX = Math.max(0, snapValue(start.x, true, grid));
-  const y = Math.max(0, snapValue(start.y, true, grid));
+  const startX = snapValue(start.x, true, grid);
+  const y = snapValue(start.y, true, grid);
 
   let x = startX;
   for (let i = 0; i < PLACEMENT_MAX_TRIES; i++) {
@@ -161,8 +161,8 @@ export function findFreeSpot(
 /** Bırakılan / sağ tıklanan noktaya ortalanmış, ızgaraya oturmuş düğüm konumu. */
 export function centeredAt(point: Point, size: { width: number; height: number }, grid = GRID_STEP): Point {
   return {
-    x: Math.max(0, snapValue(point.x - size.width / 2, true, grid)),
-    y: Math.max(0, snapValue(point.y - size.height / 2, true, grid))
+    x: snapValue(point.x - size.width / 2, true, grid),
+    y: snapValue(point.y - size.height / 2, true, grid)
   };
 }
 

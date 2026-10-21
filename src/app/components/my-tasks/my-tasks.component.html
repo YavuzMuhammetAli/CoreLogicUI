@@ -44,7 +44,7 @@
               <tr>
                 <td><a class="row-link" [routerLink]="['/tasks', task.id]">{{ task.name }}</a></td>
                 <td>{{ task.workflowName }}</td>
-                <td>{{ task.entityType }} #{{ task.entityId }}</td>
+                <td>{{ task.entityType | modelLabel }} #{{ task.entityId }}</td>
                 <td>{{ assigneeLabel(task) }}</td>
                 <td>
                   {{ dueLabel(task) }}
@@ -84,7 +84,7 @@
             </div>
             <div>
               <dt>{{ 'task.list.colRecord' | t }}</dt>
-              <dd>{{ task.entityType }} #{{ task.entityId }}</dd>
+              <dd>{{ task.entityType | modelLabel }} #{{ task.entityId }}</dd>
             </div>
             <div>
               <dt>{{ 'task.list.colAssigned' | t }}</dt>

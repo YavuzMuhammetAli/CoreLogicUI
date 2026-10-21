@@ -154,6 +154,7 @@ CoreLogicUI-master/
         │   ├── ai-import.service.ts                # HTTP yok kendi başına — AI önerilerini MEVCUT servislerle sisteme aktarır
         │   ├── language.service.ts              # HTTP yok — TR/EN dil tercihi, localStorage, t() + TranslatePipe
         │   ├── model-usage.service.ts           # HTTP yok — model kullanım özeti (raporlar + dashboardlar)
+        │   ├── model-label.service.ts           # HTTP yok — tablo adı → model etiketi (RecordMetadataService.models$ önbelleği) + `modelLabel` pipe'ı
         │   ├── lookup-label.service.ts          # Lookup id → etiket çözümleme (önbellekli)
         │   ├── record-metadata.service.ts       # Kayıt formu meta verisi (kolon kuralları/şema)
         │   ├── theme.service.ts                 # Açık/koyu tema tercihini yönetir (localStorage)
@@ -172,6 +173,7 @@ CoreLogicUI-master/
         │   ├── locale-format.ts                 # Aktif dile göre sayı/tarih biçimlendirme (sabit 'tr-TR' KULLANMA)
         │   ├── pagination.ts                    # Saf: sayfalama penceresi (pageWindow, en fazla 5 düğme, spec'li)
         │   ├── download.ts                      # downloadBlob / downloadText (rapor dışa aktarımı, akış paketi)
+        │   ├── report-column-label.ts           # Saf: rapor oluşturucu önizlemesinin kolon başlığı (çalışan raporda başlık sunucudan, spec'li)
         │   ├── design-history.ts                # Geri al/yinele geçmişi (generic, 600 ms birleştirme) — akış ve ekran tasarımcısı ortak
         │   ├── record-field/                    # isColumnRequired/mustStayVisible (zorunluluğun tek karar noktası), alan hata metni
         │   ├── screen-layout/                   # Ekran tasarımı çekirdeği, SAF + spec'li: belge tipleri, backend'le ORTAK doğrulama
@@ -209,7 +211,8 @@ CoreLogicUI-master/
         │   ├── screen.i18n.ts                 # Ekran tasarımı (screen.* — layout.* app shell'e ait); screen.issue.{kod} doğrulama metinleri
         │   └── shared.i18n.ts                 # Paylaşılan diyalog metinleri
         ├── pipes/
-        │   └── translate.pipe.ts              # TranslatePipe — şablonlarda `{{ 'key' | t }}` şeklinde kullanılır
+        │   ├── translate.pipe.ts              # TranslatePipe — şablonlarda `{{ 'key' | t }}` şeklinde kullanılır
+        │   └── model-label.pipe.ts            # ModelLabelPipe — `{{ modelName | modelLabel }}`: tablo adı yerine model etiketi (impure)
         ├── environments/
         │   ├── environment.ts                  # apiBaseUrl: 'https://localhost:7254'
         │   └── environment.prod.ts             # apiBaseUrl: '/api' — göreli, nginx aynı origin'den backend'e iletir
@@ -326,7 +329,7 @@ Tüm servisler `@Injectable({ providedIn: 'root' })`, `inject(HttpClient)` (veya
 | `RoleAdminService` | `/Role` — RBAC rol CRUD, izin/üyelik yönetimi |
 | `UserProfileService` | `/Profile` — me/update/change-password/upload-photo/sil + `language` (bildirim e-postası dili; layout açılışta ve TR/EN değişiminde yazar) |
 | `ModelColumnSettingService` | `/ModelColumnSetting` — get/set kolon görünürlüğü |
-| `ReportService` | `/Report` — define/update/list/run/export (excel/pdf) |
+| `ReportService` | `/Report` — define/update/list/run/export (excel/pdf). Sonuç kolonu başlığı `columns[].label` sunucuda, istek dilinde üretilir ("Toplam Net Tutar", "Kayıt sayısı", kolon etiketi — `ReportingManager.ApplyColumnLabels`); ekran, dashboard, grafik ve Excel/PDF aynı başlığı gösterir, satır anahtarı `name` kalır |
 | `DashboardService` | `/Dashboard` — define/get/list + soft-delete/restore |
 | `AuditLogService` | `/AuditLog` — filtrelenmiş denetim kayıtları (admin-only) |
 | `UserAdminService` | `/User` — getall/create/update/setActive/resetPassword/setAdmin/delete (admin-only) |
@@ -336,6 +339,7 @@ Tüm servisler `@Injectable({ providedIn: 'root' })`, `inject(HttpClient)` (veya
 | `AiService` | `/Ai` — `conversations`, `chat` (SSE), `proposals/{id}/status`, `usage` (admin-only) |
 | `AiImportService` | Kendi ucu YOK — AI önerilerini `PublishedTableService`/`RelationshipService`/`ReportService`/`DashboardService` üzerinden aktarır |
 | `LanguageService` | HTTP yok — TR/EN dil tercihi, `localStorage`, `t()` metodu + `TranslatePipe` |
+| `ModelLabelService` | HTTP yok — yalnız model ADI taşıyan ekranlarda (akış/süreç/görev listeleri, rapor rozetleri) tablo adını etikete çevirir; `modelLabel` pipe'ı bunu kullanır. Model listesini zaten çeken ekranlar `model.label \|\| model.typeName` yazar |
 | `ModelUsageService` | HTTP yok — model kullanım özeti: hangi raporlar/dashboardlar bu modeli kullanıyor |
 | `ThemeService` | HTTP yok — açık/koyu tema tercihi, `localStorage` |
 | `NotificationService` | HTTP yok — global toast/uyarı, guard'lar dahil kullanılır |
@@ -604,7 +608,7 @@ Akış **`manual`** tetiklenir: formu oluşturan kişi ya yalnız **Kaydet**'e b
 - **Görme izni = yeni model izni `ViewWorkflow` (bit 64)**, kullanıcı/rol izin ekranlarında
   "Akışı görüntüle". `IWorkflowAccessPolicy`: admin · başlatan · görevli/karar veren her zaman görür;
   diğerleri **Read + ViewWorkflow** ister (yalnız Read artık süreç/görev okuma uçlarını AÇMAZ —
-  Süreç paneli dahil). `recordState` (kilit/adım düğmeleri) Read ile çalışmaya devam eder.
+  kayıt başlığındaki "Akışı görüntüle" düğmesi dahil; kaydın altındaki eski "Süreç" kartı kaldırıldı). `recordState` (kilit/adım düğmeleri) Read ile çalışmaya devam eder.
   `ModelPermissionDto` UI'ın okuduğu `canOwnOnly` adını da yazar (önceden yalnız `ownRecordsOnly`
   gidiyordu; izin ekranında kutu hep boş gelip kayıtta bit siliniyordu).
 

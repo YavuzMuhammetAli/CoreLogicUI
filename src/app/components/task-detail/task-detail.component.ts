@@ -9,6 +9,7 @@ import { PermissionService } from '../../services/permission.service';
 import { RoleAdminService } from '../../services/role-admin.service';
 import { Role } from '../../models/role';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { ModelLabelPipe } from '../../pipes/model-label.pipe';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { TaskDecisionFormComponent } from '../shared/task-decision-form/task-decision-form.component';
 import { markDirty } from '../../utils/change-detection';
@@ -24,7 +25,7 @@ import { formatDate } from '../../utils/locale-format';
 @Component({
   selector: 'app-task-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, ConfirmDialogComponent, TaskDecisionFormComponent],
+  imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, ConfirmDialogComponent, TaskDecisionFormComponent],
   templateUrl: './task-detail.component.html',
   styleUrl: './task-detail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

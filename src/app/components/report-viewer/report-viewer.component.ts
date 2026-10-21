@@ -2,21 +2,13 @@ import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } 
 import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ReportService } from '../../services/report.service';
-import { AggregateFunction, ReportDefinition, ReportRunResult } from '../../models/report.model';
+import { ReportDefinition, ReportRunResult } from '../../models/report.model';
 import { AppChartComponent } from '../chart/chart.component';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { formatNumber } from '../../utils/locale-format';
 import { downloadBlob } from '../../utils/download';
-
-/** Aggregate fonksiyonlarının KPI kartı başlığında kullanılan i18n anahtarları (bkz. report.i18n.ts 'report.aggregateShort.*'). */
-const AGGREGATE_LABEL_KEYS: Record<AggregateFunction, string> = {
-  SUM: 'report.aggregateShort.sum',
-  COUNT: 'report.aggregateShort.count',
-  AVG: 'report.aggregateShort.avg',
-  MIN: 'report.aggregateShort.min',
-  MAX: 'report.aggregateShort.max'
-};
+import { aggregateAlias } from '../../utils/report-column-label';
 
 export interface KpiCard {
   label: string;
@@ -82,14 +74,13 @@ export class ReportViewerComponent implements OnInit {
 
     return report.aggregates
       .map(agg => {
-        const alias = `${agg.function}_${agg.field || 'All'}`;
-        const hasColumn = result.columns.some(c => c.name === alias);
-        if (!hasColumn) return null;
+        const alias = aggregateAlias(agg);
+        const column = result.columns.find(c => c.name === alias);
+        if (!column) return null;
 
         const total = result.rows.reduce((sum, row) => sum + Number(row[alias] ?? 0), 0);
-        const aggLabel = this.languageService.t(AGGREGATE_LABEL_KEYS[agg.function]);
-        const label = agg.field ? `${aggLabel} · ${agg.field}` : aggLabel;
-        return { label, value: formatNumber(total, this.languageService.lang()) };
+        // Başlık sunucudan ("Toplam Net Tutar"); eski sunucu göndermezse alias.
+        return { label: column.label || alias, value: formatNumber(total, this.languageService.lang()) };
       })
       .filter((card): card is KpiCard => card !== null);
   });

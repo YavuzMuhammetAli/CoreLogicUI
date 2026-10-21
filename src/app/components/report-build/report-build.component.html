@@ -41,7 +41,7 @@
           <select id="modelName" formControlName="modelName">
             <option value="" disabled>{{ 'report.build.selectModel' | t }}</option>
             @for (m of models; track m.typeName) {
-              <option [value]="m.typeName">{{ m.typeName }}</option>
+              <option [value]="m.typeName">{{ m.label || m.typeName }}</option>
             }
           </select>
           @if (f['modelName'].invalid && f['modelName'].touched) {
@@ -90,7 +90,7 @@
                 <thead>
                   <tr>
                     @for (col of previewResult().columns; track col.name) {
-                      <th>{{ col.name }}</th>
+                      <th>{{ col.label || col.name }}</th>
                     }
                   </tr>
                 </thead>
@@ -169,7 +169,7 @@
             @for (col of availableColumns; track col.columnName; let i = $index) {
               <label class="checkbox-label">
                 <input type="checkbox" [formControlName]="i" />
-                {{ col.columnName }}
+                {{ col.label || col.columnName }}
               </label>
             }
           </div>
@@ -194,7 +194,7 @@
                 <select formControlName="field">
                   <option value="" disabled>{{ 'report.build.field' | t }}</option>
                   @for (col of availableColumns; track col.columnName) {
-                    <option [value]="col.columnName">{{ col.columnName }}</option>
+                    <option [value]="col.columnName">{{ col.label || col.columnName }}</option>
                   }
                 </select>
                 <select formControlName="operator">
@@ -218,7 +218,7 @@
             @for (col of availableColumns; track col.columnName; let i = $index) {
               <label class="checkbox-label">
                 <input type="checkbox" [formControlName]="i" />
-                {{ col.columnName }}
+                {{ col.label || col.columnName }}
               </label>
             }
           </div>
@@ -246,7 +246,7 @@
                   <option value="">{{ 'report.build.countNoFieldNeeded' | t }}</option>
                   @for (col of availableColumns; track col.columnName) {
                     @if (isNumericColumn(col.columnName)) {
-                      <option [value]="col.columnName">{{ col.columnName }}</option>
+                      <option [value]="col.columnName">{{ col.label || col.columnName }}</option>
                     }
                   }
                 </select>
@@ -281,7 +281,7 @@
                 <select formControlName="field">
                   <option value="" disabled>{{ 'report.build.field' | t }}</option>
                   @for (field of outputFieldOptions; track field) {
-                    <option [value]="field">{{ field }}</option>
+                    <option [value]="field">{{ fieldLabel(field) }}</option>
                   }
                 </select>
                 <select formControlName="direction">

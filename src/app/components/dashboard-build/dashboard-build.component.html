@@ -61,7 +61,7 @@
               <label class="checkbox-label">
                 <input type="checkbox" [checked]="isAdded(report.id)" (change)="toggleReport(report)" />
                 {{ report.name }}
-                <span class="badge badge-meta">{{ report.modelName }}</span>
+                <span class="badge badge-meta">{{ report.modelName | modelLabel }}</span>
               </label>
             }
           </div>

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, forkJoin, of } from 'rxjs';
 import { map, shareReplay, catchError } from 'rxjs/operators';
-import { PublishedModelService, PublishedColumn } from './published-model.service';
+import { PublishedModelService, PublishedModel, PublishedColumn } from './published-model.service';
 import { PublishedColumnSchema } from './published-table.service';
 import { ScreenLayoutService } from './screen-layout.service';
 import { FormLayout, ListLayout, ScreenViewType } from '../utils/screen-layout/screen-layout.model';
@@ -36,6 +36,8 @@ export class RecordMetadataService {
   private readonly publishedModel = inject(PublishedModelService);
   private readonly screenLayouts = inject(ScreenLayoutService);
 
+  /** `/PublishedModel/models` yanıtı — kolon dizini ve model etiketleri bundan türer. */
+  private modelsCache$?: Observable<PublishedModel[]>;
   /** typeName → kolonlar (tek bir /models çağrısından indekslenir). */
   private columnsIndex$?: Observable<Map<string, PublishedColumn[]>>;
   private readonly rulesCache = new Map<string, Observable<Map<string, PublishedColumnSchema>>>();
@@ -45,20 +47,28 @@ export class RecordMetadataService {
   private readonly layoutCache = new Map<string, { at: number; layout$: Observable<FormLayout | ListLayout | null> }>();
 
   /**
+   * Kullanıcının görebildiği yayınlanmış modeller (admin olmayanda yalnız Read izinliler).
+   * Okunamazsa boş liste — çağıranlar typeName'e düşer.
+   */
+  models$(): Observable<PublishedModel[]> {
+    if (!this.modelsCache$) {
+      this.modelsCache$ = this.publishedModel.getModels().pipe(
+        map(res => res.success ? res.data ?? [] : []),
+        catchError(() => of<PublishedModel[]>([])),
+        shareReplay(1)
+      );
+    }
+    return this.modelsCache$;
+  }
+
+  /**
    * Tüm modellerin kolonları. `/PublishedModel/models` tek çağrıda hepsini döndürdüğü
    * için tip başına ayrı istek atılmaz.
    */
   private allColumns$(): Observable<Map<string, PublishedColumn[]>> {
     if (!this.columnsIndex$) {
-      this.columnsIndex$ = this.publishedModel.getModels().pipe(
-        map(res => {
-          const index = new Map<string, PublishedColumn[]>();
-          if (res.success) {
-            for (const m of res.data ?? []) index.set(m.typeName, m.columns ?? []);
-          }
-          return index;
-        }),
-        catchError(() => of(new Map<string, PublishedColumn[]>())),
+      this.columnsIndex$ = this.models$().pipe(
+        map(models => new Map(models.map(m => [m.typeName, m.columns ?? []] as const))),
         shareReplay(1)
       );
     }

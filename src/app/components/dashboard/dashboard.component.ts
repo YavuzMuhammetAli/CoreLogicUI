@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { Subscription, forkJoin } from 'rxjs';
 import { DashboardService } from '../../services/dashboard.service';
 import { ReportService } from '../../services/report.service';
@@ -17,7 +17,7 @@ export interface DashboardWidgetView {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [RouterLink, AppChartComponent, TranslatePipe],
+  imports: [AppChartComponent, TranslatePipe],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

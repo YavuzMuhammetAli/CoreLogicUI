@@ -1,6 +1,5 @@
 <div class="page-header">
   <span class="eyebrow">{{ dashboard()?.name ?? ('dashboard.view.defaultTitle' | t) }}</span>
-  <a routerLink="/dashboard/new" class="btn btn-primary">{{ 'dashboard.view.newButton' | t }}</a>
 </div>
 
 @if (loading()) {
@@ -51,7 +50,7 @@
                   <thead>
                     <tr>
                       @for (col of item.result.result.columns; track col.name) {
-                        <th>{{ col.name }}</th>
+                        <th>{{ col.label || col.name }}</th>
                       }
                     </tr>
                   </thead>

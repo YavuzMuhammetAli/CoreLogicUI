@@ -99,12 +99,14 @@ export const REPORT_I18N: Translations = {
   'report.aggregate.min': { tr: 'Minimum (MIN)', en: 'Minimum (MIN)' },
   'report.aggregate.max': { tr: 'Maksimum (MAX)', en: 'Maximum (MAX)' },
 
-  // ── aggregate fonksiyonları — KPI kartı kısa etiketleri (report-viewer) ─
-  'report.aggregateShort.sum': { tr: 'Toplam', en: 'Sum' },
-  'report.aggregateShort.count': { tr: 'Sayı', en: 'Count' },
-  'report.aggregateShort.avg': { tr: 'Ortalama', en: 'Average' },
-  'report.aggregateShort.min': { tr: 'Minimum', en: 'Minimum' },
-  'report.aggregateShort.max': { tr: 'Maksimum', en: 'Maximum' },
+  // ── sonuç kolonu başlıkları (COUNT_ID, SUM_NetAmount …) ─────────────────
+  // Gerçek sonuçlarda başlık sunucudan gelir (ReportColumnInfo.Label, Messages.ReportColumn*);
+  // bunlar yalnız oluşturucunun önizlemesi içindir ve backend metinleriyle AYNI kalmalıdır.
+  'report.columnLabel.count': { tr: 'Kayıt sayısı', en: 'Record count' },
+  'report.columnLabel.sum': { tr: 'Toplam {field}', en: 'Total {field}' },
+  'report.columnLabel.avg': { tr: 'Ortalama {field}', en: 'Average {field}' },
+  'report.columnLabel.min': { tr: 'En düşük {field}', en: 'Minimum {field}' },
+  'report.columnLabel.max': { tr: 'En yüksek {field}', en: 'Maximum {field}' },
 
   // ── sıralama yönleri ─────────────────────────────────────────────────────
   'report.sort.asc': { tr: 'Artan (A→Z, 0→9)', en: 'Ascending (A→Z, 0→9)' },

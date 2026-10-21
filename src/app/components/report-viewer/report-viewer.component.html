@@ -64,7 +64,7 @@
           <thead>
             <tr>
               @for (col of res.columns; track col.name) {
-                <th>{{ col.name }}</th>
+                <th>{{ col.label || col.name }}</th>
               }
             </tr>
           </thead>

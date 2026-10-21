@@ -5,6 +5,7 @@ import { WorkflowTaskService } from '../../services/workflow-task.service';
 import { WorkflowTask } from '../../models/workflow.model';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { ModelLabelPipe } from '../../pipes/model-label.pipe';
 import { formatDate } from '../../utils/locale-format';
 
 /**
@@ -20,7 +21,7 @@ import { formatDate } from '../../utils/locale-format';
 @Component({
   selector: 'app-my-tasks',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe],
   templateUrl: './my-tasks.component.html',
   styleUrl: './my-tasks.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

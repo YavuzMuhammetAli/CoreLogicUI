@@ -31,7 +31,7 @@
         <select id="inst-model" class="input" (change)="onModel($event)">
           <option value="" [selected]="model() === ''">{{ 'workflow.instances.all' | t }}</option>
           @for (m of models(); track m) {
-            <option [value]="m" [selected]="model() === m">{{ m }}</option>
+            <option [value]="m" [selected]="model() === m">{{ m | modelLabel }}</option>
           }
         </select>
       </div>
@@ -75,7 +75,7 @@
                 <a class="row-link" [routerLink]="['/workflows/instances', item.id]">{{ item.definitionName || '—' }}</a>
                 <span class="td-muted"> · v{{ item.definitionVersion }}</span>
               </td>
-              <td><a [routerLink]="['/models', item.entityType, item.entityId]">{{ item.entityType }} #{{ item.entityId }}</a></td>
+              <td><a [routerLink]="['/models', item.entityType, item.entityId]">{{ item.entityType | modelLabel }} #{{ item.entityId }}</a></td>
               <td>
                 <span class="badge" [class]="'badge ' + statusClass(item.status)">{{ 'workflow.instance.' + item.status | t }}</span>
                 @if (item.hasIncident) {

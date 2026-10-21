@@ -50,7 +50,7 @@
           <div>
             <dt>{{ 'task.detail.record' | t }}</dt>
             <dd><a [routerLink]="['/models', inst.entityType, inst.entityId]">
-              {{ inst.entityType }} #{{ inst.entityId }}
+              {{ inst.entityType | modelLabel }} #{{ inst.entityId }}
             </a></dd>
           </div>
           <div>

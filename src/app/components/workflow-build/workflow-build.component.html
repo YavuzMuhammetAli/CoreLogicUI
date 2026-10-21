@@ -113,7 +113,7 @@
           <label for="wf-model">{{ 'workflow.build.model' | t }}</label>
           <select id="wf-model" class="input" formControlName="modelName" (change)="onModelChange()">
             <option value="">{{ 'workflow.build.selectModel' | t }}</option>
-            @for (model of models; track model) { <option [value]="model">{{ model }}</option> }
+            @for (model of models; track model.typeName) { <option [value]="model.typeName">{{ model.label }}</option> }
           </select>
         </div>
         <div class="field">

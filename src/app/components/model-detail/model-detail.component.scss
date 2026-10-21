@@ -361,13 +361,6 @@ tr.row-selected td {
   }
 }
 
-// Süreç geçmişi paneli — kayıt içeriğinin altında.
-.record-workflow {
-  margin-top: var(--space-6);
-
-  app-workflow-panel { display: block; }
-}
-
 // ─── Form tabanlı iş akışı ──────────────────────────────────────────────────
 
 // Başlıktaki aksiyonlar adım butonlarıyla çoğalabilir; dar ekranda alt satıra kaysın.

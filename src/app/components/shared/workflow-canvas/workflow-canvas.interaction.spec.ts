@@ -51,8 +51,8 @@ describe('workflow-canvas.interaction', () => {
       expect(result.get('kayik')!.x % GRID_STEP).toBe(0);
     });
 
-    it('negatif konuma izin vermez', () => {
-      expect(dragPositions(origins, -500, -500, 1, false).get('a')).toEqual({ x: 0, y: 0 });
+    it('negatif konumu korur — çizimin soluna/üstüne de taşınabilir', () => {
+      expect(dragPositions(origins, -500, -500, 1, false).get('a')).toEqual({ x: -400, y: -400 });
     });
 
     it('geçersiz yakınlaştırmada 1 kabul edilir', () => {
@@ -103,10 +103,16 @@ describe('workflow-canvas.interaction', () => {
       expect(placed.x % 20).toBe(0);
     });
 
-    it('bırakılan noktaya ortalar, negatife düşmez', () => {
+    it('bırakılan noktaya ortalar; sıfırın soluna/üstüne de bırakılabilir', () => {
       // 300 − 84 = 216 → 220; 200 − 30 = 170 → 180 (yarım adım yukarı yuvarlanır).
       expect(centeredAt({ x: 300, y: 200 }, size)).toEqual({ x: 220, y: 180 });
-      expect(centeredAt({ x: 10, y: 10 }, size)).toEqual({ x: 0, y: 0 });
+      // 10 − 84 = −74 → −80; 10 − 30 = −20 → −20.
+      expect(centeredAt({ x: 10, y: 10 }, size)).toEqual({ x: -80, y: -20 });
+    });
+
+    it('boş yer araması negatif başlangıçta da çalışır', () => {
+      expect(placeBelow({ x: -300, y: -200, width: 168, height: 60 }, 84, size, []))
+        .toEqual({ x: -300, y: -60 });
     });
   });
 

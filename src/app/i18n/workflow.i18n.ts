@@ -1071,13 +1071,9 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.event.InstanceFailed': { tr: 'Süreç hataya düştü', en: 'Process failed' },
   'workflow.event.RolledBack': { tr: 'Geri alındı', en: 'Rolled back' },
 
-  // ── Kayıt detayındaki Süreç paneli ────────────────────────────────────────
+  // ── Kayıt ekranları: süreç kolonu + başlatma bildirimi ────────────────────
   'workflow.panel.title': { tr: 'Süreç', en: 'Process' },
-  'workflow.panel.start': { tr: 'Süreci Başlat', en: 'Start Process' },
   'workflow.panel.startSuccess': { tr: 'Süreç başlatıldı.', en: 'Process started.' },
-  'workflow.panel.none': { tr: 'Bu kayıt için süreç yok.', en: 'No process for this record.' },
-  'workflow.panel.viewDiagram': { tr: 'Şema', en: 'Diagram' },
-  'workflow.panel.viewDiagramAria': { tr: '{name} sürecinin şemasını göster', en: 'Show the diagram of {name}' },
 
   // ── Kayıt ekranı: Akışı görüntüle (yalnız ilerlenen yol) ─────────────────
   'workflow.view.open': { tr: 'Akışı görüntüle', en: 'View workflow' },
