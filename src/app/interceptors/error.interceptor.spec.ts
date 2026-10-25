@@ -3,6 +3,7 @@ import { HttpClient, HttpContext, provideHttpClient, withInterceptors } from '@a
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
 import { errorInterceptor, SKIP_FORBIDDEN_REDIRECT } from './error.interceptor';
+import { NotificationService } from '../services/notification.service';
 
 /**
  * Hata interceptor'ının yönlendirme kuralları.
@@ -37,10 +38,10 @@ describe('errorInterceptor', () => {
   });
 
   /** İsteği atar, verilen durum koduyla yanıtlar; hatanın zincirde devam ettiğini doğrular. */
-  function failWith(status: number, context?: HttpContext): void {
+  function failWith(status: number, context?: HttpContext, body: object = { success: false }): void {
     let errored = false;
     http.get('/test', { context }).subscribe({ error: () => (errored = true) });
-    httpMock.expectOne('/test').flush({ success: false }, { status, statusText: 'err' });
+    httpMock.expectOne('/test').flush(body, { status, statusText: 'err' });
     expect(errored).withContext('hata zinciri devam etmeli').toBeTrue();
   }
 
@@ -64,6 +65,21 @@ describe('errorInterceptor', () => {
   it('401: token yokken yönlendirmez', () => {
     failWith(401);
     expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('401 session_invalidated: veri geri yüklendi nedeniyle login\'e yönlendirir', () => {
+    localStorage.setItem('access_token', 'x');
+    failWith(401, undefined, { success: false, code: 'session_invalidated' });
+    expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { reason: 'tenant_restored' } });
+  });
+
+  it('503 tenant_maintenance: oturumu korur, yalnız uyarı gösterir', () => {
+    localStorage.setItem('access_token', 'x');
+    const warn = spyOn(TestBed.inject(NotificationService), 'warn');
+    failWith(503, undefined, { success: false, code: 'tenant_maintenance', message: 'Geri yükleniyor' });
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(localStorage.getItem('access_token')).toBe('x');
+    expect(warn).toHaveBeenCalledWith('Geri yükleniyor');
   });
 
   it('diğer hatalarda yönlendirmez', () => {

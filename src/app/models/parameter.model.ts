@@ -39,6 +39,59 @@ export interface BackupHistoryItem {
   error?: string | null;
   /** Saklama sonu — bu tarihten sonra otomatik silinir; null = süresiz. */
   expiresAt?: string | null;
+  /** Yedeğin alındığı şema sürümü; null = bilinmiyor. */
+  databaseVersion?: number | null;
+  /** Dosyası diskte duran tamamlanmış yedek — indirilebilir. */
+  canDownload?: boolean;
+  /** Geri yüklenebilir mi — sunucunun kararı; arayüz kendi kuralını tutmaz. */
+  canRestore?: boolean;
+  /** not_completed | file_missing | version_unknown | version_newer */
+  restoreBlockedReason?: string | null;
+}
+
+/** POST /Parameter/backup/{id}/download-link — kısa ömürlü (2 dk), tek amaçlı bağlantı. */
+export interface BackupDownloadLink {
+  /** API köküne göre yol (ör. "Parameter/backup/download?token=…"). */
+  url: string;
+  expiresAt: string;
+  fileName: string;
+}
+
+/** POST /Parameter/backup/{id}/restore gövdesi — çift onay. */
+export interface RestoreBackupRequest {
+  companyCodeConfirmation: string;
+  password: string;
+}
+
+/** Master kullanıcı uzlaştırmasının sonucu. */
+export interface RestoreReconcileSummary {
+  updated: number;
+  created: number;
+  removed: number;
+  /** E-postası başka bir şirkette kayıtlı — dokunulmadı, giriş yapamaz. */
+  conflicts: string[];
+}
+
+/** Geri yükleme durumu — GET /Parameter/backup/restore/{id} ve /active. */
+export interface TenantRestore {
+  id: number;
+  backupId: number;
+  preRestoreBackupId?: number | null;
+  /** Queued | Running | Completed | Failed */
+  status: string;
+  /** Pending | SideRestore | SafetyBackup | Swap | Upgrade | Reconcile | Cleanup | Done */
+  phase: string;
+  fromVersion: number;
+  toVersion?: number | null;
+  error?: string | null;
+  requestedAt: string;
+  completedAt?: string | null;
+  reconcile?: RestoreReconcileSummary | null;
+}
+
+/** Geri yüklemenin bitip bitmediği — diyalog yoklamayı bırakır. */
+export function isRestoreFinished(restore: Pick<TenantRestore, 'status'>): boolean {
+  return restore.status === 'Completed' || restore.status === 'Failed';
 }
 
 /** Kuyrukta ya da sürmekte olan yedek — geçmiş bu durumdayken yoklanır. */

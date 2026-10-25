@@ -7,7 +7,9 @@ import { ParameterService } from '../../../services/parameter.service';
 import { LanguageService } from '../../../services/language.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
-import { BackupHistoryItem, BackupSchedule, isBackupActive } from '../../../models/parameter.model';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
+import { BackupRestoreDialogComponent } from './backup-restore-dialog.component';
+import { BackupHistoryItem, BackupSchedule, TenantRestore, isBackupActive } from '../../../models/parameter.model';
 import { formatDate, formatNumber } from '../../../utils/locale-format';
 import {
   CRON_FREQUENCIES,
@@ -46,7 +48,7 @@ interface FieldVisibility {
 @Component({
   selector: 'app-backup-settings-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, ConfirmDialogComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, ConfirmDialogComponent, HelpHintComponent, BackupRestoreDialogComponent],
   templateUrl: './backup-settings-tab.component.html',
   styleUrls: ['../parameters.shared.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -83,6 +85,12 @@ export class BackupSettingsTabComponent implements OnInit {
   readonly history = signal<BackupHistoryItem[]>([]);
 
   readonly runConfirmOpen = signal(false);
+
+  /** Geri yükleme diyaloğunun yedeği (onay adımı) ve sayfa açılışında süren geri yükleme. */
+  readonly restoreTarget = signal<BackupHistoryItem | null>(null);
+  readonly activeRestore = signal<TenantRestore | null>(null);
+  /** İndirme bağlantısı istenen yedek — düğmesi kilitlenir. */
+  readonly downloadingId = signal<number | null>(null);
 
   /** Kuyrukta ya da sürmekte olan yedek var mı — varsa yeni yedek istenmez, geçmiş yoklanır. */
   readonly hasActiveBackup = computed(() => this.history().some(isBackupActive));
@@ -121,6 +129,58 @@ export class BackupSettingsTabComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
+
+    // Sayfa geri yükleme sürerken açıldıysa (yenileme, başka sekme) ilerleme doğrudan gösterilir.
+    this.parameterService.getActiveRestore().subscribe({
+      next: res => { if (res.success && res.data) this.activeRestore.set(res.data); },
+      error: () => {}
+    });
+  }
+
+  /**
+   * Yedeği indirir: sunucudan kısa ömürlü imzalı bağlantı alınır ve tarayıcı onu doğrudan açar.
+   * Dosya gigabaytlarca olabileceği için blob olarak belleğe alınmaz.
+   */
+  download(item: BackupHistoryItem): void {
+    this.downloadingId.set(item.id);
+    this.formError.set('');
+    this.parameterService.getBackupDownloadLink(item.id).subscribe({
+      next: res => {
+        this.downloadingId.set(null);
+        if (!res.success || !res.data) {
+          this.formError.set(res.message);
+          return;
+        }
+        const anchor = document.createElement('a');
+        anchor.href = this.parameterService.backupDownloadUrl(res.data);
+        anchor.download = res.data.fileName;
+        anchor.rel = 'noopener';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      },
+      error: (err: { error?: { message?: string } }) => {
+        this.downloadingId.set(null);
+        this.formError.set(err?.error?.message ?? this.languageService.t('parameter.backup.downloadFailed'));
+      }
+    });
+  }
+
+  requestRestore(item: BackupHistoryItem): void {
+    this.restoreTarget.set(item);
+  }
+
+  onRestoreDialogClosed(): void {
+    this.restoreTarget.set(null);
+    this.activeRestore.set(null);
+    this.loadHistory();
+  }
+
+  /** Geri yüklenemeyen yedeğin gerekçesi (sunucunun kısa kodu → metin). */
+  restoreBlockedText(item: BackupHistoryItem): string {
+    return item.restoreBlockedReason
+      ? this.languageService.t(`parameter.backup.restoreBlocked.${item.restoreBlockedReason}`)
+      : '';
   }
 
   load(): void {

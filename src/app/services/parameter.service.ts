@@ -6,6 +6,7 @@ import { ResponseModel } from '../models/responseModel';
 import { ListResponseModel } from '../models/responseModelList';
 import { DataResponseModel } from '../models/dataResponseModel';
 import {
+  BackupDownloadLink,
   BackupHistoryItem,
   BackupSchedule,
   MailSetting,
@@ -16,7 +17,9 @@ import {
   NotificationTemplateSummary,
   NotificationTemplateTestRequest,
   PurchasePlanRequest,
+  RestoreBackupRequest,
   TenantPlan,
+  TenantRestore,
   TenantSubscription
 } from '../models/parameter.model';
 
@@ -54,6 +57,34 @@ export class ParameterService {
    */
   runBackupNow(): Observable<DataResponseModel<number>> {
     return this.http.post<DataResponseModel<number>>(`${this.baseUrl}/backup/run`, null);
+  }
+
+  /**
+   * Yedeği indirmek için kısa ömürlü bağlantı. Dosya gigabaytlarca olabileceğinden blob olarak
+   * belleğe alınmaz: tarayıcı bağlantıyı doğrudan açar, yetki URL'deki imzalı token'dadır.
+   */
+  getBackupDownloadLink(backupId: number): Observable<DataResponseModel<BackupDownloadLink>> {
+    return this.http.post<DataResponseModel<BackupDownloadLink>>(`${this.baseUrl}/backup/${backupId}/download-link`, null);
+  }
+
+  /** İndirme bağlantısının tam adresi (API kökü + sunucunun verdiği göreli yol). */
+  backupDownloadUrl(link: BackupDownloadLink): string {
+    return `${environment.apiBaseUrl}/${link.url}`;
+  }
+
+  /** Yedeği geri yüklemeyi kuyruğa alır — şirket kodu yeniden yazılır, parola istenir. */
+  restoreBackup(backupId: number, body: RestoreBackupRequest): Observable<DataResponseModel<number>> {
+    return this.http.post<DataResponseModel<number>>(`${this.baseUrl}/backup/${backupId}/restore`, body);
+  }
+
+  /** Geri yükleme durumu — bakım sırasında ve oturum geçersizken de yanıt verir. */
+  getRestore(restoreId: number): Observable<DataResponseModel<TenantRestore>> {
+    return this.http.get<DataResponseModel<TenantRestore>>(`${this.baseUrl}/backup/restore/${restoreId}`);
+  }
+
+  /** Süren geri yükleme (yoksa data null) — sayfa yenilense de ilerleme gösterilsin. */
+  getActiveRestore(): Observable<DataResponseModel<TenantRestore | null>> {
+    return this.http.get<DataResponseModel<TenantRestore | null>>(`${this.baseUrl}/backup/restore/active`);
   }
 
   // ── E-posta ──────────────────────────────────────────────────────────────

@@ -12,6 +12,11 @@
         {{ 'login.sessionExpired' | t }}
       </div>
     }
+    @if (tenantRestored) {
+      <div class="alert alert-info" role="status" style="margin-bottom: var(--space-4)">
+        {{ 'login.tenantRestored' | t }}
+      </div>
+    }
 
     <!-- Giriş Formu -->
     <form

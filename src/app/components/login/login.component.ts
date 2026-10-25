@@ -22,6 +22,8 @@ export class LoginComponent {
 
   form: FormGroup;
   sessionExpired = false;
+  /** Şirket verisi yedekten geri yüklendi — eski oturumlar geçersiz, yeniden giriş gerekiyor. */
+  tenantRestored = false;
   isLoading = false;
   errorMessage: string | null = null;
 
@@ -38,7 +40,9 @@ export class LoginComponent {
       password: ['', [Validators.required, Validators.minLength(4)]]
     });
 
-    this.sessionExpired = this.route.snapshot.queryParamMap.get('reason') === 'session_expired';
+    const reason = this.route.snapshot.queryParamMap.get('reason');
+    this.sessionExpired = reason === 'session_expired';
+    this.tenantRestored = reason === 'tenant_restored';
   }
 
   get f() { return this.form.controls; }

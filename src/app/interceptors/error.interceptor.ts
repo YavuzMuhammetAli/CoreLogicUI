@@ -2,6 +2,11 @@ import { HttpInterceptorFn, HttpErrorResponse, HttpContextToken } from '@angular
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
+import { NotificationService } from '../services/notification.service';
+
+/** Bakım uyarısı art arda gelen isteklerde tekrar tekrar gösterilmesin (ms). */
+const MAINTENANCE_NOTICE_INTERVAL = 10_000;
+let lastMaintenanceNotice = 0;
 
 /**
  * 403'te `/models`'e yönlendirmeyi bu istek için kapatır.
@@ -18,6 +23,7 @@ export const SKIP_FORBIDDEN_REDIRECT = new HttpContextToken<boolean>(() => false
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
+  const notifications = inject(NotificationService);
 
   return next(req).pipe(
     catchError((err: HttpErrorResponse) => {
@@ -34,7 +40,20 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         const hadToken = !!localStorage.getItem('access_token');
         if (hadToken) {
           localStorage.removeItem('access_token');
-          router.navigate(['/login'], { queryParams: { reason: 'session_expired' } });
+          // Şirket verisi geri yüklendiyse eski oturumlar sunucuda geçersiz kılınır —
+          // giriş ekranı "süreniz doldu" yerine nedenini söyler.
+          const reason = errorCode(err) === 'session_invalidated' ? 'tenant_restored' : 'session_expired';
+          router.navigate(['/login'], { queryParams: { reason } });
+        }
+      }
+
+      // 503 + tenant_maintenance: şirket veritabanı geri yükleniyor (birkaç dakika). Oturum
+      // geçerli — kullanıcı sayfadan koparılmaz, yalnız neden olduğu söylenir.
+      if (err.status === 503 && errorCode(err) === 'tenant_maintenance') {
+        const now = Date.now();
+        if (now - lastMaintenanceNotice > MAINTENANCE_NOTICE_INTERVAL) {
+          lastMaintenanceNotice = now;
+          notifications.warn((err.error as { message?: string })?.message ?? 'Bakım');
         }
       }
 
@@ -51,3 +70,9 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
     })
   );
 };
+
+/** Sunucunun makine okunur hata kodu ({ code: '…' } gövdesi). */
+function errorCode(err: HttpErrorResponse): string | null {
+  const body = err.error as { code?: unknown } | null;
+  return body && typeof body === 'object' && typeof body.code === 'string' ? body.code : null;
+}

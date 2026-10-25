@@ -1,0 +1,74 @@
+/* Diyalog iskeleti onay diyaloğuyla aynı (shared/confirm-dialog) — geri yükleme ilerlemesi
+   kapatılamadığı için ayrı bileşen; arka plana tıklama kapatmaz. */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  z-index: 1000;
+}
+
+.dialog-panel {
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - 2 * var(--space-4));
+  /* dvh = görünen alan; vh mobilde tarayıcı çubuklarını da sayar ve alttaki düğmeler kesilir */
+  max-height: calc(100dvh - 2 * var(--space-4));
+  overscroll-behavior: contain;
+  overflow-y: auto;
+  box-shadow: var(--elev-high);
+}
+
+.dialog-panel .panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6) var(--space-5);
+  border-top: 1px solid var(--border-soft);
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    padding: var(--space-4);
+  }
+}
+
+.restore-warnings {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.restore-phases {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: grid;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.restore-phase {
+  color: var(--muted);
+
+  &.is-done {
+    color: var(--success);
+  }
+
+  &.is-current {
+    color: var(--fg);
+    font-weight: 600;
+  }
+
+  .spinner {
+    vertical-align: middle;
+    margin-right: var(--space-1);
+  }
+}

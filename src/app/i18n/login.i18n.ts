@@ -5,6 +5,10 @@ export const LOGIN_I18N: Translations = {
   'login.welcome': { tr: 'Hoş Geldiniz', en: 'Welcome' },
   'login.subtitle': { tr: 'Dinamik model yayınlama platformuna giriş yapın.', en: 'Sign in to the dynamic model publishing platform.' },
   'login.sessionExpired': { tr: 'Oturumunuzun süresi doldu. Lütfen tekrar giriş yapın.', en: 'Your session has expired. Please log in again.' },
+  'login.tenantRestored': {
+    tr: 'Şirket verisi yedekten geri yüklendi; tüm oturumlar sonlandırıldı. Lütfen yeniden giriş yapın.',
+    en: 'The company data was restored from a backup and all sessions were ended. Please sign in again.'
+  },
   'login.tabLogin': { tr: 'Giriş Yap', en: 'Log In' },
   'login.noAccount': { tr: 'Şirketiniz henüz kayıtlı değil mi?', en: 'Company not registered yet?' },
   'login.createCompany': { tr: 'Yeni Şirket Oluştur', en: 'Create New Company' },

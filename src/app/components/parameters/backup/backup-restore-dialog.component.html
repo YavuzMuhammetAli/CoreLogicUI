@@ -1,0 +1,107 @@
+@if (open()) {
+  <div class="dialog-overlay">
+    <div class="dialog-panel panel" role="dialog" aria-modal="true" [attr.aria-label]="'parameter.backup.restoreTitle' | t">
+      <div class="panel-head">
+        <h3>{{ 'parameter.backup.restoreTitle' | t }}</h3>
+      </div>
+
+      <div class="panel-body stack">
+        @switch (step()) {
+          @case ('done') {
+            <div class="alert alert-success" role="status">{{ 'parameter.backup.restoreDone' | t }}</div>
+            @if (restore()?.reconcile; as summary) {
+              <p>{{ 'parameter.backup.restoreSummary' | t:{ updated: summary.updated, created: summary.created, removed: summary.removed } }}</p>
+              @if (summary.conflicts.length > 0) {
+                <div class="alert alert-warn" role="alert">
+                  {{ 'parameter.backup.restoreConflicts' | t:{ emails: summary.conflicts.join(', ') } }}
+                </div>
+              }
+            }
+            <p>{{ 'parameter.backup.restoreSignInAgain' | t }}</p>
+          }
+
+          @case ('failed') {
+            <div class="alert alert-danger" role="alert">{{ error() || ('parameter.backup.restoreFailed' | t) }}</div>
+          }
+
+          @case ('progress') {
+            <p>{{ 'parameter.backup.restoreProgressIntro' | t }}</p>
+            <ol class="restore-phases">
+              @for (phase of phases; track phase; let i = $index) {
+                <li [class]="'restore-phase is-' + phaseState(i)">
+                  @if (phaseState(i) === 'current') {
+                    <span class="spinner spinner-sm" aria-hidden="true"></span>
+                  }
+                  {{ ('parameter.backup.restorePhase.' + phase) | t }}
+                </li>
+              }
+            </ol>
+          }
+
+          @default {
+            <p>{{ 'parameter.backup.restoreIntro' | t:{ date: backupDate() } }}</p>
+            <ul class="restore-warnings">
+              <li>{{ 'parameter.backup.restoreWarningData' | t }}</li>
+              <li>{{ 'parameter.backup.restoreWarningUsers' | t }}</li>
+              <li>{{ 'parameter.backup.restoreWarningDowntime' | t }}</li>
+              <li>{{ 'parameter.backup.restoreWarningSafety' | t }}</li>
+            </ul>
+
+            @if (error()) {
+              <div class="alert alert-danger" role="alert">{{ error() }}</div>
+            }
+
+            <div class="field">
+              <label for="restore-code">{{ 'parameter.backup.restoreTypeCode' | t:{ code: companyCode } }}</label>
+              <input
+                id="restore-code"
+                class="input"
+                autocomplete="off"
+                [ngModel]="codeInput()"
+                (ngModelChange)="codeInput.set($event)"
+                [disabled]="step() === 'submitting'">
+            </div>
+            <div class="field">
+              <label for="restore-password">{{ 'parameter.backup.restorePassword' | t }}</label>
+              <input
+                id="restore-password"
+                class="input"
+                type="password"
+                autocomplete="current-password"
+                [ngModel]="passwordInput()"
+                (ngModelChange)="passwordInput.set($event)"
+                [disabled]="step() === 'submitting'">
+            </div>
+          }
+        }
+      </div>
+
+      <div class="panel-actions">
+        @switch (step()) {
+          @case ('done') {
+            <button type="button" class="btn btn-primary" (click)="signInAgain()">
+              {{ 'parameter.backup.restoreSignInButton' | t }}
+            </button>
+          }
+          @case ('failed') {
+            <button type="button" class="btn btn-secondary" (click)="close()">{{ 'common.close' | t }}</button>
+          }
+          @case ('progress') {
+            <span class="field-help">{{ 'parameter.backup.restoreKeepOpen' | t }}</span>
+          }
+          @default {
+            <button type="button" class="btn btn-secondary" (click)="close()" [disabled]="step() === 'submitting'">
+              {{ 'common.cancel' | t }}
+            </button>
+            <button type="button" class="btn btn-danger" (click)="submit()" [disabled]="!canSubmit()">
+              @if (step() === 'submitting') {
+                <span class="spinner" aria-hidden="true"></span>
+              }
+              {{ 'parameter.backup.restoreConfirmButton' | t }}
+            </button>
+          }
+        }
+      </div>
+    </div>
+  </div>
+}

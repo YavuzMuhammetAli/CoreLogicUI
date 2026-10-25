@@ -279,6 +279,7 @@
                 <th scope="col">{{ 'parameter.backup.colSize' | t }}</th>
                 <th scope="col">{{ 'parameter.backup.colVerified' | t }}</th>
                 <th scope="col">{{ 'parameter.backup.colExpires' | t }}</th>
+                <th scope="col"><span class="sr-only">{{ 'parameter.backup.colActions' | t }}</span></th>
               </tr>
             </thead>
             <tbody>
@@ -295,11 +296,30 @@
                   <td>{{ formatSize(item.sizeBytes) }}</td>
                   <td>{{ formatInstant(item.verifiedAt) }}</td>
                   <td>{{ item.status === 'Completed' && !item.expiresAt ? ('parameter.backup.keepForever' | t) : formatInstant(item.expiresAt) }}</td>
+                  <td class="td-actions">
+                    @if (item.status === 'Completed') {
+                      @if (item.canDownload) {
+                        <button type="button" class="btn btn-ghost btn-sm"
+                                [disabled]="downloadingId() === item.id"
+                                (click)="download(item)">
+                          {{ 'parameter.backup.download' | t }}
+                        </button>
+                      }
+                      <button type="button" class="btn btn-ghost btn-sm"
+                              [disabled]="!item.canRestore || hasActiveBackup()"
+                              (click)="requestRestore(item)">
+                        {{ 'parameter.backup.restore' | t }}
+                      </button>
+                      @if (!item.canRestore && item.restoreBlockedReason) {
+                        <app-help-hint [text]="restoreBlockedText(item)" />
+                      }
+                    }
+                  </td>
                 </tr>
                 <!-- Hata nedeni eskiden yalnız satırın title'ındaydı — dokunmatikte okunamıyordu -->
                 @if (item.error) {
                   <tr class="backup-error-row">
-                    <td colspan="7"><span class="field-error">{{ item.error }}</span></td>
+                    <td colspan="8"><span class="field-error">{{ item.error }}</span></td>
                   </tr>
                 }
               }
@@ -318,3 +338,8 @@
   [busy]="running()"
   (confirmed)="confirmRunNow()"
   (cancelled)="cancelRunNow()" />
+
+<app-backup-restore-dialog
+  [backup]="restoreTarget()"
+  [activeRestore]="activeRestore()"
+  (closed)="onRestoreDialogClosed()" />

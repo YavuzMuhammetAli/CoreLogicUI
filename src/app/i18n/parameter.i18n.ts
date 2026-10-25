@@ -86,6 +86,67 @@ export const PARAMETER_I18N: Translations = {
     en: 'A full backup of your database will be taken in the background; you can leave this screen. Progress shows in the backup history.'
   },
   'parameter.backup.colExpires': { tr: 'Saklama sonu', en: 'Kept until' },
+  'parameter.backup.colActions': { tr: 'İşlemler', en: 'Actions' },
+  'parameter.backup.download': { tr: 'İndir', en: 'Download' },
+  'parameter.backup.downloadFailed': { tr: 'İndirme bağlantısı alınamadı.', en: 'Could not get the download link.' },
+  'parameter.backup.restore': { tr: 'Geri yükle', en: 'Restore' },
+  'parameter.backup.restoreTitle': { tr: 'Yedekten geri yükle', en: 'Restore from backup' },
+  'parameter.backup.restoreIntro': {
+    tr: 'Şirketinizin veritabanı {date} tarihli bu yedekteki hâline döndürülecek.',
+    en: 'Your company database will be returned to its state in this backup from {date}.'
+  },
+  'parameter.backup.restoreWarningData': {
+    tr: 'Yedekten sonraki her şey — kayıtlar, modeller, raporlar, ayarlar ve denetim kaydı — kalıcı olarak kaybolur.',
+    en: 'Everything after the backup — records, models, reports, settings and the audit log — is permanently lost.'
+  },
+  'parameter.backup.restoreWarningUsers': {
+    tr: 'Yedekten sonra eklenen kullanıcılar silinir; yedekte olup sonradan silinenler geri gelir. Herkes bugünkü parolasıyla girer.',
+    en: 'Users added after the backup are removed; users deleted since come back. Everyone signs in with their current password.'
+  },
+  'parameter.backup.restoreWarningDowntime': {
+    tr: 'Geçiş sırasında şirket birkaç dakika erişime kapanır; bitince herkes yeniden giriş yapmalıdır.',
+    en: 'The company is unavailable for a few minutes during the switch-over; everyone must sign in again afterwards.'
+  },
+  'parameter.backup.restoreWarningSafety': {
+    tr: 'Hemen öncesinde otomatik bir "Geri yükleme öncesi" yedeği alınır — işlemi geri almak için onu geri yükleyebilirsiniz.',
+    en: 'A "Pre-restore" backup is taken automatically just before — restore it to undo this operation.'
+  },
+  'parameter.backup.restoreTypeCode': { tr: 'Onaylamak için şirket kodunu yazın: {code}', en: 'Type the company code to confirm: {code}' },
+  'parameter.backup.restorePassword': { tr: 'Parolanız', en: 'Your password' },
+  'parameter.backup.restoreConfirmButton': { tr: 'Geri yükle', en: 'Restore' },
+  'parameter.backup.restoreProgressIntro': {
+    tr: 'Geri yükleme sürüyor. Bu pencereyi açık tutun; birkaç dakika sürebilir.',
+    en: 'The restore is in progress. Keep this window open; it can take a few minutes.'
+  },
+  'parameter.backup.restoreKeepOpen': { tr: 'Lütfen bekleyin…', en: 'Please wait…' },
+  'parameter.backup.restorePhase.SideRestore': { tr: 'Yedek ayrı bir veritabanına açılıyor', en: 'Opening the backup into a separate database' },
+  'parameter.backup.restorePhase.SafetyBackup': { tr: 'Güvenlik yedeği alınıyor', en: 'Taking a safety backup' },
+  'parameter.backup.restorePhase.Swap': { tr: 'Veritabanları yer değiştiriyor', en: 'Switching the databases' },
+  'parameter.backup.restorePhase.Upgrade': { tr: 'Şema güncelleniyor', en: 'Updating the schema' },
+  'parameter.backup.restorePhase.Reconcile': { tr: 'Modeller ve kullanıcılar eşitleniyor', en: 'Reloading models and syncing users' },
+  'parameter.backup.restorePhase.Cleanup': { tr: 'Tamamlanıyor', en: 'Finishing' },
+  'parameter.backup.restoreDone': { tr: 'Veritabanı yedekten geri yüklendi.', en: 'The database has been restored from the backup.' },
+  'parameter.backup.restoreSummary': {
+    tr: 'Kullanıcılar: {updated} eşitlendi, {created} yeniden açıldı, {removed} kaldırıldı.',
+    en: 'Users: {updated} synced, {created} restored, {removed} removed.'
+  },
+  'parameter.backup.restoreConflicts': {
+    tr: 'Şu e-postalar başka bir şirkette kayıtlı olduğu için bu kullanıcılar giriş yapamaz: {emails}',
+    en: 'These users cannot sign in because their email is registered with another company: {emails}'
+  },
+  'parameter.backup.restoreSignInAgain': { tr: 'Devam etmek için yeniden giriş yapın.', en: 'Sign in again to continue.' },
+  'parameter.backup.restoreSignInButton': { tr: 'Yeniden giriş yap', en: 'Sign in again' },
+  'parameter.backup.restoreFailed': { tr: 'Geri yükleme başarısız.', en: 'The restore failed.' },
+  'parameter.backup.restoreBlocked.not_completed': { tr: 'Yalnız tamamlanmış bir yedek geri yüklenebilir.', en: 'Only a completed backup can be restored.' },
+  'parameter.backup.restoreBlocked.file_missing': { tr: 'Yedek dosyası artık diskte yok.', en: 'The backup file is no longer on disk.' },
+  'parameter.backup.restoreBlocked.version_unknown': {
+    tr: 'Bu yedeğin şema sürümü bilinmiyor; güvenle geri yüklenemez. Daha yeni bir yedek seçin.',
+    en: 'This backup\'s schema version is unknown, so it cannot be restored safely. Choose a newer backup.'
+  },
+  'parameter.backup.restoreBlocked.version_newer': {
+    tr: 'Yedek bu sunucudan daha yeni bir sürümden alınmış.',
+    en: 'The backup was taken at a newer version than this server.'
+  },
   'parameter.backup.keepForever': { tr: 'Süresiz', en: 'Indefinitely' },
   'parameter.backup.status.Queued': { tr: 'Kuyrukta', en: 'Queued' },
   'parameter.backup.type.PreRestore': { tr: 'Geri yükleme öncesi', en: 'Pre-restore' },

@@ -335,7 +335,7 @@ Tüm servisler `@Injectable({ providedIn: 'root' })`, `inject(HttpClient)` (veya
 | `RelationshipService` | `/publish/models/{id}/relationships` (GET/POST/PUT/DELETE), `/validate-graph`, `/preview` |
 | `PublishedTableService` (otomatik değer) | `addMember` (+ `autoValueTrigger/autoValueExpression/isReadOnly`), `setMemberAutoValue` (JSON gövde) — `addMember` artık options nesnesi alır |
 | `PublishedTableService` (kayıtlı kolon) | `updateMemberMetadata` (JSON gövde, TAM değiştirme) — etiket, açıklama, zorunluluk, kurallar, dosya sınırı, lookup gösterim kolonu; gövde `utils/column-rules.ts` `toMemberMetadataUpdate` ile kurulur |
-| `ParameterService` | `/Parameter` — `backup/schedule`, `backup/history`, `backup/run`, `mail`, `mail/test`, `mail/templates/{kind}` (+ `/preview`, `/test`), `subscription/*` (admin-only) |
+| `ParameterService` | `/Parameter` — `backup/schedule`, `backup/history`, `backup/run`, `backup/{id}/download-link`, `backup/{id}/restore`, `backup/restore/{id}` + `/active`, `mail`, `mail/test`, `mail/templates/{kind}` (+ `/preview`, `/test`), `subscription/*` (admin-only) |
 | `AiService` | `/Ai` — `conversations`, `chat` (SSE), `proposals/{id}/status`, `usage` (admin-only) |
 | `AiImportService` | Kendi ucu YOK — AI önerilerini `PublishedTableService`/`RelationshipService`/`ReportService`/`DashboardService` üzerinden aktarır |
 | `LanguageService` | HTTP yok — TR/EN dil tercihi, `localStorage`, `t()` metodu + `TranslatePipe` |
@@ -522,6 +522,24 @@ ve temizlik yalnız `ExpiresAt`'e bakar — elle, zamanlanmış, migrasyon/geri 
 ölçüte tabidir. **Şema sürümü:** her yedek `DatabaseVersion`'ı (master `Tenant.DatabaseVersion`) yazar;
 yedek sırasında sürüm değiştiyse boş kalır. Migrasyon **`master/030`** kolonları ekler ve eski yedeklerin
 sürümünü (migrasyon kalemlerinden) doldurur — geri yükleme buna dayanır.
+
+**İndirme:** "İndir" `POST backup/{id}/download-link` ile 2 dakikalık imzalı bağlantı alır
+(`IDataProtector`, tenant + yedek kimliğine bağlı) ve tarayıcı onu doğrudan açar — dosya gigabaytlarca
+olabileceğinden blob olarak belleğe alınmaz, yetki başlıkta değil token'dadır (`GET backup/download?token=`
+anonim, Range destekli).
+
+**Geri yükleme** (`backup-restore-dialog`, master **031**): şirket kodu aynen yazılır + parola istenir;
+sunucu `tenant.restore` işini kuyruğa alır, diyalog fazları 2 sn'de bir yoklar (yan DB'ye açma →
+güvenlik yedeği → takas → şema yükseltme → model/kullanıcı eşitleme → tamamlama). Canlı DB'nin üzerine
+RESTORE yapılmaz; takastan önceki her hata canlıya dokunmaz. İsteyen admin o yedekte etkin yönetici
+değilse iş takastan önce iptal edilir (kendini kilitleme). Takas sırasında tenant'ın istekleri
+`503 {code: tenant_maintenance}` alır (`errorInterceptor` uyarı gösterir, oturumu korur). Bitince
+herkesin oturumu geçersizdir (`401 {code: session_invalidated}` → `/login?reason=tenant_restored`);
+diyalog uzlaştırma özetini (kullanıcılar: eşitlendi/yeniden açıldı/kaldırıldı, başka şirkette kayıtlı
+e-postalar) gösterip yeniden girişe yollar. Geri yükleme `PreRestore` yedeği geri yüklenerek geri alınır.
+Uygunluk sunucuda (`canRestore` / `restoreBlockedReason`): tamamlanmış, dosyası duran, şema sürümü bilinen
+ve sunucudan yeni olmayan yedek — sürümü bilinmeyen eski yedek bilinçli olarak geri yüklenmez
+(migrasyonlar iki kez koşarsa 012 tarihleri kaydırır).
 
 > `ScheduledTask` tablosu 2023'ten beri boştu — DAL'ı ve worker'ı yoktu, bu yüzden
 > `BackupType.Scheduled` hiç üretilmiyordu. Bu iş o boşluğu kapattı.
@@ -1051,14 +1069,13 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
 1. **Yedekler aynı diskte** — sunucu kurulumunda yedekler `corelogic_mssql-backup` volume'ünde, yani veriyle aynı diskte duruyor; dışarı kopyalama elle yapılıyor (bkz. backend `deploy/README.md` → Yedekler)
 2. **Unit test kapsamı düşük** — kapsam `i18n/translations.spec.ts`, `shared/entity-graph/entity-graph.layout.spec.ts`, `utils/cron-builder.spec.ts` ve `utils/ai-import.mapper.spec.ts` ile genişletildi, ancak servis/component'lerin büyük kısmı hâlâ test edilmiyor
 3. **Ödeme sağlayıcısı stub** — `StubPaymentGateway` her tahsilata başarı dönüyor ve `Plan`'da fiyat/para birimi kolonu yok. Stripe için: `Plan`'a parasal alanlar + `IPaymentGateway`'in gerçek implementasyonu (abonelik akışı değişmez)
-4. **Yedek geri yükleme yok** — yedek alma ve `RESTORE VERIFYONLY` doğrulaması var, ancak yedekten geri dönme ve yedek indirme ucu yok (platform tarafında da yoktu)
-5. **PlatformConfig sürümleme yok** — `PUT /api/platform/v1/config/{key}` eklendi (beyaz liste + sunucu tarafı `IsSecret` + maske koruması + audit), ancak değer geçmişi/geri alma tutulmuyor; audit yalnızca "kim ne zaman hangi anahtarı değiştirdi" diyor, eski değeri saklamıyor (bilinçli — sır sızdırmamak için)
-6. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez. Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir. Aynı varsayım AI kotasının süren istek sayacında da var (`AiQuotaReservationRegistry`, bellek içi): birden çok backend örneğinde paralel istekler birbirini göremez, sayaç master'a taşınmalı
-7. **Akış tasarımcısında mini harita ve hizala/dağıt yok** — v2 planının Faz 11'inde opsiyoneldi, yapılmadı
-8. **Kayıt tetiği güncel değere bakar** — outbox satırı işlenirken tetik koşulu kaydın O ANKİ değerine
+4. **PlatformConfig sürümleme yok** — `PUT /api/platform/v1/config/{key}` eklendi (beyaz liste + sunucu tarafı `IsSecret` + maske koruması + audit), ancak değer geçmişi/geri alma tutulmuyor; audit yalnızca "kim ne zaman hangi anahtarı değiştirdi" diyor, eski değeri saklamıyor (bilinçli — sır sızdırmamak için)
+5. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez. Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir. Aynı varsayım AI kotasının süren istek sayacında (`AiQuotaReservationRegistry`) ve geri yüklemenin bakım kapısında (`TenantMaintenanceGate`) da var — ikisi de bellek içi: birden çok backend örneğinde birbirlerini göremez, master'a taşınmalı
+6. **Akış tasarımcısında mini harita ve hizala/dağıt yok** — v2 planının Faz 11'inde opsiyoneldi, yapılmadı
+7. **Kayıt tetiği güncel değere bakar** — outbox satırı işlenirken tetik koşulu kaydın O ANKİ değerine
     karşı değerlendirilir (yazıldığı anki değil). Bir akış kaydı değiştirdikten sonra işlenen `onCreate`
     satırı, değişmiş değerle ikinci bir akışı başlatabilir (uçtan uca testte görüldü)
-9. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
-10. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
-11. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
-12. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor
+8. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
+9. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
+10. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
+11. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor
