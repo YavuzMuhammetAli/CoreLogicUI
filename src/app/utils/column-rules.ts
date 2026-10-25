@@ -94,3 +94,114 @@ export function autoValueKey(c: Pick<ColumnRuleValue, 'autoValueTrigger' | 'auto
   const trigger = (c.autoValueTrigger ?? '').trim();
   return trigger ? `${trigger}|${(c.autoValueExpression ?? '').trim()}|${!!c.isReadOnly}` : '';
 }
+
+// ── Kayıtlı kolonun meta verisi (updateMemberMetadata) ─────────────────────────
+
+/** Zorunluluğu yalnız çalışma anında denetlenen tipler — derlenen C# tipi değişmez. */
+const REQUIRED_RUNTIME_ONLY_TYPES = new Set(['string', 'enum', 'file', 'image']);
+
+/**
+ * Zorunluluk derlenen C# tipini değiştirir mi? Değer tiplerinde evet (`int` ⇄ `int?`).
+ * Backend `CoreLogicTypeMap.RequiredAffectsClrType`'ın ikizi.
+ */
+export function requiredAffectsClrType(dataType: string): boolean {
+  return !REQUIRED_RUNTIME_ONLY_TYPES.has(dataType);
+}
+
+/**
+ * Kayıtlı bir kolonun zorunluluğu şu an değiştirilebilir mi? Yayınlanmış modelde değer
+ * tipinin zorunluluğu değişirse sonraki yayın NULL değerli satırları okuyamaz hâle getirir —
+ * sunucu da reddeder; arayüz kutuyu önceden kilitler.
+ */
+export function requiredChangeAllowed(dataType: string, modelPublished: boolean): boolean {
+  return !modelPublished || !requiredAffectsClrType(dataType);
+}
+
+/** POST /Published/updateMemberMetadata gövdesi — TAM değiştirme (boş kural kaldırılır). */
+export interface MemberMetadataUpdate {
+  typeName: string;
+  memberName: string;
+  label: string | null;
+  description: string | null;
+  isRequired: boolean;
+  minLength: number | null;
+  maxLength: number | null;
+  min: number | null;
+  max: number | null;
+  regex: string | null;
+  regexMessage: string | null;
+  enumValues: string | null;
+  lookupDisplayColumn: string | null;
+}
+
+/** Meta verinin karşılaştırılabilir hâli (ad/tip hariç). */
+type MemberMetadata = Omit<MemberMetadataUpdate, 'typeName' | 'memberName'>;
+
+/** Kaydetmeye hazır (normalizeColumnRules'tan geçmiş) form sütunu. */
+export interface MetadataColumn extends ColumnRuleValue {
+  columnName: string;
+  isNullable: boolean;
+  label?: string | null;
+  description?: string | null;
+}
+
+const text = (v: string | null | undefined): string | null => (v ?? '').trim() || null;
+const num = (v: number | null | undefined): number | null => (v === undefined || v === null || Number.isNaN(v) ? null : v);
+
+/** "a | b ||a" → "a|b": backend NormalizeEnumValues ile aynı (sıra korunur, yinelenen atılır). */
+function enumKey(v: string | null | undefined): string | null {
+  const values = [...new Set((v ?? '').split('|').map(s => s.trim()).filter(Boolean))];
+  return values.length ? values.join('|') : null;
+}
+
+/**
+ * Tipe göre ayıklanmış meta veri — backend UpdateMemberMetadata'nın sakladığıyla aynı şekil;
+ * böylece kayıtlı şemadan ve formdan üretilen anahtarlar değişiklik yoksa birebir eşleşir.
+ */
+function memberMetadata(
+  dataType: string,
+  v: {
+    label?: string | null; description?: string | null; isRequired: boolean;
+    minLength?: number | null; maxLength?: number | null; min?: number | null; max?: number | null;
+    regex?: string | null; regexMessage?: string | null; enumValues?: string | null; lookupDisplayColumn?: string | null;
+  }
+): MemberMetadata {
+  const isText = dataType === 'string';
+  const isNumeric = NUMERIC_COLUMN_TYPES.has(dataType);
+  return {
+    label:               text(v.label),
+    description:         text(v.description),
+    isRequired:          v.isRequired,
+    minLength:           isText ? num(v.minLength) : null,
+    maxLength:           isText || isFileType(dataType) ? num(v.maxLength) : null,
+    min:                 isNumeric ? num(v.min) : null,
+    max:                 isNumeric ? num(v.max) : null,
+    regex:               isText ? text(v.regex) : null,
+    regexMessage:        isText ? text(v.regexMessage) : null,
+    enumValues:          dataType === 'enum' ? enumKey(v.enumValues) : null,
+    lookupDisplayColumn: dataType === 'lookup' ? text(v.lookupDisplayColumn) : null
+  };
+}
+
+/** Formdaki sütundan istek gövdesi. */
+export function toMemberMetadataUpdate(typeName: string, c: MetadataColumn): MemberMetadataUpdate {
+  return {
+    typeName,
+    memberName: c.columnName,
+    ...memberMetadata(c.dataType, { ...c, isRequired: !c.isNullable })
+  };
+}
+
+/** Formdaki sütunun meta veri anahtarı — kayıtlı hâliyle karşılaştırıp değişeni bulmak için. */
+export function metadataKey(c: MetadataColumn): string {
+  return JSON.stringify(memberMetadata(c.dataType, { ...c, isRequired: !c.isNullable }));
+}
+
+/** Sunucudan okunan kolonun meta veri anahtarı (getSchema satırı). */
+export function schemaMetadataKey(c: {
+  dataType: string; isRequired: boolean; label?: string | null; description?: string | null;
+  minLength?: number | null; maxLength?: number | null; min?: number | null; max?: number | null;
+  regex?: string | null; regexMessage?: string | null; enumValues?: string | null; lookupDisplayColumn?: string | null;
+}): string {
+  return JSON.stringify(memberMetadata(c.dataType, c));
+}

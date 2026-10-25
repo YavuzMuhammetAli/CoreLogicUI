@@ -158,6 +158,13 @@
               @if (card.summary) {
                 <p class="ai-card-summary">{{ card.summary }}</p>
               }
+              @if (card.details.length > 0) {
+                <ul class="ai-card-details">
+                  @for (line of card.details; track $index) {
+                    <li>{{ line }}</li>
+                  }
+                </ul>
+              }
               @if (card.status === 'failed' && card.errorMessage) {
                 <p class="ai-card-error" role="alert">{{ card.errorMessage }}</p>
               }

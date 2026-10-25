@@ -1,4 +1,6 @@
-import { autoValueKey, normalizeColumnRules } from './column-rules';
+import {
+  autoValueKey, metadataKey, normalizeColumnRules, requiredChangeAllowed, schemaMetadataKey, toMemberMetadataUpdate
+} from './column-rules';
 
 describe('normalizeColumnRules', () => {
 
@@ -67,5 +69,62 @@ describe('normalizeColumnRules', () => {
       expect(autoValueKey({ autoValueTrigger: 'change', autoValueExpression: ' [A] ', isReadOnly: false }))
         .toBe('change|[A]|false');
     });
+  });
+});
+
+/**
+ * Kayıtlı kolonun meta verisi. Korunan hata: şema ekranı tip/kural değişikliğini sessizce
+ * atıyordu; artık değişiklik tek istekle (updateMemberMetadata) yazılır ve "değişmedi"
+ * kararı kayıtlı şema ile formdan üretilen anahtarların birebir eşleşmesine dayanır.
+ */
+describe('kolon meta verisi', () => {
+  const schemaColumn = {
+    name: 'Unvan', dataType: 'string', isRequired: true, label: 'Ünvan', description: null,
+    minLength: 2, maxLength: 100, min: null, max: null, regex: '^[A-Z]', regexMessage: null,
+    enumValues: null, lookupTargetTable: null, lookupDisplayColumn: null
+  };
+
+  /** Şemadan forma gelip normalizeColumnRules'tan geçmiş sütun. */
+  function formColumn(overrides: Record<string, unknown> = {}) {
+    return normalizeColumnRules({
+      columnName: 'Unvan', dataType: 'string', isNullable: false, label: 'Ünvan ', description: '',
+      minLength: 2, maxLength: 100, regex: '^[A-Z]', regexMessage: '', enumValues: '', lookupTargetTable: '',
+      lookupDisplayColumn: '', ...overrides
+    });
+  }
+
+  it('değişmeyen sütunun anahtarı kayıtlı şemanınkiyle aynıdır (boş metin = null, kırpma)', () => {
+    expect(metadataKey(formColumn())).toBe(schemaMetadataKey(schemaColumn));
+  });
+
+  it('zorunluluk ya da kural değişince anahtar değişir', () => {
+    const base = schemaMetadataKey(schemaColumn);
+    expect(metadataKey(formColumn({ isNullable: true }))).not.toBe(base);
+    expect(metadataKey(formColumn({ maxLength: 120 }))).not.toBe(base);
+    expect(metadataKey(formColumn({ regex: '' }))).not.toBe(base);
+  });
+
+  it('enum değerleri sunucuyla aynı biçimde karşılaştırılır', () => {
+    const stored = { ...schemaColumn, dataType: 'enum', enumValues: 'Aktif|Pasif', minLength: null, maxLength: null, regex: null };
+    const edited = normalizeColumnRules({ columnName: 'Unvan', dataType: 'enum', isNullable: false, label: 'Ünvan', enumValues: ' Aktif | Pasif |Aktif' });
+    expect(metadataKey(edited)).toBe(schemaMetadataKey(stored));
+  });
+
+  it('istek gövdesi tipe uymayan kuralı göndermez', () => {
+    const body = toMemberMetadataUpdate('Musteri', normalizeColumnRules({
+      columnName: 'Yas', dataType: 'int', isNullable: true, label: 'Yaş', min: 0, max: 120, maxLength: 5, regex: 'x'
+    }));
+    expect(body).toEqual(jasmine.objectContaining({
+      typeName: 'Musteri', memberName: 'Yas', isRequired: false, min: 0, max: 120, maxLength: null, regex: null
+    }));
+  });
+
+  it('yayınlanmış modelde yalnız metin/enum/dosya zorunluluğu değişebilir', () => {
+    expect(requiredChangeAllowed('string', true)).toBeTrue();
+    expect(requiredChangeAllowed('enum', true)).toBeTrue();
+    expect(requiredChangeAllowed('image', true)).toBeTrue();
+    expect(requiredChangeAllowed('int', true)).toBeFalse();
+    expect(requiredChangeAllowed('lookup', true)).toBeFalse();
+    expect(requiredChangeAllowed('datetime', false)).toBeTrue();
   });
 });

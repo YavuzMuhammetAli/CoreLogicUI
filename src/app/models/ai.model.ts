@@ -41,7 +41,7 @@ export interface AiChatRequest {
 
 // ── Öneriler ───────────────────────────────────────────────────────────────
 
-export type AiProposalKind = 'model' | 'report' | 'dashboard';
+export type AiProposalKind = 'model' | 'report' | 'dashboard' | 'model_change';
 
 /**
  * proposed → imported → published, ya da herhangi bir adımda failed.
@@ -102,6 +102,34 @@ export interface AiModelPayload {
   columns: AiProposedColumn[];
   subModels?: AiProposedSubModel[];
   relationships?: AiProposedRelationship[];
+}
+
+/**
+ * propose_model_change — KAYITLI bir modelde meta veri değişikliği ve/veya yeni kolonlar.
+ * `alterColumns`'ta yalnız DEĞİŞEN alanlar gelir; verilmeyen alan kayıtlı değerinde kalır.
+ * Ad ve tip değişmez (backend tool şeması bunları hiç taşımaz).
+ */
+export interface AiColumnChange {
+  columnName: string;
+  label?: string;
+  description?: string;
+  isNullable?: boolean;
+  minLength?: number;
+  maxLength?: number;
+  min?: number;
+  max?: number;
+  regex?: string;
+  regexMessage?: string;
+  /** enum'da TÜM izinli değerler: 'A|B|C'. */
+  enumValues?: string;
+  lookupDisplayColumn?: string;
+}
+
+export interface AiModelChangePayload {
+  entityName: string;
+  reason: string;
+  alterColumns?: AiColumnChange[];
+  addColumns?: AiProposedColumn[];
 }
 
 export interface AiReportPayload {

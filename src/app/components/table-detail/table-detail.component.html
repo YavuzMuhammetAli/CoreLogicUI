@@ -490,6 +490,9 @@
                 }
               </optgroup>
             </select>
+            @if (isEditingPersistedColumn) {
+              <span class="field-help">{{ 'table.detail.typeLocked' | t }}</span>
+            }
           </div>
         </div>
 
@@ -498,6 +501,12 @@
           {{ 'table.detail.nullableCheckbox' | t }}
           <app-help-hint placement="below" [text]="'help.hint.nullable' | t" />
         </label>
+        @if (draftRequiredLocked) {
+          <span class="field-help">{{ 'table.detail.requiredLockedPublished' | t }}</span>
+        }
+        @if (draftRequiredTightened) {
+          <div class="alert alert-warn" role="status">{{ 'table.detail.requiredExistingRowsWarning' | t }}</div>
+        }
 
         <!-- String'e özel: MinLength, MaxLength, Regex -->
         @if (columnDraft.get('dataType')!.value === 'string') {
@@ -514,7 +523,7 @@
                 {{ 'table.detail.maxLength' | t }}
                 <app-help-hint placement="below" [text]="'help.hint.maxLength' | t" />
               </label>
-              <input id="col-maxlen" type="number" class="input" formControlName="maxLength" placeholder="255" min="0">
+              <input id="col-maxlen" type="number" class="input" formControlName="maxLength" placeholder="250" min="0" max="250">
             </div>
             <div class="field">
               <label for="col-regex">
@@ -598,6 +607,9 @@
                 formControlName="enumValues"
                 [attr.placeholder]="'table.detail.allowedValuesPlaceholder' | t">
               <span class="field-help">{{ 'table.detail.allowedValuesHelp' | t:{ separator: '|' } }}</span>
+              @if (draftEnumShrinks) {
+                <div class="alert alert-warn" role="status">{{ 'table.detail.enumShrinkWarning' | t }}</div>
+              }
             </div>
           </div>
         }

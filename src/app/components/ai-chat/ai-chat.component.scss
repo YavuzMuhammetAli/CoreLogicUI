@@ -226,6 +226,14 @@
   overflow-wrap: anywhere;
 }
 
+.ai-card-details {
+  margin: 0;
+  padding-left: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+
 .ai-card-error {
   margin: 0;
   font-size: var(--text-sm);

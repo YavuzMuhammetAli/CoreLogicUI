@@ -5,6 +5,7 @@ import {
   AiConversationListItem,
   AiDashboardPayload,
   AiMessage,
+  AiModelChangePayload,
   AiModelPayload,
   AiProposal,
   AiReportPayload,
@@ -27,6 +28,8 @@ interface ProposalCard {
   status: AiProposal['status'];
   /** Kartın altındaki tek satırlık özet (kolon sayısı, hedef model vb.). */
   summary: string;
+  /** Model değişikliği kartında kolon başına önerilen yeni değerler. */
+  details: string[];
   errorMessage?: string | null;
   /** O an süren aktarım/yayınlama durumu. */
   progress?: AiImportProgress;
@@ -87,14 +90,15 @@ export class AiChatComponent implements OnInit, OnDestroy {
       name: proposal.name,
       status: proposal.status,
       summary: this.summarize(proposal),
+      details: this.changeLines(proposal),
       errorMessage: proposal.errorMessage,
       progress: progress[proposal.id]
     }));
   });
 
-  /** Aktarılmayı bekleyen model sayısı. */
+  /** Aktarılmayı bekleyen model ve model değişikliği sayısı. */
   readonly importableCount = computed(
-    () => this.proposals().filter(p => p.kind === 'model' && p.status === 'proposed').length
+    () => this.proposals().filter(p => isModelKind(p.kind) && p.status === 'proposed').length
   );
 
   /**
@@ -106,8 +110,8 @@ export class AiChatComponent implements OnInit, OnDestroy {
     () =>
       this.proposals().filter(
         p =>
-          (p.kind === 'model' && p.status === 'imported') ||
-          (p.kind !== 'model' && p.status === 'proposed')
+          (isModelKind(p.kind) && p.status === 'imported') ||
+          (!isModelKind(p.kind) && p.status === 'proposed')
       ).length
   );
 
@@ -374,6 +378,15 @@ export class AiChatComponent implements OnInit, OnDestroy {
     const t = (key: string, params?: Record<string, string | number>) =>
       this.languageService.t(key, params);
 
+    if (proposal.kind === 'model_change') {
+      const payload = parseProposalPayload<AiModelChangePayload>(proposal.payloadJson);
+      if (!payload) return '';
+      return payload.reason || t('ai.summary.modelChange', {
+        a: payload.alterColumns?.length ?? 0,
+        n: payload.addColumns?.length ?? 0
+      });
+    }
+
     if (proposal.kind === 'model') {
       const payload = parseProposalPayload<AiModelPayload>(proposal.payloadJson);
       if (!payload) return '';
@@ -397,4 +410,38 @@ export class AiChatComponent implements OnInit, OnDestroy {
     if (!payload) return '';
     return t('ai.summary.dashboard', { n: payload.widgets?.length ?? 0 });
   }
+
+  /**
+   * Model değişikliği kartında kolon başına önerilen değerler ("Ad: zorunlu, etiket 'Ünvan'").
+   * Yalnız önerinin taşıdığı alanlar yazılır; verilmeyen alan kayıtlı değerinde kalır.
+   */
+  private changeLines(proposal: AiProposal): string[] {
+    if (proposal.kind !== 'model_change') return [];
+    const payload = parseProposalPayload<AiModelChangePayload>(proposal.payloadJson);
+    if (!payload) return [];
+    const t = (key: string, params?: Record<string, string | number>) =>
+      this.languageService.t(key, params);
+
+    const lines = (payload.alterColumns ?? []).map(change => {
+      const parts: string[] = [];
+      if (change.label != null) parts.push(t('ai.change.label', { value: change.label }));
+      if (change.isNullable != null) parts.push(t(change.isNullable ? 'ai.change.optional' : 'ai.change.required'));
+      if (change.enumValues != null) parts.push(t('ai.change.enum', { value: change.enumValues }));
+      const ruleTouched = [change.minLength, change.maxLength, change.min, change.max, change.regex, change.lookupDisplayColumn]
+        .some(v => v != null);
+      if (ruleTouched) parts.push(t('ai.change.rules'));
+      if (change.description != null) parts.push(t('ai.change.description'));
+      return `${change.columnName}: ${parts.join(', ') || t('ai.change.none')}`;
+    });
+
+    for (const column of payload.addColumns ?? []) {
+      lines.push(t('ai.change.add', { column: column.columnName, type: column.dataType }));
+    }
+    return lines;
+  }
+}
+
+/** Taslak olarak aktarılıp sonra yayınlanan öneri türleri (yeni model + model değişikliği). */
+function isModelKind(kind: AiProposal['kind']): boolean {
+  return kind === 'model' || kind === 'model_change';
 }

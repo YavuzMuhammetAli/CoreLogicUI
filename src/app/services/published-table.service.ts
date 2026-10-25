@@ -6,6 +6,7 @@ import { DataResponseModel } from '../models/dataResponseModel';
 import { ListResponseModel } from '../models/responseModelList';
 import { environment } from '../../environments/environment';
 import { AutoValueTrigger } from '../utils/auto-value/auto-value';
+import { MemberMetadataUpdate } from '../utils/column-rules';
 
 /** Bir modelin belirli bir versiyonunu temsil eder */
 export interface ModelVersion {
@@ -225,33 +226,12 @@ export class PublishedTableService {
   }
 
   /**
-   * Kayıtlı bir kolonun yalnızca UI metadata'sını (etiket/açıklama) günceller.
-   * Tip ve kurallar değişmez; yeniden yayınlama gerekmez.
+   * Kayıtlı bir kolonun meta verisini (etiket, açıklama, zorunluluk, kurallar, dosya boyutu
+   * sınırı, lookup gösterim kolonu) topluca yazar — TAM değiştirme, boş kural kaldırılır.
+   * Ad/tip değişmez; yeniden yayın gerekmez. Gövde `toMemberMetadataUpdate` ile kurulur.
    */
-  updateMemberDisplay(
-    typeName: string,
-    memberName: string,
-    label: string | null,
-    description: string | null
-  ): Observable<ResponseModel> {
-    let params = new HttpParams()
-      .set('typeName', typeName)
-      .set('memberName', memberName);
-    if (label?.trim())       params = params.set('label', label.trim());
-    if (description?.trim()) params = params.set('description', description.trim());
-    return this.http.post<ResponseModel>(`${this.baseUrl}/updateMemberDisplay`, null, { params });
-  }
-
-  /**
-   * Kayıtlı bir image/file kolonunun dosya boyutu sınırını (KB) günceller; null sınırı
-   * kaldırır (platform tavanı geçerli olur). Kolon şeması değişmez, yeniden yayın gerekmez.
-   */
-  setMemberFileLimit(typeName: string, memberName: string, maxSizeKb: number | null): Observable<ResponseModel> {
-    let params = new HttpParams()
-      .set('typeName', typeName)
-      .set('memberName', memberName);
-    if (maxSizeKb != null) params = params.set('maxSizeKb', maxSizeKb);
-    return this.http.post<ResponseModel>(`${this.baseUrl}/setMemberFileLimit`, null, { params });
+  updateMemberMetadata(body: MemberMetadataUpdate): Observable<ResponseModel> {
+    return this.http.post<ResponseModel>(`${this.baseUrl}/updateMemberMetadata`, body);
   }
 
   /**

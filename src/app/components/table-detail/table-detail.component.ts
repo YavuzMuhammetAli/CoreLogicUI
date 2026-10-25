@@ -26,7 +26,10 @@ import { markDirty } from '../../utils/change-detection';
 import {
   MIN_FILE_LIMIT_MB, fileLimitMbValidator, formatFileSize, isFileType, kbToMb, maxFileKbFor, maxFileMbFor
 } from '../../utils/file-size';
-import { NUMERIC_COLUMN_TYPES, autoValueKey, normalizeColumnRules } from '../../utils/column-rules';
+import {
+  MetadataColumn, NUMERIC_COLUMN_TYPES, autoValueKey, metadataKey, normalizeColumnRules, requiredChangeAllowed,
+  schemaMetadataKey, toMemberMetadataUpdate
+} from '../../utils/column-rules';
 import {
   IDENTIFIER_MAX_LENGTH, IdentifierContext, IdentifierKind, LABEL_MAX_LENGTH, LabelNameSync,
   identifierErrorMessage, identifierValidator, revalidateIdentifiers, sanitizeIdentifierInputEvent
@@ -38,14 +41,31 @@ type TabId = 'columns' | 'subModels' | 'relationships';
 /** /Published/getAll satırı — model ağacını (parent/derinlik) kurmak için. */
 type TableRow = PublishedTableRow;
 
-/** Kayıtlı bir kolonun düzenlenebilir UI metadata'sı — düzenleme modunda diff temeli. */
+/** Kayıtlı bir kolonun düzenleme modundaki diff temeli. */
 interface ColumnDisplayMeta {
-  label: string;
-  description: string;
-  /** image/file'da dosya boyutu sınırı (KB) — değişirse setMemberFileLimit ile yazılır. */
-  maxLength: number | null;
+  /** Kayıtlı tip — kilitli; yine de değişmişse kayıt durur (sessizce atılmaz). */
+  dataType: string;
+  /**
+   * Etiket, açıklama, zorunluluk ve kurallar — değişirse updateMemberMetadata ile tek istekte
+   * yazılır. Önceden yalnız etiket/açıklama yazılıyor, zorunluluk ve kurallar sessizce atılıyordu.
+   */
+  metadataKey: string;
   /** Otomatik değer kuralı (tetik|formül|salt okunur) — değişirse setMemberAutoValue ile yazılır. */
   autoValueKey: string;
+  /** Kayıtlı enum değerleri ve zorunluluk — popup'taki uyarılar için. */
+  enumValues: string;
+  isRequired: boolean;
+}
+
+/** Formdaki (kaydedilmiş) sütunun diff temeli. */
+function columnMetaOf(c: MetadataColumn & { enumValues?: string | null }): ColumnDisplayMeta {
+  return {
+    dataType: c.dataType,
+    metadataKey: metadataKey(c),
+    autoValueKey: autoValueKey(c),
+    enumValues: c.enumValues ?? '',
+    isRequired: !c.isNullable
+  };
 }
 
 /** Kaydetme akışında kullanılan düzleştirilmiş düğüm verisi */
@@ -376,13 +396,43 @@ export class TableDetailComponent implements OnDestroy {
     return this.columnDraft.get('columnName')!.disabled;
   }
 
-  /** Başlıkta gösterilecek ad: kayıtlı etiket, yoksa tablo adı. */
+  /** Düzenlenen model yayında mı (derlenmiş sınıf + SQL tablosu var mı). */
+  get isModelPublished(): boolean {
+    return !!this.editTypeName && this.publishedModelNames.includes(this.editTypeName);
+  }
+
+  /** Popup'taki kayıtlı sütunun kayıtlı meta verisi (yeni sütunda null). */
+  private get draftOriginalMeta(): ColumnDisplayMeta | null {
+    if (!this.isEditingPersistedColumn) return null;
+    return this.originalColumnMeta.get(this.columnDraft.getRawValue().columnName) ?? null;
+  }
+
+  /** Zorunluluk kutusu yayınlanmış modelde değer tipi olduğu için kilitli mi. */
+  get draftRequiredLocked(): boolean {
+    return this.isEditingPersistedColumn && this.columnDraft.get('isNullable')!.disabled;
+  }
+
+  /** Yayındaki modelde isteğe bağlı alan zorunlu yapılıyor — boş eski kayıtlar düzenlenirken takılır. */
+  get draftRequiredTightened(): boolean {
+    const original = this.draftOriginalMeta;
+    return !!original && this.isModelPublished && !original.isRequired && !this.columnDraft.getRawValue().isNullable;
+  }
+
+  /** Enum değeri kaldırılıyor — o değeri taşıyan kayıtlar bir sonraki düzenlemede geçersiz olur. */
+  get draftEnumShrinks(): boolean {
+    const original = this.draftOriginalMeta;
+    if (!original || original.dataType !== 'enum') return false;
+    const next = new Set(String(this.columnDraft.getRawValue().enumValues ?? '').split('|').map(s => s.trim()).filter(Boolean));
+    return original.enumValues.split('|').map(s => s.trim()).filter(Boolean).some(v => !next.has(v));
+  }
+
   /** Ekran tasarımı yalnız yayınlanmış modelde anlamlı: kayıt ekranları derlenmiş tipi çizer. */
   get screenDesignTypeName(): string | null {
     const name = this.editTypeName;
     return name && this.publishedModelNames.includes(name) ? name : null;
   }
 
+  /** Başlıkta gösterilecek ad: kayıtlı etiket, yoksa tablo adı. */
   get displayModelName(): string {
     return (this.originalLabel ?? '').trim() || this.editTypeName || '';
   }
@@ -682,7 +732,13 @@ export class TableDetailComponent implements OnDestroy {
         const schema = res.data;
         this.originalColumnNames = new Set(schema.columns.map(c => c.name));
         this.originalColumnMeta = new Map(schema.columns.map(c => [
-          c.name, { label: (c.label ?? '').trim(), description: (c.description ?? '').trim(), maxLength: c.maxLength ?? null, autoValueKey: autoValueKey(c) }
+          c.name, {
+            dataType: c.dataType,
+            metadataKey: schemaMetadataKey(c),
+            autoValueKey: autoValueKey(c),
+            enumValues: c.enumValues ?? '',
+            isRequired: c.isRequired
+          } satisfies ColumnDisplayMeta
         ]));
         this.ownParentName = schema.parentTableName ?? null;
         // Etiketi olmayan eski modellerde etiket tablo adıyla önden doldurulur (zorunlu alan);
@@ -763,8 +819,15 @@ export class TableDetailComponent implements OnDestroy {
 
     // Kayıtlı sütunun adı kilitli: onSaveEdit diff'i ada göre çalışır; yeniden
     // adlandırma "eskisini pasifle + yenisini ekle" demek olur ve veri eski kolonda kalır.
+    // Tip ve lookup hedefi de kilitli: değişimleri derlenen sınıfı ve tabloyu değiştirir
+    // (yalnız meta veri düzenlenir). Değer tipinde zorunluluk yayınlanmış modelde kilitli.
     if (this.originalColumnNames.has(source.columnName)) {
       this.columnDraft.get('columnName')!.disable();
+      this.columnDraft.get('dataType')!.disable();
+      this.columnDraft.get('lookupTargetTable')!.disable();
+      if (!requiredChangeAllowed(source.dataType, this.isModelPublished)) {
+        this.columnDraft.get('isNullable')!.disable();
+      }
     }
 
     const targetTable = this.columnDraft.get('lookupTargetTable')?.value;
@@ -1183,7 +1246,7 @@ export class TableDetailComponent implements OnDestroy {
     // Diff temeli: bu kayıtla birlikte sunucuda oluşan kolonlar ve etiketler.
     this.originalColumnNames = new Set(savedRoot.columns.map(c => c.columnName));
     this.originalColumnMeta = new Map(savedRoot.columns.map(c => [
-      c.columnName, { label: (c.label ?? '').trim(), description: (c.description ?? '').trim(), maxLength: c.maxLength ?? null, autoValueKey: autoValueKey(c) }
+      c.columnName, columnMetaOf(c)
     ]));
     this.originalLabel = savedRoot.label;
 
@@ -1225,6 +1288,18 @@ export class TableDetailComponent implements OnDestroy {
     const addedColumns = rootNode.columns.filter(c => !this.originalColumnNames.has(c.columnName));
     const removedColumnNames = [...this.originalColumnNames].filter(name => !currentColumnNames.has(name));
 
+    // Kayıtlı kolonun tipi kilitli; yine de değişmişse (eski bir taslak, elle müdahale)
+    // değişiklik sessizce atılmaz — kayıt hiç başlamadan durur.
+    const typeChanged = rootNode.columns.find(c => {
+      const original = this.originalColumnMeta.get(c.columnName);
+      return !!original && original.dataType !== c.dataType;
+    });
+    if (typeChanged) {
+      this.submitSuccess = false;
+      this.submitMessage = this.languageService.t('table.detail.typeChangeBlocked', { name: typeChanged.columnName });
+      return;
+    }
+
     const ops: Array<() => Observable<unknown>> = [];
 
     // 1. Kaldırılan kolonları pasifle (soft-delete — SQL kolonu DROP edilmez)
@@ -1255,32 +1330,17 @@ export class TableDetailComponent implements OnDestroy {
       ));
     }
 
-    // 4. Kayıtlı kolonların etiket/açıklama değişiklikleri (ad kilitli — tip/kural değişmez)
-    const displayChanged = rootNode.columns.filter(c => {
+    // 4. Kayıtlı kolonların meta verisi: etiket, açıklama, zorunluluk, kurallar ve dosya boyutu
+    //    sınırı — tek istekte (ad/tip kilitli; şema değişmez, yayın gerekmez).
+    const metadataChanged = rootNode.columns.filter(c => {
       const original = this.originalColumnMeta.get(c.columnName);
-      return !!original
-        && ((c.label ?? '').trim() !== original.label || (c.description ?? '').trim() !== original.description);
+      return !!original && metadataKey(c) !== original.metadataKey;
     });
-    displayChanged.forEach(col => ops.push(() =>
-      this.publishedTableService.updateMemberDisplay(
-        rootName, col.columnName, col.label || null, col.description || null
-      ).pipe(
+    metadataChanged.forEach(col => ops.push(() =>
+      this.publishedTableService.updateMemberMetadata(toMemberMetadataUpdate(rootName, col)).pipe(
         switchMap(r => r.success
           ? of(r)
-          : throwError(() => new Error(r.message ?? this.languageService.t('table.detail.columnDisplayUpdateFailed', { name: col.columnName }))))
-      )
-    ));
-
-    // 5. Kayıtlı image/file kolonlarının boyut sınırı değiştiyse yaz (şema değişmez, yayın gerekmez)
-    const fileLimitChanged = rootNode.columns.filter(c => {
-      const original = this.originalColumnMeta.get(c.columnName);
-      return !!original && isFileType(c.dataType) && (c.maxLength ?? null) !== original.maxLength;
-    });
-    fileLimitChanged.forEach(col => ops.push(() =>
-      this.publishedTableService.setMemberFileLimit(rootName, col.columnName, col.maxLength ?? null).pipe(
-        switchMap(r => r.success
-          ? of(r)
-          : throwError(() => new Error(r.message ?? this.languageService.t('table.detail.fileLimitUpdateFailed', { name: col.columnName }))))
+          : throwError(() => new Error(r.message ?? this.languageService.t('table.detail.columnMetadataUpdateFailed', { name: col.columnName }))))
       )
     ));
 
@@ -1342,7 +1402,7 @@ export class TableDetailComponent implements OnDestroy {
         // ikinci "Kaydet" aynı kolonları/alt modelleri yeniden eklemeye çalışır.
         this.originalColumnNames = new Set(rootNode.columns.map(c => c.columnName));
         this.originalColumnMeta = new Map(rootNode.columns.map(c => [
-          c.columnName, { label: (c.label ?? '').trim(), description: (c.description ?? '').trim(), maxLength: c.maxLength ?? null, autoValueKey: autoValueKey(c) }
+          c.columnName, columnMetaOf(c)
         ]));
         this.originalLabel = rootNode.label;
         this.subModels.clear({ emitEvent: false });

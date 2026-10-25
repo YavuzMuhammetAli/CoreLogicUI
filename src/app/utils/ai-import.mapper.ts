@@ -11,11 +11,15 @@
 
 import {
   AiDashboardPayload,
+  AiModelChangePayload,
   AiModelPayload,
   AiProposedColumn,
   AiProposedRelationship,
   AiReportPayload
 } from '../models/ai.model';
+import { PublishedTableSchema } from '../services/published-table.service';
+import { MemberMetadataUpdate, normalizeColumnRules, toMemberMetadataUpdate } from './column-rules';
+import { kbToMb } from './file-size';
 import { DashboardWidget } from '../models/dashboard.model';
 import {
   AggregateFunction,
@@ -106,16 +110,93 @@ export function validateModelPayload(payload: AiModelPayload | null): string | n
     if (!MODEL_NAME_PATTERN.test(node.entityName)) return `ad:${node.entityName}`;
 
     for (const column of node.columns) {
-      if (!COLUMN_NAME_PATTERN.test(column.columnName ?? '')) return `kolon:${column.columnName}`;
-      if (!DATA_TYPES.has(column.dataType)) return `tip:${column.dataType}`;
-      if (column.dataType === 'enum' && !column.enumValues?.trim()) return `enum:${column.columnName}`;
-      if (column.dataType === 'lookup' && !column.lookupTargetTable?.trim()) {
-        return `lookup:${column.columnName}`;
-      }
+      const problem = validateProposedColumn(column);
+      if (problem) return problem;
     }
   }
 
   return null;
+}
+
+/** Önerilen tek kolonun doğrulaması — yeni model ve değişiklik önerisi ortak. */
+function validateProposedColumn(column: AiProposedColumn): string | null {
+  if (!COLUMN_NAME_PATTERN.test(column.columnName ?? '')) return `kolon:${column.columnName}`;
+  if (!DATA_TYPES.has(column.dataType)) return `tip:${column.dataType}`;
+  if (column.dataType === 'enum' && !column.enumValues?.trim()) return `enum:${column.columnName}`;
+  if (column.dataType === 'lookup' && !column.lookupTargetTable?.trim()) {
+    return `lookup:${column.columnName}`;
+  }
+  return null;
+}
+
+/**
+ * Değişiklik önerisini aktarmadan önce doğrular (kayıtlı şemaya bakmadan yapılabilenler).
+ * Kolonların gerçekten var olduğu `toMemberMetadataUpdates`'te, şemayla denetlenir.
+ */
+export function validateModelChangePayload(payload: AiModelChangePayload | null): string | null {
+  if (!payload?.entityName?.trim()) return 'payload';
+  const alters = payload.alterColumns ?? [];
+  const adds = payload.addColumns ?? [];
+  if (alters.length === 0 && adds.length === 0) return 'degisiklik-yok';
+
+  for (const column of adds) {
+    const problem = validateProposedColumn(column);
+    if (problem) return problem;
+  }
+  return null;
+}
+
+export interface MetadataMergeResult {
+  updates: MemberMetadataUpdate[];
+  /** İlk sorun (ör. `kolon-yok:Ad`); varsa hiçbir güncelleme uygulanmamalı. */
+  error: string | null;
+}
+
+/**
+ * Değişiklik önerisini kayıtlı şemayla birleştirip `updateMemberMetadata` gövdelerine çevirir.
+ *
+ * Uç TAM değiştirme yapar (boş kural kaldırılır); öneri ise yalnız değişen alanları taşır.
+ * Birleştirme burada yapılmazsa önerinin söylemediği her kural sessizce silinirdi.
+ * Kural tipe göre ayıklanır (`toMemberMetadataUpdate`) — sayı kolonuna regex gitmez.
+ */
+export function toMemberMetadataUpdates(
+  schema: PublishedTableSchema,
+  payload: AiModelChangePayload
+): MetadataMergeResult {
+  const byName = new Map(schema.columns.map(c => [c.name.toLowerCase(), c]));
+  const updates: MemberMetadataUpdate[] = [];
+
+  for (const change of payload.alterColumns ?? []) {
+    const current = byName.get((change.columnName ?? '').toLowerCase());
+    if (!current) return { updates: [], error: `kolon-yok:${change.columnName}` };
+
+    const isRequired = change.isNullable === undefined || change.isNullable === null
+      ? current.isRequired
+      : !change.isNullable;
+    const maxLength = change.maxLength ?? current.maxLength;
+
+    updates.push(toMemberMetadataUpdate(schema.tableName, normalizeColumnRules({
+      columnName: current.name,
+      dataType: current.dataType,
+      isNullable: !isRequired,
+      label: change.label ?? current.label,
+      description: change.description ?? current.description,
+      minLength: change.minLength ?? current.minLength,
+      maxLength,
+      min: change.min ?? current.min,
+      max: change.max ?? current.max,
+      regex: change.regex ?? current.regex,
+      regexMessage: change.regexMessage ?? current.regexMessage,
+      enumValues: change.enumValues ?? current.enumValues,
+      lookupTargetTable: current.lookupTargetTable,
+      lookupDisplayColumn: change.lookupDisplayColumn ?? current.lookupDisplayColumn,
+      // Dosya kolonunda saklanan KB sınırı aynen korunsun: MB alanı aynı değerden türetilince
+      // normalizeColumnRules KB'yi yuvarlamadan geçirir (boş bırakılsa sınırı silerdi).
+      maxFileSizeMb: kbToMb(maxLength)
+    })));
+  }
+
+  return { updates, error: null };
 }
 
 /**

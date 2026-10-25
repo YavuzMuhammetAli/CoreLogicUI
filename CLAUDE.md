@@ -334,6 +334,7 @@ Tüm servisler `@Injectable({ providedIn: 'root' })`, `inject(HttpClient)` (veya
 | `UserAdminService` | `/User` — getall/create/update/setActive/resetPassword/setAdmin/delete (admin-only) |
 | `RelationshipService` | `/publish/models/{id}/relationships` (GET/POST/PUT/DELETE), `/validate-graph`, `/preview` |
 | `PublishedTableService` (otomatik değer) | `addMember` (+ `autoValueTrigger/autoValueExpression/isReadOnly`), `setMemberAutoValue` (JSON gövde) — `addMember` artık options nesnesi alır |
+| `PublishedTableService` (kayıtlı kolon) | `updateMemberMetadata` (JSON gövde, TAM değiştirme) — etiket, açıklama, zorunluluk, kurallar, dosya sınırı, lookup gösterim kolonu; gövde `utils/column-rules.ts` `toMemberMetadataUpdate` ile kurulur |
 | `ParameterService` | `/Parameter` — `backup/schedule`, `backup/history`, `backup/run`, `mail`, `mail/test`, `mail/templates/{kind}` (+ `/preview`, `/test`), `subscription/*` (admin-only) |
 | `AiService` | `/Ai` — `conversations`, `chat` (SSE), `proposals/{id}/status`, `usage` (admin-only) |
 | `AiImportService` | Kendi ucu YOK — AI önerilerini `PublishedTableService`/`RelationshipService`/`ReportService`/`DashboardService` üzerinden aktarır |
@@ -727,6 +728,24 @@ değil `roundAway` (1.005 → 1.01), sayı → metin en kısa gidiş-dönüş + 
 > AI önerilerinde otomatik değer. `PublishedModelManager.Update` hâlâ `DynamicEntityValidator`'ı
 > çağırmıyor (önceden var olan boşluk).
 
+## Kayıtlı Kolonun Düzenlenmesi
+
+`/build/:typeName` kolon popup'ında kayıtlı bir kolonun **adı, tipi ve lookup hedefi kilitlidir** (derlenen
+sınıfı ve tabloyu değiştirirler); **meta verisi** düzenlenir: etiket, açıklama, zorunluluk, doğrulama
+kuralları (metin: min/max uzunluk, regex · sayı: en küçük/en büyük · enum: izinli değerler · dosya: boyut
+sınırı · lookup: gösterim kolonu). Kaydet farkı `metadataKey` ile bulur ve kolon başına tek
+`POST /Published/updateMemberMetadata` atar — kurallar `DynamicEntityValidator` tarafından çalışma
+anında şemadan okunduğu için **yeniden yayın gerekmez**. Önceden popup tip/kural değişikliğine izin verip
+yalnız etiketi yazıyor, gerisini **sessizce atıyordu**.
+
+- **Zorunluluk kuralı** (`requiredChangeAllowed` ↔ backend `CoreLogicTypeMap.RequiredAffectsClrType`):
+  string/enum/file/image'da serbest; değer tiplerinde (sayı, tarih, mantıksal, guid, lookup) yalnız model
+  **hiç yayınlanmamışsa** — aksi halde `int` ⇄ `int?` değişir ve NULL değerli satırlar okunamaz olur.
+- Yayındaki modelde alanı zorunlu yapmak ya da enum değeri kaldırmak popup'ta uyarı gösterir: eski
+  kayıtlar ancak bir sonraki düzenlemede takılır.
+- Sunucu tipe uymayan kuralı yok sayar, metin `MaxLength` ≤ 250 (`nvarchar(250)`) ve `Min ≤ Max` ister.
+- Yayında `CheckDb` (ALTER ADD) hatası artık yayını durdurur; önceden sonucu atılıyordu.
+
 ## Ekran Tasarımı
 
 `/build/:typeName/screen` (adminGuard) — admin, **yayınlanmış** bir modelin kayıt formunu ve liste
@@ -886,6 +905,10 @@ kendisi ekler. Kota hatası akıştan ÖNCE kontrol edilir ki düzgün bir 400 d
 1. **İçeri Aktar** → yalnız modeller: dup kontrol → `addTable` → N× `addMember`
    (`concatMap`, sıralı) → ilişkiler (`getAllTables` ile `tableId` çözülür). Sonuç: `/drafts`.
    Düğümler **parent-first** sırada gider; `isNullable` → `isRequired` **ters çevrilir**.
+   Ardından **model değişiklikleri** (`propose_model_change`, kart türü `model_change`): kayıtlı
+   şema okunur, öneri onunla birleştirilir (`toMemberMetadataUpdates` — öneri yalnız değişen alanları
+   taşır, uç TAM değiştirir), yeni kolonlar `addMember`, meta veri `updateMemberMetadata`. Yalnız meta
+   veri değiştiyse kart hemen `published`; yeni kolon varsa `imported` kalır ve yayınlanır.
 2. **Hepsini Yayınla** → kök modelleri `publish` (alt ağaç birlikte) → raporlar `define`
    (dönen ID saklanır) → dashboard'lar (widget'lardaki rapor **adı** → ID).
 
@@ -1015,14 +1038,13 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
 3. **Ödeme sağlayıcısı stub** — `StubPaymentGateway` her tahsilata başarı dönüyor ve `Plan`'da fiyat/para birimi kolonu yok. Stripe için: `Plan`'a parasal alanlar + `IPaymentGateway`'in gerçek implementasyonu (abonelik akışı değişmez)
 4. **Yedek geri yükleme yok** — yedek alma ve `RESTORE VERIFYONLY` doğrulaması var, ancak yedekten geri dönme ve yedek indirme ucu yok (platform tarafında da yoktu)
 5. **Yedekleme senkron** — `BackupManager` yedeği HTTP isteği içinde alıyor; "Şimdi Yedek Al" büyük veritabanlarında isteği uzun süre bloklar (zamanlanmış yol kuyruktan geçtiği için etkilenmez)
-6. **AI mevcut kolonu değiştiremez** — platformda `updateMember` yolu yok (`onSaveEdit` diff'i yalnız kolon ADI üzerinden çalışır). Sistem promptu bunu açıkça yasaklıyor; kolon tipi değişimi için yeni kolon + veri taşıma gerekiyor
-7. **PlatformConfig sürümleme yok** — `PUT /api/platform/v1/config/{key}` eklendi (beyaz liste + sunucu tarafı `IsSecret` + maske koruması + audit), ancak değer geçmişi/geri alma tutulmuyor; audit yalnızca "kim ne zaman hangi anahtarı değiştirdi" diyor, eski değeri saklamıyor (bilinçli — sır sızdırmamak için)
-8. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez. Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir. Aynı varsayım AI kotasının süren istek sayacında da var (`AiQuotaReservationRegistry`, bellek içi): birden çok backend örneğinde paralel istekler birbirini göremez, sayaç master'a taşınmalı
-9. **Akış tasarımcısında mini harita ve hizala/dağıt yok** — v2 planının Faz 11'inde opsiyoneldi, yapılmadı
-10. **Kayıt tetiği güncel değere bakar** — outbox satırı işlenirken tetik koşulu kaydın O ANKİ değerine
+6. **PlatformConfig sürümleme yok** — `PUT /api/platform/v1/config/{key}` eklendi (beyaz liste + sunucu tarafı `IsSecret` + maske koruması + audit), ancak değer geçmişi/geri alma tutulmuyor; audit yalnızca "kim ne zaman hangi anahtarı değiştirdi" diyor, eski değeri saklamıyor (bilinçli — sır sızdırmamak için)
+7. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez. Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir. Aynı varsayım AI kotasının süren istek sayacında da var (`AiQuotaReservationRegistry`, bellek içi): birden çok backend örneğinde paralel istekler birbirini göremez, sayaç master'a taşınmalı
+8. **Akış tasarımcısında mini harita ve hizala/dağıt yok** — v2 planının Faz 11'inde opsiyoneldi, yapılmadı
+9. **Kayıt tetiği güncel değere bakar** — outbox satırı işlenirken tetik koşulu kaydın O ANKİ değerine
     karşı değerlendirilir (yazıldığı anki değil). Bir akış kaydı değiştirdikten sonra işlenen `onCreate`
     satırı, değişmiş değerle ikinci bir akışı başlatabilir (uçtan uca testte görüldü)
-11. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
-12. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
-13. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
-14. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor
+10. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
+11. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
+12. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
+13. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor

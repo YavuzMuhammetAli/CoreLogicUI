@@ -1,10 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, concat, defer, from, of, throwError } from 'rxjs';
-import { catchError, concatMap, map, startWith, switchMap, toArray } from 'rxjs/operators';
+import { catchError, concatMap, map, startWith, switchMap, tap, toArray } from 'rxjs/operators';
 import {
   AiDashboardPayload,
+  AiModelChangePayload,
   AiModelPayload,
   AiProposal,
+  AiProposedColumn,
   AiReportPayload
 } from '../models/ai.model';
 import { ResponseModel } from '../models/responseModel';
@@ -13,13 +15,16 @@ import { DashboardService } from './dashboard.service';
 import { PublishedTableService } from './published-table.service';
 import { RelationshipService } from './relationship.service';
 import { ReportService } from './report.service';
+import { RecordMetadataService } from './record-metadata.service';
 import {
   ImportNode,
   flattenModelPayload,
   parseProposalPayload,
   toDashboardWidgets,
+  toMemberMetadataUpdates,
   toRelationshipUpsert,
   toReportDefinition,
+  validateModelChangePayload,
   validateModelPayload
 } from '../utils/ai-import.mapper';
 
@@ -53,13 +58,57 @@ export class AiImportService {
   private readonly reports = inject(ReportService);
   private readonly dashboards = inject(DashboardService);
   private readonly ai = inject(AiService);
+  private readonly recordMetadata = inject(RecordMetadataService);
 
   // ── Aşama 1: modelleri taslak olarak yaz ─────────────────────────────────
 
-  /** Yalnız `proposed` durumundaki model önerilerini sırayla aktarır. */
+  /**
+   * Yalnız `proposed` durumundaki model ve model değişikliği önerilerini sırayla aktarır.
+   * Yeni modeller önce gelir: bir değişiklik önerisi aynı turda aktarılan modele bakabilir.
+   */
   importModels(proposals: AiProposal[]): Observable<AiImportProgress> {
-    const pending = proposals.filter(p => p.kind === 'model' && p.status === 'proposed');
-    return from(pending).pipe(concatMap(proposal => this.importModel(proposal)));
+    const pending = proposals.filter(p => p.status === 'proposed');
+    return concat(
+      from(pending.filter(p => p.kind === 'model')).pipe(concatMap(proposal => this.importModel(proposal))),
+      from(pending.filter(p => p.kind === 'model_change')).pipe(concatMap(proposal => this.importModelChange(proposal)))
+    );
+  }
+
+  /**
+   * Kayıtlı bir modelde değişiklik: yeni kolonlar `addMember`, meta veri `updateMemberMetadata`
+   * (ikisi de şema ekranının kullandığı uçlar). Meta veri değişikliği şemayı değiştirmez —
+   * hemen geçerlidir, kart `published` olur. Yeni kolon varsa SQL kolonu yayınla oluşacağı
+   * için kart `imported` kalır ve "Hepsini Yayınla" modeli yeniden yayınlar.
+   */
+  private importModelChange(proposal: AiProposal): Observable<AiImportProgress> {
+    const payload = parseProposalPayload<AiModelChangePayload>(proposal.payloadJson);
+    const invalid = validateModelChangePayload(payload);
+    if (invalid || !payload) {
+      return this.reportFailure(proposal, invalid ?? 'payload');
+    }
+
+    const added = payload.addColumns ?? [];
+
+    return this.publishedTable.getSchema(payload.entityName).pipe(
+      this.ensureSuccess(),
+      switchMap(res => {
+        const { updates, error } = toMemberMetadataUpdates(res.data, payload);
+        if (error) return throwError(() => new Error(error));
+
+        return concat(
+          this.addColumns(payload.entityName, added),
+          from(updates).pipe(
+            concatMap(update => this.publishedTable.updateMemberMetadata(update).pipe(this.ensureSuccess()))
+          )
+        ).pipe(toArray());
+      }),
+      // Açık oturumdaki kayıt formları yeni kuralları hemen kullansın.
+      tap(() => this.recordMetadata.invalidate(payload.entityName)),
+      switchMap(() => this.markStatus(proposal.id, added.length > 0 ? 'imported' : 'published')),
+      map(() => this.done(proposal)),
+      catchError(error => this.reportFailure(proposal, this.describe(error))),
+      startWith(this.running(proposal))
+    );
   }
 
   private importModel(proposal: AiProposal): Observable<AiImportProgress> {
@@ -112,28 +161,32 @@ export class AiImportService {
       })
       .pipe(
         this.ensureSuccess(),
-        switchMap(() =>
-          from(node.columns).pipe(
-            concatMap(column =>
-              this.publishedTable
-                .addMember({
-                  typeName: node.entityName,
-                  memberName: column.columnName,
-                  memberType: column.dataType,
-                  // DİKKAT: form/öneri tarafı isNullable, API isRequired bekler.
-                  isRequired: !column.isNullable,
-                  maxLength: column.maxLength ?? null,
-                  enumValues: column.enumValues ?? null,
-                  lookupTargetTable: column.lookupTargetTable ?? null,
-                  lookupDisplayColumn: column.lookupDisplayColumn ?? null,
-                  label: column.label ?? null
-                })
-                .pipe(this.ensureSuccess())
-            ),
-            toArray()
-          )
-        )
+        switchMap(() => this.addColumns(node.entityName, node.columns))
       );
+  }
+
+  /** Önerilen kolonları sırayla ekler (yeni model ya da kayıtlı modele ek kolon). */
+  private addColumns(typeName: string, columns: AiProposedColumn[]): Observable<unknown> {
+    if (columns.length === 0) return of([]);
+    return from(columns).pipe(
+      concatMap(column =>
+        this.publishedTable
+          .addMember({
+            typeName,
+            memberName: column.columnName,
+            memberType: column.dataType,
+            // DİKKAT: form/öneri tarafı isNullable, API isRequired bekler.
+            isRequired: !column.isNullable,
+            maxLength: column.maxLength ?? null,
+            enumValues: column.enumValues ?? null,
+            lookupTargetTable: column.lookupTargetTable ?? null,
+            lookupDisplayColumn: column.lookupDisplayColumn ?? null,
+            label: column.label ?? null
+          })
+          .pipe(this.ensureSuccess())
+      ),
+      toArray()
+    );
   }
 
   /**
@@ -188,7 +241,9 @@ export class AiImportService {
       )
     ).pipe(concatMap(() => from([] as AiImportProgress[])));
 
-    const models = from(proposals.filter(p => p.kind === 'model' && p.status === 'imported'))
+    // Yeni kolonlu değişiklik önerileri de modeli yeniden yayınlar (SQL kolonu yayında açılır).
+    const models = from(proposals.filter(p =>
+      (p.kind === 'model' || p.kind === 'model_change') && p.status === 'imported'))
       .pipe(concatMap(proposal => this.publishModel(proposal)));
 
     const reports = from(proposals.filter(p => p.kind === 'report' && p.status === 'proposed'))

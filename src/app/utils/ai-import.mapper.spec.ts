@@ -2,11 +2,14 @@ import {
   flattenModelPayload,
   parseProposalPayload,
   toDashboardWidgets,
+  toMemberMetadataUpdates,
   toRelationshipUpsert,
   toReportDefinition,
+  validateModelChangePayload,
   validateModelPayload
 } from './ai-import.mapper';
-import { AiDashboardPayload, AiModelPayload, AiReportPayload } from '../models/ai.model';
+import { AiDashboardPayload, AiModelChangePayload, AiModelPayload, AiReportPayload } from '../models/ai.model';
+import { PublishedTableSchema } from '../services/published-table.service';
 
 /**
  * Yapay Zeka önerilerini (G4) mevcut servis payload'larına çeviren saf
@@ -199,5 +202,94 @@ describe('ai-import.mapper', () => {
       // h en az 2 olmalı, aksi halde widget okunamaz yükseklikte kalır.
       expect(widgets[0].h).toBe(2);
     });
+  });
+});
+
+/**
+ * Model değişikliği önerisi (propose_model_change). Uç TAM değiştirme yapar; öneri yalnız
+ * değişen alanları taşır — birleştirme yanlışsa önerinin söylemediği kurallar sessizce silinir.
+ */
+describe('toMemberMetadataUpdates', () => {
+  const schema: PublishedTableSchema = {
+    tableName: 'Musteri',
+    description: '',
+    version: 1,
+    columns: [
+      { name: 'Unvan', dataType: 'string', isRequired: false, label: 'Ünvan', maxLength: 100, regex: '^[A-Z]' },
+      { name: 'Durum', dataType: 'enum', isRequired: true, label: 'Durum', enumValues: 'Aktif|Pasif' },
+      { name: 'Logo', dataType: 'image', isRequired: false, label: 'Logo', maxLength: 1000 },
+      { name: 'Yas', dataType: 'int', isRequired: false, label: 'Yaş', min: 0 }
+    ]
+  };
+
+  function change(alterColumns: AiModelChangePayload['alterColumns']): AiModelChangePayload {
+    return { entityName: 'Musteri', reason: 'test', alterColumns };
+  }
+
+  it('verilmeyen alanı kayıtlı değerinde bırakır', () => {
+    const { updates, error } = toMemberMetadataUpdates(schema, change([{ columnName: 'Unvan', isNullable: false }]));
+
+    expect(error).toBeNull();
+    expect(updates).toEqual([jasmine.objectContaining({
+      typeName: 'Musteri', memberName: 'Unvan', isRequired: true, label: 'Ünvan', maxLength: 100, regex: '^[A-Z]'
+    })]);
+  });
+
+  it('kolon adını büyük/küçük harfe duyarsız eşler, kayıtlı adı kullanır', () => {
+    const { updates } = toMemberMetadataUpdates(schema, change([{ columnName: 'unvan', label: 'Ticari Ünvan' }]));
+
+    expect(updates[0].memberName).toBe('Unvan');
+    expect(updates[0].label).toBe('Ticari Ünvan');
+  });
+
+  it('enum değerlerini tamamen değiştirir', () => {
+    const { updates } = toMemberMetadataUpdates(schema, change([{ columnName: 'Durum', enumValues: 'Aktif|Askıda' }]));
+
+    expect(updates[0].enumValues).toBe('Aktif|Askıda');
+    expect(updates[0].isRequired).toBeTrue();
+  });
+
+  it('dosya kolonunun KB sınırını yuvarlamadan korur', () => {
+    const { updates } = toMemberMetadataUpdates(schema, change([{ columnName: 'Logo', label: 'Firma logosu' }]));
+
+    expect(updates[0].maxLength).toBe(1000);
+  });
+
+  it('tipe uymayan kuralı göndermez', () => {
+    const { updates } = toMemberMetadataUpdates(schema, change([{ columnName: 'Yas', regex: 'x', max: 120 }]));
+
+    expect(updates[0]).toEqual(jasmine.objectContaining({ min: 0, max: 120, regex: null }));
+  });
+
+  it('bilinmeyen kolonda hiçbir güncelleme üretmez', () => {
+    const result = toMemberMetadataUpdates(schema, change([
+      { columnName: 'Unvan', label: 'X' },
+      { columnName: 'Yok', label: 'Y' }
+    ]));
+
+    expect(result.error).toBe('kolon-yok:Yok');
+    expect(result.updates).toEqual([]);
+  });
+});
+
+describe('validateModelChangePayload', () => {
+  it('boş öneriyi ve değişikliksiz öneriyi reddeder', () => {
+    expect(validateModelChangePayload(null)).toBe('payload');
+    expect(validateModelChangePayload({ entityName: 'Musteri', reason: '' })).toBe('degisiklik-yok');
+  });
+
+  it('eklenen kolonları yeni model kurallarıyla doğrular', () => {
+    expect(validateModelChangePayload({
+      entityName: 'Musteri', reason: '',
+      addColumns: [{ columnName: 'Tür', dataType: 'string', isNullable: true, label: 'Tür' }]
+    })).toBe('kolon:Tür');
+    expect(validateModelChangePayload({
+      entityName: 'Musteri', reason: '',
+      addColumns: [{ columnName: 'Tur', dataType: 'enum', isNullable: true, label: 'Tür' }]
+    })).toBe('enum:Tur');
+    expect(validateModelChangePayload({
+      entityName: 'Musteri', reason: '',
+      addColumns: [{ columnName: 'Telefon', dataType: 'string', isNullable: true, label: 'Telefon' }]
+    })).toBeNull();
   });
 });

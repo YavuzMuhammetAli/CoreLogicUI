@@ -9,6 +9,18 @@ export const AI_I18N: Translations = {
   'ai.quota': { tr: 'Token', en: 'Tokens' },
   'ai.quotaAria': { tr: 'Aylık token kullanımı', en: 'Monthly token usage' },
   'ai.newChat': { tr: 'Yeni Sohbet', en: 'New Chat' },
+  'ai.change.label': { tr: 'etiket → "{value}"', en: 'label → "{value}"' },
+  'ai.change.required': { tr: 'zorunlu', en: 'required' },
+  'ai.change.optional': { tr: 'isteğe bağlı', en: 'optional' },
+  'ai.change.enum': { tr: 'değerler → {value}', en: 'values → {value}' },
+  'ai.change.rules': { tr: 'doğrulama kuralları', en: 'validation rules' },
+  'ai.change.description': { tr: 'açıklama', en: 'description' },
+  'ai.change.none': { tr: 'değişiklik yok', en: 'no change' },
+  'ai.change.add': { tr: '+ {column} ({type})', en: '+ {column} ({type})' },
+  'ai.summary.modelChange': {
+    tr: '{a} alan değişikliği, {n} yeni alan',
+    en: '{a} field changes, {n} new fields'
+  },
   'ai.quotaExhaustedMidStream': {
     tr: 'Yapay Zeka kotanız bu yanıt sırasında doldu; yanıt yarıda kesildi. Kota ayın başında yenilenir.',
     en: 'Your AI quota ran out during this response, so it was cut short. It resets at the start of the month.'
@@ -59,6 +71,7 @@ export const AI_I18N: Translations = {
   'ai.kind.model': { tr: 'Model', en: 'Model' },
   'ai.kind.report': { tr: 'Rapor', en: 'Report' },
   'ai.kind.dashboard': { tr: 'Dashboard', en: 'Dashboard' },
+  'ai.kind.model_change': { tr: 'Model değişikliği', en: 'Model change' },
 
   'ai.status.proposed': { tr: 'Önerildi', en: 'Proposed' },
   'ai.status.imported': { tr: 'Taslak', en: 'Draft' },
