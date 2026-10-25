@@ -55,6 +55,13 @@
   }
 </div>
 
+<app-confirm-dialog
+  [open]="pendingDelete !== null"
+  [title]="'draft.deactivateConfirmTitle' | t"
+  [message]="deleteConfirmMessage()"
+  (confirmed)="confirmDelete()"
+  (cancelled)="cancelDelete()" />
+
 <!--
   Ana model + alt modellerini iç içe (nested) gösteren recursive şablon.
   form-build'deki model-node ağaç desenine benzer: her düğüm kendi alt modellerini
@@ -104,7 +111,7 @@
           </button>
           <button
             class="btn btn-ghost btn-sm"
-            (click)="onDelete(draft)"
+            (click)="askDelete(draft)"
             [disabled]="draft.deleting || draft.publishing"
             type="button"
             [attr.aria-label]="'draft.deactivateAria' | t:{ name: draft.tableName }"

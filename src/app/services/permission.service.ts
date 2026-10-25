@@ -1,7 +1,7 @@
 import { Injectable, signal, inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
-import { Observable, of, tap, catchError, shareReplay, map } from 'rxjs';
+import { Observable, of, tap, catchError, shareReplay, map, finalize } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface ModelPermission {
@@ -61,11 +61,13 @@ export class PermissionService {
       return of(this._data());
     }
 
-    // Uçuştaki isteği paylaş; tamamlanınca referansı temizle
+    // Uçuştaki isteği paylaş; tamamlanınca referansı temizle. Temizlenmezse başarısız
+    // bir yüklemenin null sonucu çıkışa dek önbellekte kalır ve guard'lar hiç yeniden denemez.
     if (!this._loadingRef) {
       this._loadingRef = this.loadMyPermissions().pipe(
         map(() => this._data()),
         catchError(() => of(null)),
+        finalize(() => { this._loadingRef = null; }),
         shareReplay(1)
       );
     }

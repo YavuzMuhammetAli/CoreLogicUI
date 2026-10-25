@@ -38,9 +38,8 @@ Users can:
 
 > **SSR notu:** Proje başlangıçta `@angular/ssr` + Express ile kuruldu, sonradan SSR
 > tamamen kaldırıldı. `server.ts`, `src/main.server.ts`, `src/app/app.config.server.ts`
-> dosyaları **artık mevcut değil**. `package.json`'da `@angular/ssr`/`express` bağımlılıkları
-> ve `serve:ssr:CoreLogicUI` script'i temizlenmemiş kalıntı olarak duruyor (script artık
-> sadece `echo 'SSR kaldirildi — artik kullanilmiyor'` çalıştırıyor). Koddaki
+> dosyaları **artık mevcut değil**; `@angular/ssr`, `@angular/platform-server`, `express`,
+> `@types/express` bağımlılıkları ve `serve:ssr:CoreLogicUI` script'i de kaldırıldı. Koddaki
 > `isPlatformBrowser(platformId)` kontrolleri buna rağmen **kasıtlı olarak korunuyor** —
 > detay için `.Codex/skills/angular-standalone-component/SKILL.md`.
 
@@ -288,11 +287,9 @@ npm start          # dev server → http://localhost:4200
 ```bash
 npm run build                   # Üretim build → dist/core-logic-ui/
 npm run watch                   # İzleme modunda dev build
-npm test                        # Karma/Jasmine testleri
+npm test                        # Karma/Jasmine testleri (izleme modu, Chrome)
+npm run test:ci                 # Tek koşu, ChromeHeadless — commit öncesi doğrulama bununla
 ```
-
-> `npm run serve:ssr:CoreLogicUI` script'i hâlâ `package.json`'da var ama artık sadece
-> "SSR kaldirildi — artik kullanilmiyor" yazdırıp çıkıyor — gerçek bir SSR sunucusu çalıştırmaz.
 
 ### Yeni Component Ekleme
 ```bash
@@ -314,6 +311,4 @@ Sonra `src/app/app.routes.ts`'e route ekle. Component yapısı/signal/guard konv
 
 ## Bilinen Eksikler ve TODO'lar
 
-1. **`environment.prod.ts` API URL'si** — hâlâ `http://localhost:5245` (gerçek prod URL değil), deployment'ta güncellenmeli
-2. **Unit test kapsamı düşük** — sadece 3 `*.spec.ts` dosyası var; servis/component'lerin büyük kısmı test edilmiyor
-3. **SSR bağımlılık kalıntısı** — `package.json`'da `@angular/ssr`/`express`/`@types/express` hâlâ duruyor; SSR fiilen kaldırıldığı için temizlenebilir ama `isPlatformBrowser` guard'ları kasıtlı korunuyor (bkz. `angular-standalone-component` skill)
+1. **Unit test kapsamı düşük** — sadece 3 `*.spec.ts` dosyası var; servis/component'lerin büyük kısmı test edilmiyor

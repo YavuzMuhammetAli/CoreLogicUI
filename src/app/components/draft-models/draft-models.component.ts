@@ -7,6 +7,7 @@ import { PublishedModelService } from '../../services/published-model.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
 import { markDirty } from '../../utils/change-detection';
+import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 
 interface DraftEntry {
   id: number;
@@ -45,7 +46,7 @@ interface TableRef {
 @Component({
   selector: 'app-draft-models',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, RouterLink, TranslatePipe, ConfirmDialogComponent],
   templateUrl: './draft-models.component.html',
   styleUrls: ['./draft-models.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -224,22 +225,37 @@ export class DraftModelsComponent implements OnInit {
     });
   }
 
+  /** Onay diyaloğu açıkken pasif yapılacak taslak; null ise diyalog kapalı. */
+  pendingDelete: DraftEntry | null = null;
+
+  /** Onay diyaloğunun metni — alt modeli olan taslakta "ve alt modellerini" eki alır. */
+  deleteConfirmMessage(): string {
+    const draft = this.pendingDelete;
+    if (!draft) return '';
+    return this.languageService.t('draft.deactivateConfirm', {
+      name: draft.tableName,
+      childrenSuffix: draft.children.length > 0 ? this.languageService.t('draft.andSubModels') : ''
+    });
+  }
+
+  askDelete(draft: DraftEntry): void {
+    if (draft.publishing || draft.deleting) return;
+    this.pendingDelete = draft;
+  }
+
+  cancelDelete(): void {
+    this.pendingDelete = null;
+  }
+
   /**
    * Taslağı pasif yapar (soft-delete). PublishedTable/PublishedTableMember kayıtları
    * Active=false olur; SQL'e hiç dokunulmaz (taslak hiç yayınlanmadığı için zaten SQL
    * tablosu yoktur). "Silinen Taslaklar" sayfasından geri yüklenebilir.
    */
-  onDelete(draft: DraftEntry): void {
-    if (draft.publishing || draft.deleting) return;
-
-    const hasChildren = draft.children.length > 0;
-    const confirmed = confirm(
-      this.languageService.t('draft.deactivateConfirm', {
-        name: draft.tableName,
-        childrenSuffix: hasChildren ? this.languageService.t('draft.andSubModels') : ''
-      })
-    );
-    if (!confirmed) return;
+  confirmDelete(): void {
+    const draft = this.pendingDelete;
+    this.pendingDelete = null;
+    if (!draft || draft.publishing || draft.deleting) return;
 
     draft.deleting = true;
     draft.deleteMessage = null;

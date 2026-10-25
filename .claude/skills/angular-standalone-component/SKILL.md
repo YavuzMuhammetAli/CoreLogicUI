@@ -18,9 +18,9 @@ guard ve route kaydı içindir.
 
 Proje SSR ile kuruldu, sonradan tamamen kaldırıldı (kök `CLAUDE.md` bunu artık doğru
 yansıtıyor). `server.ts`, `src/main.server.ts`, `src/app/app.config.server.ts` **mevcut değil**,
-`src/` altında sadece `app/`, `environments/`, `index.html`, `main.ts` var. `package.json`'da
-`@angular/ssr`/`express` bağımlılıkları hâlâ duruyor ama bu temizlenmemiş kalıntı — runtime'da
-SSR çalışmıyor.
+`src/` altında sadece `app/`, `environments/`, `index.html`, `main.ts` var. `@angular/ssr`,
+`@angular/platform-server` ve `express` bağımlılıkları da `package.json`'dan kaldırıldı — SSR'a
+geri dönüş yeniden kurulum demektir.
 
 Buna rağmen `app.config.ts` ve component'lerde `isPlatformBrowser(platformId)` kontrolleri
 **kasıtlı olarak korunuyor** — kod yorumunda açıkça yazıyor:

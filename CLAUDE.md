@@ -46,9 +46,8 @@ Users can:
 
 > **SSR notu:** Proje başlangıçta `@angular/ssr` + Express ile kuruldu, sonradan SSR
 > tamamen kaldırıldı. `server.ts`, `src/main.server.ts`, `src/app/app.config.server.ts`
-> dosyaları **artık mevcut değil**. `package.json`'da `@angular/ssr`/`express` bağımlılıkları
-> ve `serve:ssr:CoreLogicUI` script'i temizlenmemiş kalıntı olarak duruyor (script artık
-> sadece `echo 'SSR kaldirildi — artik kullanilmiyor'` çalıştırıyor). Koddaki
+> dosyaları **artık mevcut değil**; `@angular/ssr`, `@angular/platform-server`, `express`,
+> `@types/express` bağımlılıkları ve `serve:ssr:CoreLogicUI` script'i de kaldırıldı. Koddaki
 > `isPlatformBrowser(platformId)` kontrolleri buna rağmen **kasıtlı olarak korunuyor** —
 > detay için `.claude/skills/angular-standalone-component/SKILL.md`.
 
@@ -916,11 +915,9 @@ npm start          # dev server → http://localhost:4200
 ```bash
 npm run build                   # Üretim build → dist/core-logic-ui/
 npm run watch                   # İzleme modunda dev build
-npm test                        # Karma/Jasmine testleri
+npm test                        # Karma/Jasmine testleri (izleme modu, Chrome)
+npm run test:ci                 # Tek koşu, ChromeHeadless — commit öncesi doğrulama bununla
 ```
-
-> `npm run serve:ssr:CoreLogicUI` script'i hâlâ `package.json`'da var ama artık sadece
-> "SSR kaldirildi — artik kullanilmiyor" yazdırıp çıkıyor — gerçek bir SSR sunucusu çalıştırmaz.
 
 ### Dağıtım (Ubuntu sunucu)
 
@@ -995,26 +992,23 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
 
 ## Bilinen Eksikler ve TODO'lar
 
+
 1. **Yedekler aynı diskte** — sunucu kurulumunda yedekler `corelogic_mssql-backup` volume'ünde, yani veriyle aynı diskte duruyor; dışarı kopyalama elle yapılıyor (bkz. backend `deploy/README.md` → Yedekler)
 2. **Unit test kapsamı düşük** — kapsam `i18n/translations.spec.ts`, `shared/entity-graph/entity-graph.layout.spec.ts`, `utils/cron-builder.spec.ts` ve `utils/ai-import.mapper.spec.ts` ile genişletildi, ancak servis/component'lerin büyük kısmı hâlâ test edilmiyor
-3. **SSR bağımlılık kalıntısı** — `package.json`'da `@angular/ssr`/`express`/`@types/express` hâlâ duruyor; SSR fiilen kaldırıldığı için temizlenebilir ama `isPlatformBrowser` guard'ları kasıtlı korunuyor (bkz. `angular-standalone-component` skill)
-4. **Kalan native `confirm()` çağrısı** — `draft-models` içinde 1 çağrı hâlâ native; `ConfirmDialogComponent`'e taşınmalı
-5. **Backend controller boilerplate** — `WebAPI.Infrastructure.ApiControllerBase.Respond()` eklendi ve `ProfileController` + `PublishedModelController` + `ParameterController` bunu kullanıyor; kalan controller'lar hâlâ `result.Success ? Ok(result) : BadRequest(result)` satırını elle tekrarlıyor
-6. **Ödeme sağlayıcısı stub** — `StubPaymentGateway` her tahsilata başarı dönüyor ve `Plan`'da fiyat/para birimi kolonu yok. Stripe için: `Plan`'a parasal alanlar + `IPaymentGateway`'in gerçek implementasyonu (abonelik akışı değişmez)
-7. **Yedek geri yükleme yok** — yedek alma ve `RESTORE VERIFYONLY` doğrulaması var, ancak yedekten geri dönme ve yedek indirme ucu yok (platform tarafında da yoktu)
-8. **Yedekleme senkron** — `BackupManager` yedeği HTTP isteği içinde alıyor; "Şimdi Yedek Al" büyük veritabanlarında isteği uzun süre bloklar (zamanlanmış yol kuyruktan geçtiği için etkilenmez)
-9. **AI kotası tek istekte aşılabilir** — ön kontrol istek başında çalışır, akış ortasında sert kesme yok. `AiQuotaManager.Reserve` (20.000 token) aşımı sınırlar ama sıfırlamaz
-10. **AI maliyet hesabı girdi/çıktı ayırmıyor** — `CostAnalyticsManager.cs` `ai_tokens_per_month` için tek birim fiyat (`0.000002`) kullanıyor; Sonnet 5 çıktısı girdisinden 5 kat pahalı olduğu için maliyet eksik hesaplanıyor
-11. **AI mevcut kolonu değiştiremez** — platformda `updateMember` yolu yok (`onSaveEdit` diff'i yalnız kolon ADI üzerinden çalışır). Sistem promptu bunu açıkça yasaklıyor; kolon tipi değişimi için yeni kolon + veri taşıma gerekiyor
-12. **`ai_tokens_per_month` anahtarı üç yerde tekrarlanıyor** — backend `FeatureKeys`, UI `FEATURE_KEY_ORDER`, konsol `FEATURE_KEYS`. Yeni bir plan özelliği eklenirse üçü birden güncellenmeli
-13. **PlatformConfig sürümleme yok** — `PUT /api/platform/v1/config/{key}` eklendi (beyaz liste + sunucu tarafı `IsSecret` + maske koruması + audit), ancak değer geçmişi/geri alma tutulmuyor; audit yalnızca "kim ne zaman hangi anahtarı değiştirdi" diyor, eski değeri saklamıyor (bilinçli — sır sızdırmamak için)
-14. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez. Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir
-15. **Akış tasarımcısında mini harita ve hizala/dağıt yok** — v2 planının Faz 11'inde opsiyoneldi, yapılmadı
-16. **Kayıt tetiği güncel değere bakar** — outbox satırı işlenirken tetik koşulu kaydın O ANKİ değerine
+3. **Ödeme sağlayıcısı stub** — `StubPaymentGateway` her tahsilata başarı dönüyor ve `Plan`'da fiyat/para birimi kolonu yok. Stripe için: `Plan`'a parasal alanlar + `IPaymentGateway`'in gerçek implementasyonu (abonelik akışı değişmez)
+4. **Yedek geri yükleme yok** — yedek alma ve `RESTORE VERIFYONLY` doğrulaması var, ancak yedekten geri dönme ve yedek indirme ucu yok (platform tarafında da yoktu)
+5. **Yedekleme senkron** — `BackupManager` yedeği HTTP isteği içinde alıyor; "Şimdi Yedek Al" büyük veritabanlarında isteği uzun süre bloklar (zamanlanmış yol kuyruktan geçtiği için etkilenmez)
+6. **AI kotası tek istekte aşılabilir** — ön kontrol istek başında çalışır, akış ortasında sert kesme yok. `AiQuotaManager.Reserve` (20.000 token) aşımı sınırlar ama sıfırlamaz
+7. **AI maliyet hesabı girdi/çıktı ayırmıyor** — `CostAnalyticsManager.cs` `ai_tokens_per_month` için tek birim fiyat (`0.000002`) kullanıyor; Sonnet 5 çıktısı girdisinden 5 kat pahalı olduğu için maliyet eksik hesaplanıyor
+8. **AI mevcut kolonu değiştiremez** — platformda `updateMember` yolu yok (`onSaveEdit` diff'i yalnız kolon ADI üzerinden çalışır). Sistem promptu bunu açıkça yasaklıyor; kolon tipi değişimi için yeni kolon + veri taşıma gerekiyor
+9. **`ai_tokens_per_month` anahtarı üç yerde tekrarlanıyor** — backend `FeatureKeys`, UI `FEATURE_KEY_ORDER`, konsol `FEATURE_KEYS`. Yeni bir plan özelliği eklenirse üçü birden güncellenmeli
+10. **PlatformConfig sürümleme yok** — `PUT /api/platform/v1/config/{key}` eklendi (beyaz liste + sunucu tarafı `IsSecret` + maske koruması + audit), ancak değer geçmişi/geri alma tutulmuyor; audit yalnızca "kim ne zaman hangi anahtarı değiştirdi" diyor, eski değeri saklamıyor (bilinçli — sır sızdırmamak için)
+11. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez. Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir
+12. **Akış tasarımcısında mini harita ve hizala/dağıt yok** — v2 planının Faz 11'inde opsiyoneldi, yapılmadı
+13. **Kayıt tetiği güncel değere bakar** — outbox satırı işlenirken tetik koşulu kaydın O ANKİ değerine
     karşı değerlendirilir (yazıldığı anki değil). Bir akış kaydı değiştirdikten sonra işlenen `onCreate`
     satırı, değişmiş değerle ikinci bir akışı başlatabilir (uçtan uca testte görüldü)
-17. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
-18. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
-19. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
-20. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor
-
+14. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
+15. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
+16. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
+17. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor

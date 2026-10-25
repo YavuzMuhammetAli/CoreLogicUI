@@ -55,6 +55,7 @@ export const ADMIN_I18N: Translations = {
     tr: "'{name}'{childrenSuffix} pasif yapmak istediğinize emin misiniz?\n\nYanlışlıkla sildiyseniz \"Silinen Taslaklar\" sayfasından geri yükleyebilirsiniz.",
     en: "Are you sure you want to deactivate '{name}'{childrenSuffix}?\n\nIf you deleted it by mistake, you can restore it from the \"Deleted Drafts\" page."
   },
+  'draft.deactivateConfirmTitle': { tr: 'Taslağı pasif yap', en: 'Deactivate draft' },
   'draft.andSubModels': { tr: ' ve alt modellerini', en: ' and its sub-models' },
   'draft.deactivateFailed': { tr: 'Taslak pasif yapılamadı.', en: 'Draft could not be deactivated.' },
 

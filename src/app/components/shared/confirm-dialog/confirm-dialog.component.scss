@@ -22,6 +22,11 @@
   box-shadow: var(--elev-high);
 }
 
+/* Mesajdaki "\n\n" paragraf aralığı olarak korunur (taslak pasifleme metni bunu kullanır) */
+.dialog-message {
+  white-space: pre-line;
+}
+
 .usage-box {
   margin-top: var(--space-4);
   padding: var(--space-3) var(--space-4);
