@@ -252,7 +252,7 @@
       <div class="panel-head">
         <h2>{{ 'parameter.backup.historyTitle' | t }}</h2>
         <div class="panel-actions">
-          <button class="btn btn-secondary btn-sm" type="button" [disabled]="running()" (click)="requestRunNow()">
+          <button class="btn btn-secondary btn-sm" type="button" [disabled]="running() || hasActiveBackup()" (click)="requestRunNow()">
             @if (running()) {
               <span class="spinner" aria-hidden="true"></span>
             }
@@ -278,6 +278,7 @@
                 <th scope="col">{{ 'parameter.backup.colCompleted' | t }}</th>
                 <th scope="col">{{ 'parameter.backup.colSize' | t }}</th>
                 <th scope="col">{{ 'parameter.backup.colVerified' | t }}</th>
+                <th scope="col">{{ 'parameter.backup.colExpires' | t }}</th>
               </tr>
             </thead>
             <tbody>
@@ -293,11 +294,12 @@
                   <td>{{ formatInstant(item.completedAt) }}</td>
                   <td>{{ formatSize(item.sizeBytes) }}</td>
                   <td>{{ formatInstant(item.verifiedAt) }}</td>
+                  <td>{{ item.status === 'Completed' && !item.expiresAt ? ('parameter.backup.keepForever' | t) : formatInstant(item.expiresAt) }}</td>
                 </tr>
                 <!-- Hata nedeni eskiden yalnız satırın title'ındaydı — dokunmatikte okunamıyordu -->
                 @if (item.error) {
                   <tr class="backup-error-row">
-                    <td colspan="6"><span class="field-error">{{ item.error }}</span></td>
+                    <td colspan="7"><span class="field-error">{{ item.error }}</span></td>
                   </tr>
                 }
               }

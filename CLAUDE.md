@@ -508,6 +508,21 @@ master bağlantısı + SQL Server servis hesabı gerektirdiği için tenant DB's
 → `IBackupService.RequestBackup(Type=Scheduled)` + saklama süresi dolmuş yedekleri temizler.
 `SchedulerTick` **iş yapmaz**, yalnız tetikler: hata/yeniden deneme/park semantiği JobWorker'da tek yerde kalır.
 
+**"Şimdi Yedek Al" kuyruktan geçer** (`IBackupService.QueueBackup`): satır `Queued` yazılır, aynı
+`tenant.backup` işi `BackupId` ile kuyruğa atılır ve istek **hemen** yedeğin kimliğiyle döner; iş satırı
+sahiplenir (`TryClaim` — yeniden teslimde kopya koşu yok) ve `Running` → `Completed/Failed` ilerletir.
+Ekran geçmişi `Queued/Running` satır kaldıkça 3 sn'de bir yoklar. Kurallar: tenant başına tek aktif yedek
+(`TryInsertActive`, `UPDLOCK, HOLDLOCK`); JobWorker konsoldan durdurulmuşsa istek açık mesajla reddedilir;
+`Running` satır 30 sn'de bir canlılık damgası (`HeartbeatAt`) yazar, 10 dk damgasız kalan ya da 6 saat
+kuyrukta bekleyen satır liste açılırken `Failed`'a çekilir (süreç ortada öldü). Dosya adı
+`{Db}_{yyyyMMddHHmmssfff}_{id}.bak` — aynı saniyedeki iki yedek birbirini ezmez. Konsolun "Yedek al"ı da aynı yoldan.
+
+**Saklama:** `ExpiresAt = tamamlanma + gün` (istekte verilmezse zamanlamadaki gün, o da yoksa 30; 0 = süresiz)
+ve temizlik yalnız `ExpiresAt`'e bakar — elle, zamanlanmış, migrasyon/geri yükleme öncesi yedekler aynı
+ölçüte tabidir. **Şema sürümü:** her yedek `DatabaseVersion`'ı (master `Tenant.DatabaseVersion`) yazar;
+yedek sırasında sürüm değiştiyse boş kalır. Migrasyon **`master/030`** kolonları ekler ve eski yedeklerin
+sürümünü (migrasyon kalemlerinden) doldurur — geri yükleme buna dayanır.
+
 > `ScheduledTask` tablosu 2023'ten beri boştu — DAL'ı ve worker'ı yoktu, bu yüzden
 > `BackupType.Scheduled` hiç üretilmiyordu. Bu iş o boşluğu kapattı.
 > Cron çözümleme `Core/Utilities/Scheduling/CronSchedule.cs` (dış paket yok); saat dilimi
@@ -1037,14 +1052,13 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
 2. **Unit test kapsamı düşük** — kapsam `i18n/translations.spec.ts`, `shared/entity-graph/entity-graph.layout.spec.ts`, `utils/cron-builder.spec.ts` ve `utils/ai-import.mapper.spec.ts` ile genişletildi, ancak servis/component'lerin büyük kısmı hâlâ test edilmiyor
 3. **Ödeme sağlayıcısı stub** — `StubPaymentGateway` her tahsilata başarı dönüyor ve `Plan`'da fiyat/para birimi kolonu yok. Stripe için: `Plan`'a parasal alanlar + `IPaymentGateway`'in gerçek implementasyonu (abonelik akışı değişmez)
 4. **Yedek geri yükleme yok** — yedek alma ve `RESTORE VERIFYONLY` doğrulaması var, ancak yedekten geri dönme ve yedek indirme ucu yok (platform tarafında da yoktu)
-5. **Yedekleme senkron** — `BackupManager` yedeği HTTP isteği içinde alıyor; "Şimdi Yedek Al" büyük veritabanlarında isteği uzun süre bloklar (zamanlanmış yol kuyruktan geçtiği için etkilenmez)
-6. **PlatformConfig sürümleme yok** — `PUT /api/platform/v1/config/{key}` eklendi (beyaz liste + sunucu tarafı `IsSecret` + maske koruması + audit), ancak değer geçmişi/geri alma tutulmuyor; audit yalnızca "kim ne zaman hangi anahtarı değiştirdi" diyor, eski değeri saklamıyor (bilinçli — sır sızdırmamak için)
-7. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez. Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir. Aynı varsayım AI kotasının süren istek sayacında da var (`AiQuotaReservationRegistry`, bellek içi): birden çok backend örneğinde paralel istekler birbirini göremez, sayaç master'a taşınmalı
-8. **Akış tasarımcısında mini harita ve hizala/dağıt yok** — v2 planının Faz 11'inde opsiyoneldi, yapılmadı
-9. **Kayıt tetiği güncel değere bakar** — outbox satırı işlenirken tetik koşulu kaydın O ANKİ değerine
+5. **PlatformConfig sürümleme yok** — `PUT /api/platform/v1/config/{key}` eklendi (beyaz liste + sunucu tarafı `IsSecret` + maske koruması + audit), ancak değer geçmişi/geri alma tutulmuyor; audit yalnızca "kim ne zaman hangi anahtarı değiştirdi" diyor, eski değeri saklamıyor (bilinçli — sır sızdırmamak için)
+6. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez. Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir. Aynı varsayım AI kotasının süren istek sayacında da var (`AiQuotaReservationRegistry`, bellek içi): birden çok backend örneğinde paralel istekler birbirini göremez, sayaç master'a taşınmalı
+7. **Akış tasarımcısında mini harita ve hizala/dağıt yok** — v2 planının Faz 11'inde opsiyoneldi, yapılmadı
+8. **Kayıt tetiği güncel değere bakar** — outbox satırı işlenirken tetik koşulu kaydın O ANKİ değerine
     karşı değerlendirilir (yazıldığı anki değil). Bir akış kaydı değiştirdikten sonra işlenen `onCreate`
     satırı, değişmiş değerle ikinci bir akışı başlatabilir (uçtan uca testte görüldü)
-10. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
-11. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
-12. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
-13. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor
+9. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
+10. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
+11. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
+12. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor

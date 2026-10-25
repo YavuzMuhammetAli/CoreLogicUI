@@ -27,9 +27,9 @@ export interface BackupSchedule {
 /** GET /Parameter/backup/history satırı. */
 export interface BackupHistoryItem {
   id: number;
-  /** Manual | Scheduled | PreMigration | PrePurge */
+  /** Manual | Scheduled | PreMigration | PrePurge | PreRestore */
   type: string;
-  /** Running | Completed | Failed */
+  /** Queued | Running | Completed | Failed — "Şimdi Yedek Al" kuyruğa alır, iş ilerletir. */
   status: string;
   sizeBytes: number;
   startedAt: string;
@@ -37,6 +37,13 @@ export interface BackupHistoryItem {
   /** RESTORE VERIFYONLY başarı zamanı — geri yüklenebilirlik kanıtı. */
   verifiedAt?: string | null;
   error?: string | null;
+  /** Saklama sonu — bu tarihten sonra otomatik silinir; null = süresiz. */
+  expiresAt?: string | null;
+}
+
+/** Kuyrukta ya da sürmekte olan yedek — geçmiş bu durumdayken yoklanır. */
+export function isBackupActive(item: Pick<BackupHistoryItem, 'status'>): boolean {
+  return item.status === 'Queued' || item.status === 'Running';
 }
 
 // ── E-posta ────────────────────────────────────────────────────────────────

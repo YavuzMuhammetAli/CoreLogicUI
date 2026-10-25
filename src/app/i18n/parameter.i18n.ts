@@ -82,9 +82,13 @@ export const PARAMETER_I18N: Translations = {
   'parameter.backup.runNow': { tr: 'Şimdi Yedek Al', en: 'Back Up Now' },
   'parameter.backup.runNowConfirmTitle': { tr: 'Şimdi yedek alınsın mı?', en: 'Back up now?' },
   'parameter.backup.runNowConfirmMessage': {
-    tr: 'Veritabanınızın tam yedeği hemen alınacak. Büyük veritabanlarında bu işlem birkaç dakika sürebilir.',
-    en: 'A full backup of your database will be taken immediately. This can take a few minutes on large databases.'
+    tr: 'Veritabanınızın tam yedeği arka planda alınacak; ekranı kapatabilirsiniz. İlerleme yedek geçmişinde görünür.',
+    en: 'A full backup of your database will be taken in the background; you can leave this screen. Progress shows in the backup history.'
   },
+  'parameter.backup.colExpires': { tr: 'Saklama sonu', en: 'Kept until' },
+  'parameter.backup.keepForever': { tr: 'Süresiz', en: 'Indefinitely' },
+  'parameter.backup.status.Queued': { tr: 'Kuyrukta', en: 'Queued' },
+  'parameter.backup.type.PreRestore': { tr: 'Geri yükleme öncesi', en: 'Pre-restore' },
   'parameter.backup.historyEmpty': { tr: 'Henüz yedek alınmamış', en: 'No backups yet' },
   'parameter.backup.historyEmptyHint': {
     tr: 'Bir zamanlama kurun veya "Şimdi Yedek Al" ile ilk yedeğinizi oluşturun.',

@@ -49,11 +49,11 @@ export class ParameterService {
   }
 
   /**
-   * Zamanlamayı beklemeden hemen yedek alır. Yedekleme backend'de SENKRON
-   * koştuğu için büyük veritabanlarında istek uzun sürebilir.
+   * Yedeği kuyruğa alır ve hemen döner (yedeğin kimliği). Yedek arka planda alınır;
+   * ilerleme geçmişte Queued → Running → Completed olarak izlenir.
    */
-  runBackupNow(): Observable<ResponseModel> {
-    return this.http.post<ResponseModel>(`${this.baseUrl}/backup/run`, null);
+  runBackupNow(): Observable<DataResponseModel<number>> {
+    return this.http.post<DataResponseModel<number>>(`${this.baseUrl}/backup/run`, null);
   }
 
   // ── E-posta ──────────────────────────────────────────────────────────────

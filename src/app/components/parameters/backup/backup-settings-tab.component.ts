@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, Component, OnInit, computed, inject, signal
+  ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -7,7 +7,7 @@ import { ParameterService } from '../../../services/parameter.service';
 import { LanguageService } from '../../../services/language.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
-import { BackupHistoryItem, BackupSchedule } from '../../../models/parameter.model';
+import { BackupHistoryItem, BackupSchedule, isBackupActive } from '../../../models/parameter.model';
 import { formatDate, formatNumber } from '../../../utils/locale-format';
 import {
   CRON_FREQUENCIES,
@@ -22,6 +22,9 @@ import {
   nextOccurrences,
   parseCron
 } from '../../../utils/cron-builder';
+
+/** Kuyrukta/süren yedek varken geçmişin yoklanma aralığı. */
+const HISTORY_POLL_MS = 3000;
 
 /** Sıklık seçimine göre hangi alanların gösterileceği — şablon bunu okur. */
 interface FieldVisibility {
@@ -51,6 +54,11 @@ interface FieldVisibility {
 export class BackupSettingsTabComponent implements OnInit {
   private readonly parameterService = inject(ParameterService);
   private readonly languageService = inject(LanguageService);
+  private pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.stopPolling());
+  }
 
   readonly frequencies = CRON_FREQUENCIES;
   readonly hourIntervals = HOUR_INTERVALS;
@@ -75,6 +83,9 @@ export class BackupSettingsTabComponent implements OnInit {
   readonly history = signal<BackupHistoryItem[]>([]);
 
   readonly runConfirmOpen = signal(false);
+
+  /** Kuyrukta ya da sürmekte olan yedek var mı — varsa yeni yedek istenmez, geçmiş yoklanır. */
+  readonly hasActiveBackup = computed(() => this.history().some(isBackupActive));
 
   /** Seçime göre üretilen cron ifadesi — kaydedilen değer budur. */
   readonly cronExpression = computed(() => buildCron(this.spec()));
@@ -146,10 +157,33 @@ export class BackupSettingsTabComponent implements OnInit {
 
   private loadHistory(): void {
     this.parameterService.getBackupHistory().subscribe({
-      next: res => this.history.set(res.success ? (res.data ?? []) : []),
+      next: res => {
+        this.history.set(res.success ? (res.data ?? []) : []);
+        this.schedulePoll();
+      },
       // Geçmiş yüklenemezse zamanlama formu yine kullanılabilir kalmalı.
       error: () => this.history.set([])
     });
+  }
+
+  /**
+   * Yedek artık arka planda alındığından ekran sonucu kendisi izler: kuyrukta/süren satır
+   * kaldıkça geçmiş birkaç saniyede bir yeniden okunur, hepsi bitince durur.
+   */
+  private schedulePoll(): void {
+    this.stopPolling();
+    if (!this.hasActiveBackup()) return;
+    this.pollTimer = setTimeout(() => {
+      this.pollTimer = null;
+      this.loadHistory();
+    }, HISTORY_POLL_MS);
+  }
+
+  private stopPolling(): void {
+    if (this.pollTimer !== null) {
+      clearTimeout(this.pollTimer);
+      this.pollTimer = null;
+    }
   }
 
   onFrequencyChange(frequency: CronFrequency): void {
@@ -294,7 +328,8 @@ export class BackupSettingsTabComponent implements OnInit {
     switch (status) {
       case 'Completed': return 'badge-success';
       case 'Failed': return 'badge-danger';
-      case 'Running': return 'badge-warn';
+      case 'Running':
+      case 'Queued': return 'badge-warn';
       default: return 'badge-meta';
     }
   }
