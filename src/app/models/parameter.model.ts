@@ -123,11 +123,18 @@ export interface NotificationTemplateTestRequest extends NotificationTemplateCon
 
 // ── Abonelik ───────────────────────────────────────────────────────────────
 
-/** Plan özelliği/limiti. `limitValue` null ise bool özellik (varlığı = açık). */
+/**
+ * Plan özelliği/limiti. `limitValue` null ise bool özellik (varlığı = açık).
+ * Etiket ve birim adı sunucuda, isteğin dilinde backend `MetricCatalog`'dan gelir; liste de
+ * katalog sırasıyla döner — arayüz anahtar listesi ya da etiket tablosu tutmaz.
+ */
 export interface TenantPlanFeature {
   featureKey: string;
   limitValue?: string | null;
   unit?: string | null;
+  label: string;
+  unitLabel?: string | null;
+  kind: 'flag' | 'quota' | 'metric';
 }
 
 /** GET /Parameter/subscription/plans satırı. */
@@ -159,17 +166,3 @@ export interface PurchasePlanRequest {
   planId: number;
   seats: number;
 }
-
-/**
- * Backend'in bildiği özellik anahtarları (Entities.Concrete.Master.FeatureKeys).
- * Sıra, plan kartındaki özellik listesinin gösterim sırasını belirler.
- */
-export const FEATURE_KEY_ORDER: readonly string[] = [
-  'max_users',
-  'max_models',
-  'max_storage_gb',
-  'api_requests_per_day',
-  'ai_tokens_per_month',
-  'feature_reports',
-  'feature_api_access'
-];

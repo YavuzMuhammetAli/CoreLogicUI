@@ -330,13 +330,6 @@ export const PARAMETER_I18N: Translations = {
     en: 'The plan could not be purchased.'
   },
 
-  // Plan özelliği anahtarları — backend FeatureKeys ile birebir.
-  'parameter.feature.max_users': { tr: 'Kullanıcı', en: 'Users' },
-  'parameter.feature.max_models': { tr: 'Model', en: 'Models' },
-  'parameter.feature.max_storage_gb': { tr: 'Depolama', en: 'Storage' },
-  'parameter.feature.api_requests_per_day': { tr: 'Günlük API isteği', en: 'API requests per day' },
-  'parameter.feature.ai_tokens_per_month': { tr: 'Aylık AI token', en: 'AI tokens per month' },
-  'parameter.feature.feature_reports': { tr: 'Raporlama', en: 'Reporting' },
-  'parameter.feature.feature_api_access': { tr: 'API erişimi', en: 'API access' },
-  'parameter.feature.included': { tr: 'Dahil', en: 'Included' }
+  // Özellik adları burada TUTULMAZ — sunucu, isteğin dilinde backend MetricCatalog'dan gönderir.
+  'parameter.subscription.featureIncluded': { tr: 'Dahil', en: 'Included' }
 };

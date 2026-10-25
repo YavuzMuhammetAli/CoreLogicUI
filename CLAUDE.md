@@ -526,7 +526,9 @@ maskelenir; **maskeli değer geri POST edilirse mevcut parola korunur** (yanlı�
 ### Abonelik
 
 Planlar master'daki `Plan`/`PlanFeature`'dan okunur (yalnız `IsPublic` + `Active`), mevcut
-abonelik `isCurrent` ile işaretlenir. Satın alma önce `IPaymentGateway.Charge`, sonra
+abonelik `isCurrent` ile işaretlenir. Özellikler backend `MetricCatalog` sırasıyla, sunucuda isteğin
+dilinde üretilmiş `label`/`unitLabel` ile gelir — UI özellik anahtarı listesi ya da etiket çevirisi
+**tutmaz** (önceki `FEATURE_KEY_ORDER` iki iş akışı anahtarını bilmiyordu); sekme TR/EN değişince planları yeniden ister. Satın alma önce `IPaymentGateway.Charge`, sonra
 `ISubscriptionService.ChangePlan` çağırır — tahsilat başarısızsa abonelik **hiç değişmez**.
 
 `StubPaymentGateway` şimdilik her tahsilata başarı döner; Stripe entegrasyonu tek bir Autofac
@@ -1001,14 +1003,13 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
 6. **AI kotası tek istekte aşılabilir** — ön kontrol istek başında çalışır, akış ortasında sert kesme yok. `AiQuotaManager.Reserve` (20.000 token) aşımı sınırlar ama sıfırlamaz
 7. **AI maliyet hesabı girdi/çıktı ayırmıyor** — `CostAnalyticsManager.cs` `ai_tokens_per_month` için tek birim fiyat (`0.000002`) kullanıyor; Sonnet 5 çıktısı girdisinden 5 kat pahalı olduğu için maliyet eksik hesaplanıyor
 8. **AI mevcut kolonu değiştiremez** — platformda `updateMember` yolu yok (`onSaveEdit` diff'i yalnız kolon ADI üzerinden çalışır). Sistem promptu bunu açıkça yasaklıyor; kolon tipi değişimi için yeni kolon + veri taşıma gerekiyor
-9. **`ai_tokens_per_month` anahtarı üç yerde tekrarlanıyor** — backend `FeatureKeys`, UI `FEATURE_KEY_ORDER`, konsol `FEATURE_KEYS`. Yeni bir plan özelliği eklenirse üçü birden güncellenmeli
-10. **PlatformConfig sürümleme yok** — `PUT /api/platform/v1/config/{key}` eklendi (beyaz liste + sunucu tarafı `IsSecret` + maske koruması + audit), ancak değer geçmişi/geri alma tutulmuyor; audit yalnızca "kim ne zaman hangi anahtarı değiştirdi" diyor, eski değeri saklamıyor (bilinçli — sır sızdırmamak için)
-11. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez. Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir
-12. **Akış tasarımcısında mini harita ve hizala/dağıt yok** — v2 planının Faz 11'inde opsiyoneldi, yapılmadı
-13. **Kayıt tetiği güncel değere bakar** — outbox satırı işlenirken tetik koşulu kaydın O ANKİ değerine
+9. **PlatformConfig sürümleme yok** — `PUT /api/platform/v1/config/{key}` eklendi (beyaz liste + sunucu tarafı `IsSecret` + maske koruması + audit), ancak değer geçmişi/geri alma tutulmuyor; audit yalnızca "kim ne zaman hangi anahtarı değiştirdi" diyor, eski değeri saklamıyor (bilinçli — sır sızdırmamak için)
+10. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez. Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir
+11. **Akış tasarımcısında mini harita ve hizala/dağıt yok** — v2 planının Faz 11'inde opsiyoneldi, yapılmadı
+12. **Kayıt tetiği güncel değere bakar** — outbox satırı işlenirken tetik koşulu kaydın O ANKİ değerine
     karşı değerlendirilir (yazıldığı anki değil). Bir akış kaydı değiştirdikten sonra işlenen `onCreate`
     satırı, değişmiş değerle ikinci bir akışı başlatabilir (uçtan uca testte görüldü)
-14. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
-15. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
-16. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
-17. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor
+13. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
+14. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
+15. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
+16. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor

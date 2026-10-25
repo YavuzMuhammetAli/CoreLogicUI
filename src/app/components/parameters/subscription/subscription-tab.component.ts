@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, Component, OnInit, computed, inject, signal
+  ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, signal, untracked
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -7,9 +7,7 @@ import { ParameterService } from '../../../services/parameter.service';
 import { LanguageService } from '../../../services/language.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
-import {
-  FEATURE_KEY_ORDER, TenantPlan, TenantPlanFeature, TenantSubscription
-} from '../../../models/parameter.model';
+import { TenantPlan, TenantPlanFeature, TenantSubscription } from '../../../models/parameter.model';
 import { formatDate, formatNumber } from '../../../utils/locale-format';
 
 /**
@@ -52,25 +50,25 @@ export class SubscriptionTabComponent implements OnInit {
       : '';
   });
 
+  constructor() {
+    // Özellik adları sunucuda isteğin dilinde üretilir: dil değişince planlar yeniden istenir.
+    let firstRun = true;
+    effect(() => {
+      this.languageService.lang();
+      if (firstRun) {
+        firstRun = false;
+        return;
+      }
+      untracked(() => this.loadPlans());
+    }, { allowSignalWrites: true });
+  }
+
   ngOnInit(): void {
     this.load();
   }
 
   load(): void {
-    this.loading.set(true);
-    this.loadError.set('');
-
-    this.parameterService.getPlans().subscribe({
-      next: res => {
-        this.plans.set(res.success ? (res.data ?? []) : []);
-        if (!res.success) this.loadError.set(res.message);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.loadError.set(this.languageService.t('parameter.subscription.loadFailed'));
-        this.loading.set(false);
-      }
-    });
+    this.loadPlans();
 
     // Aboneliği olmayan tenant hata değil, "henüz plan seçilmedi" durumudur —
     // bu yüzden başarısız yanıt loadError'a yazılmaz.
@@ -84,6 +82,23 @@ export class SubscriptionTabComponent implements OnInit {
         }
       },
       error: () => this.subscription.set(null)
+    });
+  }
+
+  private loadPlans(): void {
+    this.loading.set(true);
+    this.loadError.set('');
+
+    this.parameterService.getPlans().subscribe({
+      next: res => {
+        this.plans.set(res.success ? (res.data ?? []) : []);
+        if (!res.success) this.loadError.set(res.message);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.loadError.set(this.languageService.t('parameter.subscription.loadFailed'));
+        this.loading.set(false);
+      }
     });
   }
 
@@ -123,26 +138,15 @@ export class SubscriptionTabComponent implements OnInit {
 
   // ── Görüntüleme yardımcıları ──────────────────────────────────────────────
 
-  /** Özellikleri backend'deki katalog sırasına göre dizer; bilinmeyenler sona. */
-  orderedFeatures(plan: TenantPlan): TenantPlanFeature[] {
-    return [...plan.features].sort((a, b) => {
-      const ai = FEATURE_KEY_ORDER.indexOf(a.featureKey);
-      const bi = FEATURE_KEY_ORDER.indexOf(b.featureKey);
-      return (ai < 0 ? Number.MAX_SAFE_INTEGER : ai) - (bi < 0 ? Number.MAX_SAFE_INTEGER : bi);
-    });
-  }
-
-  /** Bilinmeyen özellik anahtarı ham hâliyle gösterilir (anahtar uydurma yok). */
-  featureLabel(featureKey: string): string {
-    const key = `parameter.feature.${featureKey}`;
-    const label = this.languageService.t(key);
-    return label === key ? featureKey : label;
+  /** Sunucu etiket göndermediyse (eski backend) ham anahtar gösterilir — anahtar uydurma yok. */
+  featureLabel(feature: TenantPlanFeature): string {
+    return feature.label || feature.featureKey;
   }
 
   /** Sayısal kota yoksa özellik bool'dur: varlığı "Dahil" demektir. */
   featureValue(feature: TenantPlanFeature): string {
     if (feature.limitValue === null || feature.limitValue === undefined || feature.limitValue === '') {
-      return this.languageService.t('parameter.feature.included');
+      return this.languageService.t('parameter.subscription.featureIncluded');
     }
 
     const numeric = Number(feature.limitValue);
@@ -150,7 +154,8 @@ export class SubscriptionTabComponent implements OnInit {
       ? formatNumber(numeric, this.languageService.lang())
       : feature.limitValue;
 
-    return feature.unit ? `${text} ${feature.unit}` : text;
+    const unit = feature.unitLabel || feature.unit;
+    return unit ? `${text} ${unit}` : text;
   }
 
   statusLabel(status: string): string {

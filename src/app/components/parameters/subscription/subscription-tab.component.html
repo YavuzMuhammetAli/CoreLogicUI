@@ -112,9 +112,9 @@
                 }
 
                 <ul class="plan-features">
-                  @for (feature of orderedFeatures(plan); track feature.featureKey) {
+                  @for (feature of plan.features; track feature.featureKey) {
                     <li class="plan-feature">
-                      <span>{{ featureLabel(feature.featureKey) }}</span>
+                      <span>{{ featureLabel(feature) }}</span>
                       <span class="plan-feature-value">{{ featureValue(feature) }}</span>
                     </li>
                   }
