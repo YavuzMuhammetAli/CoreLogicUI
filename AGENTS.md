@@ -29,7 +29,7 @@ Users can:
 | **Formlar** | Angular Reactive Forms |
 | **HTTP** | `HttpClient` (`withFetch()` + interceptor'lar) |
 | **State** | Signal (`signal`/`computed`/`effect`) — component-local state ve guard senkronizasyonu için; RxJS hâlâ HTTP servislerinde kullanılır |
-| **Test** | Karma + Jasmine (çok az sayıda `*.spec.ts` var, kapsam düşük) |
+| **Test** | Karma + Jasmine — saf çekirdekler (`utils/`), interceptor/guard'lar, temel servisler ve tasarımcılar spec'li; component kapsamı seçici. Commit öncesi `npm run test:ci` |
 | **Build** | Angular CLI 18 / `@angular-devkit/build-angular` |
 
 > **Bootstrap notu:** `bootstrap` paketi `package.json`'da production bağımlılığı değildir;
@@ -311,4 +311,4 @@ Sonra `src/app/app.routes.ts`'e route ekle. Component yapısı/signal/guard konv
 
 ## Bilinen Eksikler ve TODO'lar
 
-1. **Unit test kapsamı düşük** — sadece 3 `*.spec.ts` dosyası var; servis/component'lerin büyük kısmı test edilmiyor
+Güncel liste `CLAUDE.md` → "Bilinen Eksikler ve TODO'lar" bölümündedir; burada kopyası tutulmaz (eskiyordu).

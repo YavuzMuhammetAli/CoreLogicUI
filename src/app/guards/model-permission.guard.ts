@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { PermissionService } from '../services/permission.service';
 import { NotificationService } from '../services/notification.service';
+import { LanguageService } from '../services/language.service';
 
 /**
  * Model rotaları için per-model izin guard'ı fabrikası.
@@ -22,6 +23,7 @@ export function modelPermissionGuard(action: 'read' | 'create' | 'update' | 'del
     const permissions = inject(PermissionService);
     const notify      = inject(NotificationService);
     const router      = inject(Router);
+    const language    = inject(LanguageService);
 
     const typeName = route.paramMap.get('typeName') ?? '';
 
@@ -31,15 +33,13 @@ export function modelPermissionGuard(action: 'read' | 'create' | 'update' | 'del
           return true;
         }
 
-        const actionLabel: Record<string, string> = {
-          read:   'okuma',
-          create: 'kayıt ekleme',
-          update: 'güncelleme',
-          delete: 'silme',
-        };
+        // Uyarı aktif dilde (önceden sabit Türkçe metindi).
         const label = typeName
-          ? `'${typeName}' modeli için ${actionLabel[action] ?? action} yetkiniz yok.`
-          : 'Bu modele erişim yetkiniz yok.';
+          ? language.t('permission.guard.denied', {
+              model: typeName,
+              action: language.t(`permission.guard.action.${action}`)
+            })
+          : language.t('permission.guard.deniedGeneric');
 
         notify.warn(label);
         return router.createUrlTree(['/models']);

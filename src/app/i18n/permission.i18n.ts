@@ -197,5 +197,12 @@ export const PERMISSION_I18N: Translations = {
   'permission.detail.adminUpdateError': { tr: 'Admin rolü güncellenemedi.', en: 'Failed to update admin role.' },
   'permission.detail.permissionsLoadError': { tr: 'İzin bilgileri yüklenemedi.', en: 'Failed to load permission information.' },
   'permission.detail.permissionsSaved': { tr: 'Model izinleri kaydedildi.', en: 'Model permissions saved.' },
-  'permission.detail.permissionsSaveError': { tr: '{modelName} izinleri kaydedilemedi.', en: 'Failed to save permissions for {modelName}.' }
+  'permission.detail.permissionsSaveError': { tr: '{modelName} izinleri kaydedilemedi.', en: 'Failed to save permissions for {modelName}.' },
+  // Model izin guard'ı (guards/model-permission.guard.ts) — erişim reddedilince uyarı.
+  'permission.guard.denied': { tr: "'{model}' modeli için {action} yetkiniz yok.", en: "You do not have {action} permission for the '{model}' model." },
+  'permission.guard.deniedGeneric': { tr: 'Bu modele erişim yetkiniz yok.', en: 'You do not have access to this model.' },
+  'permission.guard.action.read': { tr: 'okuma', en: 'read' },
+  'permission.guard.action.create': { tr: 'kayıt ekleme', en: 'create' },
+  'permission.guard.action.update': { tr: 'güncelleme', en: 'update' },
+  'permission.guard.action.delete': { tr: 'silme', en: 'delete' }
 };

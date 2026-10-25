@@ -37,7 +37,7 @@ Users can:
 | **Formlar** | Angular Reactive Forms |
 | **HTTP** | `HttpClient` (`withFetch()` + interceptor'lar) |
 | **State** | Signal (`signal`/`computed`/`effect`) — component-local state ve guard senkronizasyonu için; RxJS hâlâ HTTP servislerinde kullanılır |
-| **Test** | Karma + Jasmine (çok az sayıda `*.spec.ts` var, kapsam düşük) |
+| **Test** | Karma + Jasmine — saf çekirdekler (`utils/`), interceptor/guard'lar, temel servisler ve tasarımcılar spec'li; component kapsamı seçici. Commit öncesi `npm run test:ci` |
 | **Build** | Angular CLI 18 / `@angular-devkit/build-angular` |
 
 > **Bootstrap notu:** Bootstrap projede **hiç kullanılmıyor** — ne `package.json`'da
@@ -1067,15 +1067,14 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
 
 
 1. **Yedekler aynı diskte** — sunucu kurulumunda yedekler `corelogic_mssql-backup` volume'ünde, yani veriyle aynı diskte duruyor; dışarı kopyalama elle yapılıyor (bkz. backend `deploy/README.md` → Yedekler)
-2. **Unit test kapsamı düşük** — kapsam `i18n/translations.spec.ts`, `shared/entity-graph/entity-graph.layout.spec.ts`, `utils/cron-builder.spec.ts` ve `utils/ai-import.mapper.spec.ts` ile genişletildi, ancak servis/component'lerin büyük kısmı hâlâ test edilmiyor
-3. **Ödeme sağlayıcısı stub** — `StubPaymentGateway` her tahsilata başarı dönüyor ve `Plan`'da fiyat/para birimi kolonu yok. Stripe için: `Plan`'a parasal alanlar + `IPaymentGateway`'in gerçek implementasyonu (abonelik akışı değişmez)
-4. **PlatformConfig sürümleme yok** — `PUT /api/platform/v1/config/{key}` eklendi (beyaz liste + sunucu tarafı `IsSecret` + maske koruması + audit), ancak değer geçmişi/geri alma tutulmuyor; audit yalnızca "kim ne zaman hangi anahtarı değiştirdi" diyor, eski değeri saklamıyor (bilinçli — sır sızdırmamak için)
-5. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez. Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir. Aynı varsayım AI kotasının süren istek sayacında (`AiQuotaReservationRegistry`) ve geri yüklemenin bakım kapısında (`TenantMaintenanceGate`) da var — ikisi de bellek içi: birden çok backend örneğinde birbirlerini göremez, master'a taşınmalı
-6. **Akış tasarımcısında mini harita ve hizala/dağıt yok** — v2 planının Faz 11'inde opsiyoneldi, yapılmadı
-7. **Kayıt tetiği güncel değere bakar** — outbox satırı işlenirken tetik koşulu kaydın O ANKİ değerine
+2. **Ödeme sağlayıcısı stub** — `StubPaymentGateway` her tahsilata başarı dönüyor ve `Plan`'da fiyat/para birimi kolonu yok. Stripe için: `Plan`'a parasal alanlar + `IPaymentGateway`'in gerçek implementasyonu (abonelik akışı değişmez)
+3. **PlatformConfig sürümleme yok** — `PUT /api/platform/v1/config/{key}` eklendi (beyaz liste + sunucu tarafı `IsSecret` + maske koruması + audit), ancak değer geçmişi/geri alma tutulmuyor; audit yalnızca "kim ne zaman hangi anahtarı değiştirdi" diyor, eski değeri saklamıyor (bilinçli — sır sızdırmamak için)
+4. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez. Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir. Aynı varsayım AI kotasının süren istek sayacında (`AiQuotaReservationRegistry`) ve geri yüklemenin bakım kapısında (`TenantMaintenanceGate`) da var — ikisi de bellek içi: birden çok backend örneğinde birbirlerini göremez, master'a taşınmalı
+5. **Akış tasarımcısında mini harita ve hizala/dağıt yok** — v2 planının Faz 11'inde opsiyoneldi, yapılmadı
+6. **Kayıt tetiği güncel değere bakar** — outbox satırı işlenirken tetik koşulu kaydın O ANKİ değerine
     karşı değerlendirilir (yazıldığı anki değil). Bir akış kaydı değiştirdikten sonra işlenen `onCreate`
     satırı, değişmiş değerle ikinci bir akışı başlatabilir (uçtan uca testte görüldü)
-8. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
-9. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
-10. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
-11. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor
+7. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
+8. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
+9. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
+10. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor
