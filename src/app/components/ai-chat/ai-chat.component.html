@@ -22,6 +22,8 @@
 
 @if (notEntitled()) {
   <div class="alert alert-warn" role="alert">{{ 'ai.notEntitled' | t }}</div>
+} @else if (quotaExhausted()) {
+  <div class="alert alert-warn" role="alert">{{ 'ai.quotaExhausted' | t }}</div>
 }
 @if (loadError()) {
   <div class="alert alert-danger" role="alert">{{ loadError() }}</div>

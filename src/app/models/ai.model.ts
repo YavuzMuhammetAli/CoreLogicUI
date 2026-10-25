@@ -141,6 +141,15 @@ export interface AiUsage {
   remaining: number;
   periodStart: string;
   periodEnd: string;
+  /**
+   * Yeni istek şu an başlatılabilir mi — sunucunun ön kontrolüyle AYNI kural (kalan pay,
+   * süren isteklerin tuttuğu düşülerek, `minimumToStart`'tan az değil). Arayüz kendi eşiğini
+   * hesaplamaz: önceden "kalan ≤ 0" diyordu, sunucu 20.000'in altında reddediyordu.
+   */
+  canStart: boolean;
+  minimumToStart: number;
+  /** Bu şirketin süren isteklerinin tuttuğu pay (henüz tüketime yazılmadı). */
+  inFlight: number;
 }
 
 // ── Akış olayları ──────────────────────────────────────────────────────────
@@ -156,5 +165,7 @@ export type AiStreamEvent =
   | { type: 'usage'; inputTokens: number; outputTokens: number }
   /** Güvenlik denetimi isteği reddetti. */
   | { type: 'refusal' }
+  /** Kota yanıt sırasında bitti; yanıt yarıda kesildi (mesaj sunucuda, istek dilinde). */
+  | { type: 'quota'; message: string }
   | { type: 'error'; message: string }
   | { type: 'done' };

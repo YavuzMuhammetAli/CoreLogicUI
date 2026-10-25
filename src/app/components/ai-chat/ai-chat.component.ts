@@ -112,7 +112,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
   );
 
   readonly canSend = computed(
-    () => this.draft().trim().length > 0 && !this.isStreaming() && !this.busy()
+    () => this.draft().trim().length > 0 && !this.isStreaming() && !this.busy() && !this.quotaExhausted()
   );
 
   /** Kota şeridi: "240.000 / 1.000.000". Plan AI içermiyorsa null. */
@@ -123,9 +123,10 @@ export class AiChatComponent implements OnInit, OnDestroy {
     return `${formatNumber(usage.used, lang)} / ${formatNumber(usage.limit, lang)}`;
   });
 
+  /** Sunucunun başlatma kuralı (`canStart`) — arayüz kendi eşiğini hesaplamaz. */
   readonly quotaExhausted = computed(() => {
     const usage = this.usage();
-    return !!usage && usage.entitled && usage.remaining <= 0;
+    return !!usage && usage.entitled && !usage.canStart;
   });
 
   readonly notEntitled = computed(() => {
@@ -276,6 +277,9 @@ export class AiChatComponent implements OnInit, OnDestroy {
         break;
       case 'error':
         this.actionError.set(event.message || this.languageService.t('ai.streamFailed'));
+        break;
+      case 'quota':
+        this.actionError.set(event.message || this.languageService.t('ai.quotaExhaustedMidStream'));
         break;
       // 'tool' ve 'usage' akış sonundaki yeniden yüklemeyle zaten yansır.
     }

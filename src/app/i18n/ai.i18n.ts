@@ -9,6 +9,14 @@ export const AI_I18N: Translations = {
   'ai.quota': { tr: 'Token', en: 'Tokens' },
   'ai.quotaAria': { tr: 'Aylık token kullanımı', en: 'Monthly token usage' },
   'ai.newChat': { tr: 'Yeni Sohbet', en: 'New Chat' },
+  'ai.quotaExhaustedMidStream': {
+    tr: 'Yapay Zeka kotanız bu yanıt sırasında doldu; yanıt yarıda kesildi. Kota ayın başında yenilenir.',
+    en: 'Your AI quota ran out during this response, so it was cut short. It resets at the start of the month.'
+  },
+  'ai.quotaExhausted': {
+    tr: 'Bu ayki Yapay Zeka kotanız yeni bir istek için yetersiz. Kota ayın başında yenilenir.',
+    en: 'Your AI quota for this month is not enough for a new request. It resets at the start of the month.'
+  },
   'ai.notEntitled': {
     tr: 'Aboneliğiniz Yapay Zeka özelliğini içermiyor. Planınızı yükselterek kullanabilirsiniz.',
     en: 'Your subscription does not include the AI feature. Upgrade your plan to use it.'

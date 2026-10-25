@@ -849,13 +849,28 @@ olsaydı operatör konsolda kaydeder, hiçbir şey değişmez ve sebebi görünm
 tanımlıydı ama hiçbir yerden çağrılmıyordu.
 
 ```
-Ön kontrol : Limit(tenant, ai_tokens_per_month)   → null ise deny-by-default
-             kalan < 20.000 (Reserve)             → yeni istek başlatılmaz
-Tüketim    : IUsageDal.TenantTotals (SQL SUM)     — IUsageMeter.Query DEĞİL (200 satır tavanı var)
-Yazma      : IUsageMeter.Record(..., source:"ai") — MetricKey = PlanFeature anahtarıyla AYNI
+Başlatma   : AiQuotaService.BeginRequest()          → Limit null ise deny-by-default
+             kalan − süren istekler < 20.000         → yeni istek başlatılmaz (UI: usage.canStart)
+Her çağrı  : AiTokenBudget.BeginCall()               → max_tokens = min(16.000, kalan − tahmini girdi)
+             kalan < 2.000                           → döngü durur, SSE `event: quota`
+Tüketim    : IUsageDal.TenantTotals (SQL SUM)        — IUsageMeter.Query DEĞİL (200 satır tavanı var)
+Yazma      : try/finally — iptal/hata dahil HER yolda; ayrık maliyet satırları → kota satırı
 ```
 
-`Reserve` payı tek bir isteğin kotayı aşmasını sınırlar; akış ortasında sert kesme yoktur.
+**Kota tanımı = önbelleksiz girdi + çıktı** (planlar bununla satıldı); önbellek okuma/yazma
+kotaya sayılmaz (çoğu platformun kendi sistem promptu). Tool döngüsünün her model çağrısından
+önce kalan pay yeniden okunur — DB'deki tüketim + `AiQuotaReservationRegistry`'deki (tekil,
+bellek içi) **aynı tenant'ın süren diğer istekleri** düşülür; paralel iki sohbet aynı payı iki kez
+harcayamaz. Aşım en fazla bir çağrının tahmin hatası kadardır. Akış ortasında istemci koparsa
+(sekme kapandı) çıktı akan karakterlerden tahmin edilip yine yazılır — önceden hiç yazılmıyordu.
+
+**Maliyet ayrık:** her tur `ai_input_tokens`, `ai_output_tokens`, `ai_cache_write_tokens`,
+`ai_cache_read_tokens` satırlarını (yalnız maliyet, plana yazılamaz — `UsageMetricKeys`) ve kota
+satırını yazar. Birim fiyatlar `MetricCatalog`'da (claude-sonnet-5 liste fiyatı), konsoldan
+`cost.unit.{metrik}` ile ezilir. `ai_tokens_per_month`'un maliyeti 0'dır; ayrım öncesi yazılmış
+kota satırları `ai_tokens_legacy` sanal satırıyla eski harman fiyatla gösterilir. Maliyet ve
+kullanım özeti satırın **kayıt anına** (`RecordedAt`, master `029` indeksi) göre pencerelenir.
+
 Plan limitleri `migrations/master/024`'te seed edilir (free 100K, pro 1M, enterprise 5M —
 008'den) ve Platform Console → Plan Detay'dan migration'sız değiştirilebilir.
 
@@ -1000,16 +1015,14 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
 3. **Ödeme sağlayıcısı stub** — `StubPaymentGateway` her tahsilata başarı dönüyor ve `Plan`'da fiyat/para birimi kolonu yok. Stripe için: `Plan`'a parasal alanlar + `IPaymentGateway`'in gerçek implementasyonu (abonelik akışı değişmez)
 4. **Yedek geri yükleme yok** — yedek alma ve `RESTORE VERIFYONLY` doğrulaması var, ancak yedekten geri dönme ve yedek indirme ucu yok (platform tarafında da yoktu)
 5. **Yedekleme senkron** — `BackupManager` yedeği HTTP isteği içinde alıyor; "Şimdi Yedek Al" büyük veritabanlarında isteği uzun süre bloklar (zamanlanmış yol kuyruktan geçtiği için etkilenmez)
-6. **AI kotası tek istekte aşılabilir** — ön kontrol istek başında çalışır, akış ortasında sert kesme yok. `AiQuotaManager.Reserve` (20.000 token) aşımı sınırlar ama sıfırlamaz
-7. **AI maliyet hesabı girdi/çıktı ayırmıyor** — `CostAnalyticsManager.cs` `ai_tokens_per_month` için tek birim fiyat (`0.000002`) kullanıyor; Sonnet 5 çıktısı girdisinden 5 kat pahalı olduğu için maliyet eksik hesaplanıyor
-8. **AI mevcut kolonu değiştiremez** — platformda `updateMember` yolu yok (`onSaveEdit` diff'i yalnız kolon ADI üzerinden çalışır). Sistem promptu bunu açıkça yasaklıyor; kolon tipi değişimi için yeni kolon + veri taşıma gerekiyor
-9. **PlatformConfig sürümleme yok** — `PUT /api/platform/v1/config/{key}` eklendi (beyaz liste + sunucu tarafı `IsSecret` + maske koruması + audit), ancak değer geçmişi/geri alma tutulmuyor; audit yalnızca "kim ne zaman hangi anahtarı değiştirdi" diyor, eski değeri saklamıyor (bilinçli — sır sızdırmamak için)
-10. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez. Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir
-11. **Akış tasarımcısında mini harita ve hizala/dağıt yok** — v2 planının Faz 11'inde opsiyoneldi, yapılmadı
-12. **Kayıt tetiği güncel değere bakar** — outbox satırı işlenirken tetik koşulu kaydın O ANKİ değerine
+6. **AI mevcut kolonu değiştiremez** — platformda `updateMember` yolu yok (`onSaveEdit` diff'i yalnız kolon ADI üzerinden çalışır). Sistem promptu bunu açıkça yasaklıyor; kolon tipi değişimi için yeni kolon + veri taşıma gerekiyor
+7. **PlatformConfig sürümleme yok** — `PUT /api/platform/v1/config/{key}` eklendi (beyaz liste + sunucu tarafı `IsSecret` + maske koruması + audit), ancak değer geçmişi/geri alma tutulmuyor; audit yalnızca "kim ne zaman hangi anahtarı değiştirdi" diyor, eski değeri saklamıyor (bilinçli — sır sızdırmamak için)
+8. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez. Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir. Aynı varsayım AI kotasının süren istek sayacında da var (`AiQuotaReservationRegistry`, bellek içi): birden çok backend örneğinde paralel istekler birbirini göremez, sayaç master'a taşınmalı
+9. **Akış tasarımcısında mini harita ve hizala/dağıt yok** — v2 planının Faz 11'inde opsiyoneldi, yapılmadı
+10. **Kayıt tetiği güncel değere bakar** — outbox satırı işlenirken tetik koşulu kaydın O ANKİ değerine
     karşı değerlendirilir (yazıldığı anki değil). Bir akış kaydı değiştirdikten sonra işlenen `onCreate`
     satırı, değişmiş değerle ikinci bir akışı başlatabilir (uçtan uca testte görüldü)
-13. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
-14. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
-15. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
-16. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor
+11. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
+12. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
+13. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
+14. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor

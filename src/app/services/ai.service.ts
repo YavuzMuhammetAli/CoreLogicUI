@@ -199,6 +199,8 @@ export class AiService {
         };
       case 'refusal':
         return { type: 'refusal' };
+      case 'quota':
+        return { type: 'quota', message: String(payload['message'] ?? '') };
       case 'error':
         return { type: 'error', message: String(payload['message'] ?? '') };
       case 'done':
