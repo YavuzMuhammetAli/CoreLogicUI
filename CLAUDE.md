@@ -172,6 +172,9 @@ CoreLogicUI-master/
         │   ├── locale-format.ts                 # Aktif dile göre sayı/tarih biçimlendirme (sabit 'tr-TR' KULLANMA)
         │   ├── pagination.ts                    # Saf: sayfalama penceresi (pageWindow, en fazla 5 düğme, spec'li)
         │   ├── download.ts                      # downloadBlob / downloadText (rapor dışa aktarımı, akış paketi)
+        │   ├── record-file.ts                   # FileRef (sunucudaki dosya/resim kolonu: boyut + imzalı url) yardımcıları (spec'li)
+        │   ├── visible-poll.ts                  # Sekme görünürken yoklama + hatada geri çekilme (zil, görev rozeti; spec'li)
+        │   ├── outside-pointer.ts               # closeOnOutsidePointer — dışarı dokununca kapat, dinleyici yalnız AÇIKKEN bağlı (spec'li)
         │   ├── report-column-label.ts           # Saf: rapor oluşturucu önizlemesinin kolon başlığı (çalışan raporda başlık sunucudan, spec'li)
         │   ├── design-history.ts                # Geri al/yinele geçmişi (generic, 600 ms birleştirme) — akış ve ekran tasarımcısı ortak
         │   ├── record-field/                    # isColumnRequired/mustStayVisible (zorunluluğun tek karar noktası), alan hata metni
@@ -192,7 +195,9 @@ CoreLogicUI-master/
         │   ├── language.interceptor.ts         # Accept-Language header ekler (LanguageService'den okur)
         │   └── error.interceptor.ts            # HTTP hata yakalamak
         ├── i18n/                              # TR/EN çeviri sözlüğü (TRANSLATIONS map)
-        │   ├── index.ts                       # TRANSLATIONS map'ini dışa aktarır
+        │   ├── index.ts                       # TRANSLATIONS (ana paket) + registerTranslations
+        │   ├── lazy/                          # Tek ekranın sözlüğünü o ekranın parçasıyla yükleyen yan etkili modüller (help.*, parameter.*)
+        │   ├── all-translations.ts            # Ana + lazy sözlüklerin tamamı — YALNIZ testler için
         │   ├── translations.model.ts          # TranslationEntry { tr, en } tipi
         │   ├── common.i18n.ts                 # Ortak: kaydet/iptal/sil/yükle vb.
         │   ├── layout.i18n.ts                 # Sidebar + topbar metinleri
@@ -1043,6 +1048,35 @@ kullan — tek çağrıda ilgili sembollerin satır numaralı kaynak kodunu, ça
 yollarını ve etki alanını (blast-radius) döner; onlarca grep+read turu yerine
 genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
 
+## Performans Kuralları
+
+2026-10 performans çalışmasının (UI + backend, Faz 0-7) bıraktığı kurallar — backend tarafı backend
+CLAUDE.md'de "Performans kuralları".
+
+- **Dosya/resim alanları** satırla gelmez: kayıt yanıtında kolon `FileRef`
+  (`{ $file: true, kind, size, url }`, `utils/record-file.ts`). Gösterim `<img [src]="url" loading="lazy">`,
+  indirme `<a [href]="url">` — url 15 dk geçerli, imzalı, anonim (`/PublishedModel/file?token=`). Kaydederken
+  değişmemiş `FileRef` gövdeden ÇIKARILIR (`sanitizePayload`); yeni yükleme eskisi gibi base64 gider.
+- **`getModels()` önbellekli** (5 dk, kullanıcı değişince düşer). Şema/yayın/silme/geri yükleme yapan çağrılar
+  `PublishedTableService`'te `invalidatesModels()` ile sarılıdır — oraya yeni bir şema değiştiren çağrı
+  eklenirse o da sarılmalı, yoksa ekranlar eski model listesini gösterir. `RecordMetadataService.models$`
+  ve `ModelLabelService` aynı önbelleği kullanır.
+- **Açılışta `loadAssembly` çağrılmaz** — tenant'ın derlemesini backend middleware ilk istekte yükler.
+  İzin durumu için `PermissionService.ensureLoaded()` (yeniden `loadMyPermissions()` değil).
+- **Yoklama** yalnız `utils/visible-poll.ts` ile (sekme gizliyken durur, görününce hemen tazeler). Çıkışta
+  ya da bileşen yok edilince durdurulmalı.
+- **Şablonda satır döngüsünün içinde** dizi/nesne üreten metod ya da getter çağırma: her change detection
+  turunda (her tuş) satır×kolon kez çalışır ve `@for`'a yeni referans verir. Girdiler değişmedikçe aynı
+  nesneyi döndüren bir not (memo) kullan (örn. `model-detail` `tableColumns`, `model-data` `cols`).
+  Büyük alt listeler sınırlı çizilir ("Daha fazla göster").
+- **Belge geneli dinleyici** (`document:pointerdown`) açılır öğede `@HostListener` ile KONMAZ —
+  `closeOnOutsidePointer` kullan; aksi halde kapalı her örnek sayfadaki her dokunuşta çalışır.
+- **Ağır, hemen görünmeyen içerik `@defer`** ile: dashboard grafikleri `on viewport`, akış görüntüleme
+  diyaloğu `when` (ilk açılış). ApexCharts ve akış tuvali böylece kendi parçalarında kalır.
+- **i18n:** yalnız TEK lazy ekranın kullandığı büyük sözlük `i18n/lazy/` ile o ekranın parçasına alınabilir
+  (`help.*` → şema ekranı, `parameter.*` → Parametreler). Anahtar başka bir ekranda da kullanılacaksa sözlük
+  `index.ts`'e geri alınır — yoksa o ekranda ham anahtar görünür.
+
 ## Konvansiyonlar
 
 - **Standalone component'ler** — NgModule yok
@@ -1069,12 +1103,11 @@ genelde tek çağrı yeterli olur, token tüketimini ciddi azaltır.
 1. **Yedekler aynı diskte** — sunucu kurulumunda yedekler `corelogic_mssql-backup` volume'ünde, yani veriyle aynı diskte duruyor; dışarı kopyalama elle yapılıyor (bkz. backend `deploy/README.md` → Yedekler)
 2. **Ödeme sağlayıcısı stub** — `StubPaymentGateway` her tahsilata başarı dönüyor ve `Plan`'da fiyat/para birimi kolonu yok. Stripe için: `Plan`'a parasal alanlar + `IPaymentGateway`'in gerçek implementasyonu (abonelik akışı değişmez)
 3. **PlatformConfig sürümleme yok** — `PUT /api/platform/v1/config/{key}` eklendi (beyaz liste + sunucu tarafı `IsSecret` + maske koruması + audit), ancak değer geçmişi/geri alma tutulmuyor; audit yalnızca "kim ne zaman hangi anahtarı değiştirdi" diyor, eski değeri saklamıyor (bilinçli — sır sızdırmamak için)
-4. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez. Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir. Aynı varsayım AI kotasının süren istek sayacında (`AiQuotaReservationRegistry`) ve geri yüklemenin bakım kapısında (`TenantMaintenanceGate`) da var — ikisi de bellek içi: birden çok backend örneğinde birbirlerini göremez, master'a taşınmalı
+4. **Data Protection anahtar halkası tek makinede** — `%PROGRAMDATA%\CoreLogic\dataprotection-keys` (veya `DataProtection:KeyPath`). Çok sunuculu dağıtımda bu klasör paylaşılmalı, yoksa bir sunucunun şifrelediğini diğeri çözemez (dosya bağlantısı token'ları da bu halkayla imzalanır). Yatay ölçeklemeden önce paylaşımlı depo (dosya paylaşımı/Key Vault) gerekir. Aynı varsayım AI kotasının süren istek sayacında (`AiQuotaReservationRegistry`), geri yüklemenin bakım kapısında (`TenantMaintenanceGate`) ve performans önbelleklerinde (izin/şema/rapor sonucu önbelleği, `TenantChangeVersions` damgaları, dosya bağlantısı önbelleği) da var — hepsi bellek içi: birden çok backend örneğinde birbirlerini göremez; önbellekler için bu, başka örnekte yapılan değişikliğin TTL dolana dek (5–10 dk) görünmemesi demek
 5. **Akış tasarımcısında mini harita ve hizala/dağıt yok** — v2 planının Faz 11'inde opsiyoneldi, yapılmadı
 6. **Kayıt tetiği güncel değere bakar** — outbox satırı işlenirken tetik koşulu kaydın O ANKİ değerine
     karşı değerlendirilir (yazıldığı anki değil). Bir akış kaydı değiştirdikten sonra işlenen `onCreate`
     satırı, değişmiş değerle ikinci bir akışı başlatabilir (uçtan uca testte görüldü)
 7. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
 8. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
-9. **Tam sayfa yenilemede `loadAssembly` yarışı** — uygulama açılışındaki `/PublishModel/loadAssembly` aynı anda koşan bir kayıt isteğiyle çakışırsa derleme yeniden yüklenip `Cannot create DbSet … AracKaydi … AracKaydi` (500) alınabiliyor; Playwright ile her `page.goto`'da görüldü, uygulama içi gezinmede görülmedi
-10. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor
+9. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor
