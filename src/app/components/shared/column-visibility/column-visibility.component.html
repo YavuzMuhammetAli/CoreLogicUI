@@ -3,7 +3,7 @@
     type="button"
     class="btn btn-ghost btn-sm"
     (click)="toggleOpen(); $event.stopPropagation()"
-    [attr.aria-expanded]="open"
+    [attr.aria-expanded]="open()"
     aria-haspopup="true"
     [attr.aria-label]="'shared.columnVisibility.toggleLabel' | t">
     <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -13,7 +13,7 @@
     {{ 'shared.columnVisibility.buttonLabel' | t }}
   </button>
 
-  @if (open) {
+  @if (open()) {
     <div class="col-vis-dropdown" role="menu" [attr.aria-label]="'shared.columnVisibility.menuLabel' | t">
       <div class="col-vis-header">{{ 'shared.columnVisibility.header' | t }}</div>
 

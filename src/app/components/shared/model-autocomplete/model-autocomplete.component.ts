@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, ElementRef, HostListener, inject, input, model, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, input, model, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
+import { closeOnOutsidePointer } from '../../../utils/outside-pointer';
 
 /**
  * Model adı seçmek için basit, bağımlılıksız autocomplete (combobox).
@@ -58,6 +59,14 @@ export class ModelAutocompleteComponent {
   readonly query = signal('');
   readonly isOpen = signal(false);
   readonly activeIndex = signal(-1);
+
+  constructor() {
+    // Dışarı dokununca listeyi kapat — dinleyici yalnız açıkken bağlı (bkz. utils/outside-pointer).
+    closeOnOutsidePointer(this.isOpen, () => this.host.nativeElement, () => {
+      this.isOpen.set(false);
+      this.activeIndex.set(-1);
+    });
+  }
 
   /** Yazılan metne göre filtrelenmiş seçenekler. */
   readonly filtered = computed(() => {
@@ -137,17 +146,6 @@ export class ModelAutocompleteComponent {
           this.activeIndex.set(-1);
         }
         break;
-    }
-  }
-
-  /** Dışarı tıklanınca listeyi kapat (column-visibility popover'ıyla aynı desen). */
-  /** pointerdown: iOS Safari boş alana dokunmada click üretmeyebilir, liste açık kalırdı. */
-  @HostListener('document:pointerdown', ['$event'])
-  onDocumentClick(event: PointerEvent): void {
-    if (!this.isOpen()) return;
-    if (!this.host.nativeElement.contains(event.target as Node)) {
-      this.isOpen.set(false);
-      this.activeIndex.set(-1);
     }
   }
 

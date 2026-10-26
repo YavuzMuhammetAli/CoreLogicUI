@@ -93,6 +93,12 @@
   min-width: 0;
 }
 
+/* @defer yer tutucusu — grafik gelince kart boyu zıplamasın */
+.widget-placeholder {
+  flex: 1;
+  min-height: 160px;
+}
+
 .table-scroll {
   flex: 1;
   min-height: 0;

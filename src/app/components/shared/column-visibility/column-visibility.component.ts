@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, Output, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, Output, ViewChild, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
+import { closeOnOutsidePointer } from '../../../utils/outside-pointer';
 
 /** Popover'da listelenecek tek bir kolon */
 export interface ColumnVisibilityItem {
@@ -32,24 +33,28 @@ export class ColumnVisibilityComponent implements OnChanges {
 
   @Output() save = new EventEmitter<string[]>();
 
-  open = false;
+  readonly open = signal(false);
 
   /** Popover içindeki taslak seçim — Kaydet'e basılana kadar dışa yansımaz */
   draft = new Set<string>();
 
   @ViewChild('wrapRef') wrapRef?: ElementRef<HTMLElement>;
 
+  constructor() {
+    closeOnOutsidePointer(this.open, () => this.wrapRef?.nativeElement, () => this.open.set(false));
+  }
+
   ngOnChanges(): void {
     // Popover açıkken parent'tan gelen güncellemeler taslağı ezmesin
     // (örn. kaydet sonrası input değişimi); sadece kapalıyken senkronla.
-    if (!this.open) {
+    if (!this.open()) {
       this.draft = new Set(this.visible);
     }
   }
 
   toggleOpen(): void {
-    this.open = !this.open;
-    if (this.open) {
+    this.open.update(v => !v);
+    if (this.open()) {
       this.draft = new Set(this.visible);
     }
   }
@@ -78,16 +83,8 @@ export class ColumnVisibilityComponent implements OnChanges {
     this.save.emit(this.columns.map(c => c.name).filter(n => this.draft.has(n)));
   }
 
-  /** pointerdown: iOS Safari boş alana dokunmada click üretmeyebilir, menü açık kalırdı. */
-  @HostListener('document:pointerdown', ['$event'])
-  onDocumentClick(event: PointerEvent): void {
-    if (!this.wrapRef?.nativeElement.contains(event.target as Node)) {
-      this.open = false;
-    }
-  }
-
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    this.open = false;
+    this.open.set(false);
   }
 }

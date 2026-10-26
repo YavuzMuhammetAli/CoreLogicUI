@@ -1,4 +1,4 @@
-import { TRANSLATIONS } from './index';
+import { ALL_TRANSLATIONS as TRANSLATIONS } from './all-translations';
 import { NOTIFICATION_TEMPLATE_KINDS } from '../models/parameter.model';
 
 /**

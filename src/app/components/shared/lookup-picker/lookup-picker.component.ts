@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, HostListener,
+  ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef,
   OnDestroy, effect, forwardRef, inject, input, signal, viewChild
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
@@ -8,6 +8,7 @@ import { LookupOption, PublishedModelService } from '../../../services/published
 import { LookupLabelService } from '../../../services/lookup-label.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { markDirty } from '../../../utils/change-detection';
+import { closeOnOutsidePointer } from '../../../utils/outside-pointer';
 
 /** Sayfa boyutu — açılışta ve her "daha fazla" isteğinde bu kadar kayıt gelir. */
 const PAGE_SIZE = 50;
@@ -103,6 +104,8 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
   private onTouched: () => void = () => {};
 
   constructor() {
+    // Dışarı dokununca kapat — dinleyici yalnız liste açıkken bağlı (bkz. utils/outside-pointer).
+    closeOnOutsidePointer(this.isOpen, () => this.host.nativeElement, () => this.close());
     // Yazma → 300 ms bekle → aynı terimi tekrar sorma → önceki isteği iptal et.
     this.subs.add(
       this.search$.pipe(
@@ -394,13 +397,6 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
       const el = this.host.nativeElement.querySelector(`#${this.optionId(index)}`) as HTMLElement | null;
       el?.scrollIntoView({ block: 'nearest' });
     });
-  }
-
-  /** pointerdown: iOS Safari boş alana dokunmada click üretmeyebilir, liste açık kalırdı. */
-  @HostListener('document:pointerdown', ['$event'])
-  onDocumentClick(event: PointerEvent): void {
-    if (!this.isOpen()) return;
-    if (!this.host.nativeElement.contains(event.target as Node)) this.close();
   }
 
   // ── DOM id'leri (örnek başına benzersiz) ─────────────────────────────────

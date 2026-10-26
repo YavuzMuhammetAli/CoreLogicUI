@@ -1,3 +1,4 @@
+import '../../i18n/lazy/datatype-help'; // help.* sözlüğü bu parçayla iner
 import {
   ChangeDetectionStrategy, ChangeDetectorRef, Component, forwardRef, Input, inject,
   OnChanges, OnDestroy, SimpleChanges, signal

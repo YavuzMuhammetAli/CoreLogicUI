@@ -143,6 +143,7 @@ export const MODEL_I18N: Translations = {
   'model.detail.actions': { tr: 'İşlemler', en: 'Actions' },
   'model.detail.recordCount': { tr: '{count} kayıt', en: '{count} records' },
   'model.detail.filteredRecordCount': { tr: '{shown} / {total} kayıt', en: '{shown} of {total} records' },
+  'model.detail.showMoreRows': { tr: 'Daha fazla göster ({count} kayıt daha)', en: 'Show more ({count} more records)' },
   'model.detail.viewDetailTitle': { tr: 'Detayı görüntüle', en: 'View detail' },
   'model.detail.viewRecordAria': { tr: 'Kaydı görüntüle', en: 'View record' },
   'model.detail.view': { tr: 'Görüntüle', en: 'View' },

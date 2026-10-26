@@ -1,3 +1,4 @@
+import '../../i18n/lazy/parameter'; // parameter.* sözlüğü bu parçayla iner
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { BackupSettingsTabComponent } from './backup/backup-settings-tab.component';

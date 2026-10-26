@@ -504,7 +504,7 @@
                         </tr>
                       </thead>
                       <tbody>
-                        @for (row of getDisplayRows(state); track $index) {
+                        @for (row of renderedRows(state); track $index) {
                           <tr
                             [class.clickable-row]="canChild(name, 'update')"
                             [class.row-selected]="isRowSelected(state, row)"
@@ -574,6 +574,11 @@
                           {{ 'model.detail.recordCount' | t:{ count: state.rows.length } }}
                         }
                       </span>
+                      @if (hiddenRowCount(state) > 0) {
+                        <button type="button" class="btn btn-ghost btn-sm" (click)="showMoreRows(state)">
+                          {{ 'model.detail.showMoreRows' | t:{ count: hiddenRowCount(state) } }}
+                        </button>
+                      }
                     </div>
                   </div>
                 }
@@ -607,8 +612,12 @@
     (cancelled)="closeRecordDialog()" />
 }
 
-<!-- ══ AKIŞI GÖRÜNTÜLE (yalnız ilerlenen yol + kim onayladı / bekliyor) ══════ -->
-<app-workflow-view-dialog [instanceId]="viewInstanceId" (closed)="closeWorkflowView()" />
+<!-- ══ AKIŞI GÖRÜNTÜLE (yalnız ilerlenen yol + kim onayladı / bekliyor) ══════
+     Tuval (workflow-canvas) kayıt açılışında inmesin: diyalog ilk açılışta yüklenir,
+     sonra yerinde kalır (when koşulu bir kez doğru olunca blok yüklü kalır). -->
+@defer (when viewInstanceId !== null) {
+  <app-workflow-view-dialog [instanceId]="viewInstanceId" (closed)="closeWorkflowView()" />
+}
 
 <!-- ══ ADIM EYLEM DİYALOĞU (ek karar alanları / red açıklaması) ══════════════ -->
 <app-task-action-dialog

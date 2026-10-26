@@ -39,11 +39,18 @@
                 <p>{{ 'dashboard.view.noRows' | t }}</p>
               </div>
             } @else if (item.result.widget.chartType !== 'table') {
-              <app-chart
-                [chartType]="item.result.widget.chartType"
-                [columns]="item.result.result.columns"
-                [rows]="item.result.result.rows">
-              </app-chart>
+              <!-- Ekran dışındaki grafik görünür olana kadar kurulmaz: her ApexCharts örneği
+                   SVG çizimi + ResizeObserver demek; uzun dashboard'da hepsi açılışta çiziliyordu.
+                   Grafik kodu (ApexCharts) da ayrı parça olarak boşta önceden indirilir. -->
+              @defer (on viewport; prefetch on idle) {
+                <app-chart
+                  [chartType]="item.result.widget.chartType"
+                  [columns]="item.result.result.columns"
+                  [rows]="item.result.result.rows">
+                </app-chart>
+              } @placeholder {
+                <div class="widget-placeholder" aria-hidden="true"></div>
+              }
             } @else {
               <div class="table-scroll">
                 <table class="data-table">

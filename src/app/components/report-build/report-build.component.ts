@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Observable, debounceTime } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { PublishedModelService, PublishedModel, PublishedColumn } from '../../services/published-model.service';
 import { ReportService } from '../../services/report.service';
 import { ResponseModel } from '../../models/responseModel';
@@ -83,6 +84,7 @@ function isDateColumnType(type: string): boolean {
 export class ReportBuildComponent implements OnInit {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly languageService = inject(LanguageService);
 
@@ -148,7 +150,10 @@ export class ReportBuildComponent implements OnInit {
     // Canlı Önizleme yalnızca form GERÇEKTEN değiştiğinde yeniden hesaplanır — sayfadaki
     // ilgisiz tıklamalar `form.valueChanges`'i tetiklemediği için grafik gereksiz yeniden
     // render olmaz (bkz. plan: "Canlı Önizleme her tıklamada yeniden oluşuyor" hatası).
-    this.form.valueChanges.pipe(markDirty(this.cdr)).subscribe(() => this.refreshPreview());
+    // Yazarken (rapor adı, filtre değeri) her tuşta grafik baştan çizilmesin diye 300 ms
+    // beklenir; önizlemeyi etkilemeyen alanların değişimi refreshPreview'da elenir.
+    this.form.valueChanges.pipe(debounceTime(300), takeUntilDestroyed(this.destroyRef), markDirty(this.cdr))
+      .subscribe(() => this.refreshPreview());
     this.refreshPreview();
   }
 
@@ -237,8 +242,17 @@ export class ReportBuildComponent implements OnInit {
   /** Örnek tabloda "üstü çizili" (devre dışı) işaretlenmiş satırların indeksleri — yalnızca görsel, sentetik veriye uygulanır. */
   readonly struckPreviewRows = signal<Set<number>>(new Set());
 
+  /** Son önizlemenin imzası — aynı sonucu yeniden yayınlayıp grafiği boşuna çizdirmemek için. */
+  private previewSignature = '';
+
   private refreshPreview(): void {
-    this.previewResult.set(this.buildPreviewResult());
+    const next = this.buildPreviewResult();
+    // Önizleme yalnız gruplama/aggregate/kolon seçimi ve modelden etkilenir; ad, açıklama,
+    // filtre ya da sıralama değişince sonuç aynıdır ve app-chart'ın yeniden çizilmesi gereksizdir.
+    const signature = JSON.stringify(next);
+    if (signature === this.previewSignature) return;
+    this.previewSignature = signature;
+    this.previewResult.set(next);
     // Veri şekli değişmiş olabilir (model/kolon değişti) — eski satır indeksleri geçersiz olur.
     this.struckPreviewRows.set(new Set());
   }

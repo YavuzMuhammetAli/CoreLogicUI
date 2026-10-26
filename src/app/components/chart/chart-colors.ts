@@ -54,13 +54,26 @@ function resolveCssVarColor(varName: string): string {
   return resolved;
 }
 
-/** Aktif temadaki tüm grafik renk token'larını çözümler. Yalnızca tarayıcıda çağır. */
+/** Son çözümlenen palet ve ait olduğu tema — bkz. readChartTokenColors. */
+let cached: { theme: string; colors: ChartTokenColors } | null = null;
+
+/**
+ * Aktif temadaki tüm grafik renk token'larını çözümler. Yalnızca tarayıcıda çağır.
+ *
+ * Her token bir `getComputedStyle` (zorunlu stil hesabı) demek; dashboard'da her widget bunu
+ * 13 kez yapıyordu. Değerler yalnız tema değişince değiştiği için sonuç `data-theme`'e göre
+ * saklanır — tema değişince ilk okuma yeniden çözümler.
+ */
 export function readChartTokenColors(): ChartTokenColors {
+  const theme = document.documentElement.getAttribute('data-theme') ?? '';
+  if (cached?.theme === theme) return { ...cached.colors };
+
   const result = {} as ChartTokenColors;
   for (const [key, varName] of Object.entries(TOKEN_VARS) as [keyof ChartTokenColors, string][]) {
     result[key] = resolveCssVarColor(varName);
   }
-  return result;
+  cached = { theme, colors: result };
+  return { ...result };
 }
 
 /**

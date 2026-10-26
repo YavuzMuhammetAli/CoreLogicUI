@@ -99,7 +99,32 @@ interface TabState {
   savingColumnVisibility: boolean;
   /** Alt modelin yayınlanmış liste yerleşimi (ekran tasarımı) — varsa kolon sırası ondan. */
   listLayout: ListLayout | null;
+
+  /** Tablo kolonları/başlıkları önbelleği (bkz. ModelDetailComponent.tableColumns). */
+  colsMemo?: TabColumnsMemo;
+
+  /** Çizilen en fazla satır; "Daha fazla göster" artırır. */
+  renderLimit?: number;
+
+  /** renderedRows() dilimi — kaynak ve sınır aynıysa aynı dizi döner (@for her turda diff'lemesin). */
+  renderCache?: { source: DataRow[]; limit: number; result: DataRow[] };
 }
+
+/** Bir sekmenin tablo kolonları — girdileri değişmedikçe aynı nesne. */
+interface TabColumnsMemo {
+  layout: ListLayout | null;
+  columns: PublishedColumn[];
+  visible: string[] | null;
+  lang: string;
+  cols: PublishedColumn[];
+  headers: { key: string; label: string }[];
+  byName: Map<string, PublishedColumn>;
+  /** Aramada taranan kolon adları. */
+  searchable: string[];
+}
+
+/** Alt tablo ilk açılışta en fazla bu kadar satır çizer. */
+const TAB_RENDER_STEP = 100;
 
 @Component({
   selector: 'app-model-detail',
@@ -902,17 +927,44 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
    * görünümünden bir kolonu gizlese de ekle/düzenle formunda o alan kaybolmaz.
    */
   displayCols(state: TabState): PublishedColumn[] {
-    // Yayınlanmış liste yerleşimi varsa sıra ve görünürlük ondan (FK kolonu bu tabloda hiç yok).
-    return resolveListColumns(state.listLayout, this.visibleCols(state), state.visibleColumnNames)
-      .map(r => r.column);
+    return this.tableColumns(state).cols;
   }
 
   /** Tablo başlıkları — key veri/sıralama anahtarı (ham columnName), label görünen metin. */
   tableHeaders(state: TabState): { key: string; label: string }[] {
-    return [
-      { key: 'ID', label: 'ID' },
-      ...this.displayCols(state).map(c => ({ key: c.columnName, label: this.colLabel(c) }))
-    ];
+    return this.tableColumns(state).headers;
+  }
+
+  /**
+   * Sekmenin tablo kolonları, başlıkları ve kolon haritası — ÖNBELLEKLİ.
+   *
+   * Şablon bunları satır döngüsünün İÇİNDE (her satır, her hücre) çağırıyordu ve kayıt formundaki
+   * her tuş vuruşu tüm şablonu yeniden değerlendirdiği için 300 satırlık bir alt tabloda tek tuş
+   * yüzlerce kolon çözümlemesi ve binlerce `columns.find` demekti. Girdiler (yerleşim, kolonlar,
+   * görünürlük ayarı, dil) değişmedikçe aynı nesne döner.
+   */
+  private tableColumns(state: TabState): TabColumnsMemo {
+    const lang = this.languageService.lang();
+    const memo = state.colsMemo;
+    if (memo && memo.layout === state.listLayout && memo.columns === state.columns
+        && memo.visible === state.visibleColumnNames && memo.lang === lang) {
+      return memo;
+    }
+
+    // Yayınlanmış liste yerleşimi varsa sıra ve görünürlük ondan (FK kolonu bu tabloda hiç yok).
+    const cols = resolveListColumns(state.listLayout, this.visibleCols(state), state.visibleColumnNames)
+      .map(r => r.column);
+    state.colsMemo = {
+      layout: state.listLayout,
+      columns: state.columns,
+      visible: state.visibleColumnNames,
+      lang,
+      cols,
+      headers: [{ key: 'ID', label: 'ID' }, ...cols.map(c => ({ key: c.columnName, label: this.colLabel(c) }))],
+      byName: new Map(state.columns.map(c => [c.columnName, c] as const)),
+      searchable: cols.map(c => c.columnName)
+    };
+    return state.colsMemo;
   }
 
   /** Kolon görünürlüğü popover'ı için kolon listesi — alt model tablosunda zorunlu zorlaması yok */
@@ -978,13 +1030,33 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
         searchTerm: state.searchTerm,
         sortCol: state.sortCol,
         sortDir: state.sortDir,
-        searchableColumns: this.displayCols(state).map(c => c.columnName),
+        searchableColumns: this.tableColumns(state).searchable,
         locale: this.languageService.lang()
       },
       state.displayCache
     );
 
     return state.displayCache.result;
+  }
+
+  /** Çizilecek satırlar: görünen satırların ilk `renderLimit` kadarı (sayım ve seçim tümüyle çalışır). */
+  renderedRows(state: TabState): DataRow[] {
+    const rows = this.getDisplayRows(state);
+    const limit = state.renderLimit ?? TAB_RENDER_STEP;
+    if (rows.length <= limit) return rows;
+    const cache = state.renderCache;
+    if (cache && cache.source === rows && cache.limit === limit) return cache.result;
+    state.renderCache = { source: rows, limit, result: rows.slice(0, limit) };
+    return state.renderCache.result;
+  }
+
+  /** Çizilmeyen satır sayısı ("Daha fazla göster" düğmesi için). */
+  hiddenRowCount(state: TabState): number {
+    return Math.max(0, this.getDisplayRows(state).length - (state.renderLimit ?? TAB_RENDER_STEP));
+  }
+
+  showMoreRows(state: TabState): void {
+    state.renderLimit = (state.renderLimit ?? TAB_RENDER_STEP) + TAB_RENDER_STEP;
   }
 
   rowId(row: DataRow): number {
@@ -1000,7 +1072,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
   /** Tablo hücresi için görüntülenecek değer — lookup kolonları FK ID yerine display değerini gösterir. */
   tabCellDisplay(state: TabState, row: DataRow, columnName: string): string {
-    const col = state.columns.find(c => c.columnName === columnName);
+    const col = this.tableColumns(state).byName.get(columnName);
     if (col?.dataType === 'lookup') {
       return this.lookupCellLabel(col, fieldValue(row, columnName));
     }

@@ -1,3 +1,4 @@
+import '../../../i18n/lazy/datatype-help'; // help.* sözlüğü bu parçayla iner
 import { ChangeDetectionStrategy, Component, computed, HostListener, inject, input, output, signal } from '@angular/core';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { LanguageService } from '../../../services/language.service';

@@ -138,14 +138,52 @@ export class ModelDataComponent implements OnInit {
     return this.model?.columns ?? [];
   }
 
+  /**
+   * Kolon türevlerinin önbelleği. Şablon `tableHeaders`'ı her SATIRDA, genişlik ve görünürlük
+   * listelerini her change detection turunda okur; getter'lar her okumada yeniden çözümleyip
+   * yeni dizi döndürüyordu (100 satırlık sayfada tur başına ~100 kolon çözümlemesi ve @for'un
+   * her turda baştan diff'lemesi). Girdiler (yerleşim, model, görünürlük ayarı) referansla
+   * karşılaştırılır — üçü de yerinde değiştirilmez, hep yeniden atanır.
+   */
+  private colsMemo?: {
+    layout: ListLayout | null;
+    model: PublishedModel | undefined;
+    visible: string[] | null;
+    resolved: ResolvedListColumn[];
+    display: PublishedColumn[];
+    headers: { key: string; label: string }[];
+    visibilityItems: ColumnVisibilityItem[];
+    effectiveVisible: string[];
+  };
+
+  private get cols(): NonNullable<ModelDataComponent['colsMemo']> {
+    const m = this.colsMemo;
+    if (m && m.layout === this.listLayout && m.model === this.model && m.visible === this.visibleColumnNames) {
+      return m;
+    }
+    const resolved = resolveListColumns(this.listLayout, this.columns, this.visibleColumnNames);
+    const display = resolved.map(r => r.column);
+    this.colsMemo = {
+      layout: this.listLayout,
+      model: this.model,
+      visible: this.visibleColumnNames,
+      resolved,
+      display,
+      headers: [{ key: 'ID', label: 'ID' }, ...display.map(c => ({ key: c.columnName, label: this.colLabel(c) }))],
+      visibilityItems: this.columns.map(c => ({ name: c.columnName, required: false })),
+      effectiveVisible: this.visibleColumnNames ?? this.columns.map(c => c.columnName)
+    };
+    return this.colsMemo;
+  }
+
   /** Görünür kolonlar ve genişlikleri — liste yerleşimi, yoksa "Kolonlar" ayarı, o da yoksa hepsi. */
   get resolvedColumns(): ResolvedListColumn[] {
-    return resolveListColumns(this.listLayout, this.columns, this.visibleColumnNames);
+    return this.cols.resolved;
   }
 
   /** Görünür kolonlar — ayar yoksa şema kolonlarının tümü */
   get displayColumns(): PublishedColumn[] {
-    return this.resolvedColumns.map(r => r.column);
+    return this.cols.display;
   }
 
   /**
@@ -168,12 +206,12 @@ export class ModelDataComponent implements OnInit {
 
   /** Kolon görünürlüğü popover'ı için kolon listesi (liste görünümünde zorunlu kolon yok) */
   get columnVisibilityItems(): ColumnVisibilityItem[] {
-    return this.columns.map(c => ({ name: c.columnName, required: false }));
+    return this.cols.visibilityItems;
   }
 
   /** Popover'ın o anki etkin seçimi — ayar yoksa tüm kolonlar işaretli gösterilir */
   get effectiveVisibleColumnNames(): string[] {
-    return this.visibleColumnNames ?? this.columns.map(c => c.columnName);
+    return this.cols.effectiveVisible;
   }
 
   /** Admin tarafından kayıtlı liste-görünümü kolon ayarını yükler */
@@ -286,10 +324,7 @@ export class ModelDataComponent implements OnInit {
    * label: kullanıcıya gösterilen metin (admin Label tanımlamışsa onu kullanır).
    */
   get tableHeaders(): { key: string; label: string }[] {
-    return [
-      { key: 'ID', label: 'ID' },
-      ...this.displayColumns.map(c => ({ key: c.columnName, label: this.colLabel(c) }))
-    ];
+    return this.cols.headers;
   }
 
   // ─── Sayfalama ─────────────────────────────────────────────────────────────────
@@ -451,8 +486,14 @@ export class ModelDataComponent implements OnInit {
    * gereksiz genişlik pahalı.
    */
   get hasWorkflowStatus(): boolean {
-    return this.rows.some(row => this.workflowStatusOf(row) !== '');
+    // Satır dizisi yalnız yeniden atanır; aynı dizi için sonuç değişmez.
+    if (this.workflowStatusMemo?.rows !== this.rows) {
+      this.workflowStatusMemo = { rows: this.rows, value: this.rows.some(row => this.workflowStatusOf(row) !== '') };
+    }
+    return this.workflowStatusMemo.value;
   }
+
+  private workflowStatusMemo?: { rows: DataRow[]; value: boolean };
 
   /** Sürüm geçmişini backend'den yükler */
   loadVersions(): void {
