@@ -5,7 +5,6 @@ import { filter } from 'rxjs/operators';
 import { isPlatformBrowser } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
-import { PublishModelService } from '../../services/publish-model.service';
 import { PermissionService } from '../../services/permission.service';
 import { PublishedModelService, PublishedModel } from '../../services/published-model.service';
 import { NotificationService } from '../../services/notification.service';
@@ -109,7 +108,6 @@ export class LayoutComponent implements OnInit, OnDestroy {
   constructor(
     private auth: AuthService,
     private router: Router,
-    private publishModel: PublishModelService,
     public permissionService: PermissionService,
     private publishedModel: PublishedModelService,
     public notificationService: NotificationService
@@ -124,22 +122,10 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
     this.setupMobileSidebar();
 
-    // Assembly'yi backend TenantResolutionMiddleware tenant'ın ilk isteğinde zaten
-    // kendisi yükler; bu çağrı admin için ek güvencedir. Uç admin'e özel — admin
-    // olmayan kullanıcıda 403 döner ve eskiden kullanıcıyı açılış sayfasından
-    // /models'e atıyordu. Hata kullanıcıyı bloklamaz.
-    if (this.permissionService.isAdmin()) {
-      this.publishModel.loadAssembly().subscribe({
-        next: res => {
-          if (!res.success) {
-            console.warn('[CoreLogic] loadAssembly:', res.message);
-          }
-        },
-        error: err => {
-          console.warn('[CoreLogic] loadAssembly başarısız:', err?.message);
-        }
-      });
-    }
+    // Derlenmiş modelleri backend kendisi yükler (TenantResolutionMiddleware, tenant'ın ilk
+    // isteğinde). Kabuk eskiden admin için her açılışta /PublishModel/loadAssembly çağırıyordu;
+    // her çağrı sunucuda baştan Roslyn derlemesi + tenant'ın EF modelinin yeniden kurulması ve
+    // bellekte kalan bir eski nesil demekti. Gerçekten yüklenmemişse model-data'nın geri dönüşü çağırır.
 
     // H: Görev rozeti. isPlatformBrowser kontrolünün ALTINDA — sunucu tarafında
     // zamanlayıcı kurmak anlamsız ve sızıntı olurdu.
