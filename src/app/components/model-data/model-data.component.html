@@ -169,23 +169,27 @@
                   }
                   @for (header of tableHeaders; track header.key) {
                     <td [attr.data-label]="header.label">
-                      @if (isImage(rowVal(row, header.key))) {
-                        <img
-                          [src]="imageSrc(rowVal(row, header.key))"
-                          alt="{{ header.label }}"
-                          style="max-height: 48px; max-width: 72px; border-radius: 4px; object-fit: cover; vertical-align: middle;"
-                          loading="lazy">
-                      } @else if (isBase64Value(rowVal(row, header.key))) {
-                        <button
-                          type="button"
-                          class="btn btn-ghost btn-sm"
-                          (click)="downloadFile(rowVal(row, header.key), header.key); $event.stopPropagation()"
-                          [attr.title]="'model.data.downloadFileTitle' | t">
-                          <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                          </svg>
-                          {{ 'model.data.download' | t }}
-                        </button>
+                      @if (fileRefOf(row, header.key); as file) {
+                        @if (file.kind === 'image') {
+                          <img
+                            [src]="fileUrl(file)"
+                            alt="{{ header.label }}"
+                            style="max-height: 48px; max-width: 72px; border-radius: 4px; object-fit: cover; vertical-align: middle;"
+                            loading="lazy"
+                            decoding="async">
+                        } @else {
+                          <a
+                            class="btn btn-ghost btn-sm"
+                            [href]="fileUrl(file)"
+                            download
+                            (click)="$event.stopPropagation()"
+                            [attr.title]="'model.data.downloadFileTitle' | t">
+                            <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            {{ 'model.data.download' | t }}
+                          </a>
+                        }
                       } @else {
                         {{ cellValue(row, header.key) }}
                       }

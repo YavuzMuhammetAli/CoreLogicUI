@@ -12,14 +12,8 @@ import { ColumnVisibilityComponent, ColumnVisibilityItem } from '../shared/colum
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
-import {
-  isImage,
-  imageSrc,
-  isBase64Value,
-  cellValue,
-  rowVal,
-  downloadFile
-} from './model-data.util';
+import { cellValue, fieldValue } from './model-data.util';
+import { asFileRef, FileRef, fileRefUrl } from '../../utils/record-file';
 import { markDirty } from '../../utils/change-detection';
 import { RecordMetadataService } from '../../services/record-metadata.service';
 import { ListLayout } from '../../utils/screen-layout/screen-layout.model';
@@ -424,15 +418,12 @@ export class ModelDataComponent implements OnInit {
 
   // ─── Util delegasyonları — template'te doğrudan çağrılabilmesi için ────────────
 
-  isImage       = isImage;
-  imageSrc      = imageSrc;
-  isBase64Value = isBase64Value;
   cellValue     = cellValue;
-  rowVal        = rowVal;
+  fileUrl       = fileRefUrl;
 
-  downloadFile(b64: string, colName: string): void {
-    // Dosya adı bu ekranda bilinmiyor; util uzantıyı MIME'den tahmin eder
-    downloadFile(b64, colName, {});
+  /** Hücredeki dosya/resim gösterimi (sunucu içerik değil bağlantı gönderir); yoksa null. */
+  fileRefOf(row: DataRow, key: string): FileRef | null {
+    return asFileRef(fieldValue(row, key));
   }
 
   rowId(row: DataRow): number {

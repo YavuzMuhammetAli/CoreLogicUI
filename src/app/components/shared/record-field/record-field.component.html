@@ -58,7 +58,18 @@
     <span class="field-error" role="alert">{{ fileErr }}</span>
   }
   @if (value(); as current) {
-    @if (isImage(current)) {
+    @if (asFileRef(current); as file) {
+      <!-- Kayıtlı dosya: içerik değil imzalı bağlantı gelir (bkz. utils/record-file.ts). -->
+      @if (file.kind === 'image') {
+        <img class="file-preview" [src]="fileUrl(file)" [attr.alt]="'model.detail.preview' | t"
+          loading="lazy" decoding="async">
+      } @else {
+        <div class="file-row">
+          <span class="eyebrow">{{ 'model.detail.fileExists' | t }}</span>
+          <a class="btn btn-ghost btn-sm" [href]="fileUrl(file)" download>{{ 'model.detail.download' | t }}</a>
+        </div>
+      }
+    } @else if (isImage(current)) {
       <img class="file-preview" [src]="imageSrc($any(current))" [attr.alt]="'model.detail.preview' | t">
     } @else {
       <div class="file-row">

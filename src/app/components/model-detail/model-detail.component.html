@@ -526,7 +526,24 @@
                             }
                             @for (h of tableHeaders(state); track h.key) {
                               <td [attr.data-label]="h.label">
-                                @if (isImage(strVal(row, h.key))) {
+                                @if (fileRefOf(row, h.key); as file) {
+                                  @if (file.kind === 'image') {
+                                    <img
+                                      [src]="fileUrl(file)"
+                                      [alt]="h.label"
+                                      style="max-height:40px;max-width:60px;border-radius:4px;object-fit:cover;vertical-align:middle"
+                                      loading="lazy"
+                                      decoding="async">
+                                  } @else {
+                                    <a class="btn btn-ghost btn-sm" [href]="fileUrl(file)" download
+                                      (click)="$event.stopPropagation()" [attr.title]="'model.data.download' | t">
+                                      <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                                      </svg>
+                                      {{ 'model.data.download' | t }}
+                                    </a>
+                                  }
+                                } @else if (isImage(strVal(row, h.key))) {
                                   <img
                                     [src]="imageSrc(strVal(row, h.key))"
                                     [alt]="h.label"

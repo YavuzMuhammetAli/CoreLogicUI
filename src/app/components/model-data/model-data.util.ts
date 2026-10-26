@@ -5,6 +5,7 @@
  */
 
 import { PublishedColumn } from '../../services/published-model.service';
+import { isFileRef } from '../../utils/record-file';
 
 type DataRow = Record<string, unknown>;
 
@@ -83,11 +84,18 @@ export function toInputValue(dataType: string, raw: unknown): unknown {
  * bir değer sayar — yani boş bırakılan opsiyonel bir alan '' olarak gönderilirse
  * regex/minLength kuralı '' üzerinde çalışır ve kayıt gereksiz yere reddedilir.
  * Zorunlu alanlarda davranış değişmez: backend `IsNullOrWhiteSpace` ile bakar.
+ *
+ * Değişmeyen dosya (sunucunun gönderdiği `FileRef`) payload'dan ÇIKARILIR: sunucu anahtarı
+ * olmayan dosya kolonuna dokunmaz. Dosyanın kendisi istemcide yok; geri gönderilecek içerik de yok.
  */
 export function sanitizePayload(columns: PublishedColumn[], formValue: DataRow): DataRow {
   const typeByName = new Map(columns.map(c => [c.columnName, c.dataType]));
   const out: DataRow = { ...formValue };
   for (const [key, val] of Object.entries(out)) {
+    if (isFileRef(val)) {
+      delete out[key];
+      continue;
+    }
     const dataType = typeByName.get(key);
     if (!dataType) continue;                 // ID gibi meta alanlar dokunulmaz
     if (dataType === 'boolean') {
@@ -200,6 +208,7 @@ type RowWithIndex = DataRow & { [LOWER_KEY_INDEX]?: Map<string, string> };
 export function cellValue(row: DataRow, key: string): string {
   const v = fieldValue(row, key);
   if (v === null || v === undefined) return '—';
+  if (isFileRef(v)) return '📎';
   if (typeof v === 'boolean') return v ? '✓' : '✗';
   return String(v);
 }

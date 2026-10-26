@@ -48,6 +48,7 @@ import {
   fieldValue,
   toInputValue
 } from '../model-data/model-data.util';
+import { asFileRef, FileRef, fileRefUrl } from '../../utils/record-file';
 import { markDirty } from '../../utils/change-detection';
 import { AutoValueFormBinding } from '../../utils/auto-value/auto-value-form';
 import { buildAutoValuePlan } from '../../utils/auto-value/auto-value';
@@ -255,6 +256,15 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   isImage        = isImage;
   imageSrc       = imageSrc;
   isBase64Value  = isBase64Value;
+  fileUrl        = fileRefUrl;
+
+  /**
+   * Hücredeki kayıtlı dosya/resim (sunucu içerik değil bağlantı gönderir); yoksa null.
+   * Kaydedilmemiş (bekleyen) alt satırlar dosyayı hâlâ base64 taşır — onlar eski yoldan çizilir.
+   */
+  fileRefOf(row: DataRow, key: string): FileRef | null {
+    return asFileRef(fieldValue(row, key));
+  }
 
   // ─── Lookup etiketleri (tablo hücreleri için) ───────────────────────────────
   //

@@ -11,6 +11,7 @@ import {
 } from '../../model-data/model-data.util';
 import { AutoValueRule } from '../../../utils/auto-value/auto-value';
 import { fileSizeError } from '../../../utils/file-size';
+import { asFileRef, fileRefUrl } from '../../../utils/record-file';
 import { isColumnRequired } from '../../../utils/record-field/column-required';
 import { fieldErrorText } from '../../../utils/record-field/field-error';
 import { FieldWidget } from '../../../utils/screen-layout/screen-layout.model';
@@ -85,6 +86,8 @@ export class RecordFieldComponent {
 
   readonly isImage = isImage;
   readonly imageSrc = imageSrc;
+  readonly asFileRef = asFileRef;
+  readonly fileUrl = fileRefUrl;
 
   constructor() {
     // Form yeniden kurulunca (yeni kontrol) önceki dosya seçiminin izi taşınmasın.
