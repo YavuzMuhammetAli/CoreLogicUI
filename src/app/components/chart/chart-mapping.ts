@@ -92,6 +92,19 @@ const fmtDate = (locale: ChartLocaleContext, value: Date): string =>
 const MAX_BAR_POINTS = 50;
 const MAX_LINE_POINTS = 200;
 
+/**
+ * Grafik türünün çizebileceği en fazla satır — sunucudan bundan fazlası istenmez (backend
+ * DashboardManager.RowCapFor ile aynı). null: tavan yok — kpi ve radialBar TÜM satırlardan
+ * toplam/oran hesaplar, erken kırpmak yanlış sayı üretir.
+ */
+export function chartRowCap(chartType: string | null | undefined): number | null {
+  switch (chartType) {
+    case 'pie': case 'donut': case 'column': case 'bar': return MAX_BAR_POINTS;
+    case 'line': case 'area': return MAX_LINE_POINTS;
+    default: return null;
+  }
+}
+
 function capRows(rows: Record<string, unknown>[], cap: number, locale: ChartLocaleContext): { rows: Record<string, unknown>[]; note: string | null } {
   if (rows.length <= cap) return { rows, note: null };
   return {

@@ -66,10 +66,16 @@ export class ReportService {
    * Verilmezse sunucu 5000 satırlık güvenlik tavanı uygular ve kırpılma olduysa
    * yanıtta truncated = true gelir. Her durumda total, filtre sonrası gerçek satır sayısıdır.
    */
-  run(id: number, page?: number, pageSize?: number): Observable<DataResponseModel<ReportRunResult>> {
+  /**
+   * `maxRows`: sayfasız (grafik) çalıştırmada en fazla satır — grafik zaten 50/200 noktadan
+   * fazlasını çizmez; sunucu 5000'e kadar satır üretip göndermesin.
+   */
+  run(id: number, page?: number, pageSize?: number, maxRows?: number | null): Observable<DataResponseModel<ReportRunResult>> {
     let params = new HttpParams().set('id', id);
     if (page != null && pageSize != null) {
       params = params.set('page', page).set('pageSize', pageSize);
+    } else if (maxRows != null) {
+      params = params.set('maxRows', maxRows);
     }
     return this.http.get<DataResponseModel<ReportRunResult>>(`${this.baseUrl}/run`, { params });
   }

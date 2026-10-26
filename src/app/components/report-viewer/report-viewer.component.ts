@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ReportService } from '../../services/report.service';
 import { ReportDefinition, ReportRunResult } from '../../models/report.model';
 import { AppChartComponent } from '../chart/chart.component';
+import { chartRowCap } from '../chart/chart-mapping';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { formatNumber } from '../../utils/locale-format';
@@ -117,11 +118,12 @@ export class ReportViewerComponent implements OnInit {
     this.loading.set(true);
     this.loadError.set(null);
 
-    // Tablo görünümü sayfalanır; grafik/KPI görünümü sunucu tavanıyla (5000) çekilir.
+    // Tablo görünümü sayfalanır; grafik görünümü yalnız çizilebilecek kadar satır ister
+    // (KPI/radialBar tüm satırlardan hesapladığı için sunucu tavanıyla — 5000).
     const paged = this.isTableView();
     const req = paged
       ? this.reportService.run(this.id, this.pageIndex(), this.pageSize())
-      : this.reportService.run(this.id);
+      : this.reportService.run(this.id, undefined, undefined, chartRowCap(this.report()?.chartType));
 
     req.subscribe({
       next: res => {
