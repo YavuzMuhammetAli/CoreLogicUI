@@ -424,13 +424,14 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
   private loadChildren(): void {
     this.loadingChildren = true;
-    this.publishedModel.getChildModels(this.typeName).pipe(markDirty(this.cdr)).subscribe({
-      next: res => {
+    // Alt model adları önbellekten (RecordMetadataService; şema değişince düşer) — eskiden
+    // her kayıt açılışında yeniden isteniyordu.
+    this.metadata.childTypeNames$(this.typeName).pipe(markDirty(this.cdr)).subscribe({
+      next: names => {
         this.loadingChildren = false;
         // Okuma izni olmayan alt modelin sekmesi açılmaz: satırlarını çeken getall 403
         // döner ve kullanıcıyı kayıttan /models'e atardı. Admin'de filtre hep true.
-        const readable = (res.success ? res.data ?? [] : [])
-          .filter(name => this.permission.can(name, 'read'));
+        const readable = names.filter(name => this.permission.can(name, 'read'));
         if (readable.length) {
           this.childModelNames = readable;
           this.activeTab = readable[0];
@@ -1694,7 +1695,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     const id = this.recordId;
     if (!id) return;
 
-    this.instanceService.forEntity(typeName, id).pipe(markDirty(this.cdr)).subscribe({
+    this.instanceService.forEntity(typeName, id, true).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (typeName !== this.typeName || id !== this.recordId) return;
         this.latestInstanceId = res.success ? res.data?.[0]?.id ?? null : null;

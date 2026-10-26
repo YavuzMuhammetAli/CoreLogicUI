@@ -36,29 +36,36 @@ export class RecordMetadataService {
   private readonly publishedModel = inject(PublishedModelService);
   private readonly screenLayouts = inject(ScreenLayoutService);
 
-  /** `/PublishedModel/models` yanıtı — kolon dizini ve model etiketleri bundan türer. */
-  private modelsCache$?: Observable<PublishedModel[]>;
-  /** typeName → kolonlar (tek bir /models çağrısından indekslenir). */
-  private columnsIndex$?: Observable<Map<string, PublishedColumn[]>>;
+  /** typeName → kolonlar (tek bir /models yanıtından indekslenir; yanıtla birlikte yenilenir). */
+  private columnsIndex?: { source: Observable<unknown>; index$: Observable<Map<string, PublishedColumn[]>> };
   private readonly rulesCache = new Map<string, Observable<Map<string, PublishedColumnSchema>>>();
   private readonly childCache = new Map<string, Observable<string[]>>();
   private readonly metaCache = new Map<string, Observable<TypeMeta>>();
   /** `${typeName}|${viewType}` → yayındaki yerleşim (süreli önbellek, bkz. layout$). */
   private readonly layoutCache = new Map<string, { at: number; layout$: Observable<FormLayout | ListLayout | null> }>();
 
+  /** Model listesi geçersiz kılındı (bkz. PublishedModelService.invalidateModels). */
+  readonly modelsInvalidated$ = this.publishedModel.modelsInvalidated$.asObservable();
+
+  constructor() {
+    // Model listesi değişince (yayın, şema düzenlemesi) ondan türeyen paketler de bayattır.
+    this.publishedModel.modelsInvalidated$.subscribe(() => {
+      this.metaCache.clear();
+      this.childCache.clear();
+      this.columnsIndex = undefined;
+    });
+  }
+
   /**
    * Kullanıcının görebildiği yayınlanmış modeller (admin olmayanda yalnız Read izinliler).
    * Okunamazsa boş liste — çağıranlar typeName'e düşer.
    */
   models$(): Observable<PublishedModel[]> {
-    if (!this.modelsCache$) {
-      this.modelsCache$ = this.publishedModel.getModels().pipe(
-        map(res => res.success ? res.data ?? [] : []),
-        catchError(() => of<PublishedModel[]>([])),
-        shareReplay(1)
-      );
-    }
-    return this.modelsCache$;
+    // Önbellek PublishedModelService'te (süreli, oturuma bağlı, şema değişince düşer).
+    return this.publishedModel.getModels().pipe(
+      map(res => res.success ? res.data ?? [] : []),
+      catchError(() => of<PublishedModel[]>([]))
+    );
   }
 
   /**
@@ -66,13 +73,18 @@ export class RecordMetadataService {
    * için tip başına ayrı istek atılmaz.
    */
   private allColumns$(): Observable<Map<string, PublishedColumn[]>> {
-    if (!this.columnsIndex$) {
-      this.columnsIndex$ = this.models$().pipe(
-        map(models => new Map(models.map(m => [m.typeName, m.columns ?? []] as const))),
-        shareReplay(1)
-      );
+    // Dizin, kaynağı olan /models yanıtı değişmedikçe yeniden kurulmaz.
+    const source = this.publishedModel.getModels();
+    if (this.columnsIndex?.source !== source) {
+      this.columnsIndex = {
+        source,
+        index$: this.models$().pipe(
+          map(models => new Map(models.map(m => [m.typeName, m.columns ?? []] as const))),
+          shareReplay(1)
+        )
+      };
     }
-    return this.columnsIndex$;
+    return this.columnsIndex.index$;
   }
 
   columns$(typeName: string): Observable<PublishedColumn[]> {

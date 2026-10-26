@@ -18,6 +18,11 @@ export class ModelLabelService {
   private readonly labels = signal<ReadonlyMap<string, string>>(new Map());
   private requested = false;
 
+  constructor() {
+    // Etiket değişebilir (şema düzenlemesi, yeni yayın): sonraki okumada yeniden yüklenir.
+    this.metadata.modelsInvalidated$?.subscribe(() => { this.requested = false; });
+  }
+
   labelOf(typeName: string | null | undefined): string {
     if (!typeName) return '';
     this.ensureLoaded();

@@ -24,6 +24,11 @@ export class DashboardService {
     return this.http.get<DataResponseModel<DashboardRunResult>>(`${this.baseUrl}/get`, { params });
   }
 
+  /** Menüde gösterilecek dashboard'lar — yalnız kimlik + ad (widget'lar inmez). */
+  nav(): Observable<ListResponseModel<DashboardDefinition>> {
+    return this.http.get<ListResponseModel<DashboardDefinition>>(`${this.baseUrl}/nav`);
+  }
+
   /** Tenant içindeki tüm dashboard tanımlarını (widget listeleri dahil) getirir. */
   list(): Observable<ListResponseModel<DashboardDefinition>> {
     return this.http.get<ListResponseModel<DashboardDefinition>>(`${this.baseUrl}/list`);

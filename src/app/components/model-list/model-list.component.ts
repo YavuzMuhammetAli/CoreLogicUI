@@ -48,9 +48,11 @@ export class ModelListComponent implements OnInit {
     this.loadError = null;
     this.noPermission = false;
 
-    // Yetki ve model listesini birlikte yükle — signal'in hazır olması için
+    // Yetki ve model listesini birlikte yükle — signal'in hazır olması için. İzinler açılışta
+    // (APP_INITIALIZER) zaten yüklendi: ensureLoaded yalnız yüklenmemişse ister. Eskiden her
+    // /models ziyaretinde yeniden isteniyor ve sinyal yeniden yazıldığı için her şey yeniden çiziliyordu.
     forkJoin([
-      this.permissionService.loadMyPermissions(),
+      this.permissionService.ensureLoaded(),
       this.publishedModel.getModels()
     ]).pipe(markDirty(this.cdr)).subscribe({
       next: ([, modelsRes]) => {

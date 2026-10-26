@@ -73,9 +73,14 @@ export class BackupRestoreDialogComponent {
   readonly currentPhaseIndex = computed(() => PHASES.indexOf((this.restore()?.phase ?? '') as typeof PHASES[number]));
 
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Kapanışta süren bir istek yanıt verince yeni yoklama zinciri başlamasın. */
+  private destroyed = false;
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.stopPolling());
+    inject(DestroyRef).onDestroy(() => {
+      this.destroyed = true;
+      this.stopPolling();
+    });
 
     // Sayfa yenilendiğinde süren geri yükleme: onay adımı atlanır, ilerleme gösterilir.
     effect(() => {
@@ -169,6 +174,7 @@ export class BackupRestoreDialogComponent {
   }
 
   private schedule(restoreId: number): void {
+    if (this.destroyed) return;
     this.pollTimer = setTimeout(() => {
       this.pollTimer = null;
       this.poll(restoreId);

@@ -7,6 +7,7 @@ import { ListResponseModel } from '../models/responseModelList';
 import { AppUser } from '../models/appUser';
 import { Role } from '../models/role';
 import { ModelPermission } from './permission.service';
+import { DataResponseModel } from '../models/dataResponseModel';
 
 /**
  * İsimli rol (RBAC) yönetimi servisi.
@@ -63,6 +64,11 @@ export class RoleAdminService {
   }
 
   /** Rolün tüm model izinlerini döndürür. GET /Role/permissions?roleId= */
+  /** Rol başına izinli model sayısı (roleId → sayı) — TEK istek. GET /Role/permittedModelCounts */
+  getPermittedModelCounts(): Observable<DataResponseModel<Record<string, number>>> {
+    return this.http.get<DataResponseModel<Record<string, number>>>(`${this.roleUrl}/permittedModelCounts`);
+  }
+
   getRolePermissions(roleId: number): Observable<ListResponseModel<ModelPermission>> {
     return this.http.get<ListResponseModel<ModelPermission>>(
       `${this.roleUrl}/permissions`,

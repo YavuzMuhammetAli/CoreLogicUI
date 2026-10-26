@@ -6,6 +6,7 @@ import { ResponseModel } from '../models/responseModel';
 import { ListResponseModel } from '../models/responseModelList';
 import { AppUser } from '../models/appUser';
 import { ModelPermission } from './permission.service';
+import { DataResponseModel } from '../models/dataResponseModel';
 
 /** Bitwise PermissionAction bayrakları — backend PermissionAction enum ile birebir eşleşir */
 export const PermissionFlag = {
@@ -66,6 +67,14 @@ export class PermissionAdminService {
    * Belirtilen kullanıcının tüm model izinlerini döndürür.
    * GET /Permission/forUser?userId= — admin yetkisi gerekli.
    */
+  /**
+   * Kullanıcı başına izinli model sayısı (userId → sayı) — TEK istek.
+   * GET /Permission/permittedModelCounts — admin yetkisi gerekli.
+   */
+  getPermittedModelCounts(): Observable<DataResponseModel<Record<string, number>>> {
+    return this.http.get<DataResponseModel<Record<string, number>>>(`${this.permissionUrl}/permittedModelCounts`);
+  }
+
   getUserPermissions(userId: number): Observable<ListResponseModel<ModelPermission>> {
     return this.http.get<ListResponseModel<ModelPermission>>(
       `${this.permissionUrl}/forUser`,

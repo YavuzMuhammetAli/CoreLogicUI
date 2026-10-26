@@ -5,6 +5,7 @@ import {
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { Subject, Subscription, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { LookupOption, PublishedModelService } from '../../../services/published-model.service';
+import { LookupLabelService } from '../../../services/lookup-label.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { markDirty } from '../../../utils/change-detection';
 
@@ -51,6 +52,7 @@ let instanceCounter = 0;
 export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly publishedModel = inject(PublishedModelService);
+  private readonly lookupLabels = inject(LookupLabelService);
   private readonly host = inject(ElementRef<HTMLElement>);
 
   /** Hedef model (lookupTargetTable). */
@@ -150,17 +152,18 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
       return;
     }
 
-    // Seçili kaydın etiketini TEK istekle çöz — listede olup olmaması önemli değil.
-    this.publishedModel
-      .lookupOptionsByIds(this.typeName(), this.displayColumn(), [this.value])
+    // Seçili kaydın etiketi ortak etiket önbelleğinden (LookupLabelService): alt tablolar aynı
+    // hedefin etiketlerini zaten toplu çözer; form her yeniden kurulduğunda alan başına ayrı
+    // istek atılıyordu. Önbellekte yoksa tek istekle çözülür.
+    const selected = this.value;
+    const target = this.typeName();
+    const column = this.displayColumn();
+    this.lookupLabels.ensure(target, column, [selected])
       .pipe(markDirty(this.cdr))
-      .subscribe({
-        next: res => {
-          const found = res.success ? (res.data?.items ?? [])[0] : undefined;
-          // Etiket çözülemezse (silinmiş kayıt vb.) ham id gösterilir — değer KORUNUR.
-          this.selectedLabel.set(found ? found.label : String(this.value));
-        },
-        error: () => this.selectedLabel.set(String(this.value))
+      .subscribe(() => {
+        if (this.value !== selected) return;   // arada başka değer yazıldı
+        // Etiket çözülemezse (silinmiş kayıt vb.) ham id gösterilir — değer KORUNUR.
+        this.selectedLabel.set(this.lookupLabels.label(target, column, selected) ?? String(selected));
       });
   }
 

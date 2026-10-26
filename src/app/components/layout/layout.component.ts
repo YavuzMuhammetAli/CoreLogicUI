@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, HostListener, inject, OnDestroy, OnInit, PLATFORM_ID, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
-import { filter } from 'rxjs/operators';
+import { filter, tap } from 'rxjs/operators';
+import { startVisiblePoll, VisiblePoll } from '../../utils/visible-poll';
 import { isPlatformBrowser } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
@@ -91,11 +92,11 @@ export class LayoutComponent implements OnInit, OnDestroy {
    */
   readonly pendingTaskCount = signal(0);
 
-  /** Rozet yenileme aralığı (ms). Kullanıcı beklemesin diye kısa, sunucuyu
-   *  yormasın diye 30 sn'den seyrek değil. */
-  private static readonly TaskPollIntervalMs = 30_000;
+  /** Rozet yenileme aralığı (ms). Sekme gizliyken hiç sorulmaz, görünür olunca hemen tazelenir
+   *  (bkz. utils/visible-poll) — aralık bu yüzden 60 sn'ye çıkabildi. */
+  private static readonly TaskPollIntervalMs = 60_000;
 
-  private taskPollTimer?: ReturnType<typeof setInterval>;
+  private taskPoll?: VisiblePoll;
 
   private readonly platformId   = inject(PLATFORM_ID);
   private readonly destroyRef   = inject(DestroyRef);
@@ -129,9 +130,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
     // H: Görev rozeti. isPlatformBrowser kontrolünün ALTINDA — sunucu tarafında
     // zamanlayıcı kurmak anlamsız ve sızıntı olurdu.
-    this.refreshTaskCount();
-    this.taskPollTimer = setInterval(
-      () => this.refreshTaskCount(), LayoutComponent.TaskPollIntervalMs);
+    this.taskPoll = startVisiblePoll(() => this.refreshTaskCount(), LayoutComponent.TaskPollIntervalMs);
 
     // Arayüz dili bildirim e-postalarının dili olarak saklanır. Kabuk her açılışta
     // bir kez yazar — dil tercihi hiç kaydedilmemiş mevcut kullanıcılar da (girişten
@@ -165,7 +164,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
     });
 
     // Admin tarafından navigasyona yayınlanmış dashboard'ları yükle — tüm kullanıcılar görür.
-    this.dashboardService.list().pipe(markDirty(this.cdr)).subscribe({
+    // Yalnız menü dashboard'ları, widget tanımları olmadan.
+    this.dashboardService.nav().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         const all = res.success ? (res.data ?? []) : [];
         this.navDashboards = all.filter(d => d.showInNav);
@@ -261,7 +261,28 @@ export class LayoutComponent implements OnInit, OnDestroy {
    * < 019) ekran bozulmamalı — e-posta o durumda şirketin varsayılan dilinde gider.
    */
   private syncLanguagePreference(): void {
-    this.userProfile.setLanguage(this.languageService.lang()).subscribe({ error: () => {} });
+    // Yalnız DEĞİŞTİYSE yazılır: eskiden her sayfa yenilemesi bir veritabanı yazımıydı
+    // (PUT /Profile/language). Son yazılan (kullanıcı, dil) tarayıcıda tutulur; başka
+    // kullanıcıyla girişte ya da dil değişince yeniden yazılır.
+    const lang = this.languageService.lang();
+    const user = this.auth.getUserFromToken();
+    const marker = `${user?.tenantId ?? ''}|${user?.email ?? ''}|${lang}`;
+    if (this.readLanguageMarker() === marker) return;
+
+    this.userProfile.setLanguage(lang).subscribe({
+      next: res => { if (res.success) this.writeLanguageMarker(marker); },
+      error: () => {}
+    });
+  }
+
+  private static readonly LanguageMarkerKey = 'lang.synced';
+
+  private readLanguageMarker(): string | null {
+    try { return localStorage.getItem(LayoutComponent.LanguageMarkerKey); } catch { return null; }
+  }
+
+  private writeLanguageMarker(marker: string): void {
+    try { localStorage.setItem(LayoutComponent.LanguageMarkerKey, marker); } catch { /* gizli pencere */ }
   }
 
   /**
@@ -271,17 +292,15 @@ export class LayoutComponent implements OnInit, OnDestroy {
    * kurulmamış bir tenant'ta (migrasyon < 017) bu uç hata döner ve her 30 saniyede
    * kullanıcıya uyarı göstermek anlamsız olurdu.
    */
-  private refreshTaskCount(): void {
-    this.taskService.myCount().subscribe({
-      next: res => {
-        if (res.success) this.pendingTaskCount.set(res.data ?? 0);
-      },
-      error: () => { /* sessiz — sınıf notuna bak */ }
-    });
+  private refreshTaskCount() {
+    // Hata sessizdir (yoklayıcı yalnız aralığı uzatır).
+    return this.taskService.myCount().pipe(
+      tap(res => { if (res.success) this.pendingTaskCount.set(res.data ?? 0); })
+    );
   }
 
   ngOnDestroy(): void {
-    if (this.taskPollTimer) clearInterval(this.taskPollTimer);
+    this.taskPoll?.stop();
     this.mobileQuery?.removeEventListener('change', this.onMobileChange);
   }
 }

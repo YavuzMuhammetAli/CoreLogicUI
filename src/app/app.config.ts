@@ -44,7 +44,10 @@ function permissionInitializerFactory(
     // (kayıt sihirbazına deep-link'i kırıyordu).
     if (!localStorage.getItem('access_token')) return Promise.resolve();
 
-    return firstValueFrom(permissionService.loadMyPermissions())
+    // ensureLoaded: uçuştaki isteği guard'larla PAYLAŞIR. Router'ın ilk gezinmesi de bir
+    // initializer'dır ve bununla paralel başlar; doğrudan loadMyPermissions çağrılınca guard'lar
+    // isteği göremiyor, korumalı her sayfa açılışında /Permission/my ikinci kez gidiyordu.
+    return firstValueFrom(permissionService.ensureLoaded())
       .then(() => {}) // başarılı — sinyal set edildi
       .catch(() => {}); // hata (401, ağ vb.) — sessizce geç, authGuard devralır
   };

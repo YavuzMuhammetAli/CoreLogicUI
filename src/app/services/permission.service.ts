@@ -1,4 +1,4 @@
-import { Injectable, signal, inject, PLATFORM_ID } from '@angular/core';
+import { Injectable, signal, computed, inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
 import { Observable, of, tap, catchError, shareReplay, map, finalize } from 'rxjs';
@@ -37,6 +37,17 @@ export class PermissionService {
 
   /** Kullanıcının yetki verisi — null ise henüz yüklenmedi */
   private _data = signal<MyPermissionsResponse['data'] | null>(null);
+
+  /**
+   * Model adı (küçük harf) → izin. can()/canNavigate() liste satırlarında satır başına birkaç kez
+   * çağrılır; her çağrıda tüm izin listesini toLowerCase ile taramak model sayısıyla büyüyordu.
+   * Harita yalnız izin verisi değişince kurulur.
+   */
+  private readonly byModel = computed(() => {
+    const map = new Map<string, ModelPermission>();
+    for (const p of this._data()?.permissions ?? []) map.set(p.modelName.toLowerCase(), p);
+    return map;
+  });
 
   /**
    * Uçuştaki yükleme isteği — aynı anda birden fazla guard çalışırsa
@@ -114,9 +125,7 @@ export class PermissionService {
     if (!data) return false;
     if (data.isAdmin) return true;
 
-    const perm = data.permissions.find(
-      p => p.modelName.toLowerCase() === modelName.toLowerCase()
-    );
+    const perm = this.byModel().get(modelName.toLowerCase());
     if (!perm) return false;
 
     switch (action) {
@@ -137,10 +146,7 @@ export class PermissionService {
     if (!data) return false;
     if (data.isAdmin) return true;
 
-    const perm = data.permissions.find(
-      p => p.modelName.toLowerCase() === modelName.toLowerCase()
-    );
-    return perm?.canShowInNav ?? false;
+    return this.byModel().get(modelName.toLowerCase())?.canShowInNav ?? false;
   }
 
   /**

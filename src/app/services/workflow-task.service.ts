@@ -134,10 +134,11 @@ export class WorkflowInstanceService {
   }
 
   /** Kayıt detayındaki "Süreç" panelinin veri kaynağı. */
-  forEntity(entityType: string, entityId: number): Observable<ListResponseModel<WorkflowInstance>> {
-    return this.http.get<ListResponseModel<WorkflowInstance>>(`${this.baseUrl}/forEntity`, {
-      params: new HttpParams().set('entityType', entityType).set('entityId', entityId)
-    });
+  /** `latestOnly`: yalnız en yeni süreç, olay geçmişi olmadan (kayıt başlığı yalnız kimliği kullanır). */
+  forEntity(entityType: string, entityId: number, latestOnly = false): Observable<ListResponseModel<WorkflowInstance>> {
+    let params = new HttpParams().set('entityType', entityType).set('entityId', entityId);
+    if (latestOnly) params = params.set('latestOnly', true);
+    return this.http.get<ListResponseModel<WorkflowInstance>>(`${this.baseUrl}/forEntity`, { params });
   }
 
   /**

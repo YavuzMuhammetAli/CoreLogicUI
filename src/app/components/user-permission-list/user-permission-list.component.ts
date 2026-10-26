@@ -1,11 +1,10 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
+import { of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import { PermissionAdminService } from '../../services/permission-admin.service';
-import { ModelPermission } from '../../services/permission.service';
 import { AppUser } from '../../models/appUser';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
@@ -60,16 +59,13 @@ export class UserPermissionListComponent implements OnInit {
           return;
         }
 
-        // Her kullanıcının izinli model sayısını ayrıca çek (en az bir izni olan modeller)
-        forkJoin(
-          users.map(user =>
-            this.adminService.getUserPermissions(user.id).pipe(
-              map(permsRes => this.countPermittedModels(permsRes.success ? permsRes.data : [])),
-              catchError(() => of(0))
-            )
-          )
-        ).pipe(markDirty(this.cdr)).subscribe(counts => {
-          this.rows.set(users.map((user, i) => ({ ...user, permittedModelCount: counts[i] })));
+        // İzinli model sayıları TEK istekte (eskiden kullanıcı başına ayrı forUser isteği).
+        this.adminService.getPermittedModelCounts().pipe(
+          map(countsRes => (countsRes.success ? countsRes.data ?? {} : {}) as Record<string, number>),
+          catchError(() => of({} as Record<string, number>)),
+          markDirty(this.cdr)
+        ).subscribe(counts => {
+          this.rows.set(users.map(user => ({ ...user, permittedModelCount: counts[String(user.id)] ?? 0 })));
           this.loading.set(false);
         });
       },
@@ -78,12 +74,6 @@ export class UserPermissionListComponent implements OnInit {
         this.loading.set(false);
       }
     });
-  }
-
-  private countPermittedModels(perms: ModelPermission[] | undefined): number {
-    return (perms ?? []).filter(p =>
-      p.canRead || p.canCreate || p.canUpdate || p.canDelete || p.canShowInNav || p.canOwnOnly || p.canViewWorkflow
-    ).length;
   }
 
   /** Kullanıcının tam adı */

@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { MonoTypeOperatorFunction, Observable, tap } from 'rxjs';
 import { ResponseModel } from '../models/responseModel';
 import { DataResponseModel } from '../models/dataResponseModel';
 import { ListResponseModel } from '../models/responseModelList';
 import { environment } from '../../environments/environment';
+import { PublishedModelService } from './published-model.service';
 import { AutoValueTrigger } from '../utils/auto-value/auto-value';
 import { MemberMetadataUpdate } from '../utils/column-rules';
 
@@ -116,7 +117,15 @@ export interface PublishedTableRow {
 export class PublishedTableService {
   private readonly baseUrl = `${environment.apiBaseUrl}/Published`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private publishedModels: PublishedModelService) {}
+
+  /**
+   * Şemayı değiştiren her çağrı model listesi önbelleğini düşürür (bkz. PublishedModelService.getModels);
+   * ekranların bunu ayrıca hatırlaması gerekmez. Başarısız yanıtta da düşer — zararsız bir yeniden istek.
+   */
+  private invalidatesModels<T>(): MonoTypeOperatorFunction<T> {
+    return tap({ next: () => this.publishedModels.invalidateModels() });
+  }
 
   /** Yeni tablo metadata kaydı ekler. parentTableName verilirse alt model olarak kaydedilir. */
   addTable(table: PublishedTableDto): Observable<ResponseModel> {
@@ -126,7 +135,7 @@ export class PublishedTableService {
     }
     // parentTableName body entity'sinde yok; yalnızca query param olarak gönderilir
     const body = { tableName: table.tableName, description: table.description, label: table.label ?? null, version: table.version };
-    return this.http.post<ResponseModel>(`${this.baseUrl}/addTable`, body, { params });
+    return this.http.post<ResponseModel>(`${this.baseUrl}/addTable`, body, { params }).pipe(this.invalidatesModels());
   }
 
   /** Tabloya kolon metadata kaydı ekler (opsiyonel kural parametreleri null ise query string'e eklenmez) */
@@ -155,7 +164,7 @@ export class PublishedTableService {
     }
     if (m.isReadOnly)                  params = params.set('isReadOnly', true);
 
-    return this.http.post<ResponseModel>(`${this.baseUrl}/addMember`, null, { params });
+    return this.http.post<ResponseModel>(`${this.baseUrl}/addMember`, null, { params }).pipe(this.invalidatesModels());
   }
 
   /**
@@ -164,7 +173,7 @@ export class PublishedTableService {
    */
   publish(typeName: string): Observable<ResponseModel> {
     const params = new HttpParams().set('typeName', typeName);
-    return this.http.post<ResponseModel>(`${this.baseUrl}/publish`, null, { params });
+    return this.http.post<ResponseModel>(`${this.baseUrl}/publish`, null, { params }).pipe(this.invalidatesModels());
   }
 
   /**
@@ -204,7 +213,7 @@ export class PublishedTableService {
     const params = new HttpParams()
       .set('modelName', modelName)
       .set('version', version);
-    return this.http.post<ResponseModel>(`${this.baseUrl}/rollback`, null, { params });
+    return this.http.post<ResponseModel>(`${this.baseUrl}/rollback`, null, { params }).pipe(this.invalidatesModels());
   }
 
   /**
@@ -215,14 +224,14 @@ export class PublishedTableService {
     const params = new HttpParams()
       .set('typeName', typeName)
       .set('memberName', memberName);
-    return this.http.post<ResponseModel>(`${this.baseUrl}/removeMember`, null, { params });
+    return this.http.post<ResponseModel>(`${this.baseUrl}/removeMember`, null, { params }).pipe(this.invalidatesModels());
   }
 
   /** Yalnızca model etiketini günceller — tablo adı, derinlik ve parent değişmez. */
   setTableLabel(typeName: string, label: string | null): Observable<ResponseModel> {
     let params = new HttpParams().set('typeName', typeName);
     if (label?.trim()) params = params.set('label', label.trim());
-    return this.http.post<ResponseModel>(`${this.baseUrl}/setTableLabel`, null, { params });
+    return this.http.post<ResponseModel>(`${this.baseUrl}/setTableLabel`, null, { params }).pipe(this.invalidatesModels());
   }
 
   /**
@@ -231,7 +240,7 @@ export class PublishedTableService {
    * Ad/tip değişmez; yeniden yayın gerekmez. Gövde `toMemberMetadataUpdate` ile kurulur.
    */
   updateMemberMetadata(body: MemberMetadataUpdate): Observable<ResponseModel> {
-    return this.http.post<ResponseModel>(`${this.baseUrl}/updateMemberMetadata`, body);
+    return this.http.post<ResponseModel>(`${this.baseUrl}/updateMemberMetadata`, body).pipe(this.invalidatesModels());
   }
 
   /**
@@ -240,7 +249,7 @@ export class PublishedTableService {
    * değişmez, yeniden yayın gerekmez — kural bir sonraki kayıtta devreye girer.
    */
   setMemberAutoValue(req: SetMemberAutoValueRequest): Observable<ResponseModel> {
-    return this.http.post<ResponseModel>(`${this.baseUrl}/setMemberAutoValue`, req);
+    return this.http.post<ResponseModel>(`${this.baseUrl}/setMemberAutoValue`, req).pipe(this.invalidatesModels());
   }
 
   /**
@@ -249,7 +258,7 @@ export class PublishedTableService {
    */
   deleteModel(typeName: string): Observable<ResponseModel> {
     const params = new HttpParams().set('typeName', typeName);
-    return this.http.post<ResponseModel>(`${this.baseUrl}/deleteModel`, null, { params });
+    return this.http.post<ResponseModel>(`${this.baseUrl}/deleteModel`, null, { params }).pipe(this.invalidatesModels());
   }
 
   /**
@@ -268,7 +277,7 @@ export class PublishedTableService {
    */
   restoreDraft(typeName: string): Observable<ResponseModel> {
     const params = new HttpParams().set('typeName', typeName);
-    return this.http.post<ResponseModel>(`${this.baseUrl}/restoreDraft`, null, { params });
+    return this.http.post<ResponseModel>(`${this.baseUrl}/restoreDraft`, null, { params }).pipe(this.invalidatesModels());
   }
 
   /**
@@ -287,6 +296,6 @@ export class PublishedTableService {
    */
   restoreModel(typeName: string): Observable<ResponseModel> {
     const params = new HttpParams().set('typeName', typeName);
-    return this.http.post<ResponseModel>(`${this.baseUrl}/restoreModel`, null, { params });
+    return this.http.post<ResponseModel>(`${this.baseUrl}/restoreModel`, null, { params }).pipe(this.invalidatesModels());
   }
 }

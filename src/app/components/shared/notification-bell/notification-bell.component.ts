@@ -9,6 +9,8 @@ import { UserNotification } from '../../../models/userNotification';
 import { LanguageService } from '../../../services/language.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { formatDate } from '../../../utils/locale-format';
+import { tap } from 'rxjs';
+import { startVisiblePoll, VisiblePoll } from '../../../utils/visible-poll';
 
 /** Açılır listede gösterilen bildirim sayısı. */
 const LIST_SIZE = 20;
@@ -34,7 +36,7 @@ const LIST_SIZE = 20;
 })
 export class NotificationBellComponent implements OnInit, OnDestroy {
   /** Rozet yenileme aralığı (ms) — görev rozetiyle aynı. */
-  private static readonly PollIntervalMs = 30_000;
+  private static readonly PollIntervalMs = 60_000;
 
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly router = inject(Router);
@@ -54,18 +56,18 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
     return count > 9 ? '9+' : String(count);
   });
 
-  private pollTimer?: ReturnType<typeof setInterval>;
+  private poll?: VisiblePoll;
 
   ngOnInit(): void {
     // Sunucu tarafında zamanlayıcı kurmak anlamsız ve sızıntı olurdu.
     if (!isPlatformBrowser(this.platformId)) return;
 
-    this.refreshCount();
-    this.pollTimer = setInterval(() => this.refreshCount(), NotificationBellComponent.PollIntervalMs);
+    // Sekme gizliyken sorulmaz, görünür olunca hemen tazelenir (bkz. utils/visible-poll).
+    this.poll = startVisiblePoll(() => this.countRequest(), NotificationBellComponent.PollIntervalMs);
   }
 
   ngOnDestroy(): void {
-    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.poll?.stop();
   }
 
   toggle(): void {
@@ -145,10 +147,13 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
   }
 
   private refreshCount(): void {
-    this.notificationService.unreadCount().subscribe({
-      next: res => { if (res.success) this.unreadCount.set(res.data ?? 0); },
-      error: () => { /* sessiz — sınıf notuna bak */ }
-    });
+    this.countRequest().subscribe({ error: () => { /* sessiz — sınıf notuna bak */ } });
+  }
+
+  private countRequest() {
+    return this.notificationService.unreadCount().pipe(
+      tap(res => { if (res.success) this.unreadCount.set(res.data ?? 0); })
+    );
   }
 
   private loadList(): void {

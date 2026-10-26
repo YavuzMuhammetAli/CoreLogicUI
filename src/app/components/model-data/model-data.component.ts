@@ -240,7 +240,8 @@ export class ModelDataComponent implements OnInit {
           this.rowsRetried = true;
           this.publishModel.loadAssembly().pipe(markDirty(this.cdr)).subscribe({
             next: () => {
-              // Assembly yeniden yüklendi; model meta'sını da taze çek
+              // Assembly yeniden yüklendi; model meta'sını da taze çek (önbellek atlanır)
+              this.publishedModel.invalidateModels();
               this.publishedModel.getModels().pipe(markDirty(this.cdr)).subscribe({
                 next: metaRes => {
                   if (metaRes.success)

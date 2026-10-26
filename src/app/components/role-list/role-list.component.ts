@@ -1,11 +1,10 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
+import { of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import { RoleAdminService } from '../../services/role-admin.service';
-import { ModelPermission } from '../../services/permission.service';
 import { Role } from '../../models/role';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
@@ -62,16 +61,13 @@ export class RoleListComponent implements OnInit {
           return;
         }
 
-        // Her rolün izinli model sayısını ayrıca çek (en az bir izni olan modeller)
-        forkJoin(
-          roles.map(role =>
-            this.roleService.getRolePermissions(role.id).pipe(
-              map(permsRes => this.countPermittedModels(permsRes.success ? permsRes.data : [])),
-              catchError(() => of(0))
-            )
-          )
-        ).pipe(markDirty(this.cdr)).subscribe(counts => {
-          this.rows.set(roles.map((role, i) => ({ ...role, permittedModelCount: counts[i] })));
+        // İzinli model sayıları TEK istekte (eskiden rol başına ayrı permissions isteği).
+        this.roleService.getPermittedModelCounts().pipe(
+          map(countsRes => (countsRes.success ? countsRes.data ?? {} : {}) as Record<string, number>),
+          catchError(() => of({} as Record<string, number>)),
+          markDirty(this.cdr)
+        ).subscribe(counts => {
+          this.rows.set(roles.map(role => ({ ...role, permittedModelCount: counts[String(role.id)] ?? 0 })));
           this.loading.set(false);
         });
       },
@@ -80,12 +76,6 @@ export class RoleListComponent implements OnInit {
         this.loading.set(false);
       }
     });
-  }
-
-  private countPermittedModels(perms: ModelPermission[] | undefined): number {
-    return (perms ?? []).filter(p =>
-      p.canRead || p.canCreate || p.canUpdate || p.canDelete || p.canShowInNav || p.canOwnOnly || p.canViewWorkflow
-    ).length;
   }
 
   /** Onay bekleyen silme hedefi; null ise diyalog kapalıdır. */

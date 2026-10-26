@@ -57,9 +57,14 @@ export class BackupSettingsTabComponent implements OnInit {
   private readonly parameterService = inject(ParameterService);
   private readonly languageService = inject(LanguageService);
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Kapanışta süren bir istek yanıt verince yeni yoklama zinciri başlamasın. */
+  private destroyed = false;
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.stopPolling());
+    inject(DestroyRef).onDestroy(() => {
+      this.destroyed = true;
+      this.stopPolling();
+    });
   }
 
   readonly frequencies = CRON_FREQUENCIES;
@@ -232,7 +237,7 @@ export class BackupSettingsTabComponent implements OnInit {
    */
   private schedulePoll(): void {
     this.stopPolling();
-    if (!this.hasActiveBackup()) return;
+    if (this.destroyed || !this.hasActiveBackup()) return;
     this.pollTimer = setTimeout(() => {
       this.pollTimer = null;
       this.loadHistory();

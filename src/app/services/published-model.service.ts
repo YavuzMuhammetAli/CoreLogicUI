@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, Subject, shareReplay, tap } from 'rxjs';
 import { ResponseModel } from '../models/responseModel';
 import { ListResponseModel } from '../models/responseModelList';
 import { DataResponseModel } from '../models/dataResponseModel';
@@ -95,11 +95,63 @@ const AUXILIARY = () => new HttpContext().set(SKIP_FORBIDDEN_REDIRECT, true);
 export class PublishedModelService {
   private readonly baseUrl = `${environment.apiBaseUrl}/PublishedModel`;
 
+  /**
+   * Model listesi önbelleği süresi. Liste başka bir admin'in yayınıyla değişebilir; bu oturumun
+   * kendi şema değişiklikleri `invalidateModels()` ile anında düşer (PublishedTableService çağırır).
+   */
+  static readonly MODELS_TTL_MS = 5 * 60 * 1000;
+
+  private modelsCache: { at: number; token: string | null; models$: Observable<ListResponseModel<PublishedModel>> } | null = null;
+
+  /** Model listesi geçersiz kılındı — türetilmiş önbellekler (RecordMetadataService) de düşsün. */
+  readonly modelsInvalidated$ = new Subject<void>();
+
   constructor(private http: HttpClient) {}
 
-  /** Assembly'deki tüm model tiplerini ve kolon meta verilerini getirir */
+  /**
+   * Assembly'deki tüm model tiplerini ve kolon meta verilerini getirir — ÖNBELLEKLİ.
+   *
+   * Kabuk, model listesi, kayıt/liste ekranları, şema/rapor/akış tasarımcıları ve izin ekranları
+   * bunu ayrı ayrı istiyordu: tek bir sayfa açılışı 2-3 kez, sunucuda da her biri model başına
+   * izin + şema sorgusu. Liste kullanıcının izinlerine göre süzüldüğü için önbellek oturum
+   * token'ına bağlıdır: çıkış yapıp başka kullanıcıyla girilince yeniden istenir.
+   */
   getModels(): Observable<ListResponseModel<PublishedModel>> {
-    return this.http.get<ListResponseModel<PublishedModel>>(`${this.baseUrl}/models`);
+    const now = Date.now();
+    const token = this.currentToken();
+    const cached = this.modelsCache;
+    if (cached && cached.token === token && now - cached.at < PublishedModelService.MODELS_TTL_MS) {
+      return cached.models$;
+    }
+
+    const models$ = this.http.get<ListResponseModel<PublishedModel>>(`${this.baseUrl}/models`).pipe(
+      // Başarısız yanıt ya da hata önbellekte kalmasın: sonraki çağrı yeniden denesin.
+      tap({
+        next: res => { if (!res.success) this.dropCache(models$); },
+        error: () => this.dropCache(models$)
+      }),
+      shareReplay(1)
+    );
+    this.modelsCache = { at: now, token, models$ };
+    return models$;
+  }
+
+  /** Model listesini (ve ondan türetilen önbellekleri) düşürür — şema değiştiğinde çağrılır. */
+  invalidateModels(): void {
+    this.modelsCache = null;
+    this.modelsInvalidated$.next();
+  }
+
+  private dropCache(models$: Observable<unknown>): void {
+    if (this.modelsCache?.models$ === models$) this.modelsCache = null;
+  }
+
+  private currentToken(): string | null {
+    try {
+      return typeof localStorage === 'undefined' ? null : localStorage.getItem('access_token');
+    } catch {
+      return null;
+    }
   }
 
   /** Tüm kayıtları getirir. parentColumn + parentId verilirse FK filtrelemesi yapılır. */
