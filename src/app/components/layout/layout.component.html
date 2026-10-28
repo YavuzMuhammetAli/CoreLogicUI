@@ -137,7 +137,7 @@
             [routerLink]="['/models', t.typeName]"
             routerLinkActive="active" #rlaTable="routerLinkActive"
             [attr.aria-label]="'layout.tableAria' | t:{ name: t.label || t.typeName }">
-            <app-icon name="table" [filled]="rlaTable.isActive" />
+            <app-model-icon [icon]="t.icon" [filled]="rlaTable.isActive" />
             {{ t.label || t.typeName }}
           </a>
         } @empty {

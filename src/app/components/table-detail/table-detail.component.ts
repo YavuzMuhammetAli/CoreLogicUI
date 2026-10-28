@@ -36,6 +36,9 @@ import {
   identifierErrorMessage, identifierValidator, revalidateIdentifiers, sanitizeIdentifierInputEvent
 } from '../../utils/identifier';
 import { IconComponent } from '../shared/icon/icon.component';
+import { ModelIconComponent } from '../shared/model-icon/model-icon.component';
+import { ModelIconPickerComponent } from '../shared/model-icon/model-icon-picker.component';
+import { NotificationService } from '../../services/notification.service';
 
 /** Ekrandaki sekmeler. */
 type TabId = 'columns' | 'subModels' | 'relationships';
@@ -138,7 +141,7 @@ const SEQUENCE_TEMPLATE = "TODAY('ddMMyyyy') & '-' & SEQ(3, TODAY('ddMMyyyy'))";
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe,
     ModelNodeComponent, HelpHintComponent, DatatypeHelpComponent,
-    RelationshipsTabComponent, IconComponent
+    RelationshipsTabComponent, IconComponent, ModelIconComponent, ModelIconPickerComponent
   ],
   templateUrl: './table-detail.component.html',
   styleUrls: ['./table-detail.component.scss'],
@@ -147,6 +150,18 @@ const SEQUENCE_TEMPLATE = "TODAY('ddMMyyyy') & '-' & SEQ(3, TODAY('ddMMyyyy'))";
 export class TableDetailComponent implements OnDestroy {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly notifications = inject(NotificationService);
+
+  /**
+   * Model ikonu (PublishedTable.Icon, migrasyon 025). Şemaya dokunmaz: henüz kaydedilmemiş modelde
+   * addTable ile, kayıtlı modelde seçildiği anda setTableIcon ile yazılır; Yayınla da seçtirir.
+   */
+  modelIcon: string | null = null;
+  /** Sunucudaki ikon — yalnız değiştiyse yazılır. */
+  private originalIcon: string | null = null;
+  /** Açık ikon seçicinin kipi; null = kapalı. */
+  iconPickerMode: 'publish' | 'select' | null = null;
+  iconSaving = false;
 
   /** Kök model FormGroup — entityName + columns + subModels */
   rootGroup: FormGroup;
@@ -517,6 +532,9 @@ export class TableDetailComponent implements OnDestroy {
     this.originalColumnNames = new Set<string>();
     this.originalColumnMeta  = new Map<string, ColumnDisplayMeta>();
     this.originalLabel       = null;
+    this.modelIcon           = null;
+    this.originalIcon        = null;
+    this.iconPickerMode      = null;
     this.ownParentName       = null;
     this.activeTab.set('columns');
 
@@ -746,6 +764,7 @@ export class TableDetailComponent implements OnDestroy {
         // Etiketi olmayan eski modellerde etiket tablo adıyla önden doldurulur (zorunlu alan);
         // diff temeli de aynı değer olduğu için kullanıcı değiştirmedikçe yazılmaz.
         this.originalLabel = schema.label?.trim() || schema.tableName;
+        this.modelIcon = this.originalIcon = schema.icon?.trim() || null;
         this.rootGroup = this.buildGroupFromSchema(schema, this.originalLabel);
         this.rootGroup.get('entityName')?.disable();
         this.trackFormChanges();
@@ -1078,6 +1097,8 @@ export class TableDetailComponent implements OnDestroy {
         return this.publishedTableService.addTable({
           tableName:       node.entityName,
           label:           node.label,
+          // İkon yalnız kök modelde seçilir (başlıktaki düğme).
+          icon:            node.parentName ? null : this.modelIcon,
           description:     `${node.entityName} dinamik modeli`,
           version:         1,
           parentTableName: node.parentName ?? undefined
@@ -1251,6 +1272,8 @@ export class TableDetailComponent implements OnDestroy {
       c.columnName, columnMetaOf(c)
     ]));
     this.originalLabel = savedRoot.label;
+    // addTable ikonu birlikte yazdı (025'siz tenant'ta sunucu atlar; ikon varsayılan kalır).
+    this.originalIcon = this.modelIcon;
 
     // Kaydedilen alt modeller artık taslak değildir; formdan düşürülür ve
     // "Alt Modeller" sekmesindeki kayıtlı listeye geçerler (loadTables).
@@ -1420,8 +1443,8 @@ export class TableDetailComponent implements OnDestroy {
   // ─── ADIM 2: YAYINLA ──────────────────────────────────────────────────────
 
   /**
-   * Kaydedilmiş ağacı backend'e yayınlatır.
-   * Backend kök adından tüm ağacı BFS ile çekip parent-first derler ve SQL tabloları oluşturur.
+   * Yayınla: önce model ikonu seçtirilir (kayıtlı ikon seçili gelir, seçmek opsiyonel),
+   * onaylanınca {@link onIconConfirmed} → {@link publish}.
    */
   onPublish(): void {
     if (!this.isSaved || !this.savedRootName) {
@@ -1431,12 +1454,91 @@ export class TableDetailComponent implements OnDestroy {
     }
 
     if (this.isPublishing || this.isSaving) return;
+    this.iconPickerMode = 'publish';
+  }
+
+  /** Başlıktaki ikon düğmesi — yeniden yayınlamadan değiştirir. */
+  openIconPicker(): void {
+    if (!this.isPublishing && !this.isSaving) this.iconPickerMode = 'select';
+  }
+
+  /** Seçici onayı. Yayın kipinde ikon (değiştiyse) yazılır ve yayın başlar. */
+  onIconConfirmed(icon: string | null): void {
+    const mode = this.iconPickerMode;
+    const typeName = this.editTypeName ?? this.savedRootName;
+
+    if (mode === 'publish') {
+      this.iconPickerMode = null;
+      this.modelIcon = icon;
+      this.publish(typeName && icon !== this.originalIcon ? typeName : null);
+      return;
+    }
+
+    // Henüz kaydedilmemiş model: ikon addTable ile birlikte gider.
+    if (!typeName) {
+      this.modelIcon = icon;
+      this.iconPickerMode = null;
+      return;
+    }
+    if (icon === this.originalIcon) {
+      this.iconPickerMode = null;
+      return;
+    }
+
+    this.iconSaving = true;
+    this.publishedTableService.setTableIcon(typeName, icon).pipe(markDirty(this.cdr)).subscribe({
+      next: res => {
+        this.iconSaving = false;
+        this.iconPickerMode = null;
+        if (res.success) {
+          this.modelIcon = this.originalIcon = icon;
+        } else {
+          this.submitSuccess = false;
+          this.submitMessage = this.languageService.t('model.icon.saveFailed', { message: res.message ?? '' });
+        }
+      },
+      error: (err: { error?: { message?: string }; message?: string }) => {
+        this.iconSaving = false;
+        this.iconPickerMode = null;
+        this.submitSuccess = false;
+        this.submitMessage = this.languageService.t('model.icon.saveFailed', {
+          message: err?.error?.message ?? err?.message ?? ''
+        });
+      }
+    });
+  }
+
+  /**
+   * Kaydedilmiş ağacı backend'e yayınlatır.
+   * Backend kök adından tüm ağacı BFS ile çekip parent-first derler ve SQL tabloları oluşturur.
+   *
+   * `iconFor` doluysa önce o modelin ikonu yazılır. İkon opsiyoneldir: yazılamazsa (ör. tenant
+   * migrasyonu 025 yok) uyarı gösterilir, yayın yine yapılır.
+   */
+  private publish(iconFor: string | null): void {
+    if (!this.savedRootName) return;
+    const rootName = this.savedRootName;
+    const icon = this.modelIcon;
 
     this.isPublishing = true;
     this.submitMessage = null;
     this.submitSuccess = null;
 
-    this.publishedTableService.publish(this.savedRootName).pipe(markDirty(this.cdr)).subscribe({
+    const writeIcon$ = iconFor
+      ? this.publishedTableService.setTableIcon(iconFor, icon).pipe(
+          catchError((err: { error?: { message?: string }; message?: string }) =>
+            of({ success: false, message: err?.error?.message ?? err?.message ?? '' })),
+          switchMap(res => {
+            if (res.success) this.originalIcon = icon;
+            else this.notifications.warn(this.languageService.t('model.icon.saveFailed', { message: res.message ?? '' }));
+            return of(null);
+          }))
+      : of(null);
+
+    writeIcon$.pipe(
+      concatMap(() => this.publishedTableService.publish(rootName)),
+      markDirty(this.cdr)
+    ).subscribe({
       next: res => {
         this.isPublishing = false;
         if (res.success) {

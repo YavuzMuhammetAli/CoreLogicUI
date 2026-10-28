@@ -503,6 +503,10 @@ satır içi SVG, renk `currentColor`. Font DEĞİL — pakete yalnız kullanıla
 | Aç-kapa | `keyboard_arrow_down` / `chevron_right` | Sayfa | `chevron_left` `chevron_right` `first_page` `last_page` |
 | Ekran tasarımı | `dashboard_customize` | Akış | `account_tree` |
 
+**Model ikonu** (admin'in yayınlarken seçtiği, `PublishedModel.icon`) `<app-model-icon [icon]="model.icon" size="16" />`
+ile çizilir — ayrı, lazy katalogdan gelir (`components/shared/model-icon/`, bkz. CLAUDE.md "Model İkonu").
+Seçici: `<app-model-icon-picker>`. Model adı/kartı gösteren yeni ekran sabit `table` yerine bunu kullanır.
+
 Veri tipi ikonu: `components/shared/icon/data-type-icon.ts` (`dataTypeIcon(dataType)`). Akış düğümleri
 `NODE_KINDS[].icon`, grafik tipleri `CHART_TYPE_META[].icon`. Material Symbols sürüm geçişinde ad
 değişebilir (`expand_more` → `keyboard_arrow_down`, `auto_awesome` → `star_shine`); script 404 verirse

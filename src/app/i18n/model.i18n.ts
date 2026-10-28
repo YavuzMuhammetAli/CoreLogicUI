@@ -495,5 +495,38 @@ export const MODEL_I18N: Translations = {
 
   // ── Otomatik değer (kayıt formları) ────────────────────────────────────────
   'model.detail.autoValue.badgeAria': { tr: 'Otomatik değer: {expression}', en: 'Automatic value: {expression}' },
-  'model.detail.autoValue.pending': { tr: 'Kaydedince atanır', en: 'Assigned on save' }
+  'model.detail.autoValue.pending': { tr: 'Kaydedince atanır', en: 'Assigned on save' },
+
+  // ── Model ikonu (yayınlarken seçilir; shared/model-icon) ────────────────────
+  'model.icon.pickTitle': { tr: 'Model ikonu', en: 'Model icon' },
+  'model.icon.publishTitle': { tr: 'Yayınla — model ikonunu seç', en: 'Publish — choose the model icon' },
+  'model.icon.publishHint': {
+    tr: 'Model listesinde ve menüde bu ikon görünür. Seçmezseniz varsayılan tablo ikonu kullanılır; sonradan başlıktaki ikondan değiştirebilirsiniz.',
+    en: 'This icon appears in the model list and the menu. If you skip it, the default table icon is used; you can change it later from the icon in the header.'
+  },
+  'model.icon.default': { tr: 'Varsayılan', en: 'Default' },
+  'model.icon.search': { tr: 'İkon ara (ör. sipariş, stok, kişi)', en: 'Search icons (e.g. order, stock, person)' },
+  'model.icon.noResults': { tr: 'Aramaya uyan ikon yok.', en: 'No icons match your search.' },
+  'model.icon.loadFailed': { tr: 'İkonlar yüklenemedi. Bağlantınızı kontrol edip yeniden açın.', en: 'Icons could not be loaded. Check your connection and reopen.' },
+  'model.icon.publish': { tr: 'Yayınla', en: 'Publish' },
+  'model.icon.select': { tr: 'Seç', en: 'Select' },
+  'model.icon.change': { tr: 'Model ikonunu değiştir', en: 'Change model icon' },
+  'model.icon.saveFailed': {
+    tr: 'Model ikonu kaydedilemedi: {message}',
+    en: 'The model icon could not be saved: {message}'
+  },
+  'model.icon.cat.general': { tr: 'Genel', en: 'General' },
+  'model.icon.cat.commerce': { tr: 'Ticaret ve satış', en: 'Commerce and sales' },
+  'model.icon.cat.finance': { tr: 'Finans ve muhasebe', en: 'Finance and accounting' },
+  'model.icon.cat.people': { tr: 'Kişiler ve İK', en: 'People and HR' },
+  'model.icon.cat.documents': { tr: 'Belgeler', en: 'Documents' },
+  'model.icon.cat.logistics': { tr: 'Lojistik ve stok', en: 'Logistics and stock' },
+  'model.icon.cat.production': { tr: 'Üretim ve bakım', en: 'Production and maintenance' },
+  'model.icon.cat.health': { tr: 'Sağlık', en: 'Health' },
+  'model.icon.cat.education': { tr: 'Eğitim', en: 'Education' },
+  'model.icon.cat.projects': { tr: 'Proje ve görev', en: 'Projects and tasks' },
+  'model.icon.cat.communication': { tr: 'İletişim', en: 'Communication' },
+  'model.icon.cat.places': { tr: 'Mekân ve tesis', en: 'Places and facilities' },
+  'model.icon.cat.vehicles': { tr: 'Araç ve ulaşım', en: 'Vehicles and transport' },
+  'model.icon.cat.it': { tr: 'BT ve teknoloji', en: 'IT and technology' }
 };

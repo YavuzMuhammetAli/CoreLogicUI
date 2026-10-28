@@ -25,6 +25,8 @@ export interface PublishedTableDto {
   description: string;
   /** Kullanıcı dostu model adı ("Satış Pazarlama Formu"); tableName bundan türetilir. */
   label?: string | null;
+  /** Model ikonu (Material Symbols adı, katalog: shared/model-icon). Boş = varsayılan. */
+  icon?: string | null;
   version: number;
   /** Alt model için parent model adı. Verilmezse kök model olarak kaydedilir. */
   parentTableName?: string;
@@ -94,6 +96,8 @@ export interface PublishedTableSchema {
   description: string;
   /** Kullanıcı dostu model adı. Eski kayıtlarda boş olabilir — o zaman tableName gösterilir. */
   label?: string | null;
+  /** Model ikonu (migrasyon 025). Boşsa varsayılan çizilir. */
+  icon?: string | null;
   version: number;
   columns: PublishedColumnSchema[];
   /** Üst (parent) modelin adı. null ise kök modeldir. */
@@ -134,7 +138,7 @@ export class PublishedTableService {
       params = params.set('parentTableName', table.parentTableName);
     }
     // parentTableName body entity'sinde yok; yalnızca query param olarak gönderilir
-    const body = { tableName: table.tableName, description: table.description, label: table.label ?? null, version: table.version };
+    const body = { tableName: table.tableName, description: table.description, label: table.label ?? null, icon: table.icon ?? null, version: table.version };
     return this.http.post<ResponseModel>(`${this.baseUrl}/addTable`, body, { params }).pipe(this.invalidatesModels());
   }
 
@@ -232,6 +236,16 @@ export class PublishedTableService {
     let params = new HttpParams().set('typeName', typeName);
     if (label?.trim()) params = params.set('label', label.trim());
     return this.http.post<ResponseModel>(`${this.baseUrl}/setTableLabel`, null, { params }).pipe(this.invalidatesModels());
+  }
+
+  /**
+   * Yalnızca model ikonunu yazar (boş = varsayılan). Yeniden yayın gerekmez. Kolon tenant
+   * migrasyonu 025 ile gelir; kurulmamışsa sunucu açık hata döner.
+   */
+  setTableIcon(typeName: string, icon: string | null): Observable<ResponseModel> {
+    let params = new HttpParams().set('typeName', typeName);
+    if (icon) params = params.set('icon', icon);
+    return this.http.post<ResponseModel>(`${this.baseUrl}/setTableIcon`, null, { params }).pipe(this.invalidatesModels());
   }
 
   /**

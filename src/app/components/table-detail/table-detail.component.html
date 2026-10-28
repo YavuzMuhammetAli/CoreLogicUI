@@ -19,9 +19,17 @@
   <!-- ══ ÜST PANEL: Model Tanımı ═══════════════════════════════════════════ -->
   <div class="panel record-panel">
     <div class="panel-head record-panel-head">
-      <span class="eyebrow">
-        @if (isNew) { {{ 'table.detail.newTableTitle' | t }} } @else { {{ displayModelName }} }
-      </span>
+      <div class="cluster">
+        <!-- Model ikonu — liste ve menüde görünür; kayıtlı modelde seçildiği anda yazılır -->
+        <button type="button" class="btn btn-ghost btn-sm" (click)="openIconPicker()"
+                [disabled]="isSaving || isPublishing || iconSaving"
+                [attr.aria-label]="'model.icon.change' | t" [title]="'model.icon.change' | t">
+          <app-model-icon [icon]="modelIcon" size="20" />
+        </button>
+        <span class="eyebrow">
+          @if (isNew) { {{ 'table.detail.newTableTitle' | t }} } @else { {{ displayModelName }} }
+        </span>
+      </div>
 
       <!-- Sağ üst aksiyonlar: Listeye Dön + Kaydet + Yayınla -->
       <div class="panel-actions">
@@ -730,3 +738,12 @@
   [topic]="helpTopic()"
   (closed)="closeHelp()"
   (patternPicked)="onHelpPattern($event)" />
+
+<!-- Model ikonu seçici: Yayınla'da (publish) ve başlıktaki ikon düğmesinde (select) -->
+<app-model-icon-picker
+  [open]="iconPickerMode !== null"
+  [mode]="iconPickerMode ?? 'select'"
+  [current]="modelIcon"
+  [busy]="iconSaving"
+  (confirmed)="onIconConfirmed($event)"
+  (cancelled)="iconPickerMode = null" />

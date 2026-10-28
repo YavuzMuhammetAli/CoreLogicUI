@@ -31,6 +31,8 @@ export interface PublishedModel {
   typeName: string;
   /** Kullanıcı dostu model adı (PublishedTable.Label). Boşsa typeName gösterilir. */
   label?: string | null;
+  /** Model ikonu (PublishedTable.Icon, Material Symbols adı) — `<app-model-icon>` çizer. */
+  icon?: string | null;
   columns: PublishedColumn[];
 }
 

@@ -116,6 +116,7 @@ CoreLogicUI-master/
         │   │                                #   depo (geri al/yinele), saf komutlar, isabet hesabı, kısayollar (spec'li)
         │   └── shared/
         │       ├── icon/                   # <app-icon> — TEK ikon kaynağı (Material Symbols); icons.manifest.json → `npm run icons` → icons.generated.ts
+        │       ├── model-icon/             # <app-model-icon> + seçici diyaloğu — admin'in yayınlarken seçtiği model ikonu (kategori başına lazy katalog)
         │       ├── column-visibility/      # Admin-managed model kolon görünürlüğü (liste/detay/alt-model sekmeleri)
         │       ├── confirm-dialog/         # Onay diyaloğu — native confirm() YERİNE her zaman bu kullanılır
         │       ├── record-field/           # Kayıt formunun TEK alanı (etiket süsleri, tipe göre kontrol, dosya, hata) — kayıt sayfası, pop-up ve tasarımcı ortak
@@ -340,6 +341,7 @@ Tüm servisler `@Injectable({ providedIn: 'root' })`, `inject(HttpClient)` (veya
 | `UserAdminService` | `/User` — getall/create/update/setActive/resetPassword/setAdmin/delete (admin-only) |
 | `RelationshipService` | `/publish/models/{id}/relationships` (GET/POST/PUT/DELETE), `/validate-graph`, `/preview` |
 | `PublishedTableService` (otomatik değer) | `addMember` (+ `autoValueTrigger/autoValueExpression/isReadOnly`), `setMemberAutoValue` (JSON gövde) — `addMember` artık options nesnesi alır |
+| `PublishedTableService` (model ikonu) | `setTableIcon(typeName, icon)` + `addTable` gövdesinde `icon` — bkz. [Model İkonu](#model-ikonu) |
 | `PublishedTableService` (kayıtlı kolon) | `updateMemberMetadata` (JSON gövde, TAM değiştirme) — etiket, açıklama, zorunluluk, kurallar, dosya sınırı, lookup gösterim kolonu; gövde `utils/column-rules.ts` `toMemberMetadataUpdate` ile kurulur |
 | `ParameterService` | `/Parameter` — `backup/schedule`, `backup/history`, `backup/run`, `backup/{id}/download-link`, `backup/{id}/restore`, `backup/restore/{id}` + `/active`, `mail`, `mail/test`, `mail/templates/{kind}` (+ `/preview`, `/test`), `subscription/*` (admin-only) |
 | `AiService` | `/Ai` — `conversations`, `chat` (SSE), `proposals/{id}/status`, `usage` (admin-only) |
@@ -458,6 +460,25 @@ pasiflemeye yönlendirilir. Veri ve denetim izi hiçbir durumda bozulmaz.
 > Parola akışı: tenant tarafında e-posta altyapısı yoktur; admin başlangıç parolasını belirler
 > ve kullanıcıya kendi kanalından iletir. Kullanıcı `/profile` üzerinden değiştirir.
 > Yetki/pasifleme değişiklikleri kullanıcının **yeni JWT oturumunda** etkinleşir.
+
+## Model İkonu
+
+Admin, `/build/:typeName` ekranında **Yayınla**'ya basınca açılan diyalogdan modelin ikonunu seçer
+(kayıtlı ikon seçili gelir, seçmek opsiyonel); başlıktaki ikon düğmesiyle yeniden yayınlamadan da
+değiştirir. İkon `/models` ve `/build` kartlarında ve normal kullanıcının sidebar'ında görünür. Saf UI
+metadata'sıdır — derlenen sınıfa ve tabloya dokunmaz.
+
+- **Saklama:** `PublishedTable.Icon` NVARCHAR(40), tenant migrasyonu **`025`**. Kolon EF'e **eşlenmez**
+  (backend `EfPublishedTableIconDal`, ham SQL): `Label` (020) gibi eşlenseydi 025'i koşmamış tenant'ta her
+  `PublishedTable` sorgusu düşerdi. 025'siz tenant'ta ikon varsayılan kalır, `setTableIcon` açık hata döner;
+  Yayınla bunu uyarıyla geçer, yayın yine yapılır.
+- **Yazım:** kaydedilmemiş modelde `addTable` gövdesiyle; kayıtlı modelde seçildiği anda `setTableIcon`;
+  Yayınla'da ikon değiştiyse önce `setTableIcon`, sonra `publish`. Yalnız kök model ikon taşır.
+- **Katalog:** `components/shared/model-icon/model-icons.manifest.json` — kategoriler ve her ikon için TR arama
+  kelimeleri (~250 ikon). `npm run icons` dizini (`model-icons.generated.ts`) ve kategori başına path parçalarını
+  (`paths/*.generated.ts`) üretir: kart yalnız kendi kategorisini (~6 KB gzip), seçici hepsini indirir. Ad sunucuda
+  yalnız `^[a-z0-9_]{1,40}$` ile doğrulanır; katalog dışı ad (sonradan çıkarılmış ikon) varsayılan `table` çizer.
+- Gösterim `<app-model-icon [icon]="model.icon">` ile — `<app-icon>` DEĞİL (o yalnız sabit uygulama ikonları).
 
 ## Model İlişkileri (Publish · G1)
 

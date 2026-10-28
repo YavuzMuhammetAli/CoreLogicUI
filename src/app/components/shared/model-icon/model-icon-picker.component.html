@@ -1,0 +1,79 @@
+@if (open()) {
+  <div class="dialog-overlay" (click)="cancel()" (keydown.escape)="cancel(); $event.stopPropagation()">
+    <div
+      class="dialog-panel panel"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="(mode() === 'publish' ? 'model.icon.publishTitle' : 'model.icon.pickTitle') | t"
+      (click)="$event.stopPropagation()">
+      <div class="panel-head">
+        <h3>{{ (mode() === 'publish' ? 'model.icon.publishTitle' : 'model.icon.pickTitle') | t }}</h3>
+      </div>
+
+      <div class="panel-body picker-body">
+        @if (mode() === 'publish') {
+          <p class="field-help">{{ 'model.icon.publishHint' | t }}</p>
+        }
+
+        <div class="picker-top">
+          <div class="picker-preview" aria-live="polite">
+            <app-model-icon [icon]="selected()" size="28" />
+            <span>{{ selected() || ('model.icon.default' | t) }}</span>
+          </div>
+          <input #searchBox type="search" class="input" [value]="query()" (input)="onSearch(searchBox.value)"
+                 [placeholder]="'model.icon.search' | t" [attr.aria-label]="'model.icon.search' | t">
+        </div>
+
+        <div class="picker-scroll">
+          @if (paths(); as p) {
+            @if (!query()) {
+              <div class="picker-grid" role="radiogroup" [attr.aria-label]="'model.icon.default' | t">
+                <button type="button" class="picker-cell" role="radio"
+                        [attr.aria-checked]="selected() === null" [class.is-selected]="selected() === null"
+                        [title]="'model.icon.default' | t" [attr.aria-label]="'model.icon.default' | t"
+                        (click)="select(null)" (dblclick)="select(null); confirm()" (keydown)="onCellKey($event)">
+                  <app-icon name="table" size="24" />
+                </button>
+              </div>
+            }
+            @for (cat of visible(); track cat.key) {
+              <p class="eyebrow picker-cat">{{ 'model.icon.cat.' + cat.key | t }}</p>
+              <div class="picker-grid" role="radiogroup" [attr.aria-label]="'model.icon.cat.' + cat.key | t">
+                @for (ic of cat.icons; track ic.name) {
+                  <button type="button" class="picker-cell" role="radio"
+                          [attr.aria-checked]="selected() === ic.name" [class.is-selected]="selected() === ic.name"
+                          [title]="ic.name" [attr.aria-label]="ic.name"
+                          (click)="select(ic.name)" (dblclick)="select(ic.name); confirm()" (keydown)="onCellKey($event)">
+                    <svg viewBox="0 -960 960 960" width="24" height="24" fill="currentColor" aria-hidden="true">
+                      <path [attr.d]="p[ic.name]" />
+                    </svg>
+                  </button>
+                }
+              </div>
+            } @empty {
+              <p class="picker-empty">{{ 'model.icon.noResults' | t }}</p>
+            }
+          } @else if (loadError()) {
+            <div class="alert alert-danger" role="alert">{{ 'model.icon.loadFailed' | t }}</div>
+          } @else {
+            <div class="picker-empty"><span class="spinner" aria-hidden="true"></span></div>
+          }
+        </div>
+      </div>
+
+      <div class="panel-actions">
+        <button type="button" class="btn btn-secondary" (click)="cancel()" [disabled]="busy()">
+          {{ 'common.cancel' | t }}
+        </button>
+        <button type="button" class="btn btn-primary" (click)="confirm()" [disabled]="busy()">
+          @if (busy()) {
+            <span class="spinner" aria-hidden="true"></span>
+          } @else {
+            <app-icon [name]="mode() === 'publish' ? 'publish' : 'check'" size="16" />
+          }
+          {{ (mode() === 'publish' ? 'model.icon.publish' : 'model.icon.select') | t }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
