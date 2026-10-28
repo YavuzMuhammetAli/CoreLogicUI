@@ -704,6 +704,14 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return this.autoValues;
   }
 
+  /**
+   * Tasarımcı bağlantısının sorgu parametreleri: ekranda görünen tasarım (sunucu role göre seçti)
+   * açılsın — admin rollere özel bir tasarıma bakıyorsa varsayılanı değil onu düzenlesin.
+   */
+  designQuery(typeName: string, view: 'form' | 'list'): Record<string, string | number | null> {
+    return { view: view === 'list' ? 'list' : null, layout: this.metadata.publishedLayoutId(typeName, view) };
+  }
+
   /** Admin'e tasarımcı bağlantısı (yerleşim bileşenindeki "güncel değil" uyarısı); diğerlerine null. */
   get designLink(): string[] | null {
     return this.permission.isAdmin() ? ['/build', this.typeName, 'screen'] : null;

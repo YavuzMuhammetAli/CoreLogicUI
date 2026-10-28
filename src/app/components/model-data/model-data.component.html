@@ -37,7 +37,7 @@
         }
         @if (permissionService.isAdmin()) {
           <!-- Yayınlanmış liste tasarımı "Kolonlar" ayarının yerini alır: tek doğruluk kaynağı. -->
-          <a class="btn btn-ghost btn-sm" [routerLink]="['/build', typeName, 'screen']" [queryParams]="{ view: 'list' }"
+          <a class="btn btn-ghost btn-sm" [routerLink]="['/build', typeName, 'screen']" [queryParams]="designQuery"
              [attr.aria-label]="'screen.designScreenAria' | t"><app-icon name="dashboard_customize" size="14" />{{ 'screen.designScreen' | t }}</a>
           @if (!listLayout) {
             <app-column-visibility

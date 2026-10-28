@@ -25,7 +25,7 @@ import { SCREEN_I18N } from './screen.i18n';
  * YALNIZ TEK BİR LAZY EKRANIN kullandığı büyük sözlükler burada DEĞİL, o ekranın
  * parçasıyla iner (`i18n/lazy/*`, bkz. registerTranslations): `help.*` (tip/kural kılavuzu —
  * yalnız şema ekranı) ve `parameter.*` (yalnız Parametreler). İkisi ana paketin yaklaşık
- * 100 KB'ıydı. Bir anahtarı başka bir ekranda da kullanmak gerekirse sözlüğü buraya geri
+ * 100 KB'ıydı. `design.*` (Tasarım sayfası + tasarımcılar) da aynı yoldan iner. Bir anahtarı başka bir ekranda da kullanmak gerekirse sözlüğü buraya geri
  * almak gerekir — yoksa o ekranda ham anahtar görünür. Testler tüm sözlükleri
  * `all-translations.ts` üzerinden denetler.
  */

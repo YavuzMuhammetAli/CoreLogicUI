@@ -282,5 +282,48 @@ export const SCREEN_I18N: Translations = {
     tr: "'{column}' forma yerleştirilmedi — kullanıcılar onu formun sonunda görür.",
     en: "'{column}' is not placed — users see it at the end of the form."
   },
-  'screen.issue.emptySection': { tr: 'Boş bölüm var.', en: 'There is an empty section.' }
+  'screen.issue.emptySection': { tr: 'Boş bölüm var.', en: 'There is an empty section.' },
+
+  // ─── Rollere özel tasarımlar (varyantlar, 026) ──────────────────────────────
+  'screen.variant.select': { tr: 'Tasarım', en: 'Layout' },
+  'screen.variant.default': { tr: 'Varsayılan (herkes)', en: 'Default (everyone)' },
+  'screen.variant.moveUp': { tr: 'Önceliği artır', en: 'Raise priority' },
+  'screen.variant.moveDown': { tr: 'Önceliği düşür', en: 'Lower priority' },
+  'screen.variant.settings': { tr: 'Ad ve roller', en: 'Name and roles' },
+  'screen.variant.new': { tr: 'Yeni tasarım', en: 'New layout' },
+  'screen.variant.delete': { tr: 'Tasarımı sil', en: 'Delete layout' },
+  'screen.variant.audience': {
+    tr: 'Bu tasarımı şu rollerdeki kullanıcılar görür: {roles} (öncelik {position}).',
+    en: 'Users in these roles see this layout: {roles} (priority {position}).'
+  },
+  'screen.variant.defaultAudience': {
+    tr: 'Varsayılan tasarım herkese gösterilir. Belirli roller için "Yeni tasarım" ile ayrı bir tasarım oluşturabilirsiniz.',
+    en: 'The default layout is shown to everyone. Use "New layout" to create a separate layout for specific roles.'
+  },
+  'screen.variant.defaultAudienceOthers': {
+    tr: 'Varsayılan tasarım: rollerine özel tasarım eşleşmeyen herkes bunu görür.',
+    en: 'Default layout: everyone without a matching role-specific layout sees this.'
+  },
+  'screen.variant.deleteTitle': { tr: 'Tasarım silinsin mi?', en: 'Delete this layout?' },
+  'screen.variant.deleteMessage': {
+    tr: 'Bu rollerdeki kullanıcılar bundan sonra varsayılan tasarımı (ya da sıradaki eşleşen tasarımı) görür.',
+    en: 'Users in these roles will see the default layout (or the next matching layout) from now on.'
+  },
+  'screen.variant.switchTitle': { tr: 'Kaydedilmemiş değişiklikler atılsın mı?', en: 'Discard unsaved changes?' },
+  'screen.variant.switchMessage': {
+    tr: 'Bu tasarımda kaydedilmemiş değişiklikler var. Başka bir tasarıma geçerseniz kaybolur.',
+    en: 'This layout has unsaved changes. They are lost if you switch to another layout.'
+  },
+  'screen.variant.switchConfirm': { tr: 'Atıp geç', en: 'Discard and switch' },
+  'screen.variant.createTitle': { tr: 'Rollere özel yeni tasarım', en: 'New role-specific layout' },
+  'screen.variant.editTitle': { tr: 'Tasarımın adı ve rolleri', en: 'Layout name and roles' },
+  'screen.variant.create': { tr: 'Oluştur', en: 'Create' },
+  'screen.variant.rolesHint': {
+    tr: 'Kullanıcının rolü birden çok tasarımla eşleşirse listede üstte olan kazanır.',
+    en: 'If a user\'s roles match several layouts, the one higher in the list wins.'
+  },
+  'screen.variant.copyCurrent': {
+    tr: 'Açık tasarımdan kopyala (kaydedilmemiş değişiklikler dahil)',
+    en: 'Copy the open layout (including unsaved changes)'
+  }
 };

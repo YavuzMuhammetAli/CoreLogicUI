@@ -1,0 +1,59 @@
+<div class="sidebar-nav-tree" [attr.inert]="preview() ? '' : null">
+  @for (node of nodes(); track node.id) {
+    @if (node.kind === 'folder') {
+      <div class="nav-folder">
+        <button
+          type="button"
+          class="nav-item nav-folder-head"
+          [attr.aria-expanded]="isOpen(node)"
+          [attr.aria-controls]="'nav-folder-' + node.id"
+          (click)="toggle(node)">
+          @if (node.icon) {
+            <app-model-icon [icon]="node.icon" />
+          } @else {
+            <app-icon name="folder_open" />
+          }
+          <span class="nav-text">{{ node.label }}</span>
+          <app-icon name="chevron_right" size="16" class="nav-chevron" [class.open]="isOpen(node)" />
+        </button>
+        <div class="nav-folder-body" [id]="'nav-folder-' + node.id" [hidden]="!isOpen(node)">
+          @for (link of node.children; track link.id) {
+            <ng-container *ngTemplateOutlet="linkTpl; context: { $implicit: link }" />
+          }
+        </div>
+      </div>
+    } @else {
+      <ng-container *ngTemplateOutlet="linkTpl; context: { $implicit: node }" />
+    }
+  } @empty {
+    <span class="nav-empty-hint">{{ 'layout.noAccessibleTables' | t }}</span>
+  }
+</div>
+
+<ng-template #linkTpl let-link>
+  @if (link.href) {
+    <!-- Dış bağlantı: yeni sekmede; adres iki tarafta yalnız http(s) olarak doğrulanır -->
+    <a class="nav-item" [href]="link.href" target="_blank" rel="noopener noreferrer"
+       [attr.aria-label]="'layout.externalLinkAria' | t:{ name: link.label }">
+      @if (link.icon.kind === 'model') { <app-model-icon [icon]="link.icon.name" /> } @else { <app-icon [name]="link.icon.name" /> }
+      <span class="nav-text">{{ link.label }}</span>
+    </a>
+  } @else {
+    <a class="nav-item"
+       [routerLink]="link.route"
+       routerLinkActive="active" #rla="routerLinkActive"
+       [routerLinkActiveOptions]="link.exact ? exact : subset">
+      @if (link.icon.kind === 'model') {
+        <app-model-icon [icon]="link.icon.name" [filled]="rla.isActive" />
+      } @else {
+        <app-icon [name]="link.icon.name" [filled]="rla.isActive" />
+      }
+      <span class="nav-text">{{ link.label }}</span>
+      @if (link.isTasks && pendingTaskCount() > 0) {
+        <span class="nav-badge" [attr.aria-label]="'layout.tasksBadgeAria' | t:{ count: pendingTaskCount() }">
+          {{ pendingTaskCount() }}
+        </span>
+      }
+    </a>
+  }
+</ng-template>

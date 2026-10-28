@@ -71,4 +71,12 @@ export class LayoutDesignerStore<T> {
     this.savedSnapshot.set(this.serialize(sent));
     this.lastModifiedOn.set(lastModifiedOn);
   }
+
+  /**
+   * Belgeye dokunmayan bir yazım (ad/rol/öncelik) satırın damgasını yeniledi — kirlilik
+   * korunur, sonraki kayıt yeni damgayla gider (yoksa kendi değişikliğimiz çakışma sayılırdı).
+   */
+  restamp(lastModifiedOn: string | null): void {
+    this.lastModifiedOn.set(lastModifiedOn);
+  }
 }

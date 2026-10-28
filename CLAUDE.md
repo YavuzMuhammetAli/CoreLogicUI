@@ -24,7 +24,8 @@ Users can:
 - Uygulama arayüz dilini değiştirmek (TR/EN topbar toggle)
 - Görsel tasarımcıyla iş akışı kurmak (onay, görev, paralel, koşul, alan güncelle, bildirim, bekleme, bitiş), simüle etmek, yayınlamak; çalışan süreci şema üzerinde izlemek (admin, `/workflows`)
 - Kendisine atanan görevleri görmek ve karar vermek (`/tasks`)
-- Yayınlanmış bir modelin kayıt formunu (sekme/bölüm/12 kolonluk ızgara) ve liste kolonlarını (sıra/genişlik) sürükle-bırakla tasarlamak, taslak olarak kaydedip yayınlamak (admin, `/build/:typeName/screen`)
+- Yayınlanmış bir modelin kayıt formunu (sekme/bölüm/12 kolonluk ızgara) ve liste kolonlarını (sıra/genişlik) sürükle-bırakla tasarlamak, taslak olarak kaydedip yayınlamak; aynı model için rollere özel ayrı tasarımlar kurmak (admin, `/build/:typeName/screen`)
+- Tasarım sayfasından yönetici olmayanların sol menüsünü klasörlerle tasarlamak (birden çok tasarım, rollere atanır, öncelik sıralı) (admin, `/design`)
 
 ## Tech Stack
 
@@ -69,6 +70,7 @@ CoreLogicUI-master/
         ├── components/
         │   ├── login/                     # Giriş ekranı (public, JWT alır)
         │   ├── layout/                     # App shell (sidebar + topbar CSS Grid, tema + dil toggle)
+        │   │   └── sidebar-nav/            #   Tasarlanmış (rolüne düşen) menüyü çizer — klasör aç/kapa, etkin klasör kendiliğinden açılır
         │   ├── model-list/                # Kayıtlı model listesi
         │   ├── model-data/                # Dinamik tablo CRUD (liste görünümü, sayfalama)
         │   ├── model-detail/               # Dinamik tablo tekil kayıt görünümü/düzenleme (new + :id)
@@ -111,6 +113,8 @@ CoreLogicUI-master/
         │   ├── workflow-instance/           # Süreç detayı — şema + yol katmanı, olay bandı (Yeniden dene/Adımı atla)
         │   ├── deleted-workflows/           # Silinen akışlar (admin)
         │   ├── my-tasks/ · task-detail/     # Görevlerim ve görev karar ekranı (authGuard)
+        │   ├── design-hub/                  # Tasarım (admin) — Ekranlar (model kartları) + Navigasyon (tasarım listesi) sekmeleri
+        │   ├── nav-designer/                # Navigasyon tasarımcısı (admin) — palet · ağaç (sürükle-bırak) · özellikler; bkz. "Tasarım"
         │   ├── screen-designer/             # Ekran Tasarımı (admin) — bkz. "Ekran Tasarımı"
         │   │   └── designer/                #   Form tasarımcısı (palet · tuval · özellikler), liste tasarımcısı,
         │   │                                #   depo (geri al/yinele), saf komutlar, isabet hesabı, kısayollar (spec'li)
@@ -119,6 +123,8 @@ CoreLogicUI-master/
         │       ├── model-icon/             # <app-model-icon> + seçici diyaloğu — admin'in yayınlarken seçtiği model ikonu (kategori başına lazy katalog)
         │       ├── column-visibility/      # Admin-managed model kolon görünürlüğü (liste/detay/alt-model sekmeleri)
         │       ├── confirm-dialog/         # Onay diyaloğu — native confirm() YERİNE her zaman bu kullanılır
+        │       ├── role-picker/            # Rol seçici çipler (tasarımın atanacağı roller) + roleNames()
+        │       ├── design-settings-dialog/ # Tasarım ayarları (ad + roller, ek seçenekler ng-content) — ekran varyantı ve navigasyon ortak
         │       ├── record-field/           # Kayıt formunun TEK alanı (etiket süsleri, tipe göre kontrol, dosya, hata) — kayıt sayfası, pop-up ve tasarımcı ortak
         │       ├── record-layout/          # Alanları yayındaki ekran tasarımına göre çizer (sekme/bölüm/12 kolon); tasarım yoksa eski otomatik ızgara
         │       ├── deleted-list/           # "Silinenler" ekranlarının ortak gövdesi (model/taslak/rapor/dashboard)
@@ -161,7 +167,8 @@ CoreLogicUI-master/
         │   ├── theme.service.ts                 # Açık/koyu tema tercihini yönetir (localStorage)
         │   ├── workflow.service.ts              # /Workflow — tanım CRUD, validate, simulate, publish, new-version,
         │   │                                    #   setEnabled, usage (kota), capabilities (Bekleme → 022)
-        │   ├── screen-layout.service.ts         # /ModelScreenLayout — ekran tasarımı (published yardımcı istek; state/saveDraft/publish/discardDraft/reset admin)
+        │   ├── screen-layout.service.ts         # /ModelScreenLayout — ekran tasarımı (published yardımcı istek; state/saveDraft/publish/discardDraft/reset/variant uçları admin)
+        │   ├── navigation-layout.service.ts     # /NavigationLayout — kenar çubuğu tasarımı (my yardımcı istek; list/get/create/saveDraft/publish/updateMeta/reorder/delete admin)
         │   ├── workflow-task.service.ts         # /WorkflowTask + /WorkflowInstance — görevler, süreçler (list sayfalı),
         │   │                                    #   rollback, skipStep, cancel, verifyChain
         │   ├── notification.service.ts          # Global toast/uyarı bildirimleri (guard'lar dahil)
@@ -180,6 +187,8 @@ CoreLogicUI-master/
         │   ├── report-column-label.ts           # Saf: rapor oluşturucu önizlemesinin kolon başlığı (çalışan raporda başlık sunucudan, spec'li)
         │   ├── design-history.ts                # Geri al/yinele geçmişi (generic, 600 ms birleştirme) — akış ve ekran tasarımcısı ortak
         │   ├── record-field/                    # isColumnRequired/mustStayVisible (zorunluluğun tek karar noktası), alan hata metni
+        │   ├── nav-layout/                      # Navigasyon tasarımı çekirdeği, SAF + spec'li: belge tipleri, backend'le ORTAK doğrulama
+        │   │                                    #   (nav-layout.vectors.json — sorunlar + normalize çıktı), komutlar, bırakma hesabı, tohum, çözümleme
         │   ├── screen-layout/                   # Ekran tasarımı çekirdeği, SAF + spec'li: belge tipleri, backend'le ORTAK doğrulama
         │   │                                    #   (screen-layout.vectors.json), parse/normalize, form planı, duyarlı kademe, liste kolonları, ilk taslak
         │   ├── workflow/                        # Akış çekirdeği, SAF + spec'li: exits (port sözlüğü — backend WorkflowExits
@@ -215,6 +224,7 @@ CoreLogicUI-master/
         │   ├── ai.i18n.ts                     # Yapay Zeka asistanı (sohbet, öneri kartları, durumlar)
         │   ├── notification.i18n.ts           # Topbar bildirim zili (notification.kind.* = backend WorkflowNotifyKinds)
         │   ├── screen.i18n.ts                 # Ekran tasarımı (screen.* — layout.* app shell'e ait); screen.issue.{kod} doğrulama metinleri
+        │   ├── design.i18n.ts                 # Tasarım sayfası + navigasyon tasarımcısı (design.*, LAZY: i18n/lazy/design); design.issue.{kod}
         │   └── shared.i18n.ts                 # Paylaşılan diyalog metinleri
         ├── pipes/
         │   ├── translate.pipe.ts              # TranslatePipe — şablonlarda `{{ 'key' | t }}` şeklinde kullanılır
@@ -234,7 +244,8 @@ CoreLogicUI-master/
             ├── dashboard.model.ts                # DashboardDefinition, DashboardWidget, DashboardRunResult vb.
             ├── relationship.model.ts             # RelationshipType/Definition, ValidationIssue, EntityGraph, PublishPreview
             ├── ai.model.ts                       # Sohbet/mesaj/öneri tipleri, öneri payload şekilleri, SSE olay union'ı
-            └── screen-layout.model.ts            # /ModelScreenLayout DTO'ları (yerleşim API'de ham JSON metni)
+            ├── screen-layout.model.ts            # /ModelScreenLayout DTO'ları (yerleşim API'de ham JSON metni)
+            └── navigation-layout.model.ts        # /NavigationLayout DTO'ları (belge API'de ham JSON metni)
 ```
 
 ## Routing
@@ -250,8 +261,10 @@ CoreLogicUI-master/
   /models/:typeName/:id     → ModelDetailComponent           (modelPermissionGuard('read'))
   /build                    → FormBuildComponent             (adminGuard — model şema listesi)
   /build/new                → TableDetailComponent           (adminGuard, data.mode='new' — yeni şema oluştur)
-  /build/:typeName/screen   → ScreenDesignerComponent        (adminGuard, canDeactivate: unsavedChangesGuard; ?view=list)
+  /build/:typeName/screen   → ScreenDesignerComponent        (adminGuard, canDeactivate: unsavedChangesGuard; ?view=list&layout=ID)
   /build/:typeName          → TableDetailComponent           (adminGuard — mevcut şemayı düzenle)
+  /design                   → DesignHubComponent             (adminGuard; ?tab=nav)
+  /design/navigation/:id    → NavDesignerComponent           (adminGuard, canDeactivate: unsavedChangesGuard)
   /drafts                   → DraftModelsComponent           (adminGuard)
   /drafts/deleted           → DeletedDraftsComponent         (adminGuard)
   /database                 → DatabaseProccessComponent       (adminGuard)
@@ -351,7 +364,8 @@ Tüm servisler `@Injectable({ providedIn: 'root' })`, `inject(HttpClient)` (veya
 | `ModelUsageService` | HTTP yok — model kullanım özeti: hangi raporlar/dashboardlar bu modeli kullanıyor |
 | `ThemeService` | HTTP yok — açık/koyu tema tercihi, `localStorage` |
 | `NotificationService` | HTTP yok — global toast/uyarı, guard'lar dahil kullanılır |
-| `ScreenLayoutService` | `/ModelScreenLayout` — `published` (kayıt ekranları; yardımcı istek, 403 yerine boş döner), `state`/`saveDraft`/`publish`/`discardDraft`/`reset` (admin). Yayındaki yerleşimi ekranlar `RecordMetadataService.formLayout$/listLayout$` ile okur (5 dk önbellek, `invalidateLayout`) |
+| `ScreenLayoutService` | `/ModelScreenLayout` — `published` (kayıt ekranları; yardımcı istek, 403 yerine boş döner; sunucu kullanıcının ROLÜNE düşen tasarımı seçer, `layoutId` döner), `state`/`saveDraft`/`publish`/`discardDraft`/`reset` + `createVariant`/`updateVariant`/`reorderVariants`/`summary` (admin; işlemlerde `layoutId: null` = varsayılan). Yayındaki yerleşimi ekranlar `RecordMetadataService.formLayout$/listLayout$` ile okur (5 dk, oturum token'ına bağlı önbellek, `invalidateLayout`, `publishedLayoutId`) |
+| `NavigationLayoutService` | `/NavigationLayout` — `my` (kabuk; yardımcı istek, kullanıcıya düşen yayındaki menü ya da null), `list`/`get`/`create`/`saveDraft`/`publish`/`discardDraft`/`updateMeta`/`reorder`/`delete` (admin) |
 | `UserNotificationService` | `/UserNotification` — `my`, `unreadCount`, `markRead`, `markAllRead` (kullanıcı kendi bildirimleri; satırları backend `InAppNotificationChannel` yazar, tablo tenant migrasyonu `018`) |
 
 > `ModelRegistryService` kaldırıldı — model kaydı artık backend'deki `PublishedModelService`
@@ -854,6 +868,47 @@ Telefonda tuval yerine yapı listesi. İlk taslak bugünkü görünümden (mevcu
 > **Zorunluluk tek yerden:** `utils/record-field/column-required.ts`. Backend `CoreLogicTypeMap.IsNullable`
 > her referans tipi (string/file/image) için `true` döner; görünürlük eskiden `!isNullable`'a baktığı için
 > zorunlu metin alanı "Kolonlar" ayarıyla gizlenebiliyor ve Kaydet sessizce dönüyordu.
+
+## Tasarım (Navigasyon + Rol Bazlı Ekran Tasarımları)
+
+`/design` (adminGuard, menüde Platform → **Tasarım**) iki sekme taşır: **Ekranlar** (yayınlanmış model kartları →
+`/build/:typeName/screen`; kartta form/liste/rollere özel tasarım sayısı, `GET /ModelScreenLayout/summary`) ve
+**Navigasyon** (kenar çubuğu tasarımları listesi: öncelik, roller, durum, etkin, varsayılan yap, kopyala, sil).
+Tenant migrasyonu **026**; koşmamış tenant'ta ekranlar yayındaki varsayılan tasarımı görmeye devam eder (sunucu eski
+kolonlarla yeniden okur), tasarımcılar ve navigasyon "kurulu değil" der, kenar çubuğu otomatik menüyle çalışır.
+
+**Seçim kuralı (ekran ve navigasyon ortak, sunucuda — backend `DesignSelector`):** etkin + yayınlanmış adaylardan,
+varsayılan olmayanlar öncelik sırasında (eşitlikte ID) denenir, kullanıcının rollerinden biriyle eşleşen İLK kazanır;
+eşleşme yoksa **Varsayılan**, o da yoksa uygulamanın bugünkü görünümü. Rol kimlikleri JWT'de ve istemcide yoktur —
+istemci yalnız "bana düşeni" ister (`/NavigationLayout/my`, `/ModelScreenLayout/published`). Varsayılanın rolleri yok
+sayılır; rolü olmayan varyant kimseye düşmez (listede "Kimseye gösterilmez").
+
+**Navigasyon tasarımı** (`NavigationLayout`, tenant başına çok): yalnız **admin olmayanlara** uygulanır — admin'in
+menüsü değişmez. Belge (schemaVersion 1): `{ appendUnplaced, items: [folder | link] }`, klasör **tek seviye**;
+bağlantı türleri `model`, `dashboard`, `report`, `page` (`tasks|reports|dashboards|profile`), `url` (**yalnız http/https**,
+`javascript:` iki tarafta reddedilir, yeni sekmede `rel="noopener noreferrer"`). İlk oluşturulan tasarım varsayılandır;
+yeni tasarım bugünkü menüden (`seedNavLayout`), boş ya da başka tasarımdan kopya başlar. Taslak + Yayınla + Aktif/Pasif.
+- **Doğrulama iki tarafta, tek davranış:** `utils/nav-layout/nav-layout.validate.ts` ↔ backend
+  `Business/Concrete/Design/NavigationLayoutValidator.cs`; ortak vektörler `nav-layout.vectors.json` iki repoda birebir
+  kopya (sorunlar **ve** normalize çıktı — `serializeNavLayout` sunucunun normalize ettiği metinle aynı olmalı, yoksa
+  kaydedilen taslak hep "değişmiş" görünür). .NET tarafı düzenli ifadelerde `$` değil `\z` kullanır.
+- **Çalışma anı** (`layout/sidebar-nav`, `resolveNav`): kullanıcının göremediği (`canNavigate`) ya da silinmiş model atılır,
+  boş klasör gizlenir; `appendUnplaced` ise tasarımda olmayan görünür modeller sonda "Diğer modeller" klasöründe —
+  tasarımdan sonra yayınlanan model kaybolmasın. Klasör aç/kapa kullanıcı başına `localStorage`'da
+  (`nav.folders.{layoutId}`), etkin sayfayı içeren klasör kendiliğinden açılır. Görevlerim rozeti `page: tasks` bağlantısında.
+- **Tasarımcı** (`nav-designer`): palet (tıkla = seçili klasöre/seçilinin altına ekle; sürükle = konuma bırak) · ağaç
+  (Pointer Events, bırakma hesabı saf `nav-layout.drop.ts`) · özellikler (etiket, adres, ikon — model ikon seçicisi,
+  "kapalı başlasın", konum düğmeleri). Kısayollar Ctrl+Z/Y/S, Alt+↑/↓ taşı, Alt+→ üstteki klasöre al, Alt+← çıkar, Delete.
+  Telefonda sürükleme yok, konum düğmeleri var. "Önizle" menüyü `app-sidebar-nav` ile kullanıcı gözüyle çizer.
+
+**Rollere özel ekran tasarımları** (`ModelScreenLayout` varyantları): model + görünüm başına bir varsayılan + adlandırılmış
+varyantlar (`Name`, `Priority`, `RoleIdsJson`). Ekran tasarımcısının çubuğunda tasarım seçici (`?layout=ID`), "Yeni tasarım"
+(açık tasarımdan — kaydedilmemiş değişiklikler dahil — ya da bugünkü görünümden), "Ad ve roller", öncelik oku, "Tasarımı sil".
+Kirliyken başka tasarıma geçiş onay ister. Kayıt/liste ekranındaki "Ekranı tasarla" admin'in o an gördüğü tasarımı açar
+(`RecordMetadataService.publishedLayoutId`). Belge şeması ve doğrulayıcı değişmedi.
+
+> Ad/rol/öncelik/varsayılan yazımları belgeye dokunmaz ama `LastModifiedOn`'u yeniler; açık tasarımcı dönen damgayla
+> `LayoutDesignerStore.restamp` yapar — yoksa kendi sonraki kaydı çakışma sayılırdı.
 
 ## Yapay Zeka Modülü (G4)
 

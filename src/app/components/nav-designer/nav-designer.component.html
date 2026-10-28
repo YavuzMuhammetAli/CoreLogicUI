@@ -1,0 +1,388 @@
+<div class="page-header">
+  <span class="eyebrow">{{ 'design.nav.designerTitle' | t }} · {{ detail()?.name }}</span>
+  @if (!loading() && !loadError()) {
+    <div class="designer-actions">
+      @if (store.dirty()) {
+        <span class="unsaved" role="status">● {{ 'screen.designer.unsaved' | t }}</span>
+      }
+      <button type="button" class="btn btn-ghost btn-sm" (click)="undo()" [disabled]="!store.canUndo()"
+        [attr.aria-label]="'screen.designer.undo' | t"><app-icon name="undo" size="14" /></button>
+      <button type="button" class="btn btn-ghost btn-sm" (click)="redo()" [disabled]="!store.canRedo()"
+        [attr.aria-label]="'screen.designer.redo' | t"><app-icon name="redo" size="14" /></button>
+      <button type="button" class="btn btn-sm" [class.btn-primary]="preview()" [class.btn-secondary]="!preview()"
+        (click)="preview.set(!preview())" [attr.aria-pressed]="preview()">
+        <app-icon name="visibility" size="14" />{{ 'screen.designer.preview' | t }}
+      </button>
+      <button type="button" class="btn btn-ghost btn-sm" (click)="openSettings()" [disabled]="!!busy()">
+        <app-icon name="settings" size="14" />{{ 'design.nav.settings' | t }}
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="save()" [disabled]="!!busy()">
+        @if (busy() === 'save') { <span class="spinner" aria-hidden="true"></span> } @else { <app-icon name="save" size="14" /> }
+        {{ 'screen.designer.save' | t }}
+      </button>
+      <button type="button" class="btn btn-primary btn-sm" (click)="publish()" [disabled]="!canPublish()">
+        @if (busy() === 'publish') { <span class="spinner" aria-hidden="true"></span> } @else { <app-icon name="publish" size="14" /> }
+        {{ 'screen.designer.publish' | t }}
+      </button>
+    </div>
+  }
+</div>
+
+@if (loading()) {
+  <div class="panel"><div class="empty-state"><span class="spinner" [attr.aria-label]="'design.hub.loading' | t"></span></div></div>
+} @else if (loadError()) {
+  <div class="alert alert-danger" role="alert">
+    <span>{{ loadError() }}</span>
+    <a class="btn btn-ghost btn-sm" routerLink="/design" [queryParams]="{ tab: 'nav' }"><app-icon name="arrow_back" size="14" />{{ 'design.nav.back' | t }}</a>
+  </div>
+} @else {
+  <div class="flow">
+    @if (conflict()) {
+      <div class="alert alert-warn conflict" role="alert">
+        <span>{{ 'screen.designer.conflict' | t }}</span>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="reloadAfterConflict()"><app-icon name="refresh" size="14" />{{ 'screen.designer.reload' | t }}</button>
+      </div>
+    }
+
+    <div class="designer-bar">
+      <a class="btn btn-ghost btn-sm" routerLink="/design" [queryParams]="{ tab: 'nav' }"><app-icon name="arrow_back" size="14" />{{ 'design.nav.back' | t }}</a>
+      @if (!detail()?.publishedVersion) {
+        <span class="badge badge-warn">{{ 'design.nav.statusDraft' | t }}</span>
+      } @else if (hasUnpublished()) {
+        <span class="badge badge-warn">{{ 'design.nav.statusChanged' | t:{ version: detail()?.publishedVersion ?? 0 } }}</span>
+      } @else {
+        <span class="badge badge-success">{{ 'design.nav.statusPublished' | t:{ version: detail()?.publishedVersion ?? 0 } }}</span>
+      }
+      @if (detail()?.isDefault) { <span class="badge badge-meta">{{ 'design.nav.default' | t }}</span> }
+      @if (!detail()?.isEnabled) { <span class="badge badge-danger">{{ 'design.nav.disabled' | t }}</span> }
+      <span class="audience">{{ 'design.nav.audience' | t:{ roles: roleSummary() } }}</span>
+      <span class="bar-spacer"></span>
+      @if (detail()?.publishedVersion && hasUnpublished()) {
+        <button type="button" class="btn btn-ghost btn-sm" (click)="confirmDiscard.set(true)" [disabled]="!!busy()">
+          <app-icon name="delete" size="14" />{{ 'screen.designer.discard' | t }}
+        </button>
+      }
+    </div>
+
+    @if (narrow()) {
+      <div class="alert alert-info" role="note">{{ 'design.nav.narrowNotice' | t }}</div>
+    }
+
+    <div class="nav-designer" [class.nav-designer--narrow]="narrow()">
+      <!-- ─── Palet ─────────────────────────────────────────────────────── -->
+      <aside class="panel palette" [attr.aria-label]="'design.nav.palette' | t">
+        <div class="palette-group">
+          <span class="eyebrow">{{ 'design.nav.paletteStructure' | t }}</span>
+          <button type="button" class="palette-item" (pointerdown)="onPalettePointerDown($event, { kind: 'folder' })"
+            (click)="addFromPalette({ kind: 'folder' })">
+            <app-icon name="create_new_folder" size="16" />{{ 'design.nav.addFolder' | t }}
+          </button>
+          <button type="button" class="palette-item" (pointerdown)="onPalettePointerDown($event, { kind: 'url' })"
+            (click)="addFromPalette({ kind: 'url' })">
+            <app-icon name="link" size="16" />{{ 'design.nav.addLink' | t }}
+          </button>
+        </div>
+
+        <div class="palette-group">
+          <span class="eyebrow">{{ 'design.nav.palettePages' | t }}</span>
+          @for (page of pages; track page) {
+            <button type="button" class="palette-item" (pointerdown)="onPalettePointerDown($event, { kind: 'page', page: page })"
+              (click)="addFromPalette({ kind: 'page', page: page })">
+              <app-icon [name]="pageIcons[page]" size="16" />{{ pageLabel(page) }}
+            </button>
+          }
+        </div>
+
+        <div class="palette-group">
+          <span class="eyebrow">{{ 'design.nav.paletteModels' | t }}</span>
+          @if (models().length > 8) {
+            <label class="sr-only" for="palette-search">{{ 'design.hub.search' | t }}</label>
+            <input id="palette-search" class="input palette-search" type="search" [placeholder]="'design.hub.search' | t"
+                   [value]="paletteSearch()" (input)="paletteSearch.set($any($event.target).value)" />
+          }
+          @for (model of filteredModels(); track model.typeName) {
+            <button type="button" class="palette-item" [class.placed]="placedModels().has(model.typeName)"
+              (pointerdown)="onPalettePointerDown($event, { kind: 'model', model: model })"
+              (click)="addFromPalette({ kind: 'model', model: model })">
+              <app-model-icon [icon]="model.icon" size="16" />
+              <span class="palette-text">{{ model.label || model.typeName }}</span>
+              @if (placedModels().has(model.typeName)) {
+                <app-icon name="check" size="14" class="placed-mark" [attr.aria-label]="'design.nav.placed' | t" />
+              }
+            </button>
+          } @empty {
+            <span class="field-help">{{ 'design.hub.noModels' | t }}</span>
+          }
+        </div>
+
+        @if (dashboards()?.length) {
+          <div class="palette-group">
+            <span class="eyebrow">{{ 'design.nav.paletteDashboards' | t }}</span>
+            @for (d of dashboards(); track d.id) {
+              <button type="button" class="palette-item" (pointerdown)="onPalettePointerDown($event, { kind: 'dashboard', dashboard: d })"
+                (click)="addFromPalette({ kind: 'dashboard', dashboard: d })">
+                <app-icon name="dashboard" size="16" /><span class="palette-text">{{ d.name }}</span>
+              </button>
+            }
+          </div>
+        }
+
+        @if (reports()?.length) {
+          <div class="palette-group">
+            <span class="eyebrow">{{ 'design.nav.paletteReports' | t }}</span>
+            @for (r of reports(); track r.id) {
+              <button type="button" class="palette-item" (pointerdown)="onPalettePointerDown($event, { kind: 'report', report: r })"
+                (click)="addFromPalette({ kind: 'report', report: r })">
+                <app-icon name="bar_chart" size="16" /><span class="palette-text">{{ r.name }}</span>
+              </button>
+            }
+          </div>
+        }
+        <p class="field-help">{{ 'design.nav.paletteHelp' | t }}</p>
+      </aside>
+
+      <!-- ─── Ağaç (kenar çubuğu görünümünde) ─────────────────────────────── -->
+      <section class="tree-wrap" [attr.aria-label]="'design.nav.tree' | t">
+        @if (preview()) {
+          <div class="sidebar-frame">
+            <app-sidebar-nav [nodes]="previewNodes()" [preview]="true" />
+          </div>
+          <p class="field-help">{{ 'design.nav.previewNote' | t }}</p>
+        } @else {
+          <div class="sidebar-frame tree" #canvas [class.tree--dragging]="dragging()" (click)="select(null)">
+            @for (row of rows(); track row.key) {
+              @switch (row.kind) {
+                @case ('folder') {
+                  <button type="button" class="tree-row tree-folder" data-row-kind="folder" [attr.data-row-id]="row.node.id"
+                    [class.selected]="selection() === row.node.id" [class.is-dragged]="draggingId() === row.node.id"
+                    [attr.aria-pressed]="selection() === row.node.id"
+                    (click)="$event.stopPropagation(); select(row.node.id)">
+                    @if (!narrow()) {
+                      <span class="handle" (pointerdown)="onRowPointerDown($event, row.node)" [attr.aria-hidden]="true">
+                        <app-icon name="drag_indicator" size="16" />
+                      </span>
+                    }
+                    @if (row.node.icon) { <app-model-icon [icon]="row.node.icon" size="18" /> } @else { <app-icon name="folder_open" size="18" /> }
+                    <span class="tree-text">{{ labelOf(row.node) }}</span>
+                    <span class="tree-count">{{ row.node.children.length }}</span>
+                  </button>
+                }
+                @case ('link') {
+                  <button type="button" class="tree-row" data-row-kind="link" [attr.data-row-id]="row.node.id"
+                    [attr.data-parent]="row.folderId" [class.tree-child]="!!row.folderId"
+                    [class.selected]="selection() === row.node.id"
+                    [class.is-dragged]="draggingId() === row.node.id || (!!row.folderId && draggingId() === row.folderId)"
+                    [attr.aria-pressed]="selection() === row.node.id"
+                    (click)="$event.stopPropagation(); select(row.node.id)">
+                    @if (!narrow()) {
+                      <span class="handle" (pointerdown)="onRowPointerDown($event, row.node)" [attr.aria-hidden]="true">
+                        <app-icon name="drag_indicator" size="16" />
+                      </span>
+                    }
+                    @if (modelIconOf(row.node) || row.node.kind === 'model') {
+                      <app-model-icon [icon]="modelIconOf(row.node)" size="18" />
+                    } @else {
+                      <app-icon [name]="appIconOf(row.node)" size="18" />
+                    }
+                    <span class="tree-text">{{ labelOf(row.node) }}</span>
+                    <span class="tree-kind">{{ kindLabel(row.node) }}</span>
+                    @if (isBroken(row.node)) {
+                      <app-icon name="warning" size="16" class="tree-broken" [attr.aria-label]="'design.nav.broken' | t" />
+                    }
+                  </button>
+                }
+                @case ('folderEnd') {
+                  <div class="tree-drop" data-row-kind="folderEnd" [attr.data-row-id]="row.folderId" [attr.data-parent]="row.folderId"
+                       [class.visible]="row.empty || dragging()">
+                    {{ (row.empty ? 'design.nav.emptyFolder' : 'design.nav.dropHere') | t }}
+                  </div>
+                }
+              }
+            } @empty {
+              <div class="tree-empty">{{ 'design.nav.emptyTree' | t }}</div>
+            }
+            @if (dropLine(); as line) {
+              <div class="drop-line" [class.inset]="line.inset" [style.top.px]="line.top" aria-hidden="true"></div>
+            }
+            @if (doc().appendUnplaced) {
+              <div class="tree-auto" aria-hidden="true"><app-icon name="folder_open" size="16" />{{ 'layout.navOtherModels' | t }} · {{ 'design.nav.autoAppended' | t }}</div>
+            }
+          </div>
+        }
+      </section>
+
+      <!-- ─── Özellikler ─────────────────────────────────────────────────── -->
+      <aside class="panel inspector" [attr.aria-label]="'design.nav.inspector' | t">
+        @if (selected(); as node) {
+          <div class="inspector-head">
+            <span class="badge badge-meta">{{ kindLabel(node) }}</span>
+            <button type="button" class="btn btn-ghost btn-sm" (click)="select(null)" [attr.aria-label]="'design.nav.deselect' | t">
+              <app-icon name="close" size="14" />
+            </button>
+          </div>
+
+          @switch (node.kind) {
+            @case ('model') {
+              <p class="field-help">{{ 'design.nav.modelTarget' | t:{ name: defaultLabelOf(node) } }}</p>
+            }
+            @case ('dashboard') {
+              <p class="field-help">{{ 'design.nav.dashboardTarget' | t:{ id: node.dashboardId } }}</p>
+            }
+            @case ('report') {
+              <p class="field-help">{{ 'design.nav.reportTarget' | t:{ id: node.reportId } }}</p>
+            }
+          }
+
+          <div class="field">
+            <label for="node-label">{{ 'design.nav.label' | t }}</label>
+            <input id="node-label" class="input" maxlength="60" [value]="node.label ?? ''"
+                   [placeholder]="defaultLabelOf(node)" (input)="setLabel(node.id, $any($event.target).value)" />
+            @if (node.kind === 'model' || node.kind === 'page') {
+              <span class="field-help">{{ 'design.nav.labelOptional' | t }}</span>
+            }
+          </div>
+
+          @if (node.kind === 'url') {
+            <div class="field">
+              <label for="node-url">{{ 'design.nav.url' | t }}</label>
+              <input id="node-url" class="input" type="url" inputmode="url" maxlength="500" [value]="node.url"
+                     [attr.aria-invalid]="!urlValid(node.url)" aria-describedby="node-url-help"
+                     (input)="setUrl(node.id, $any($event.target).value)" />
+              @if (!urlValid(node.url)) {
+                <span class="field-error" role="alert">{{ 'design.nav.urlInvalid' | t }}</span>
+              }
+              <span id="node-url-help" class="field-help">{{ 'design.nav.urlHelp' | t }}</span>
+            </div>
+          }
+
+          @if (node.kind === 'folder' || node.kind === 'url') {
+            <div class="field">
+              <span class="field-label">{{ 'design.nav.icon' | t }}</span>
+              <button type="button" class="btn btn-secondary btn-sm icon-choice" (click)="iconPickerFor.set(node.id)">
+                @if (node.icon) { <app-model-icon [icon]="node.icon" size="16" /> } @else { <app-icon [name]="appIconOf(node)" size="16" /> }
+                {{ 'design.nav.chooseIcon' | t }}
+              </button>
+            </div>
+          }
+
+          @if (node.kind === 'folder') {
+            <label class="checkbox-label">
+              <input type="checkbox" [checked]="!!node.collapsed" (change)="setCollapsed(node.id, $any($event.target).checked)" />
+              {{ 'design.nav.startCollapsed' | t }}
+            </label>
+          }
+
+          <div class="inspector-moves">
+            <span class="field-label">{{ 'design.nav.position' | t }}</span>
+            <div class="cluster">
+              <button type="button" class="btn btn-ghost btn-sm" (click)="moveBy(node.id, -1)" [disabled]="!canMove(-1)">
+                <app-icon name="arrow_upward" size="14" />{{ 'design.nav.moveUp' | t }}
+              </button>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="moveBy(node.id, 1)" [disabled]="!canMove(1)">
+                <app-icon name="arrow_downward" size="14" />{{ 'design.nav.moveDown' | t }}
+              </button>
+              @if (node.kind !== 'folder') {
+                @if (selectedLocation()?.folderId) {
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="outdent(node.id)">
+                    <app-icon name="format_indent_decrease" size="14" />{{ 'design.nav.outdent' | t }}
+                  </button>
+                } @else {
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="indent(node.id)" [disabled]="!canIndent()">
+                    <app-icon name="format_indent_increase" size="14" />{{ 'design.nav.indent' | t }}
+                  </button>
+                }
+              }
+            </div>
+            <span class="field-help">{{ 'design.nav.keyboardHelp' | t }}</span>
+          </div>
+
+          <button type="button" class="btn btn-danger btn-sm" (click)="remove(node.id)">
+            <app-icon name="delete" size="14" />{{ 'design.nav.remove' | t }}
+          </button>
+        } @else {
+          <span class="eyebrow">{{ 'design.nav.documentSettings' | t }}</span>
+          <label class="checkbox-label">
+            <input type="checkbox" [checked]="doc().appendUnplaced" (change)="setAppendUnplaced($any($event.target).checked)" />
+            {{ 'design.nav.appendUnplaced' | t }}
+          </label>
+          <p class="field-help">{{ 'design.nav.appendUnplacedHelp' | t }}</p>
+          <p class="field-help">{{ 'design.nav.selectHint' | t }}</p>
+        }
+      </aside>
+    </div>
+
+    <!-- ─── Sorunlar ──────────────────────────────────────────────────────── -->
+    <section class="panel issues">
+      <button type="button" class="issues-head" (click)="issuesOpen.set(!issuesOpen())" [attr.aria-expanded]="issuesOpen()">
+        <span class="eyebrow">{{ 'screen.designer.issues' | t }}</span>
+        <span class="cluster">
+          @if (errorCount() > 0) { <span class="badge badge-danger">{{ 'screen.designer.errorCount' | t:{ count: errorCount() } }}</span> }
+          @if (issues().length - errorCount() > 0) {
+            <span class="badge badge-warn">{{ 'screen.designer.warningCount' | t:{ count: issues().length - errorCount() } }}</span>
+          }
+          @if (issues().length === 0) { <span class="badge badge-success">{{ 'screen.designer.noIssuesBadge' | t }}</span> }
+        </span>
+      </button>
+      @if (issuesOpen() && issues().length > 0) {
+        <ul class="issue-list">
+          @for (issue of issues(); track $index) {
+            <li class="issue">
+              <span class="badge" [class.badge-danger]="issue.severity === 'error'" [class.badge-warn]="issue.severity === 'warning'">
+                {{ ('screen.designer.severity.' + issue.severity) | t }}
+              </span>
+              <button type="button" class="issue-text" (click)="pickIssue(issue)">{{ issueText(issue) }}</button>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  </div>
+}
+
+@if (ghost(); as g) {
+  <div class="drag-ghost" [style.left.px]="g.x + 12" [style.top.px]="g.y + 12" aria-hidden="true">{{ g.label }}</div>
+}
+
+<app-model-icon-picker
+  [open]="!!iconPickerFor()"
+  mode="select"
+  [current]="selected()?.kind === 'folder' || selected()?.kind === 'url' ? $any(selected()).icon : null"
+  (confirmed)="setIcon($event)"
+  (cancelled)="iconPickerFor.set(null)" />
+
+<app-design-settings-dialog
+  [open]="settingsOpen()"
+  [title]="'design.nav.settingsTitle' | t"
+  [name]="detail()?.name ?? ''"
+  [roleIds]="detail()?.roleIds ?? []"
+  [roles]="roles()"
+  [rolesHint]="'design.nav.rolesHint' | t"
+  [busy]="busy() === 'meta'"
+  (confirmed)="saveSettings($event)"
+  (cancelled)="settingsOpen.set(false)">
+  <label class="checkbox-label">
+    <input type="checkbox" [checked]="metaDefault()" (change)="metaDefault.set($any($event.target).checked)" />
+    {{ 'design.nav.isDefault' | t }}
+  </label>
+  <span class="field-help">{{ 'design.nav.isDefaultHelp' | t }}</span>
+  <label class="checkbox-label">
+    <input type="checkbox" [checked]="metaEnabled()" (change)="metaEnabled.set($any($event.target).checked)" />
+    {{ 'design.nav.isEnabled' | t }}
+  </label>
+</app-design-settings-dialog>
+
+<app-confirm-dialog
+  [open]="confirmDiscard()"
+  [title]="'screen.designer.discardTitle' | t"
+  [message]="'screen.designer.discardMessage' | t"
+  [busy]="busy() === 'discard'"
+  (confirmed)="discard()"
+  (cancelled)="confirmDiscard.set(false)" />
+
+<app-confirm-dialog
+  [open]="confirmLeave()"
+  [title]="'screen.designer.leaveTitle' | t"
+  [message]="'screen.designer.leaveMessage' | t"
+  [confirmLabel]="'screen.designer.leaveConfirm' | t"
+  (confirmed)="answerLeave(true)"
+  (cancelled)="answerLeave(false)" />

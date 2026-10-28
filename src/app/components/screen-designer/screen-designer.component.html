@@ -76,6 +76,35 @@
         </button>
       </div>
 
+      <!-- Tasarım seçici: varsayılan + rollere özel tasarımlar (öncelik sırasıyla) -->
+      <div class="layout-picker">
+        <label class="sr-only" for="layout-select">{{ 'screen.variant.select' | t }}</label>
+        <select id="layout-select" class="input layout-select" [disabled]="!!busy()"
+                (change)="onSelectLayout($any($event.target).value)">
+          <option value="" [selected]="!isVariant()">{{ 'screen.variant.default' | t }}</option>
+          @for (v of currentVariants(); track v.id; let i = $index) {
+            <option [value]="v.id" [selected]="v.id === currentLayoutId()">{{ i + 1 }}. {{ v.name }}</option>
+          }
+        </select>
+        @if (isVariant()) {
+          <button type="button" class="btn btn-ghost btn-sm" (click)="moveVariant(-1)"
+            [disabled]="!!busy() || variantIndex() <= 0" [attr.aria-label]="'screen.variant.moveUp' | t">
+            <app-icon name="arrow_upward" size="14" />
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" (click)="moveVariant(1)"
+            [disabled]="!!busy() || variantIndex() >= currentVariants().length - 1" [attr.aria-label]="'screen.variant.moveDown' | t">
+            <app-icon name="arrow_downward" size="14" />
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" (click)="variantDialog.set('edit')" [disabled]="!!busy() || !moduleInstalled()">
+            <app-icon name="edit" size="14" />{{ 'screen.variant.settings' | t }}
+          </button>
+        }
+        <button type="button" class="btn btn-ghost btn-sm" (click)="copyCurrent.set(true); variantDialog.set('create')"
+          [disabled]="!!busy() || !moduleInstalled()">
+          <app-icon name="add" size="14" />{{ 'screen.variant.new' | t }}
+        </button>
+      </div>
+
       @if (notSaved()) {
         <span class="badge badge-meta">{{ 'screen.designer.statusNotSaved' | t }}</span>
       } @else if (!currentState()?.publishedVersion) {
@@ -108,11 +137,21 @@
       }
       @if (currentState()?.exists) {
         <button type="button" class="btn btn-ghost btn-sm" (click)="confirmReset.set(true)" [disabled]="!!busy()">
-          <app-icon name="restart_alt" size="14" />
-          {{ 'screen.designer.reset' | t }}
+          <app-icon [name]="isVariant() ? 'delete' : 'restart_alt'" size="14" />
+          {{ (isVariant() ? 'screen.variant.delete' : 'screen.designer.reset') | t }}
         </button>
       }
     </div>
+
+    <p class="field-help audience">
+      @if (currentVariant(); as v) {
+        {{ 'screen.variant.audience' | t:{ roles: roleSummary(v.roleIds), position: variantIndex() + 1 } }}
+      } @else if (currentVariants().length > 0) {
+        {{ 'screen.variant.defaultAudienceOthers' | t }}
+      } @else {
+        {{ 'screen.variant.defaultAudience' | t }}
+      }
+    </p>
 
     @if (notSaved()) {
       <div class="alert alert-info" role="note">{{ 'screen.designer.notSavedNotice' | t }}</div>
@@ -180,11 +219,39 @@
 
 <app-confirm-dialog
   [open]="confirmReset()"
-  [title]="'screen.designer.resetTitle' | t"
-  [message]="'screen.designer.resetMessage' | t"
+  [title]="(isVariant() ? 'screen.variant.deleteTitle' : 'screen.designer.resetTitle') | t"
+  [message]="(isVariant() ? 'screen.variant.deleteMessage' : 'screen.designer.resetMessage') | t"
   [busy]="busy() === 'reset'"
   (confirmed)="reset()"
   (cancelled)="confirmReset.set(false)" />
+
+<app-confirm-dialog
+  [open]="!!pendingSwitch()"
+  [title]="'screen.variant.switchTitle' | t"
+  [message]="'screen.variant.switchMessage' | t"
+  [confirmLabel]="'screen.variant.switchConfirm' | t"
+  (confirmed)="answerSwitch(true)"
+  (cancelled)="answerSwitch(false)" />
+
+<app-design-settings-dialog
+  [open]="!!variantDialog()"
+  [title]="(variantDialog() === 'create' ? 'screen.variant.createTitle' : 'screen.variant.editTitle') | t"
+  [name]="variantDialog() === 'edit' ? (currentVariant()?.name ?? '') : ''"
+  [roleIds]="variantDialog() === 'edit' ? (currentVariant()?.roleIds ?? []) : []"
+  [roles]="roles()"
+  [rolesRequired]="true"
+  [rolesHint]="'screen.variant.rolesHint' | t"
+  [confirmLabel]="(variantDialog() === 'create' ? 'screen.variant.create' : 'common.save') | t"
+  [busy]="busy() === 'variant'"
+  (confirmed)="confirmVariant($event)"
+  (cancelled)="variantDialog.set(null)">
+  @if (variantDialog() === 'create') {
+    <label class="checkbox-label">
+      <input type="checkbox" [checked]="copyCurrent()" (change)="copyCurrent.set($any($event.target).checked)" />
+      {{ 'screen.variant.copyCurrent' | t }}
+    </label>
+  }
+</app-design-settings-dialog>
 
 <app-confirm-dialog
   [open]="confirmLeave()"

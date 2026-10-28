@@ -88,6 +88,20 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/table-detail/table-detail.component').then(m => m.TableDetailComponent)
       },
+      // Tasarım: model ekran tasarımlarına giriş + navigasyon (kenar çubuğu) tasarımları (?tab=nav)
+      {
+        path: 'design',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/design-hub/design-hub.component').then(m => m.DesignHubComponent)
+      },
+      {
+        path: 'design/navigation/:id',
+        canActivate: [adminGuard],
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () =>
+          import('./components/nav-designer/nav-designer.component').then(m => m.NavDesignerComponent)
+      },
       {
         path: 'drafts',
         canActivate: [adminGuard],

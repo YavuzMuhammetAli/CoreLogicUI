@@ -41,8 +41,14 @@ export class RecordMetadataService {
   private readonly rulesCache = new Map<string, Observable<Map<string, PublishedColumnSchema>>>();
   private readonly childCache = new Map<string, Observable<string[]>>();
   private readonly metaCache = new Map<string, Observable<TypeMeta>>();
-  /** `${typeName}|${viewType}` → yayındaki yerleşim (süreli önbellek, bkz. layout$). */
-  private readonly layoutCache = new Map<string, { at: number; layout$: Observable<FormLayout | ListLayout | null> }>();
+  /**
+   * `${typeName}|${viewType}` → yayındaki yerleşim (süreli önbellek, bkz. layout$). Sunucu tasarımı
+   * kullanıcının ROLÜNE göre seçer; bu yüzden girdi oturum token'ına bağlıdır — çıkış yapıp başka
+   * kullanıcıyla girilince öncekinin tasarımı gösterilmez.
+   */
+  private readonly layoutCache = new Map<string, { at: number; token: string | null; layout$: Observable<FormLayout | ListLayout | null> }>();
+  /** `${typeName}|${viewType}` → sunucunun seçtiği tasarımın kimliği (admin "Ekranı tasarla" ile aynısını açar). */
+  private readonly layoutIds = new Map<string, number>();
 
   /** Model listesi geçersiz kılındı (bkz. PublishedModelService.invalidateModels). */
   readonly modelsInvalidated$ = this.publishedModel.modelsInvalidated$.asObservable();
@@ -173,26 +179,37 @@ export class RecordMetadataService {
 
   /** Tasarımcı yayınladıktan / sıfırladıktan sonra çağırır — açık ekranlar yeni düzeni okusun. */
   invalidateLayout(typeName: string): void {
-    this.layoutCache.delete(`${typeName}|form`);
-    this.layoutCache.delete(`${typeName}|list`);
+    for (const view of ['form', 'list']) {
+      this.layoutCache.delete(`${typeName}|${view}`);
+      this.layoutIds.delete(`${typeName}|${view}`);
+    }
+  }
+
+  /** Son okunan yayındaki tasarımın kimliği; tasarım yoksa null. */
+  publishedLayoutId(typeName: string, viewType: ScreenViewType): number | null {
+    return this.layoutIds.get(`${typeName}|${viewType}`) ?? null;
   }
 
   private layout$(typeName: string, viewType: ScreenViewType): Observable<FormLayout | ListLayout | null> {
     const key = `${typeName}|${viewType}`;
     const now = Date.now();
+    const token = currentToken();
     const cached = this.layoutCache.get(key);
-    if (cached && now - cached.at < RecordMetadataService.LAYOUT_TTL_MS) return cached.layout$;
+    if (cached && cached.token === token && now - cached.at < RecordMetadataService.LAYOUT_TTL_MS) return cached.layout$;
 
     const layout$ = this.screenLayouts.getPublished(typeName, viewType).pipe(
       map(res => {
-        const json = res.success ? res.data?.layoutJson : null;
+        const dto = res.success ? res.data : null;
+        if (dto?.layoutId) this.layoutIds.set(key, dto.layoutId);
+        else this.layoutIds.delete(key);
+        const json = dto?.layoutJson;
         return viewType === 'form' ? parseFormLayout(json) : parseListLayout(json);
       }),
       // Modül kurulu değil / ağ hatası: ekran varsayılan görünümle çalışır.
       catchError(() => of(null)),
       shareReplay(1)
     );
-    this.layoutCache.set(key, { at: now, layout$ });
+    this.layoutCache.set(key, { at: now, token, layout$ });
     return layout$;
   }
 
@@ -206,4 +223,13 @@ export class RecordMetadataService {
   // Yan fayda: eski önbellek yalnız tablo adına göre anahtarlanıp displayColumn'u
   // yok sayıyordu — aynı tabloya farklı etiket kolonuyla bakan iki kolon birbirinin
   // etiketini gösteriyordu. LookupLabelService anahtarı (tablo|kolon) çiftidir.
+}
+
+/** Oturum token'ı — yerleşim önbelleğinin sahibi (PublishedModelService.getModels ile aynı yaklaşım). */
+function currentToken(): string | null {
+  try {
+    return typeof localStorage === 'undefined' ? null : localStorage.getItem('access_token');
+  } catch {
+    return null;
+  }
 }

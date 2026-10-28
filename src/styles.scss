@@ -522,6 +522,9 @@ input[type="checkbox"] {
    sarmalayıcısız geniş tablo dar ekranda kırpılır, kaydırılamaz. */
 .table-wrapper {
   overflow-x: auto;
+  /* Hücredeki .sr-only (position: absolute) kaydırma kabının içinde kalsın; konumlanmış ata
+     olmazsa kırpılmaz ve dar ekranda sayfayı yatay taşırır. */
+  position: relative;
 }
 
 .data-table {

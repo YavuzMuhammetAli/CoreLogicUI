@@ -22,11 +22,19 @@ import { userInitials } from '../../utils/user-initials';
 import { computed, signal } from '@angular/core';
 import { IconComponent } from '../shared/icon/icon.component';
 import { ModelIconComponent } from '../shared/model-icon/model-icon.component';
+import { SidebarNavComponent } from './sidebar-nav/sidebar-nav.component';
+import { NavigationLayoutService } from '../../services/navigation-layout.service';
+import { NavLayout, NavPage } from '../../utils/nav-layout/nav-layout.model';
+import { parseNavLayout } from '../../utils/nav-layout/nav-layout.parse';
+import { resolveNav } from '../../utils/nav-layout/nav-layout.resolve';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, NotificationBellComponent, IconComponent, ModelIconComponent],
+  imports: [
+    RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, NotificationBellComponent, IconComponent, ModelIconComponent,
+    SidebarNavComponent
+  ],
   templateUrl: './layout.component.html',
   styleUrls: ['./layout.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -87,6 +95,24 @@ export class LayoutComponent implements OnInit, OnDestroy {
   navDashboards: DashboardDefinition[] = [];
 
   /**
+   * Admin'in Tasarım sayfasında kurduğu, kullanıcının rolüne düşen menü (sunucu seçer). Varsa
+   * admin olmayan kullanıcının Görevlerim/Tablolar/Raporlama bloğunun yerini alır; yoksa (tasarım
+   * yok, modül kurulu değil, istek düştü) bugünkü otomatik menü çizilir. Admin'in menüsü değişmez.
+   */
+  private readonly navDoc = signal<{ id: number; doc: NavLayout } | null>(null);
+  private readonly navModels = signal<PublishedModel[]>([]);
+  readonly designedNavId = computed(() => this.navDoc()?.id ?? null);
+  readonly designedNav = computed(() => {
+    const nav = this.navDoc();
+    if (!nav) return null;
+    return resolveNav(nav.doc, {
+      models: this.navModels(),
+      pageLabel: page => this.languageService.t(PAGE_LABEL_KEYS[page]),
+      otherModelsLabel: this.languageService.t('layout.navOtherModels')
+    });
+  });
+
+  /**
    * H: Sidebar'daki "Görevlerim" rozeti — bekleyen onay sayısı.
    *
    * Projede SignalR/WebSocket olmadığı için anlık bildirim yok; sayı belirli
@@ -105,6 +131,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   private readonly userProfile  = inject(UserProfileService);
   private readonly dashboardService = inject(DashboardService);
   private readonly taskService  = inject(WorkflowTaskService);
+  private readonly navigationLayouts = inject(NavigationLayoutService);
   readonly themeService         = inject(ThemeService);
   readonly languageService      = inject(LanguageService);
 
@@ -159,11 +186,23 @@ export class LayoutComponent implements OnInit, OnDestroy {
         this.navTables = allModels.filter(m =>
           this.permissionService.canNavigate(m.typeName)
         );
+        this.navModels.set(this.navTables);
       },
       error: err => {
         console.warn('[CoreLogic] Model listesi yükleme hatası:', err?.message);
       }
     });
+
+    // Tasarlanmış menü yalnız admin olmayanlara; yardımcı istek — düşerse otomatik menü kalır.
+    if (!this.permissionService.isAdmin()) {
+      this.navigationLayouts.my().subscribe({
+        next: res => {
+          const doc = res.success && res.data ? parseNavLayout(res.data.layoutJson) : null;
+          this.navDoc.set(doc && res.data ? { id: res.data.layoutId, doc } : null);
+        },
+        error: () => this.navDoc.set(null)
+      });
+    }
 
     // Admin tarafından navigasyona yayınlanmış dashboard'ları yükle — tüm kullanıcılar görür.
     // Yalnız menü dashboard'ları, widget tanımları olmadan.
@@ -306,3 +345,11 @@ export class LayoutComponent implements OnInit, OnDestroy {
     this.mobileQuery?.removeEventListener('change', this.onMobileChange);
   }
 }
+
+/** Tasarlanmış menüdeki uygulama sayfalarının varsayılan adları (admin etiket vermediyse). */
+const PAGE_LABEL_KEYS: Record<NavPage, string> = {
+  tasks: 'layout.tasks',
+  reports: 'layout.reports',
+  dashboards: 'layout.dashboard',
+  profile: 'layout.profile'
+};

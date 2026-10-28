@@ -1,0 +1,43 @@
+// Bölümlü düğme grubu (sekme/görünüm seçici) — tasarım ekranları ortak.
+// Ekran tasarımcısının kendi kopyası da aynı görünümü verir.
+
+.segmented {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--muted);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+
+    & + button { border-left: 1px solid var(--border); }
+
+    &:hover { color: var(--fg); }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: inset var(--focus-ring);
+    }
+
+    &[aria-selected='true'],
+    &[aria-pressed='true'] {
+      color: #fff;
+      background: var(--accent);
+    }
+  }
+
+  &--small button {
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--text-xs);
+  }
+}

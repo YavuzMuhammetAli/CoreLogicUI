@@ -36,7 +36,7 @@
       <div class="panel-actions">
         @if (permission.isAdmin()) {
           <!-- Yayınlanmış ekran tasarımı "Kolonlar" ayarının yerini alır: tek doğruluk kaynağı. -->
-          <a class="btn btn-ghost btn-sm" [routerLink]="['/build', typeName, 'screen']"
+          <a class="btn btn-ghost btn-sm" [routerLink]="['/build', typeName, 'screen']" [queryParams]="designQuery(typeName, 'form')"
              [attr.aria-label]="'screen.designScreenAria' | t"><app-icon name="dashboard_customize" size="14" />{{ 'screen.designScreen' | t }}</a>
           @if (!formLayout) {
             <app-column-visibility
@@ -293,7 +293,7 @@
                     @if (permission.isAdmin()) {
                       @if (state.listLayout) {
                         <a class="btn btn-ghost btn-sm" [routerLink]="['/build', state.typeName, 'screen']"
-                           [queryParams]="{ view: 'list' }"
+                           [queryParams]="designQuery(state.typeName, 'list')"
                            [attr.aria-label]="'screen.designScreenAria' | t"><app-icon name="dashboard_customize" size="14" />{{ 'screen.designScreen' | t }}</a>
                       } @else {
                         <app-column-visibility

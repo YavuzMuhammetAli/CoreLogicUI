@@ -1,0 +1,200 @@
+<div class="page-header">
+  <span class="eyebrow">{{ 'design.hub.title' | t }}</span>
+  @if (tab() === 'navigation' && navInstalled() && !loadingNav()) {
+    <button type="button" class="btn btn-primary btn-sm" (click)="openCreate('current')" [disabled]="!!busy()">
+      <app-icon name="add" size="14" />{{ 'design.nav.new' | t }}
+    </button>
+  }
+</div>
+
+<div class="flow">
+  <div class="segmented" role="tablist" [attr.aria-label]="'design.hub.tabsAria' | t">
+    <button type="button" role="tab" [attr.aria-selected]="tab() === 'screens'" (click)="setTab('screens')">
+      <app-icon name="dashboard_customize" size="16" />{{ 'design.hub.tabScreens' | t }}
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab() === 'navigation'" (click)="setTab('navigation')">
+      <app-icon name="menu" size="16" />{{ 'design.hub.tabNavigation' | t }}
+    </button>
+  </div>
+
+  @if (tab() === 'screens') {
+    <!-- ─── Ekranlar ─────────────────────────────────────────────────────── -->
+    <p class="field-help">{{ 'design.hub.screensIntro' | t }}</p>
+
+    @if (loadingScreens()) {
+      <div class="panel"><div class="empty-state"><span class="spinner" [attr.aria-label]="'design.hub.loading' | t"></span></div></div>
+    } @else if (screensError()) {
+      <div class="alert alert-danger" role="alert">{{ screensError() }}</div>
+    } @else if (models().length === 0) {
+      <div class="panel">
+        <div class="empty-state">
+          <app-icon name="folder_open" size="32" />
+          <p>{{ 'design.hub.noModels' | t }}</p>
+          <a class="btn btn-secondary btn-sm" routerLink="/build">{{ 'design.hub.goBuild' | t }}</a>
+        </div>
+      </div>
+    } @else {
+      @if (models().length > 6) {
+        <div class="field search">
+          <label class="sr-only" for="design-search">{{ 'design.hub.search' | t }}</label>
+          <input id="design-search" class="input" type="search" [placeholder]="'design.hub.search' | t"
+                 [value]="search()" (input)="search.set($any($event.target).value)" />
+        </div>
+      }
+      <div class="model-grid">
+        @for (model of filteredModels(); track model.typeName) {
+          <a class="model-card panel" [routerLink]="['/build', model.typeName, 'screen']"
+             [attr.aria-label]="'design.hub.designModelAria' | t:{ name: model.label || model.typeName }">
+            <div class="model-card-head">
+              <span class="model-type-badge"><app-model-icon [icon]="model.icon" size="16" /></span>
+              <app-icon name="chevron_right" size="18" class="card-chevron" />
+            </div>
+            <h2 class="model-name">{{ model.label || model.typeName }}</h2>
+            <div class="cluster card-badges">
+              @if (summaryOf(model.typeName); as s) {
+                <span class="badge badge-meta">{{ 'design.hub.formCount' | t:{ count: s.formCount } }}</span>
+                <span class="badge badge-meta">{{ 'design.hub.listCount' | t:{ count: s.listCount } }}</span>
+                @if (s.variantCount > 0) {
+                  <span class="badge badge-success">{{ 'design.hub.variantCount' | t:{ count: s.variantCount } }}</span>
+                }
+                @if (s.hasUnpublishedChanges) {
+                  <span class="badge badge-warn">{{ 'design.hub.unpublished' | t }}</span>
+                }
+              } @else {
+                <span class="badge badge-meta">{{ 'design.hub.defaultView' | t }}</span>
+              }
+            </div>
+          </a>
+        } @empty {
+          <p class="field-help">{{ 'design.hub.noMatch' | t }}</p>
+        }
+      </div>
+    }
+  } @else {
+    <!-- ─── Navigasyon ───────────────────────────────────────────────────── -->
+    <p class="field-help">{{ 'design.nav.intro' | t }}</p>
+
+    @if (loadingNav()) {
+      <div class="panel"><div class="empty-state"><span class="spinner" [attr.aria-label]="'design.hub.loading' | t"></span></div></div>
+    } @else if (navError()) {
+      <div class="alert alert-danger" role="alert">{{ navError() }}</div>
+    } @else if (!navInstalled()) {
+      <div class="alert alert-warn" role="status">{{ 'design.nav.notInstalled' | t }}</div>
+    } @else if (navLayouts().length === 0) {
+      <div class="panel">
+        <div class="empty-state">
+          <app-icon name="menu" size="32" />
+          <p>{{ 'design.nav.empty' | t }}</p>
+          <button type="button" class="btn btn-primary btn-sm" (click)="openCreate('current')">
+            <app-icon name="add" size="14" />{{ 'design.nav.new' | t }}
+          </button>
+        </div>
+      </div>
+    } @else {
+      @if (!hasDefault()) {
+        <div class="alert alert-info" role="note">{{ 'design.nav.noDefault' | t }}</div>
+      }
+      <div class="panel">
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">{{ 'design.nav.colPriority' | t }}</th>
+                <th scope="col">{{ 'design.nav.colName' | t }}</th>
+                <th scope="col">{{ 'design.nav.colRoles' | t }}</th>
+                <th scope="col">{{ 'design.nav.colStatus' | t }}</th>
+                <th scope="col">{{ 'design.nav.colEnabled' | t }}</th>
+                <th scope="col"><span class="sr-only">{{ 'design.nav.colActions' | t }}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (layout of navLayouts(); track layout.id; let i = $index, last = $last) {
+                <tr [class.row-disabled]="!layout.isEnabled">
+                  <td class="td-muted">{{ i + 1 }}</td>
+                  <td>
+                    <a class="row-link" [routerLink]="['/design/navigation', layout.id]">{{ layout.name }}</a>
+                    @if (layout.isDefault) { <span class="badge badge-meta">{{ 'design.nav.default' | t }}</span> }
+                  </td>
+                  <td>
+                    {{ roleSummary(layout) }}
+                    @if (unreachable(layout)) {
+                      <span class="badge badge-warn">{{ 'design.nav.unreachable' | t }}</span>
+                    }
+                  </td>
+                  <td>
+                    @if (!layout.publishedVersion) {
+                      <span class="badge badge-warn">{{ 'design.nav.statusDraft' | t }}</span>
+                    } @else if (layout.hasUnpublishedChanges) {
+                      <span class="badge badge-warn">{{ 'design.nav.statusChanged' | t:{ version: layout.publishedVersion } }}</span>
+                    } @else {
+                      <span class="badge badge-success">{{ 'design.nav.statusPublished' | t:{ version: layout.publishedVersion } }}</span>
+                    }
+                  </td>
+                  <td>
+                    <label class="checkbox-label">
+                      <input type="checkbox" [checked]="layout.isEnabled" [disabled]="!!busy()" (change)="toggleEnabled(layout)" />
+                      <span class="sr-only">{{ 'design.nav.enabledAria' | t:{ name: layout.name } }}</span>
+                    </label>
+                  </td>
+                  <td class="td-actions">
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="move(layout, -1)" [disabled]="!!busy() || i === 0"
+                      [attr.aria-label]="'design.nav.moveUpAria' | t:{ name: layout.name }"><app-icon name="arrow_upward" size="14" /></button>
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="move(layout, 1)" [disabled]="!!busy() || last"
+                      [attr.aria-label]="'design.nav.moveDownAria' | t:{ name: layout.name }"><app-icon name="arrow_downward" size="14" /></button>
+                    @if (!layout.isDefault) {
+                      <button type="button" class="btn btn-ghost btn-sm" (click)="makeDefault(layout)" [disabled]="!!busy()">
+                        {{ 'design.nav.makeDefault' | t }}
+                      </button>
+                    }
+                    <a class="btn btn-ghost btn-sm" [routerLink]="['/design/navigation', layout.id]">
+                      <app-icon name="edit" size="14" />{{ 'design.nav.edit' | t }}
+                    </a>
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="openCreate(layout.id)" [disabled]="!!busy()"
+                      [attr.aria-label]="'design.nav.copyAria' | t:{ name: layout.name }"><app-icon name="content_copy" size="14" /></button>
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="toDelete.set(layout)" [disabled]="!!busy()"
+                      [attr.aria-label]="'design.nav.deleteAria' | t:{ name: layout.name }"><app-icon name="delete" size="14" /></button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p class="field-help">{{ 'design.nav.priorityHelp' | t }}</p>
+    }
+  }
+</div>
+
+<app-design-settings-dialog
+  [open]="createOpen()"
+  [title]="'design.nav.createTitle' | t"
+  [name]="createName()"
+  [roleIds]="createRoles()"
+  [roles]="roles()"
+  [rolesHint]="'design.nav.rolesHint' | t"
+  [confirmLabel]="'design.nav.create' | t"
+  [busy]="busy() === 'create'"
+  (confirmed)="create($event)"
+  (cancelled)="createOpen.set(false)">
+  @if (createFrom() === 'current' || createFrom() === 'empty') {
+    <fieldset class="start-from">
+      <legend>{{ 'design.nav.startFrom' | t }}</legend>
+      <label class="checkbox-label">
+        <input type="radio" name="nav-start" [checked]="createFrom() === 'current'" (change)="createFrom.set('current')" />
+        {{ 'design.nav.startCurrent' | t }}
+      </label>
+      <label class="checkbox-label">
+        <input type="radio" name="nav-start" [checked]="createFrom() === 'empty'" (change)="createFrom.set('empty')" />
+        {{ 'design.nav.startEmpty' | t }}
+      </label>
+    </fieldset>
+  }
+</app-design-settings-dialog>
+
+<app-confirm-dialog
+  [open]="!!toDelete()"
+  [title]="'design.nav.deleteTitle' | t"
+  [message]="'design.nav.deleteMessage' | t:{ name: toDelete()?.name ?? '' }"
+  [busy]="busy() === toDelete()?.id"
+  (confirmed)="confirmDelete()"
+  (cancelled)="toDelete.set(null)" />

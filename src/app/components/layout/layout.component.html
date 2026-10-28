@@ -107,7 +107,20 @@
           <app-icon name="account_tree" [filled]="rlaWorkflows.isActive" />
           {{ 'layout.workflows' | t }}
         </a>
+        <a
+          class="nav-item"
+          routerLink="/design"
+          routerLinkActive="active" #rlaDesign="routerLinkActive"
+          [attr.aria-label]="'layout.designAria' | t">
+          <app-icon name="palette" [filled]="rlaDesign.isActive" />
+          {{ 'layout.design' | t }}
+        </a>
       }
+
+      @if (!permissionService.isAdmin() && designedNav(); as nodes) {
+        <!-- Admin'in Tasarım sayfasında kurduğu, kullanıcının rolüne düşen menü -->
+        <app-sidebar-nav [nodes]="nodes" [layoutId]="designedNavId()" [pendingTaskCount]="pendingTaskCount()" />
+      } @else {
 
       <!--
         H: Görevlerim — admin bloğunun DIŞINDA, çünkü onay görevleri normal
@@ -175,6 +188,7 @@
           <app-icon name="dashboard" [filled]="rlaDashItem.isActive" />
           {{ d.name }}
         </a>
+      }
       }
 
     </nav>

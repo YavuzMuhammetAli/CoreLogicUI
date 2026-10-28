@@ -27,6 +27,11 @@ export const LAYOUT_I18N: Translations = {
   'layout.aiAria': { tr: 'Yapay Zeka asistanı', en: 'AI assistant' },
   'layout.workflows': { tr: 'İş Akışları', en: 'Workflows' },
   'layout.workflowsAria': { tr: 'İş akışı tasarımı', en: 'Workflow design' },
+  'layout.design': { tr: 'Tasarım', en: 'Design' },
+  'layout.designAria': { tr: 'Ekran ve menü tasarımı', en: 'Screen and menu design' },
+  'layout.profile': { tr: 'Profilim', en: 'My profile' },
+  'layout.navOtherModels': { tr: 'Diğer modeller', en: 'Other models' },
+  'layout.externalLinkAria': { tr: '{name} (yeni sekmede açılır)', en: '{name} (opens in a new tab)' },
   'layout.tasks': { tr: 'Görevlerim', en: 'My Tasks' },
   'layout.tasksAria': { tr: 'Bekleyen onay görevlerim', en: 'My pending approval tasks' },
   'layout.tasksBadgeAria': {

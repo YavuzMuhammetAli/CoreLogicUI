@@ -78,6 +78,11 @@ export class ModelDataComponent implements OnInit {
    */
   listLayout: ListLayout | null = null;
 
+  /** "Ekranı tasarla": görünen liste tasarımı (sunucu role göre seçti) açılsın. */
+  get designQuery(): Record<string, string | number | null> {
+    return { view: 'list', layout: this.metadata.publishedLayoutId(this.typeName, 'list') };
+  }
+
   // Toplu silme durumu
   /**
    * Seçili satırların ID'leri. Sayfalama SUNUCU taraflı olduğu için seçim sayfalar

@@ -5,8 +5,9 @@ import { environment } from '../../environments/environment';
 import { DataResponseModel } from '../models/dataResponseModel';
 import { ResponseModel } from '../models/responseModel';
 import {
-  PublishedScreenLayoutDto, SaveScreenLayoutDraftDto, ScreenLayoutActionDto, ScreenLayoutSaveResultDto,
-  ScreenLayoutStateDto
+  CreateScreenLayoutVariantDto, PublishedScreenLayoutDto, ReorderScreenLayoutVariantsDto, SaveScreenLayoutDraftDto,
+  ScreenLayoutActionDto, ScreenLayoutSaveResultDto, ScreenLayoutStampDto, ScreenLayoutStateDto, ScreenLayoutSummaryDto,
+  ScreenLayoutViewStateDto, UpdateScreenLayoutVariantDto
 } from '../models/screen-layout.model';
 import { ScreenViewType } from '../utils/screen-layout/screen-layout.model';
 import { SKIP_FORBIDDEN_REDIRECT } from '../interceptors/error.interceptor';
@@ -15,8 +16,10 @@ import { SKIP_FORBIDDEN_REDIRECT } from '../interceptors/error.interceptor';
  * /ModelScreenLayout — ekran tasarımı (model formu ve liste yerleşimi).
  *
  * `getPublished` kayıt ekranlarının YARDIMCI isteğidir: başarısız olursa ekran varsayılan
- * görünümle çalışır, kullanıcı sayfadan koparılmamalı (SKIP_FORBIDDEN_REDIRECT). Diğer uçlar
- * admin'e özeldir (tasarımcı).
+ * görünümle çalışır, kullanıcı sayfadan koparılmamalı (SKIP_FORBIDDEN_REDIRECT). Sunucu,
+ * model + görünümün tasarımlarından kullanıcının ROLÜNE düşeni seçer (rol kimlikleri istemcide yok).
+ * Diğer uçlar admin'e özeldir (tasarımcı, Tasarım sayfası). İşlem DTO'larında `layoutId: null`
+ * görünümün varsayılan tasarımıdır.
  */
 @Injectable({ providedIn: 'root' })
 export class ScreenLayoutService {
@@ -48,7 +51,24 @@ export class ScreenLayoutService {
     return this.http.post<DataResponseModel<ScreenLayoutSaveResultDto>>(`${this.baseUrl}/discardDraft`, dto);
   }
 
+  /** Varsayılanda tasarımı kaldırır; varyantta tasarımı siler. */
   reset(dto: ScreenLayoutActionDto): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/reset`, dto);
+  }
+
+  createVariant(dto: CreateScreenLayoutVariantDto): Observable<DataResponseModel<ScreenLayoutViewStateDto>> {
+    return this.http.post<DataResponseModel<ScreenLayoutViewStateDto>>(`${this.baseUrl}/createVariant`, dto);
+  }
+
+  updateVariant(dto: UpdateScreenLayoutVariantDto): Observable<DataResponseModel<ScreenLayoutViewStateDto>> {
+    return this.http.post<DataResponseModel<ScreenLayoutViewStateDto>>(`${this.baseUrl}/updateVariant`, dto);
+  }
+
+  reorderVariants(dto: ReorderScreenLayoutVariantsDto): Observable<DataResponseModel<ScreenLayoutStampDto[]>> {
+    return this.http.post<DataResponseModel<ScreenLayoutStampDto[]>>(`${this.baseUrl}/reorderVariants`, dto);
+  }
+
+  summary(): Observable<DataResponseModel<ScreenLayoutSummaryDto[]>> {
+    return this.http.get<DataResponseModel<ScreenLayoutSummaryDto[]>>(`${this.baseUrl}/summary`);
   }
 }

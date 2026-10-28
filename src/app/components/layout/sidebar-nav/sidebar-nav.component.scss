@@ -1,0 +1,58 @@
+@use '../nav-items';
+
+:host {
+  display: block;
+}
+
+.sidebar-nav-tree {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.nav-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-folder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.nav-folder-head {
+  font-weight: 600;
+  color: var(--sidebar-fg);
+}
+
+.nav-chevron {
+  margin-left: auto;
+  transition: transform var(--motion-fast) var(--ease-standard);
+
+  &.open {
+    transform: rotate(90deg);
+  }
+}
+
+/* Klasör içeriği: girintili, sol çizgiyle gruplanmış */
+.nav-folder-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-left: var(--space-5);
+  padding-left: var(--space-2);
+  border-left: 1px solid var(--sidebar-border);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-chevron {
+    transition: none;
+  }
+}

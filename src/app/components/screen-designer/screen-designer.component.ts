@@ -1,9 +1,10 @@
+import '../../i18n/lazy/design'; // design.* sözlüğü bu parçayla iner
 import {
   ChangeDetectionStrategy, Component, DestroyRef, HostListener, computed, inject, signal
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
-import { firstValueFrom, forkJoin, of } from 'rxjs';
+import { Observable, firstValueFrom, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { PublishedColumn, PublishedModel, PublishedModelService } from '../../services/published-model.service';
 import { PublishedColumnSchema } from '../../services/published-table.service';
@@ -18,6 +19,10 @@ import { HasUnsavedChanges } from '../../guards/unsaved-changes.guard';
 import { isTypingTarget } from '../shared/workflow-canvas/workflow-canvas.keymap';
 import { DataResponseModel } from '../../models/dataResponseModel';
 import { ScreenLayoutSaveResultDto, ScreenLayoutViewStateDto } from '../../models/screen-layout.model';
+import { Role } from '../../models/role';
+import { RoleAdminService } from '../../services/role-admin.service';
+import { DesignSettings, DesignSettingsDialogComponent } from '../shared/design-settings-dialog/design-settings-dialog.component';
+import { roleNames } from '../shared/role-picker/role-picker.component';
 import {
   FormLayout, LayoutIssue, ListLayout, ScreenViewType
 } from '../../utils/screen-layout/screen-layout.model';
@@ -54,11 +59,18 @@ type SaveOutcome = { ok: true; data: ScreenLayoutSaveResultDto; message: string 
  * Form ve liste ayrı belgelerdir (iki depo, iki kilit damgası); ikisi de sayfada canlıdır,
  * görünüm geçişi düzenlemeyi kaybettirmez. Tasarımcı yalnız sunumu değiştirir — etiket ve
  * kurallar şema ekranındadır.
+ *
+ * Her görünümün bir VARSAYILAN tasarımı ve rollere atanmış adlandırılmış varyantları olabilir
+ * (migrasyon 026). Kullanıcıya hangisinin düşeceğini sunucu seçer: öncelik sırasında rolü eşleşen
+ * ilk yayınlanmış varyant, yoksa varsayılan. Depo, seçili tasarımın belgesini tutar (`?layout=ID`).
  */
 @Component({
   selector: 'app-screen-designer',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, ConfirmDialogComponent, FormDesignerComponent, ListDesignerComponent, IconComponent],
+  imports: [
+    TranslatePipe, RouterLink, ConfirmDialogComponent, FormDesignerComponent, ListDesignerComponent, IconComponent,
+    DesignSettingsDialogComponent
+  ],
   templateUrl: './screen-designer.component.html',
   styleUrls: ['./screen-designer.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -72,6 +84,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
   private readonly metadata = inject(RecordMetadataService);
   readonly notification = inject(NotificationService);
   private readonly languageService = inject(LanguageService);
+  private readonly roleAdmin = inject(RoleAdminService);
 
   readonly typeName = signal('');
   readonly loading = signal(true);
@@ -80,7 +93,19 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
   readonly rules = signal<ReadonlyMap<string, PublishedColumnSchema>>(new Map());
   readonly moduleInstalled = signal(true);
   readonly conflict = signal(false);
-  readonly busy = signal<'save' | 'publish' | 'discard' | 'reset' | null>(null);
+  readonly busy = signal<'save' | 'publish' | 'discard' | 'reset' | 'variant' | null>(null);
+
+  /** Sunucudaki tüm tasarımlar (iki görünüm, varsayılan + varyantlar). */
+  readonly layouts = signal<ScreenLayoutViewStateDto[]>([]);
+  readonly roles = signal<Role[]>([]);
+  /** Görünüm başına seçili tasarım; null = varsayılan. */
+  readonly formLayoutId = signal<number | null>(null);
+  readonly listLayoutId = signal<number | null>(null);
+  /** Varsayılan satırı olmayan görünümün tohumu için eski "Kolonlar" ayarı. */
+  private legacyDetail: string[] = [];
+  private legacyList: string[] = [];
+  /** İlk yüklemede `?layout=` ile istenen tasarım. */
+  private requestedLayoutId: number | null = null;
 
   readonly formStore = new LayoutDesignerStore<FormLayout>(EMPTY_FORM, serializeLayout);
   readonly listStore = new LayoutDesignerStore<ListLayout>(EMPTY_LIST, serializeLayout);
@@ -100,6 +125,11 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
   readonly confirmReset = signal(false);
   readonly confirmLeave = signal(false);
   private resolveLeave: ((leave: boolean) => void) | null = null;
+  /** Kirliyken başka tasarıma geçiş isteği — onay bekler. */
+  readonly pendingSwitch = signal<{ id: number | null } | null>(null);
+  /** Varyant diyaloğu: yeni tasarım ya da seçili varyantın ayarları. */
+  readonly variantDialog = signal<'create' | 'edit' | null>(null);
+  readonly copyCurrent = signal(true);
 
   readonly columns = computed<readonly PublishedColumn[]>(() => this.model()?.columns ?? []);
   readonly modelLabel = computed(() => this.model()?.label?.trim() || this.typeName());
@@ -114,6 +144,13 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
   readonly currentState = computed(() => this.view() === 'form' ? this.formState() : this.listState());
   readonly anyDirty = computed(() => this.formStore.dirty() || this.listStore.dirty());
 
+  readonly currentLayoutId = computed(() => this.view() === 'form' ? this.formLayoutId() : this.listLayoutId());
+  /** Seçili tasarım rollere atanmış bir varyant mı (varsayılan değil). */
+  readonly isVariant = computed(() => this.currentLayoutId() !== null);
+  /** Görünümün varyantları, öncelik sırasıyla. */
+  readonly currentVariants = computed(() => this.variantsOf(this.view()));
+  readonly variantIndex = computed(() => this.currentVariants().findIndex(v => v.id === this.currentLayoutId()));
+
   /** Sunucuda henüz satır yok: ilk taslak bugünkü görünümden tohumlandı, kaydedilmedi. */
   readonly notSaved = computed(() => !this.currentState()?.exists);
   readonly hasUnpublished = computed(() =>
@@ -126,6 +163,8 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
 
     this.route.paramMap.subscribe(params => {
       this.typeName.set(params.get('typeName') ?? '');
+      const layout = Number(this.route.snapshot.queryParamMap.get('layout'));
+      this.requestedLayoutId = Number.isInteger(layout) && layout > 0 ? layout : null;
       this.load();
     });
     this.route.queryParamMap.subscribe(params => {
@@ -157,9 +196,10 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
       schema: this.publishedModel.getSchema(typeName).pipe(catchError(() => of(null))),
       state: this.screenLayouts.getState(typeName),
       detail: this.columnSettings.get(typeName, 'detail').pipe(catchError(() => of(null))),
-      list: this.columnSettings.get(typeName, 'list').pipe(catchError(() => of(null)))
+      list: this.columnSettings.get(typeName, 'list').pipe(catchError(() => of(null))),
+      roles: this.roleAdmin.getRoles().pipe(catchError(() => of(null)))
     }).subscribe({
-      next: ({ models, schema, state, detail, list }) => {
+      next: ({ models, schema, state, detail, list, roles }) => {
         if (typeName !== this.typeName()) return;
         const model = models.success ? (models.data ?? []).find(m => m.typeName === typeName) ?? null : null;
         if (!model) {
@@ -174,8 +214,19 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
 
         const s = state.data;
         this.moduleInstalled.set(!!s?.moduleInstalled);
-        this.applyFormState(s?.form ?? null, detail?.success ? detail.data?.visibleColumns ?? [] : []);
-        this.applyListState(s?.list ?? null, list?.success ? list.data?.visibleColumns ?? [] : []);
+        this.roles.set(roles?.success ? roles.data ?? [] : []);
+        this.layouts.set(s?.layouts ?? []);
+        this.legacyDetail = detail?.success ? detail.data?.visibleColumns ?? [] : [];
+        this.legacyList = list?.success ? list.data?.visibleColumns ?? [] : [];
+
+        // `?layout=` (kayıt ekranındaki "Ekranı tasarla" baktığı tasarımı açar); varsayılansa seçim boş kalır.
+        const requested = this.layouts().find(l => l.id === this.requestedLayoutId);
+        this.requestedLayoutId = null;
+        if (requested) this.view.set(requested.viewType);
+        this.formLayoutId.set(requested?.viewType === 'form' && !requested.isDefault ? requested.id : null);
+        this.listLayoutId.set(requested?.viewType === 'list' && !requested.isDefault ? requested.id : null);
+        this.applyView('form');
+        this.applyView('list');
         this.loading.set(false);
       },
       error: (err: HttpErrorResponse) => {
@@ -200,16 +251,42 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     this.listStore.load(doc, state?.exists ? state.lastModifiedOn : null);
   }
 
-  /** Tek görünümün sunucu durumunu yeniden okur (taslağı at / sıfırla / çakışma sonrası). */
+  /** Görünümün seçili tasarımını depoya yükler; seçili varyant artık yoksa varsayılana döner. */
+  private applyView(view: ScreenViewType): void {
+    const selected = this.selectedSignal(view);
+    let row = selected() === null
+      ? this.layouts().find(l => l.viewType === view && l.isDefault) ?? null
+      : this.layouts().find(l => l.id === selected()) ?? null;
+    if (selected() !== null && !row) {
+      selected.set(null);
+      row = this.layouts().find(l => l.viewType === view && l.isDefault) ?? null;
+    }
+    if (view === 'form') this.applyFormState(row, this.legacyDetail);
+    else this.applyListState(row, this.legacyList);
+  }
+
+  /** Tasarımların sunucu durumunu yeniden okur, tek görünümü yeniden yükler (taslağı at / sil sonrası). */
   private async reloadView(view: ScreenViewType): Promise<void> {
-    const typeName = this.typeName();
-    const [state, legacy] = await Promise.all([
-      firstValueFrom(this.screenLayouts.getState(typeName)),
-      firstValueFrom(this.columnSettings.get(typeName, view === 'form' ? 'detail' : 'list').pipe(catchError(() => of(null))))
-    ]);
-    const visible = legacy?.success ? legacy.data?.visibleColumns ?? [] : [];
-    if (view === 'form') this.applyFormState(state.data?.form ?? null, visible);
-    else this.applyListState(state.data?.list ?? null, visible);
+    const state = await firstValueFrom(this.screenLayouts.getState(this.typeName()));
+    this.layouts.set(state.data?.layouts ?? []);
+    this.applyView(view);
+  }
+
+  private selectedSignal(view: ScreenViewType) {
+    return view === 'form' ? this.formLayoutId : this.listLayoutId;
+  }
+
+  private variantsOf(view: ScreenViewType): ScreenLayoutViewStateDto[] {
+    return this.layouts()
+      .filter(l => l.viewType === view && !l.isDefault)
+      .sort((a, b) => a.priority - b.priority || a.id - b.id);
+  }
+
+  private syncUrl(): void {
+    this.router.navigate([], {
+      relativeTo: this.route, replaceUrl: true,
+      queryParams: { view: this.view() === 'list' ? 'list' : null, layout: this.currentLayoutId() }
+    });
   }
 
   // ─── Görünüm ───────────────────────────────────────────────────────────────
@@ -217,9 +294,133 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
   setView(view: ScreenViewType): void {
     if (view === this.view()) return;
     // Adres çubuğu da güncellenir: yenileme ve paylaşılan bağlantı aynı görünümü açsın.
-    this.router.navigate([], { relativeTo: this.route, queryParams: { view: view === 'list' ? 'list' : null }, replaceUrl: true });
     this.view.set(view);
     this.preview.set(false);
+    this.syncUrl();
+  }
+
+  // ─── Tasarımlar (varsayılan + rollere özel) ────────────────────────────────
+
+  /** Seçici değişti: '' = varsayılan. Kirliyse önce onay. */
+  onSelectLayout(value: string): void {
+    const id = value ? Number(value) : null;
+    if (id === this.currentLayoutId()) return;
+    if (this.currentStore().dirty()) {
+      this.pendingSwitch.set({ id });
+      return;
+    }
+    this.switchTo(id);
+  }
+
+  answerSwitch(confirmed: boolean): void {
+    const pending = this.pendingSwitch();
+    this.pendingSwitch.set(null);
+    if (confirmed && pending) this.switchTo(pending.id);
+  }
+
+  private switchTo(id: number | null): void {
+    this.selectedSignal(this.view()).set(id);
+    this.applyView(this.view());
+    this.preview.set(false);
+    this.syncUrl();
+  }
+
+  roleSummary(roleIds: readonly number[]): string {
+    const names = roleNames(this.roles(), roleIds);
+    return names.length ? names.join(', ') : this.languageService.t('design.roles.nobody');
+  }
+
+  readonly currentVariant = computed(() => this.layouts().find(l => l.id === this.currentLayoutId()) ?? null);
+
+  async confirmVariant(settings: DesignSettings): Promise<void> {
+    const mode = this.variantDialog();
+    if (!mode || this.busy()) return;
+    this.busy.set('variant');
+    try {
+      if (mode === 'create') await this.createVariant(settings);
+      else await this.updateVariant(settings);
+    } finally {
+      this.busy.set(null);
+    }
+  }
+
+  /**
+   * Yeni varyant. "Mevcut tasarımdan kopyala" seçiliyse depodaki belge (kaydedilmemiş değişiklikler
+   * dahil) yeni tasarıma gider — "farklı kaydet" gibi; eski tasarım kaydedilmiş hâlinde kalır.
+   */
+  private async createVariant(settings: DesignSettings): Promise<void> {
+    const view = this.view();
+    const doc = this.copyCurrent()
+      ? this.currentStore().doc()
+      : view === 'form'
+        ? seedFormLayout(this.columns(), this.rules(), this.legacyDetail.length ? this.legacyDetail : null)
+        : seedListLayout(this.columns(), this.legacyList.length ? this.legacyList : null);
+    const res = await this.call(this.screenLayouts.createVariant({
+      typeName: this.typeName(), viewType: view, name: settings.name, roleIds: settings.roleIds,
+      layoutJson: serializeLayout(doc)
+    }));
+    if (!res?.success || !res.data) return;
+    this.layouts.update(list => [...list, res.data]);
+    this.variantDialog.set(null);
+    this.switchTo(res.data.id);
+    this.notification.success(res.message);
+  }
+
+  private async updateVariant(settings: DesignSettings): Promise<void> {
+    const current = this.currentVariant();
+    if (!current) return;
+    const store = this.currentStore();
+    const res = await this.call(this.screenLayouts.updateVariant({
+      layoutId: current.id, name: settings.name, roleIds: settings.roleIds, expectedLastModifiedOn: store.lastModifiedOn()
+    }));
+    if (!res?.success || !res.data) return;
+    this.upsertLayout(res.data);
+    store.restamp(res.data.lastModifiedOn);
+    this.variantDialog.set(null);
+    this.notification.success(res.message);
+  }
+
+  /** Seçili varyantın önceliğini bir kaydırır (eşleşen ilk varyant kazanır). */
+  async moveVariant(delta: -1 | 1): Promise<void> {
+    const list = this.currentVariants();
+    const index = this.variantIndex();
+    const to = index + delta;
+    if (index < 0 || to < 0 || to >= list.length || this.busy()) return;
+    const ordered = list.map(v => v.id);
+    [ordered[index], ordered[to]] = [ordered[to], ordered[index]];
+
+    this.busy.set('variant');
+    try {
+      const res = await this.call(this.screenLayouts.reorderVariants({
+        typeName: this.typeName(), viewType: this.view(), orderedIds: ordered
+      }));
+      if (!res?.success) return;
+      const stamps = new Map((res.data ?? []).map(s => [s.layoutId, s.lastModifiedOn]));
+      this.layouts.update(rows => rows.map(r => {
+        const position = ordered.indexOf(r.id);
+        return position < 0 ? r : { ...r, priority: position, lastModifiedOn: stamps.get(r.id) ?? r.lastModifiedOn };
+      }));
+      const own = stamps.get(this.currentLayoutId() ?? -1);
+      if (own) this.currentStore().restamp(own);
+      this.notification.success(res.message);
+    } finally {
+      this.busy.set(null);
+    }
+  }
+
+  private async call<T>(request: Observable<DataResponseModel<T>>): Promise<DataResponseModel<T> | null> {
+    let res: DataResponseModel<T> | null;
+    try {
+      res = await firstValueFrom(request);
+    } catch (e) {
+      res = ((e as HttpErrorResponse)?.error ?? null) as DataResponseModel<T> | null;
+    }
+    if (!res?.success) this.notification.warn(res?.message || this.languageService.t('screen.designer.saveFailed'));
+    return res;
+  }
+
+  private upsertLayout(row: ScreenLayoutViewStateDto): void {
+    this.layouts.update(rows => rows.some(r => r.id === row.id) ? rows.map(r => (r.id === row.id ? row : r)) : [...rows, row]);
   }
 
   togglePreview(): void {
@@ -288,7 +489,8 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     this.busy.set('discard');
     try {
       const outcome = await this.write(this.screenLayouts.discardDraft({
-        typeName: this.typeName(), viewType: view, expectedLastModifiedOn: store.lastModifiedOn()
+        layoutId: this.selectedSignal(view)(), typeName: this.typeName(), viewType: view,
+        expectedLastModifiedOn: store.lastModifiedOn()
       }));
       if (!outcome.ok) return;
       await this.reloadView(view);
@@ -304,14 +506,18 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     this.busy.set('reset');
     try {
       const res = await firstValueFrom(this.screenLayouts.reset({
-        typeName: this.typeName(), viewType: view, expectedLastModifiedOn: this.storeOf(view).lastModifiedOn()
+        layoutId: this.selectedSignal(view)(), typeName: this.typeName(), viewType: view,
+        expectedLastModifiedOn: this.storeOf(view).lastModifiedOn()
       })).catch((err: HttpErrorResponse) => err.error as DataResponseModel<unknown> | null);
       if (!res?.success) {
         this.notification.warn(res?.message ?? this.languageService.t('screen.designer.saveFailed'));
         return;
       }
       this.metadata.invalidateLayout(this.typeName());
+      // Silinen varyantın yerine varsayılan açılır.
+      this.selectedSignal(view).set(null);
       await this.reloadView(view);
+      this.syncUrl();
       this.notification.success(res.message);
     } finally {
       this.busy.set(null);
@@ -329,6 +535,8 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
       : await this.saveWith(this.listStore, view);
     if (!outcome.ok) return outcome;
     this.patchState(view, {
+      // İlk kayıtta varsayılan satır oluşur; kimliği listeye girsin.
+      ...(outcome.data.layoutId ? { id: outcome.data.layoutId } : {}),
       exists: true, hasUnpublishedChanges: outcome.data.hasUnpublishedChanges,
       lastModifiedOn: outcome.data.lastModifiedOn, publishedVersion: outcome.data.publishedVersion
     });
@@ -339,7 +547,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
   private async saveWith<T extends FormLayout | ListLayout>(store: LayoutDesignerStore<T>, view: ScreenViewType): Promise<SaveOutcome> {
     const sent = store.doc();
     const outcome = await this.write(this.screenLayouts.saveDraft({
-      typeName: this.typeName(), viewType: view,
+      layoutId: this.selectedSignal(view)(), typeName: this.typeName(), viewType: view,
       layoutJson: serializeLayout(sent), expectedLastModifiedOn: store.lastModifiedOn()
     }));
     if (outcome.ok) store.markSaved(sent, outcome.data.lastModifiedOn);
@@ -349,7 +557,8 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
   private async publishWith<T extends FormLayout | ListLayout>(store: LayoutDesignerStore<T>, view: ScreenViewType): Promise<SaveOutcome> {
     const sent = store.doc();
     const outcome = await this.write(this.screenLayouts.publish({
-      typeName: this.typeName(), viewType: view, expectedLastModifiedOn: store.lastModifiedOn()
+      layoutId: this.selectedSignal(view)(), typeName: this.typeName(), viewType: view,
+      expectedLastModifiedOn: store.lastModifiedOn()
     }));
     if (outcome.ok) store.markSaved(sent, outcome.data.lastModifiedOn);
     return outcome;
@@ -372,13 +581,17 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     return { ok: false };
   }
 
+  /** Seçili tasarımın durumunu ve tasarım listesindeki satırını birlikte günceller. */
   private patchState(view: ScreenViewType, patch: Partial<ScreenLayoutViewStateDto>): void {
     const target = view === 'form' ? this.formState : this.listState;
     const current = target() ?? {
-      viewType: view, exists: false, draftJson: null, publishedJson: null, publishedVersion: 0,
+      id: 0, viewType: view, name: null, isDefault: true, priority: 0, roleIds: [],
+      exists: false, draftJson: null, publishedJson: null, publishedVersion: 0,
       publishedOn: null, lastModifiedOn: null, hasUnpublishedChanges: false
     };
-    target.set({ ...current, ...patch });
+    const next = { ...current, ...patch };
+    target.set(next);
+    if (next.id) this.upsertLayout(next);
   }
 
   private storeOf(view: ScreenViewType): LayoutDesignerStore<FormLayout> | LayoutDesignerStore<ListLayout> {
@@ -445,7 +658,8 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
-    if (this.confirmDiscard() || this.confirmReset() || this.confirmLeave() || this.loading()) return;
+    if (this.confirmDiscard() || this.confirmReset() || this.confirmLeave() || this.pendingSwitch()
+      || this.variantDialog() || this.loading()) return;
     const command = screenCommandFor(event);
     if (!command) return;
     // Yazı alanında yalnız Ctrl+S yakalanır; geri al/yinele alanın kendi geçmişine kalır.
