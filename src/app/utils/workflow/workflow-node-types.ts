@@ -1,4 +1,5 @@
 import { WorkflowStep, WorkflowStepType } from '../../models/workflow.model';
+import type { IconName } from '../../components/shared/icon/icons.generated';
 
 /**
  * Akış düğümü tip kataloğu — SAF, Angular yok.
@@ -29,8 +30,8 @@ export interface NodeKindInfo {
   category: NodeCategory;
   /** Görev açmadan motorun ilerlettiği adım (koşul, alan güncelle, bildirim). */
   automatic: boolean;
-  /** 24×24 viewBox'ta stroke ikon yolu (`currentColor`). */
-  icon: string;
+  /** Material Symbols ikon adı (`<app-icon>`). */
+  icon: IconName;
 }
 
 export const NODE_KINDS: ReadonlyArray<NodeKindInfo> = [
@@ -43,7 +44,7 @@ export const NODE_KINDS: ReadonlyArray<NodeKindInfo> = [
     tone: 'accent',
     category: 'human',
     automatic: false,
-    icon: 'M9 12l2 2 4-4M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7z'
+    icon: 'approval'
   },
   {
     kind: 'task',
@@ -54,7 +55,7 @@ export const NODE_KINDS: ReadonlyArray<NodeKindInfo> = [
     tone: 'success',
     category: 'human',
     automatic: false,
-    icon: 'M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9'
+    icon: 'task_alt'
   },
   {
     kind: 'parallel',
@@ -65,7 +66,7 @@ export const NODE_KINDS: ReadonlyArray<NodeKindInfo> = [
     tone: 'warn',
     category: 'human',
     automatic: false,
-    icon: 'M6 3v18M18 3v18M6 8h12M6 16h12'
+    icon: 'call_split'
   },
   {
     kind: 'condition',
@@ -76,7 +77,7 @@ export const NODE_KINDS: ReadonlyArray<NodeKindInfo> = [
     tone: 'neutral',
     category: 'flow',
     automatic: true,
-    icon: 'M12 2l10 10-10 10L2 12z'
+    icon: 'alt_route'
   },
   {
     kind: 'action',
@@ -87,7 +88,7 @@ export const NODE_KINDS: ReadonlyArray<NodeKindInfo> = [
     tone: 'accent',
     category: 'automation',
     automatic: true,
-    icon: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'
+    icon: 'edit_note'
   },
   {
     kind: 'notify',
@@ -98,7 +99,7 @@ export const NODE_KINDS: ReadonlyArray<NodeKindInfo> = [
     tone: 'warn',
     category: 'automation',
     automatic: true,
-    icon: 'M4 4h16v12H5.2L4 17.2zM4 8l8 5 8-5'
+    icon: 'notifications'
   },
   {
     kind: 'timer',
@@ -109,7 +110,7 @@ export const NODE_KINDS: ReadonlyArray<NodeKindInfo> = [
     tone: 'neutral',
     category: 'automation',
     automatic: true,
-    icon: 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z'
+    icon: 'hourglass_empty'
   },
   {
     kind: 'end',
@@ -120,7 +121,7 @@ export const NODE_KINDS: ReadonlyArray<NodeKindInfo> = [
     tone: 'success',
     category: 'flow',
     automatic: false,
-    icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'
+    icon: 'flag'
   }
 ];
 

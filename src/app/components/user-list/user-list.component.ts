@@ -7,6 +7,7 @@ import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { AppUser } from '../../models/appUser';
 import { markDirty } from '../../utils/change-detection';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /**
  * Şirket içi kullanıcı listesi (/users) — yalnızca admin (adminGuard).
@@ -17,7 +18,7 @@ import { markDirty } from '../../utils/change-detection';
 @Component({
   selector: 'app-user-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, RouterLink, TranslatePipe, IconComponent],
   templateUrl: './user-list.component.html',
   styleUrls: ['./user-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

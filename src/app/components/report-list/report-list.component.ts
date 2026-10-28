@@ -7,11 +7,12 @@ import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { ModelLabelPipe } from '../../pipes/model-label.pipe';
 import { markDirty } from '../../utils/change-detection';
+import { IconComponent } from '../shared/icon/icon.component';
 
 @Component({
   selector: 'app-report-list',
   standalone: true,
-  imports: [RouterLink, TranslatePipe, ModelLabelPipe],
+  imports: [RouterLink, TranslatePipe, ModelLabelPipe, IconComponent],
   templateUrl: './report-list.component.html',
   styleUrls: ['./report-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

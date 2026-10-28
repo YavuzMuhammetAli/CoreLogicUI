@@ -211,7 +211,7 @@
             (click)="save()">
             @if (saving()) {
               <span class="spinner" aria-hidden="true"></span>
-            }
+            } @else { <app-icon name="save" size="16" /> }
             {{ 'parameter.backup.saveSchedule' | t }}
           </button>
         </div>
@@ -255,7 +255,7 @@
           <button class="btn btn-secondary btn-sm" type="button" [disabled]="running() || hasActiveBackup()" (click)="requestRunNow()">
             @if (running()) {
               <span class="spinner" aria-hidden="true"></span>
-            }
+            } @else { <app-icon name="backup" size="14" /> }
             {{ 'parameter.backup.runNow' | t }}
           </button>
         </div>
@@ -263,7 +263,7 @@
 
       @if (history().length === 0) {
         <div class="empty-state">
-          <div class="empty-icon" aria-hidden="true">💾</div>
+          <app-icon class="empty-icon" name="backup" size="40" />
           <h3>{{ 'parameter.backup.historyEmpty' | t }}</h3>
           <p>{{ 'parameter.backup.historyEmptyHint' | t }}</p>
         </div>
@@ -302,12 +302,14 @@
                         <button type="button" class="btn btn-ghost btn-sm"
                                 [disabled]="downloadingId() === item.id"
                                 (click)="download(item)">
+                          <app-icon name="download" size="14" />
                           {{ 'parameter.backup.download' | t }}
                         </button>
                       }
                       <button type="button" class="btn btn-ghost btn-sm"
                               [disabled]="!item.canRestore || hasActiveBackup()"
                               (click)="requestRestore(item)">
+                        <app-icon name="history" size="14" />
                         {{ 'parameter.backup.restore' | t }}
                       </button>
                       @if (!item.canRestore && item.restoreBlockedReason) {

@@ -3,17 +3,12 @@
   <div class="cluster">
     @if (isAdmin) {
       <a routerLink="/dashboard/deleted" class="btn btn-secondary btn-sm">
-        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-        </svg>
+        <app-icon name="delete" size="14" />
         {{ 'dashboard.list.deletedLink' | t }}
       </a>
     }
     <a routerLink="/dashboard/new" class="btn btn-primary">
-      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="M12 5v14M5 12h14"/>
-      </svg>
+      <app-icon name="add" size="16" />
       {{ 'dashboard.list.newButton' | t }}
     </a>
   </div>
@@ -51,7 +46,7 @@
                 <td><span class="badge badge-meta">{{ dashboard.widgets.length }}</span></td>
                 <td>
                   <div class="td-actions">
-                    <a class="btn btn-ghost btn-sm" [routerLink]="['/dashboard', dashboard.id]">{{ 'dashboard.list.view' | t }}</a>
+                    <a class="btn btn-ghost btn-sm" [routerLink]="['/dashboard', dashboard.id]"><app-icon name="visibility" size="14" />{{ 'dashboard.list.view' | t }}</a>
                   </div>
                 </td>
               </tr>
@@ -63,10 +58,10 @@
   } @else {
     <div class="panel">
       <div class="empty-state">
-        <div class="empty-icon" aria-hidden="true">📊</div>
+        <app-icon class="empty-icon" name="dashboard" size="40" />
         <h3>{{ 'dashboard.list.emptyTitle' | t }}</h3>
         <p>{{ 'dashboard.list.emptyText' | t }}</p>
-        <a routerLink="/dashboard/new" class="btn btn-primary">{{ 'dashboard.list.emptyCta' | t }}</a>
+        <a routerLink="/dashboard/new" class="btn btn-primary"><app-icon name="add" size="16" />{{ 'dashboard.list.emptyCta' | t }}</a>
       </div>
     </div>
   }

@@ -7,6 +7,7 @@ import {
   ExpressionCheck, ValueInputKind, addCase, addRow, checkExpression, moveCase, removeCase, removeRow,
   setFormulaMode, updateCase, updateRow, valueInputKind
 } from './condition-form';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Hedef seçicideki adım. */
 export interface StepTarget {
@@ -25,7 +26,7 @@ export interface StepTarget {
 @Component({
   selector: 'app-condition-editor',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, IconComponent],
   templateUrl: './condition-editor.component.html',
   styleUrl: './editors.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

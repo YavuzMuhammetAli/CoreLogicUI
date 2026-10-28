@@ -28,7 +28,7 @@
             <span>{{ recipientLabel(recipient) }}</span>
             @if (!readonly()) {
               <button type="button" class="btn btn-ghost btn-sm" (click)="removeRecipient(i)"
-                      [attr.aria-label]="'workflow.notify.removeRecipient' | t: { name: recipientLabel(recipient) }">✕</button>
+                      [attr.aria-label]="'workflow.notify.removeRecipient' | t: { name: recipientLabel(recipient) }"><app-icon name="close" size="14" /></button>
             }
           </li>
         }
@@ -76,6 +76,7 @@
         }
 
         <button type="button" class="btn btn-secondary btn-sm" [disabled]="!canAdd()" (click)="addRecipient()">
+          <app-icon name="add" size="14" />
           + {{ 'workflow.notify.addRecipient' | t }}
         </button>
       </div>

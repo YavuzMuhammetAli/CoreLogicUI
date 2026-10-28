@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { NODE_KINDS, NodeKind } from '../../../utils/workflow/workflow-node-types';
 import { WORKFLOW_NODE_MIME } from '../../shared/workflow-canvas/workflow-canvas.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /**
  * Tasarımcı paleti — eklenebilecek düğüm türleri.
@@ -14,7 +15,7 @@ import { WORKFLOW_NODE_MIME } from '../../shared/workflow-canvas/workflow-canvas
 @Component({
   selector: 'app-workflow-palette',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, IconComponent],
   templateUrl: './workflow-palette.component.html',
   styleUrl: './workflow-palette.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

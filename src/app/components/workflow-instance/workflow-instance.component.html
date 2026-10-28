@@ -1,14 +1,16 @@
 <div class="page-header">
   <span class="eyebrow">{{ 'workflow.instance.title' | t }}</span>
   <div class="cluster">
-    <a [routerLink]="backLink" class="btn btn-ghost btn-sm">{{ 'workflow.instance.back' | t }}</a>
+    <a [routerLink]="backLink" class="btn btn-ghost btn-sm"><app-icon name="arrow_back" size="14" />{{ 'workflow.instance.back' | t }}</a>
     @if (isAdmin) {
       <button type="button" class="btn btn-secondary btn-sm" [disabled]="verifying" (click)="verifyChain()">
+        <app-icon name="verified" size="14" />
         {{ 'workflow.instance.verifyChain' | t }}
       </button>
     }
     @if (canCancel) {
       <button type="button" class="btn btn-danger btn-sm" [disabled]="cancelling" (click)="askCancel()">
+        <app-icon name="block" size="14" />
         {{ 'workflow.panel.cancel' | t }}
       </button>
     }
@@ -87,10 +89,12 @@
           <div class="cluster incident-actions">
             <button type="button" class="btn btn-secondary btn-sm"
                     [disabled]="retrying || skipping" (click)="retryIncident()">
+              <app-icon name="refresh" size="14" />
               {{ 'workflow.incident.retry' | t }}
             </button>
             <button type="button" class="btn btn-danger btn-sm"
                     [disabled]="retrying || skipping" (click)="askSkip()">
+              <app-icon name="skip_next" size="14" />
               {{ 'workflow.incident.skip' | t }}
             </button>
           </div>
@@ -142,6 +146,7 @@
             <button type="button" class="btn btn-danger"
                     [disabled]="!rollbackTarget || rollingBack"
                     (click)="askRollback()">
+              <app-icon name="undo" size="16" />
               {{ 'workflow.instance.rollbackAction' | t }}
             </button>
           </div>

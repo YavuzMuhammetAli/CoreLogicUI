@@ -11,6 +11,7 @@ import { NotificationService } from '../../services/notification.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { markDirty } from '../../utils/change-detection';
 import { formatDate } from '../../utils/locale-format';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /**
  * Bir akış kodunun sürüm geçmişi.
@@ -22,7 +23,7 @@ import { formatDate } from '../../utils/locale-format';
 @Component({
   selector: 'app-workflow-versions',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, WorkflowCanvasComponent],
+  imports: [CommonModule, RouterLink, TranslatePipe, WorkflowCanvasComponent, IconComponent],
   templateUrl: './workflow-versions.component.html',
   styleUrl: './workflow-versions.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

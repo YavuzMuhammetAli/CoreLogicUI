@@ -18,6 +18,7 @@ import {
   NotificationTemplateContent,
   NotificationTemplateKind
 } from '../../../models/parameter.model';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Kaydedilmemiş değişiklik varken istenen geçiş — onaydan sonra uygulanır. */
 interface PendingSwitch {
@@ -37,7 +38,7 @@ interface PendingSwitch {
 @Component({
   selector: 'app-notification-templates-tab',
   standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe, ConfirmDialogComponent],
+  imports: [ReactiveFormsModule, TranslatePipe, ConfirmDialogComponent, IconComponent],
   templateUrl: './notification-templates-tab.component.html',
   styleUrls: ['../parameters.shared.scss', './notification-templates-tab.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

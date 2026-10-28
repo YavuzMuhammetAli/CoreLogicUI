@@ -11,6 +11,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
 import { ModelLabelPipe } from '../../pipes/model-label.pipe';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { markDirty } from '../../utils/change-detection';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /**
  * İş akışı tanım listesi.
@@ -23,7 +24,7 @@ import { markDirty } from '../../utils/change-detection';
 @Component({
   selector: 'app-workflow-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, ConfirmDialogComponent],
+  imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, ConfirmDialogComponent, IconComponent],
   templateUrl: './workflow-list.component.html',
   styleUrl: './workflow-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

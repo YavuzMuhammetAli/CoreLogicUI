@@ -7,6 +7,7 @@ import { ParameterService } from '../../../services/parameter.service';
 import { LanguageService } from '../../../services/language.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { MASKED_PASSWORD, MailSetting, NotificationLanguage } from '../../../models/parameter.model';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /**
  * Yalnız http(s) mutlak adres — backend de aynı kuralı uygular. Bu adresler
@@ -24,7 +25,7 @@ const HTTP_URL = /^https?:\/\/\S+$/i;
 @Component({
   selector: 'app-mail-settings-tab',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
+  imports: [CommonModule, ReactiveFormsModule, TranslatePipe, IconComponent],
   templateUrl: './mail-settings-tab.component.html',
   styleUrls: ['../parameters.shared.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

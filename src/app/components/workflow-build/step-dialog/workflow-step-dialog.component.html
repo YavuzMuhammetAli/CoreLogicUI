@@ -5,7 +5,7 @@
       <h3 id="wf-step-dialog-title">
         {{ (readonly() ? 'workflow.build.stepDialogView' : isNew() ? 'workflow.build.stepDialogNew' : 'workflow.build.stepDialogEdit') | t }}
       </h3>
-      <button type="button" class="btn btn-ghost btn-sm" (click)="cancel()" [attr.aria-label]="'common.close' | t">✕</button>
+      <button type="button" class="btn btn-ghost btn-sm" (click)="cancel()" [attr.aria-label]="'common.close' | t"><app-icon name="close" size="14" /></button>
     </div>
 
     @if (special()) {
@@ -175,6 +175,7 @@
               <span class="eyebrow">{{ 'workflow.build.branches' | t }}</span>
               @if (!readonly()) {
                 <button type="button" class="btn btn-secondary btn-sm" (click)="addBranch()">
+                  <app-icon name="add" size="14" />
                   {{ 'workflow.build.addBranch' | t }}
                 </button>
               }
@@ -188,7 +189,7 @@
                     <span class="branch-index">{{ b + 1 }}</span>
                     @if (!readonly()) {
                       <button type="button" class="btn btn-ghost btn-sm" (click)="removeBranch(b)"
-                              [attr.aria-label]="'common.delete' | t">✕</button>
+                              [attr.aria-label]="'common.delete' | t"><app-icon name="close" size="14" /></button>
                     }
                   </div>
                   <div class="dialog-grid">
@@ -262,6 +263,7 @@
               <span class="eyebrow">{{ 'workflow.build.recordFields' | t }}</span>
               @if (!readonly() && columns().length > recordFields.length) {
                 <button type="button" class="btn btn-secondary btn-sm" (click)="addRecordField()">
+                  <app-icon name="add" size="14" />
                   {{ 'workflow.build.addRecordField' | t }}
                 </button>
               }
@@ -290,7 +292,7 @@
                     </label>
                     @if (!readonly()) {
                       <button type="button" class="btn btn-ghost btn-sm" (click)="removeRecordField(r)"
-                              [attr.aria-label]="'common.delete' | t">✕</button>
+                              [attr.aria-label]="'common.delete' | t"><app-icon name="close" size="14" /></button>
                     } @else {
                       <span></span>
                     }
@@ -334,6 +336,7 @@
               <span class="eyebrow">{{ 'workflow.build.formFields' | t }}</span>
               @if (!readonly()) {
                 <button type="button" class="btn btn-secondary btn-sm" (click)="addField()">
+                  <app-icon name="add" size="14" />
                   {{ 'workflow.build.addField' | t }}
                 </button>
               }
@@ -365,7 +368,7 @@
                     </label>
                     @if (!readonly()) {
                       <button type="button" class="btn btn-ghost btn-sm" (click)="removeField(j)"
-                              [attr.aria-label]="'common.delete' | t">✕</button>
+                              [attr.aria-label]="'common.delete' | t"><app-icon name="close" size="14" /></button>
                     } @else {
                       <span></span>
                     }
@@ -398,7 +401,7 @@
           <span class="dialog-error" role="alert">{{ 'workflow.build.stepInvalid' | t }}</span>
         }
         <button type="button" class="btn btn-secondary" (click)="cancel()">{{ 'common.cancel' | t }}</button>
-        <button type="button" class="btn btn-primary" (click)="save()">{{ 'common.save' | t }}</button>
+        <button type="button" class="btn btn-primary" (click)="save()"><app-icon name="save" size="16" />{{ 'common.save' | t }}</button>
       }
     </div>
   </div>

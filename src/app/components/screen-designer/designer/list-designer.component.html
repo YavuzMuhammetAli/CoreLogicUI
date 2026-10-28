@@ -13,11 +13,11 @@
                 (change)="setWidth(entry.column, $any($event.target).value)"
                 [attr.aria-label]="'screen.list.width' | t">
               <button type="button" class="btn btn-ghost btn-sm" [disabled]="i === 0" (click)="moveBy(entry.column, -1)"
-                [attr.aria-label]="'screen.designer.moveUp' | t">↑</button>
+                [attr.aria-label]="'screen.designer.moveUp' | t"><app-icon name="arrow_upward" size="14" /></button>
               <button type="button" class="btn btn-ghost btn-sm" [disabled]="i === doc().columns.length - 1"
-                (click)="moveBy(entry.column, 1)" [attr.aria-label]="'screen.designer.moveDown' | t">↓</button>
+                (click)="moveBy(entry.column, 1)" [attr.aria-label]="'screen.designer.moveDown' | t"><app-icon name="arrow_downward" size="14" /></button>
               <button type="button" class="btn btn-ghost btn-sm" (click)="hide(entry.column)"
-                [attr.aria-label]="'screen.list.hide' | t">✕</button>
+                [attr.aria-label]="'screen.list.hide' | t"><app-icon name="close" size="14" /></button>
             </span>
           </li>
         }
@@ -128,11 +128,12 @@
               {{ 'screen.list.autoWidth' | t }}
             </button>
             <button type="button" class="btn btn-ghost btn-sm" [disabled]="selectedIndex() <= 0" (click)="moveBy(entry.column, -1)">
-              ← {{ 'screen.inspector.moveLeft' | t }}
+              <app-icon name="chevron_left" size="14" />
+              {{ 'screen.inspector.moveLeft' | t }}
             </button>
             <button type="button" class="btn btn-ghost btn-sm" [disabled]="selectedIndex() >= doc().columns.length - 1"
-              (click)="moveBy(entry.column, 1)">{{ 'screen.inspector.moveRight' | t }} →</button>
-            <button type="button" class="btn btn-secondary btn-sm" (click)="hide(entry.column)">{{ 'screen.list.hide' | t }}</button>
+              (click)="moveBy(entry.column, 1)"><app-icon name="chevron_right" size="14" />{{ 'screen.inspector.moveRight' | t }}</button>
+            <button type="button" class="btn btn-secondary btn-sm" (click)="hide(entry.column)"><app-icon name="visibility_off" size="14" />{{ 'screen.list.hide' | t }}</button>
           </div>
         } @else {
           <p class="inspector-empty">{{ 'screen.list.emptyHelp' | t }}</p>

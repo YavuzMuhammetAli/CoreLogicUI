@@ -9,6 +9,7 @@ import { LookupLabelService } from '../../../services/lookup-label.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { markDirty } from '../../../utils/change-detection';
 import { closeOnOutsidePointer } from '../../../utils/outside-pointer';
+import { IconComponent } from '../icon/icon.component';
 
 /** Sayfa boyutu — açılışta ve her "daha fazla" isteğinde bu kadar kayıt gelir. */
 const PAGE_SIZE = 50;
@@ -38,7 +39,7 @@ let instanceCounter = 0;
 @Component({
   selector: 'app-lookup-picker',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, IconComponent],
   templateUrl: './lookup-picker.component.html',
   styleUrls: ['./lookup-picker.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

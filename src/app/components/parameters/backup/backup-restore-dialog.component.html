@@ -80,6 +80,7 @@
         @switch (step()) {
           @case ('done') {
             <button type="button" class="btn btn-primary" (click)="signInAgain()">
+              <app-icon name="login" size="16" />
               {{ 'parameter.backup.restoreSignInButton' | t }}
             </button>
           }
@@ -96,7 +97,7 @@
             <button type="button" class="btn btn-danger" (click)="submit()" [disabled]="!canSubmit()">
               @if (step() === 'submitting') {
                 <span class="spinner" aria-hidden="true"></span>
-              }
+              } @else { <app-icon name="history" size="16" /> }
               {{ 'parameter.backup.restoreConfirmButton' | t }}
             </button>
           }

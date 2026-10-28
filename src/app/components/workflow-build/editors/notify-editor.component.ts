@@ -14,6 +14,7 @@ import {
   addRecipient, channelChecked, insertPlaceholder, notifyOf, patchNotify, placeholderNames, removeRecipient,
   toggleChannel, unknownPlaceholders
 } from './notify-form';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /**
  * Bildirim düğümünün düzenleyicisi: alıcılar, kanallar, konu/metin şablonu ve
@@ -23,7 +24,7 @@ import {
 @Component({
   selector: 'app-notify-editor',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, IconComponent],
   templateUrl: './notify-editor.component.html',
   styleUrl: './editors.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

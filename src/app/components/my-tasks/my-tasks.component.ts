@@ -7,6 +7,7 @@ import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { ModelLabelPipe } from '../../pipes/model-label.pipe';
 import { formatDate } from '../../utils/locale-format';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /**
  * "Görevlerim" — kullanıcıya doğrudan atanmış veya üyesi olduğu rollerin
@@ -21,7 +22,7 @@ import { formatDate } from '../../utils/locale-format';
 @Component({
   selector: 'app-my-tasks',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe],
+  imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, IconComponent],
   templateUrl: './my-tasks.component.html',
   styleUrl: './my-tasks.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

@@ -4,7 +4,7 @@
     @if (p.unplaced.length > 0) {
       <div class="alert alert-warn layout-stale" role="status">
         <span>{{ 'screen.form.staleNotice' | t:{ count: p.unplaced.length } }}</span>
-        <a class="btn btn-ghost btn-sm" [routerLink]="link">{{ 'screen.form.design' | t }}</a>
+        <a class="btn btn-ghost btn-sm" [routerLink]="link"><app-icon name="dashboard_customize" size="14" />{{ 'screen.form.design' | t }}</a>
       </div>
     }
   }
@@ -48,10 +48,7 @@
               [attr.aria-expanded]="isSectionOpen(section)"
               [attr.aria-controls]="idPrefix() + 'section-' + section.id"
               (click)="toggleSection(section)">
-              <svg class="layout-chevron" [class.layout-chevron--open]="isSectionOpen(section)" aria-hidden="true"
-                   width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
+              <app-icon name="chevron_right" size="14" class="layout-chevron" [class.layout-chevron--open]="isSectionOpen(section)" />
               <span>{{ section.title || ('screen.form.untitledSection' | t) }}</span>
             </button>
           } @else if (section.title) {

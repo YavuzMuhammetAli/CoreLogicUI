@@ -21,6 +21,7 @@ import { buildAutoValuePlan } from '../../../utils/auto-value/auto-value';
 import { mustStayVisible } from '../../../utils/record-field/column-required';
 import { FormLayout, ListLayout } from '../../../utils/screen-layout/screen-layout.model';
 import { resolveListColumns } from '../../../utils/screen-layout/list-layout.resolve';
+import { IconComponent } from '../icon/icon.component';
 
 /** Alt model sekmesinin dialog içindeki görünüm durumu. */
 interface ChildTabView {
@@ -60,7 +61,7 @@ interface ChildTabView {
     ConfirmDialogComponent,
     RecordLayoutComponent,
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    forwardRef(() => RecordFormDialogComponent)
+    forwardRef(() => RecordFormDialogComponent), IconComponent
   ],
   templateUrl: './record-form-dialog.component.html',
   styleUrls: ['./record-form-dialog.component.scss'],

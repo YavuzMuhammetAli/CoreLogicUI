@@ -10,6 +10,8 @@ import {
   BRANCH_LINE_HEIGHT, EdgeRequest, NODE_HEIGHT, NODE_WIDTH, routeOrthogonal
 } from '../workflow-graph/workflow-edge.geometry';
 import { NODE_KINDS, NodeKind, NodeTone, isNodeKind } from '../../../utils/workflow/workflow-node-types';
+import { IconComponent } from '../icon/icon.component';
+import type { IconName } from '../icon/icons.generated';
 import { OverlayNodeState, WorkflowOverlay, edgeId } from '../../../utils/workflow/workflow-overlay';
 import {
   CanvasEdge, CanvasNode, CanvasPort, PortKind,
@@ -50,8 +52,8 @@ export const WORKFLOW_NODE_MIME = 'application/x-corelogic-workflow-node';
 export interface CanvasNodeMeta {
   kindLabel: string;
   tone: NodeTone;
-  /** 24×24 stroke ikon yolu. */
-  icon: string;
+  /** Düğüm tipinin ikonu (`NODE_KINDS`). */
+  icon: IconName;
   summary: string;
   errors: number;
   warnings: number;
@@ -188,7 +190,7 @@ type Gesture =
 @Component({
   selector: 'app-workflow-canvas',
   standalone: true,
-  imports: [TranslatePipe, HelpHintComponent],
+  imports: [TranslatePipe, HelpHintComponent, IconComponent],
   templateUrl: './workflow-canvas.component.html',
   styleUrl: './workflow-canvas.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

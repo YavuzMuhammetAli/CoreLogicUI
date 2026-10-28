@@ -17,6 +17,7 @@ import {
 import { nodeKindInfo, nodeKindOf, nodeTone } from '../../../utils/workflow/workflow-node-types';
 import { formatDateTime } from '../../../utils/locale-format';
 import { placeTooltip } from './tooltip-position';
+import { IconComponent } from '../icon/icon.component';
 
 /** İpucundaki bir satır — karar, bekleyen ya da otomatik adımın sonucu. */
 interface TipLine {
@@ -54,7 +55,7 @@ const MAX_PEOPLE = 8;
 @Component({
   selector: 'app-workflow-view-dialog',
   standalone: true,
-  imports: [TranslatePipe, WorkflowCanvasComponent],
+  imports: [TranslatePipe, WorkflowCanvasComponent, IconComponent],
   templateUrl: './workflow-view-dialog.component.html',
   styleUrl: './workflow-view-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

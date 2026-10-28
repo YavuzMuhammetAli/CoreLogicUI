@@ -9,6 +9,7 @@ import { AppUser } from '../../models/appUser';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
 import { markDirty } from '../../utils/change-detection';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /** "İzinli model sayısı" sütununda gösterilen, izin sayısı zenginleştirilmiş kullanıcı satırı */
 interface UserRow extends AppUser {
@@ -18,7 +19,7 @@ interface UserRow extends AppUser {
 @Component({
   selector: 'app-user-permission-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, RouterLink, TranslatePipe, IconComponent],
   templateUrl: './user-permission-list.component.html',
   styleUrls: ['./user-permission-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

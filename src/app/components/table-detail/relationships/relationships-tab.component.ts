@@ -18,6 +18,7 @@ import {
   RELATIONSHIP_TYPE_OPTIONS
 } from '../../../models/relationship.model';
 import { markDirty } from '../../../utils/change-detection';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /**
  * "İlişkiler" sekmesi — model ilişkilerinin (G1) tüm yaşam döngüsü.
@@ -35,7 +36,7 @@ import { markDirty } from '../../../utils/change-detection';
   standalone: true,
   imports: [
     TranslatePipe, ConfirmDialogComponent,
-    RelationshipDialogComponent, PublishPreviewDialogComponent
+    RelationshipDialogComponent, PublishPreviewDialogComponent, IconComponent
   ],
   templateUrl: './relationships-tab.component.html',
   styleUrls: ['./relationships.shared.scss'],

@@ -4,6 +4,7 @@ import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { LanguageService } from '../../../services/language.service';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { DeletedItem, DeletedListSource } from './deleted-list.model';
+import { IconComponent } from '../icon/icon.component';
 
 /**
  * "Silinenler" ekranlarının ortak gövdesi: listeleme, hata gösterimi, onaylı
@@ -19,7 +20,7 @@ import { DeletedItem, DeletedListSource } from './deleted-list.model';
 @Component({
   selector: 'app-deleted-list',
   standalone: true,
-  imports: [RouterLink, TranslatePipe, ConfirmDialogComponent],
+  imports: [RouterLink, TranslatePipe, ConfirmDialogComponent, IconComponent],
   templateUrl: './deleted-list.component.html',
   styleUrls: ['./deleted-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

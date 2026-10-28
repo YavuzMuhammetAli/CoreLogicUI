@@ -1,7 +1,7 @@
 <aside class="sim" [attr.aria-label]="'workflow.simulate.title' | t">
   <header class="sim-head">
     <span class="eyebrow">{{ 'workflow.simulate.title' | t }}</span>
-    <button type="button" class="btn btn-ghost btn-sm" (click)="closed.emit()" [attr.aria-label]="'common.close' | t">✕</button>
+    <button type="button" class="btn btn-ghost btn-sm" (click)="closed.emit()" [attr.aria-label]="'common.close' | t"><app-icon name="close" size="14" /></button>
   </header>
 
   <div class="sim-body">
@@ -108,11 +108,11 @@
 
   <footer class="sim-actions">
     <button type="button" class="btn btn-primary btn-sm" [disabled]="running()" (click)="run()">
-      @if (running()) { <span class="spinner" aria-hidden="true"></span> }
+      @if (running()) { <span class="spinner" aria-hidden="true"></span> } @else { <app-icon name="play_arrow" size="14" /> }
       {{ 'workflow.simulate.run' | t }}
     </button>
     @if (result()) {
-      <button type="button" class="btn btn-ghost btn-sm" (click)="clear()">{{ 'workflow.simulate.clear' | t }}</button>
+      <button type="button" class="btn btn-ghost btn-sm" (click)="clear()"><app-icon name="close" size="14" />{{ 'workflow.simulate.clear' | t }}</button>
     }
   </footer>
 </aside>

@@ -17,7 +17,7 @@
       }
     </div>
     <div class="panel-actions">
-      <a routerLink="/users" class="btn btn-secondary btn-sm">{{ 'user.detail.backToList' | t }}</a>
+      <a routerLink="/users" class="btn btn-secondary btn-sm"><app-icon name="arrow_back" size="14" />{{ 'user.detail.backToList' | t }}</a>
     </div>
   </div>
 
@@ -124,6 +124,7 @@
 
         <div class="panel-actions form-actions">
           <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            <app-icon name="save" size="16" />
             {{ (isNew ? 'user.detail.create' : 'common.save') | t }}
           </button>
         </div>
@@ -152,6 +153,7 @@
                   [disabled]="togglingActive() || isSelf()"
                   [title]="isSelf() ? ('user.list.ownAccountHint' | t) : ''"
                   (click)="toggleActive()">
+            <app-icon [name]="user()!.status ? 'block' : 'check_circle'" size="14" />
             {{ (user()!.status ? 'user.list.deactivate' : 'user.list.activate') | t }}
           </button>
 
@@ -181,6 +183,7 @@
             }
           </div>
           <button type="submit" class="btn btn-secondary" [disabled]="resetting()">
+            <app-icon name="key" size="16" />
             {{ 'user.detail.resetPassword' | t }}
           </button>
         </form>
@@ -193,6 +196,7 @@
                 [disabled]="deleting() || isSelf()"
                 [title]="isSelf() ? ('user.list.ownAccountHint' | t) : ''"
                 (click)="openDelete()">
+          <app-icon name="delete" size="14" />
           {{ 'user.detail.deleteTitle' | t }}
         </button>
       }

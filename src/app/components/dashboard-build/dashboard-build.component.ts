@@ -12,6 +12,7 @@ import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { ModelLabelPipe } from '../../pipes/model-label.pipe';
 import { markDirty } from '../../utils/change-detection';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /** Canvas üzerinde düzenlenen widget — kaydedilirken `reportName` ayıklanır (DashboardWidget'ta yok). */
 interface EditableWidget extends DashboardWidget {
@@ -32,7 +33,7 @@ const ROW_PITCH_PX = 56;
 @Component({
   selector: 'app-dashboard-build',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, ModelLabelPipe],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, ModelLabelPipe, IconComponent],
   templateUrl: './dashboard-build.component.html',
   styleUrls: ['./dashboard-build.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

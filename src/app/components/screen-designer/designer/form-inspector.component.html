@@ -88,10 +88,12 @@
 
         <div class="inspector-actions">
           <button type="button" class="btn btn-secondary btn-sm" (click)="remove(item)">
+            <app-icon name="close" size="14" />
             {{ 'screen.inspector.removeFromForm' | t }}
           </button>
           @if (item.kind === 'field') {
             <button type="button" class="btn btn-ghost btn-sm" (click)="hide(item)" [disabled]="mustStayVisible(item.column)">
+              <app-icon name="visibility_off" size="14" />
               {{ 'screen.inspector.hide' | t }}
             </button>
           }
@@ -121,12 +123,15 @@
         }
         <div class="inspector-actions">
           <button type="button" class="btn btn-ghost btn-sm" [disabled]="t.index === 0" (click)="moveSection(t.section, -1)">
-            ↑ {{ 'screen.designer.moveUp' | t }}
+            <app-icon name="arrow_upward" size="14" />
+            {{ 'screen.designer.moveUp' | t }}
           </button>
           <button type="button" class="btn btn-ghost btn-sm" [disabled]="t.index === t.count - 1" (click)="moveSection(t.section, 1)">
-            ↓ {{ 'screen.designer.moveDown' | t }}
+            <app-icon name="arrow_downward" size="14" />
+            {{ 'screen.designer.moveDown' | t }}
           </button>
           <button type="button" class="btn btn-danger btn-sm" (click)="removeSection(t.section)">
+            <app-icon name="delete" size="14" />
             {{ 'screen.inspector.removeSection' | t }}
           </button>
         </div>
@@ -140,12 +145,15 @@
         </div>
         <div class="inspector-actions">
           <button type="button" class="btn btn-ghost btn-sm" [disabled]="t.index === 0" (click)="moveTab(t.tab, -1)">
-            ← {{ 'screen.inspector.moveLeft' | t }}
+            <app-icon name="chevron_left" size="14" />
+            {{ 'screen.inspector.moveLeft' | t }}
           </button>
           <button type="button" class="btn btn-ghost btn-sm" [disabled]="t.index === t.count - 1" (click)="moveTab(t.tab, 1)">
-            {{ 'screen.inspector.moveRight' | t }} →
+            <app-icon name="chevron_right" size="14" />
+            {{ 'screen.inspector.moveRight' | t }}
           </button>
           <button type="button" class="btn btn-danger btn-sm" [disabled]="t.count <= 1" (click)="removeTab(t.tab)">
+            <app-icon name="delete" size="14" />
             {{ 'screen.inspector.removeTab' | t }}
           </button>
         </div>

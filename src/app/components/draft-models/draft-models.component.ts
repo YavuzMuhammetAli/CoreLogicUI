@@ -8,6 +8,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
 import { markDirty } from '../../utils/change-detection';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
+import { IconComponent } from '../shared/icon/icon.component';
 
 interface DraftEntry {
   id: number;
@@ -46,7 +47,7 @@ interface TableRef {
 @Component({
   selector: 'app-draft-models',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, ConfirmDialogComponent],
+  imports: [CommonModule, RouterLink, TranslatePipe, ConfirmDialogComponent, IconComponent],
   templateUrl: './draft-models.component.html',
   styleUrls: ['./draft-models.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

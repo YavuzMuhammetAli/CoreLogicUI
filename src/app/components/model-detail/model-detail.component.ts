@@ -55,6 +55,7 @@ import { buildAutoValuePlan } from '../../utils/auto-value/auto-value';
 import { mustStayVisible } from '../../utils/record-field/column-required';
 import { FormLayout, ListLayout } from '../../utils/screen-layout/screen-layout.model';
 import { resolveListColumns } from '../../utils/screen-layout/list-layout.resolve';
+import { IconComponent } from '../shared/icon/icon.component';
 
 type DataRow = Record<string, unknown>;
 
@@ -132,7 +133,7 @@ const TAB_RENDER_STEP = 100;
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, ColumnVisibilityComponent,
     TranslatePipe, RecordFormDialogComponent, ConfirmDialogComponent, RecordLayoutComponent,
-    TaskActionDialogComponent, WorkflowViewDialogComponent
+    TaskActionDialogComponent, WorkflowViewDialogComponent, IconComponent
   ],
   templateUrl: './model-detail.component.html',
   styleUrls: ['./model-detail.component.scss'],

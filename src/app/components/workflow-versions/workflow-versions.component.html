@@ -1,7 +1,7 @@
 <div class="page-header">
   <span class="eyebrow" style="overflow-wrap: anywhere; min-width: 0">{{ 'workflow.versions.title' | t }} · {{ code }}</span>
   <div class="cluster">
-    <a routerLink="/workflows" class="btn btn-ghost btn-sm">{{ 'workflow.instance.back' | t }}</a>
+    <a routerLink="/workflows" class="btn btn-ghost btn-sm"><app-icon name="arrow_back" size="14" />{{ 'workflow.instance.back' | t }}</a>
   </div>
 </div>
 
@@ -50,6 +50,7 @@
                       @if (previousOf(version)) {
                         <button type="button" class="btn btn-ghost btn-sm" (click)="compare(version)"
                                 [attr.aria-pressed]="comparison?.version?.id === version.id">
+                          <app-icon name="compare_arrows" size="14" />
                           {{ 'workflow.diff.compare' | t }}
                         </button>
                       }
@@ -57,6 +58,7 @@
                         <button type="button" class="btn btn-secondary btn-sm"
                                 [disabled]="busy"
                                 (click)="startNewVersion(version)">
+                          <app-icon name="add" size="14" />
                           {{ 'workflow.list.newVersion' | t }}
                         </button>
                       }
@@ -77,7 +79,7 @@
     <div class="panel versions-diff">
       <div class="panel-head">
         <h2 class="panel-title">{{ 'workflow.diff.title' | t: { from: versionLabel(c.previous), to: versionLabel(c.version) } }}</h2>
-        <button type="button" class="btn btn-ghost btn-sm" (click)="closeComparison()" [attr.aria-label]="'common.close' | t">✕</button>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="closeComparison()" [attr.aria-label]="'common.close' | t"><app-icon name="close" size="14" /></button>
       </div>
       <div class="panel-body stack">
         @if (c.empty) {

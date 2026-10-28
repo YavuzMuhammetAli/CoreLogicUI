@@ -10,13 +10,13 @@
   <div class="cluster">
     <a routerLink="/workflows" class="btn btn-ghost btn-sm">{{ 'common.cancel' | t }}</a>
     <button type="button" class="btn btn-ghost btn-sm" (click)="exportDesign()" [title]="'workflow.package.exportHint' | t">
+      <app-icon name="download" size="14" />
       {{ 'workflow.package.export' | t }}
     </button>
     <!-- Simülasyon geniş ekranda (tuvalin yanında); telefonda tuval yok. -->
     <button type="button" class="btn btn-ghost btn-sm simulate-btn" [class.simulate-btn--active]="simulating()"
             (click)="simulating() ? closeSimulation() : openSimulation()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4l13 8-13 8z" /></svg>
+      <app-icon name="play_arrow" size="14" />
       {{ 'workflow.simulate.open' | t }}
     </button>
     @if (readonlyMode()) {
@@ -32,17 +32,11 @@
       }
       <button type="button" class="btn btn-ghost btn-sm" [disabled]="!store.canUndo()" (click)="undo()"
               [attr.aria-label]="'workflow.build.undo' | t" [title]="'workflow.build.undo' | t">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
-        </svg>
+        <app-icon name="undo" size="14" />
       </button>
       <button type="button" class="btn btn-ghost btn-sm" [disabled]="!store.canRedo()" (click)="redo()"
               [attr.aria-label]="'workflow.build.redo' | t" [title]="'workflow.build.redo' | t">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="m15 14 5-5-5-5" /><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
-        </svg>
+        <app-icon name="redo" size="14" />
       </button>
       <!-- Canlı doğrulamanın özeti; tıklayınca sorun listesine gider. -->
       <button type="button" class="btn btn-ghost btn-sm issue-chip"
@@ -58,9 +52,11 @@
         }
       </button>
       <button type="button" class="btn btn-secondary" [disabled]="saving" (click)="onSubmit(false)">
+        <app-icon name="save" size="16" />
         {{ 'workflow.build.save' | t }}
       </button>
       <button type="button" class="btn btn-primary" [disabled]="saving" (click)="onSubmit(true)">
+        <app-icon name="publish" size="16" />
         {{ 'workflow.build.saveAndPublish' | t }}
       </button>
     }
@@ -164,6 +160,7 @@
           <span class="field-help">{{ (readonlyMode() ? 'workflow.build.stepsHintReadonly' : 'workflow.build.stepsHint') | t }}</span>
           @if (!readonlyMode()) {
             <button type="button" class="btn btn-secondary btn-sm" (click)="openNewStep()">
+              <app-icon name="add" size="14" />
               {{ 'workflow.build.addStep' | t }}
             </button>
           }
@@ -214,7 +211,7 @@
                         <button type="button" class="btn btn-ghost btn-sm"
                                 (click)="$event.stopPropagation(); removeStep(row.key)"
                                 (keydown.enter)="$event.stopPropagation()"
-                                [attr.aria-label]="'workflow.build.removeStep' | t">✕</button>
+                                [attr.aria-label]="'workflow.build.removeStep' | t"><app-icon name="close" size="14" /></button>
                       }
                     </td>
                   </tr>
@@ -262,21 +259,13 @@
                 <!-- Başlıktaki Simüle et'in aynısı; tam ekranda başlık örtülü. -->
                 <button type="button" class="btn btn-ghost btn-sm" [class.simulate-btn--active]="simulating()"
                         (click)="simulating() ? closeSimulation() : openSimulation()">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4l13 8-13 8z" /></svg>
+                  <app-icon name="play_arrow" size="14" />
                   {{ 'workflow.simulate.open' | t }}
                 </button>
               }
               <button type="button" class="btn btn-secondary btn-sm fullscreen-btn"
                       [attr.aria-pressed]="fullscreen()" (click)="toggleFullscreen()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  @if (fullscreen()) {
-                    <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
-                  } @else {
-                    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-                  }
-                </svg>
+                <app-icon [name]="fullscreen() ? 'fullscreen_exit' : 'fullscreen'" size="14" />
                 {{ (fullscreen() ? 'workflow.build.exitFullscreen' : 'workflow.build.fullscreen') | t }}
               </button>
             </div>
@@ -323,6 +312,7 @@
             <span class="eyebrow">{{ 'workflow.build.conditions' | t }}</span>
             @if (!readonlyMode()) {
               <button type="button" class="btn btn-secondary btn-sm" (click)="addCondition()">
+                <app-icon name="add" size="14" />
                 {{ 'workflow.build.addCondition' | t }}
               </button>
             }
@@ -354,7 +344,7 @@
                          [attr.aria-label]="'workflow.build.conditionValue' | t" />
                   @if (!readonlyMode()) {
                     <button type="button" class="btn btn-ghost btn-sm" (click)="removeCondition(i)"
-                            [attr.aria-label]="'common.delete' | t">✕</button>
+                            [attr.aria-label]="'common.delete' | t"><app-icon name="close" size="14" /></button>
                   } @else {
                     <span></span>
                   }

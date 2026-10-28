@@ -257,7 +257,7 @@ tasarım sistemi kullanır (artık açık/koyu tema desteği dahil). Detaylar i�
 ### Yazım Kuralları
 - Standalone component'ler (`standalone: true`)
 - Yeni control flow: `@if` / `@for` / `@else` (`*ngIf`/`*ngFor` değil)
-- İkonlar: inline stroke SVG, `currentColor`
+- İkonlar: yalnız `<app-icon name="…">` (Material Symbols Outlined, satır içi SVG, `currentColor`) — elle `<svg>` ikon, ikon fontu, emoji/Unicode glif YOK. Sözlük ve kurallar: `corelogic-design` skill'i "İkonlar"
 - A11y: `aria-invalid`, `role="alert"`, `aria-describedby`, `.sr-only`
 - **Tüm UI metni ve yorumlar Türkçe**
 

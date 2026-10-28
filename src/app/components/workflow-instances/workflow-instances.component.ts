@@ -8,6 +8,7 @@ import { ModelLabelPipe } from '../../pipes/model-label.pipe';
 import { WorkflowInstance, WorkflowInstanceStatus } from '../../models/workflow.model';
 import { formatDate } from '../../utils/locale-format';
 import { pageWindow } from '../../utils/pagination';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /** Akış filtresi seçeneği: kod + ad (sürümler aynı kodu paylaşır). */
 interface CodeOption {
@@ -25,7 +26,7 @@ const STATUSES: ReadonlyArray<WorkflowInstanceStatus> = ['Running', 'Completed',
 @Component({
   selector: 'app-workflow-instances',
   standalone: true,
-  imports: [RouterLink, TranslatePipe, ModelLabelPipe],
+  imports: [RouterLink, TranslatePipe, ModelLabelPipe, IconComponent],
   templateUrl: './workflow-instances.component.html',
   styleUrl: './workflow-instances.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

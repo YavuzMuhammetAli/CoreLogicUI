@@ -9,6 +9,7 @@ import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { caseKeyOf } from '../../../utils/workflow/workflow-exits';
 import { nodeKindOf } from '../../../utils/workflow/workflow-node-types';
 import { ValueInputKind, valueInputKind } from '../editors/condition-form';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Kararı sorulan insan adımı (paralelde her dal ayrı satır). */
 interface DecisionRow {
@@ -39,7 +40,7 @@ interface PathRow {
 @Component({
   selector: 'app-workflow-simulate-panel',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, IconComponent],
   templateUrl: './workflow-simulate-panel.component.html',
   styleUrl: './workflow-simulate-panel.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

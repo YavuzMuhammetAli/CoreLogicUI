@@ -127,11 +127,6 @@
   color: var(--muted);
   cursor: pointer;
 
-  svg {
-    width: 100%;
-    height: 100%;
-  }
-
   &.is-selected {
     color: var(--accent-on);
     background: var(--accent);

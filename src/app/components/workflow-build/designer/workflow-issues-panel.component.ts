@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, model, output } from '@angular/core';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { IssueRow, countIssues } from './workflow-issues';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /**
  * Akışın doğrulama sorunları — tasarım ekranının altında, her sekmede görünür.
@@ -12,7 +13,7 @@ import { IssueRow, countIssues } from './workflow-issues';
 @Component({
   selector: 'app-workflow-issues-panel',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, IconComponent],
   templateUrl: './workflow-issues-panel.component.html',
   styleUrl: './workflow-issues-panel.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

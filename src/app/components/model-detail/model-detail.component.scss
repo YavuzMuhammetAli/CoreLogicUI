@@ -292,9 +292,9 @@
 }
 
 .sort-icon {
-  display: inline-block;
+  display: inline-flex;
+  vertical-align: middle;
   margin-left: var(--space-1);
-  font-size: 11px;
   opacity: 0.8;
 }
 

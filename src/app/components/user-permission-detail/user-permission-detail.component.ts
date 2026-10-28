@@ -13,6 +13,7 @@ import { HelpHintComponent } from '../shared/help-hint/help-hint.component';
 import { LanguageService } from '../../services/language.service';
 import { markDirty } from '../../utils/change-detection';
 import { pageWindow } from '../../utils/pagination';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /** Düzenleme için kullanılan geçici izin satırı (role-detail ile aynı yapı) */
 export interface PermissionRow {
@@ -34,7 +35,7 @@ export interface PermissionRow {
 @Component({
   selector: 'app-user-permission-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, HelpHintComponent],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, HelpHintComponent, IconComponent],
   templateUrl: './user-permission-detail.component.html',
   styleUrls: ['./user-permission-detail.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

@@ -10,6 +10,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
 import { formatNumber } from '../../utils/locale-format';
 import { downloadBlob } from '../../utils/download';
 import { aggregateAlias } from '../../utils/report-column-label';
+import { IconComponent } from '../shared/icon/icon.component';
 
 export interface KpiCard {
   label: string;
@@ -19,7 +20,7 @@ export interface KpiCard {
 @Component({
   selector: 'app-report-viewer',
   standalone: true,
-  imports: [RouterLink, AppChartComponent, NgTemplateOutlet, TranslatePipe],
+  imports: [RouterLink, AppChartComponent, NgTemplateOutlet, TranslatePipe, IconComponent],
   templateUrl: './report-viewer.component.html',
   styleUrls: ['./report-viewer.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

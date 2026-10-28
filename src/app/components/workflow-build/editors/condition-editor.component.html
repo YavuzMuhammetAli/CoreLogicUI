@@ -32,11 +32,11 @@
           @if (!readonly()) {
             <div class="cluster case-tools">
               <button type="button" class="btn btn-ghost btn-sm" [disabled]="first" (click)="moveCase(i, -1)"
-                      [attr.aria-label]="'workflow.case.moveUp' | t" [title]="'workflow.case.moveUp' | t">↑</button>
+                      [attr.aria-label]="'workflow.case.moveUp' | t" [title]="'workflow.case.moveUp' | t"><app-icon name="arrow_upward" size="14" /></button>
               <button type="button" class="btn btn-ghost btn-sm" [disabled]="last" (click)="moveCase(i, 1)"
-                      [attr.aria-label]="'workflow.case.moveDown' | t" [title]="'workflow.case.moveDown' | t">↓</button>
+                      [attr.aria-label]="'workflow.case.moveDown' | t" [title]="'workflow.case.moveDown' | t"><app-icon name="arrow_downward" size="14" /></button>
               <button type="button" class="btn btn-ghost btn-sm editor-danger" (click)="removeCase(i)"
-                      [attr.aria-label]="'common.delete' | t" [title]="'common.delete' | t">✕</button>
+                      [attr.aria-label]="'common.delete' | t" [title]="'common.delete' | t"><app-icon name="close" size="14" /></button>
             </div>
           }
         </div>
@@ -136,7 +136,7 @@
 
                 @if (!readonly()) {
                   <button type="button" class="btn btn-ghost btn-sm" (click)="removeRow(i, j)"
-                          [attr.aria-label]="'common.delete' | t">✕</button>
+                          [attr.aria-label]="'common.delete' | t"><app-icon name="close" size="14" /></button>
                 }
               </div>
             } @empty {
@@ -144,6 +144,7 @@
             }
             @if (!readonly()) {
               <button type="button" class="btn btn-ghost btn-sm case-add-row" (click)="addRow(i)">
+                <app-icon name="add" size="14" />
                 + {{ 'workflow.case.addRow' | t }}
               </button>
             }
@@ -164,7 +165,7 @@
     }
 
     @if (!readonly()) {
-      <button type="button" class="btn btn-secondary btn-sm" (click)="addCase()">+ {{ 'workflow.case.add' | t }}</button>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="addCase()"><app-icon name="add" size="14" />+ {{ 'workflow.case.add' | t }}</button>
     }
   </section>
 

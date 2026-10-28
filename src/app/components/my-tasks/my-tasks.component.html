@@ -2,9 +2,7 @@
   <span class="eyebrow">{{ 'task.list.title' | t }}</span>
   <div class="cluster">
     <button type="button" class="btn btn-secondary btn-sm" (click)="load()">
-      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" />
-      </svg>
+      <app-icon name="refresh" size="16" />
       {{ 'task.list.refresh' | t }}
     </button>
   </div>
@@ -55,6 +53,7 @@
                 <td>
                   <div class="td-actions">
                     <a [routerLink]="['/tasks', task.id]" class="btn btn-primary btn-sm">
+                      <app-icon name="arrow_forward" size="14" />
                       {{ 'task.list.open' | t }}
                     </a>
                   </div>
@@ -92,6 +91,7 @@
             </div>
           </dl>
           <a [routerLink]="['/tasks', task.id]" class="btn btn-primary task-card-open">
+            <app-icon name="arrow_forward" size="16" />
             {{ 'task.list.open' | t }}
           </a>
         </li>
@@ -100,7 +100,7 @@
   } @else {
     <div class="panel">
       <div class="empty-state">
-        <div class="empty-icon" aria-hidden="true">✅</div>
+        <app-icon class="empty-icon" name="task_alt" size="40" />
         <h3>{{ 'task.list.emptyTitle' | t }}</h3>
         <p>{{ 'task.list.emptyHint' | t }}</p>
       </div>

@@ -72,12 +72,7 @@
                 (click)="triggerPhotoInput()"
                 [disabled]="photoUploading()"
                 [attr.aria-label]="'profile.uploadOrChangePhoto' | t">
-                <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="17 8 12 3 7 8"/>
-                  <line x1="12" y1="3" x2="12" y2="15"/>
-                </svg>
+                <app-icon name="upload" size="15" />
                 {{ 'profile.uploadPhoto' | t }}
               </button>
 
@@ -88,6 +83,7 @@
                   (click)="removePhoto()"
                   [disabled]="photoUploading()"
                   [attr.aria-label]="'profile.removePhotoAria' | t">
+                  <app-icon name="delete" size="14" />
                   {{ 'profile.removePhoto' | t }}
                 </button>
               }
@@ -240,6 +236,7 @@
                     <span class="spinner" [attr.aria-label]="'profile.saving' | t"></span>
                     {{ 'profile.saving' | t }}
                   } @else {
+                    <app-icon name="save" size="16" />
                     {{ 'profile.saveInfo' | t }}
                   }
                 </button>
@@ -324,6 +321,7 @@
                     <span class="spinner" [attr.aria-label]="'profile.saving' | t"></span>
                     {{ 'profile.saving' | t }}
                   } @else {
+                    <app-icon name="key" size="16" />
                     {{ 'profile.changePassword' | t }}
                   }
                 </button>

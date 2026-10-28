@@ -8,11 +8,12 @@ import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { markDirty } from '../../utils/change-detection';
 import { pageWindow } from '../../utils/pagination';
+import { IconComponent } from '../shared/icon/icon.component';
 
 @Component({
   selector: 'app-audit-log',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, IconComponent],
   templateUrl: './audit-log.component.html',
   styleUrl: './audit-log.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

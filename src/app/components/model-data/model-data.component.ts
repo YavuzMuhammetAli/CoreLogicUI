@@ -19,6 +19,7 @@ import { RecordMetadataService } from '../../services/record-metadata.service';
 import { ListLayout } from '../../utils/screen-layout/screen-layout.model';
 import { ResolvedListColumn, resolveListColumns } from '../../utils/screen-layout/list-layout.resolve';
 import { pageWindow } from '../../utils/pagination';
+import { IconComponent } from '../shared/icon/icon.component';
 
 type DataRow = Record<string, unknown>;
 
@@ -27,7 +28,7 @@ type DataRow = Record<string, unknown>;
   standalone: true,
   imports: [
     CommonModule, RouterLink, DatePipe, ColumnVisibilityComponent,
-    ConfirmDialogComponent, TranslatePipe
+    ConfirmDialogComponent, TranslatePipe, IconComponent
   ],
   templateUrl: './model-data.component.html',
   styleUrls: ['./model-data.component.scss'],

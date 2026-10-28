@@ -7,11 +7,12 @@ import { PermissionService } from '../../services/permission.service';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { markDirty } from '../../utils/change-detection';
+import { IconComponent } from '../shared/icon/icon.component';
 
 @Component({
   selector: 'app-model-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, RouterLink, TranslatePipe, IconComponent],
   templateUrl: './model-list.component.html',
   styleUrls: ['./model-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

@@ -24,6 +24,7 @@ import {
   ExitRow, KeyProblem, exitRows, keyProblem, setAllowReject, setAssignee, setAssignmentMode,
   setDueHours, setJoinMode, setName
 } from './inspector-form';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Seçili kenarın panelde gösterilen hali. */
 interface EdgeView {
@@ -45,7 +46,7 @@ interface EdgeView {
 @Component({
   selector: 'app-workflow-inspector',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, IconComponent],
   templateUrl: './workflow-inspector.component.html',
   styleUrl: './workflow-inspector.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

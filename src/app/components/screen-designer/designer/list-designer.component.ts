@@ -11,6 +11,7 @@ import {
   hideListColumn, moveColumn, moveColumnBy, setColumnWidth, showColumn
 } from './list-layout.commands';
 import { contains, exceedsDragThreshold, headerDropIndex, widthFromDrag } from './form-layout.hit-test';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 type DataRow = Record<string, unknown>;
 
@@ -33,7 +34,7 @@ const ID_WIDTH = 80;
 @Component({
   selector: 'app-list-designer',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, IconComponent],
   templateUrl: './list-designer.component.html',
   styleUrls: ['./list-designer.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

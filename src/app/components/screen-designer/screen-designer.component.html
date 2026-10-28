@@ -8,28 +8,29 @@
         }
         <button type="button" class="btn btn-ghost btn-sm" (click)="undo()" [disabled]="!currentStore().canUndo()"
           [attr.aria-label]="'screen.designer.undo' | t" [attr.title]="'screen.designer.undo' | t">
-          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg>
+          <app-icon name="undo" size="14" />
         </button>
         <button type="button" class="btn btn-ghost btn-sm" (click)="redo()" [disabled]="!currentStore().canRedo()"
           [attr.aria-label]="'screen.designer.redo' | t" [attr.title]="'screen.designer.redo' | t">
-          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 15-6.7L21 13"/></svg>
+          <app-icon name="redo" size="14" />
         </button>
         @if (view() === 'form' && !narrow()) {
           <button type="button" class="btn btn-sm" [class.btn-primary]="preview()" [class.btn-secondary]="!preview()"
-            (click)="togglePreview()" [attr.aria-pressed]="preview()">{{ 'screen.designer.preview' | t }}</button>
+            (click)="togglePreview()" [attr.aria-pressed]="preview()"><app-icon name="visibility" size="14" />{{ 'screen.designer.preview' | t }}</button>
         }
         @if (!narrow()) {
           <button type="button" class="btn btn-ghost btn-sm" (click)="toggleFullscreen()" [attr.aria-pressed]="fullscreen()">
+            <app-icon [name]="fullscreen() ? 'fullscreen_exit' : 'fullscreen'" size="14" />
             {{ (fullscreen() ? 'screen.designer.exitFullscreen' : 'screen.designer.fullscreen') | t }}
           </button>
         }
         <button type="button" class="btn btn-secondary btn-sm" (click)="save()" [disabled]="!!busy() || !moduleInstalled()">
-          @if (busy() === 'save') { <span class="spinner" aria-hidden="true"></span> }
+          @if (busy() === 'save') { <span class="spinner" aria-hidden="true"></span> } @else { <app-icon name="save" size="14" /> }
           {{ 'screen.designer.save' | t }}
         </button>
         <button type="button" class="btn btn-primary btn-sm" (click)="publish()" [disabled]="!canPublish()"
           [attr.title]="errorCount() > 0 ? ('screen.designer.publishBlocked' | t:{ count: errorCount() }) : null">
-          @if (busy() === 'publish') { <span class="spinner" aria-hidden="true"></span> }
+          @if (busy() === 'publish') { <span class="spinner" aria-hidden="true"></span> } @else { <app-icon name="publish" size="14" /> }
           {{ 'screen.designer.publish' | t }}
         </button>
       </div>
@@ -50,7 +51,7 @@
   } @else if (loadError()) {
     <div class="alert alert-danger" role="alert">
       <span>{{ loadError() }}</span>
-      <a class="btn btn-ghost btn-sm" routerLink="/build">{{ 'screen.designer.backToModels' | t }}</a>
+      <a class="btn btn-ghost btn-sm" routerLink="/build"><app-icon name="arrow_back" size="14" />{{ 'screen.designer.backToModels' | t }}</a>
     </div>
   } @else {
     @if (!moduleInstalled()) {
@@ -59,7 +60,7 @@
     @if (conflict()) {
       <div class="alert alert-warn conflict" role="alert">
         <span>{{ 'screen.designer.conflict' | t }}</span>
-        <button type="button" class="btn btn-secondary btn-sm" (click)="reloadAfterConflict()">{{ 'screen.designer.reload' | t }}</button>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="reloadAfterConflict()"><app-icon name="refresh" size="14" />{{ 'screen.designer.reload' | t }}</button>
       </div>
     }
 
@@ -96,15 +97,18 @@
       <span class="bar-spacer"></span>
 
       <a class="btn btn-ghost btn-sm" [routerLink]="view() === 'form' ? ['/models', typeName(), 'new'] : ['/models', typeName()]">
+        <app-icon name="open_in_new" size="14" />
         {{ 'screen.designer.openScreen' | t }}
       </a>
       @if (currentState()?.exists && currentState()?.publishedVersion && hasUnpublished()) {
         <button type="button" class="btn btn-ghost btn-sm" (click)="confirmDiscard.set(true)" [disabled]="!!busy()">
+          <app-icon name="delete" size="14" />
           {{ 'screen.designer.discard' | t }}
         </button>
       }
       @if (currentState()?.exists) {
         <button type="button" class="btn btn-ghost btn-sm" (click)="confirmReset.set(true)" [disabled]="!!busy()">
+          <app-icon name="restart_alt" size="14" />
           {{ 'screen.designer.reset' | t }}
         </button>
       }

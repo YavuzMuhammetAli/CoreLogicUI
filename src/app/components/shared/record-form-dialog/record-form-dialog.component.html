@@ -19,9 +19,7 @@
         class="btn btn-ghost btn-sm"
         (click)="cancel()"
         [attr.aria-label]="'record.close' | t">
-        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 6L6 18M6 6l12 12"/>
-        </svg>
+        <app-icon name="close" size="16" />
       </button>
     </div>
 
@@ -37,10 +35,7 @@
         <!-- Önceki kaydetme denemesinin sunucu hatası -->
         @if (node.error) {
           <div class="alert alert-danger" role="alert">
-            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" style="flex-shrink:0">
-              <circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/>
-            </svg>
+            <app-icon name="error" size="14" />
             <span>{{ node.error }}</span>
           </div>
         }
@@ -87,18 +82,12 @@
                     <div class="tab-toolbar-actions">
                       @if (selectedCount(tab.typeName) > 0) {
                         <button type="button" class="btn btn-danger btn-sm" (click)="openBulkDelete(tab.typeName)">
-                          <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none"
-                               stroke="currentColor" stroke-width="2">
-                            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                          </svg>
+                          <app-icon name="delete" size="12" />
                           {{ 'record.bulkDelete' | t:{ count: selectedCount(tab.typeName) } }}
                         </button>
                       }
                       <button type="button" class="btn btn-primary btn-sm" (click)="openNestedAdd(tab.typeName)">
-                        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none"
-                             stroke="currentColor" stroke-width="2.5">
-                          <path d="M12 5v14M5 12h14"/>
-                        </svg>
+                        <app-icon name="add" size="12" />
                         {{ 'record.newChild' | t:{ name: (tab.typeName | modelLabel) } }}
                       </button>
                     </div>
@@ -207,7 +196,7 @@
 
       <div class="panel-actions">
         <button type="button" class="btn btn-secondary" (click)="cancel()">{{ 'record.cancel' | t }}</button>
-        <button type="button" class="btn btn-primary" (click)="submit()">{{ 'record.apply' | t }}</button>
+        <button type="button" class="btn btn-primary" (click)="submit()"><app-icon name="check" size="16" />{{ 'record.apply' | t }}</button>
       </div>
     }
   </div>

@@ -23,6 +23,7 @@ import { ActionEditorComponent } from '../editors/action-editor.component';
 import { NotifyEditorComponent } from '../editors/notify-editor.component';
 import { TimerEditorComponent } from '../editors/timer-editor.component';
 import { keyProblem } from '../designer/inspector-form';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Form alanı tipi seçenekleri — model kolon tipleriyle aynı sözlükten dar bir alt küme. */
 const FORM_FIELD_TYPES = ['string', 'int', 'decimal', 'boolean', 'datetime', 'dateonly', 'enum'] as const;
@@ -48,7 +49,7 @@ export interface StepDialogResult {
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, TranslatePipe,
-    ConditionEditorComponent, EndEditorComponent, ActionEditorComponent, NotifyEditorComponent, TimerEditorComponent
+    ConditionEditorComponent, EndEditorComponent, ActionEditorComponent, NotifyEditorComponent, TimerEditorComponent, IconComponent
   ],
   templateUrl: './workflow-step-dialog.component.html',
   styleUrl: './workflow-step-dialog.component.scss',

@@ -115,6 +115,7 @@ CoreLogicUI-master/
         │   │   └── designer/                #   Form tasarımcısı (palet · tuval · özellikler), liste tasarımcısı,
         │   │                                #   depo (geri al/yinele), saf komutlar, isabet hesabı, kısayollar (spec'li)
         │   └── shared/
+        │       ├── icon/                   # <app-icon> — TEK ikon kaynağı (Material Symbols); icons.manifest.json → `npm run icons` → icons.generated.ts
         │       ├── column-visibility/      # Admin-managed model kolon görünürlüğü (liste/detay/alt-model sekmeleri)
         │       ├── confirm-dialog/         # Onay diyaloğu — native confirm() YERİNE her zaman bu kullanılır
         │       ├── record-field/           # Kayıt formunun TEK alanı (etiket süsleri, tipe göre kontrol, dosya, hata) — kayıt sayfası, pop-up ve tasarımcı ortak
@@ -417,7 +418,7 @@ tasarım sistemi kullanır (artık açık/koyu tema desteği dahil). Detaylar i�
 ### Yazım Kuralları
 - Standalone component'ler (`standalone: true`)
 - Yeni control flow: `@if` / `@for` / `@else` (`*ngIf`/`*ngFor` değil)
-- İkonlar: inline stroke SVG, `currentColor`
+- İkonlar: yalnız `<app-icon name="…">` (Material Symbols Outlined, satır içi SVG, `currentColor`) — elle `<svg>` ikon, ikon fontu, emoji/Unicode glif YOK. Sözlük ve kurallar: `corelogic-design` skill'i "İkonlar"
 - A11y: `aria-invalid`, `role="alert"`, `aria-describedby`, `.sr-only`
 - **Tüm UI metni ve yorumlar Türkçe**
 

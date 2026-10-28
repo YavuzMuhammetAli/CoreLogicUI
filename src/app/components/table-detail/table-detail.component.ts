@@ -35,6 +35,7 @@ import {
   IDENTIFIER_MAX_LENGTH, IdentifierContext, IdentifierKind, LABEL_MAX_LENGTH, LabelNameSync,
   identifierErrorMessage, identifierValidator, revalidateIdentifiers, sanitizeIdentifierInputEvent
 } from '../../utils/identifier';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /** Ekrandaki sekmeler. */
 type TabId = 'columns' | 'subModels' | 'relationships';
@@ -137,7 +138,7 @@ const SEQUENCE_TEMPLATE = "TODAY('ddMMyyyy') & '-' & SEQ(3, TODAY('ddMMyyyy'))";
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe,
     ModelNodeComponent, HelpHintComponent, DatatypeHelpComponent,
-    RelationshipsTabComponent
+    RelationshipsTabComponent, IconComponent
   ],
   templateUrl: './table-detail.component.html',
   styleUrls: ['./table-detail.component.scss'],

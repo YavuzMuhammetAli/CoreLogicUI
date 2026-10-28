@@ -45,11 +45,11 @@
                         </select>
                       }
                       <button type="button" class="btn btn-ghost btn-sm" (click)="moveBy(item.id, -1)"
-                        [attr.aria-label]="'screen.designer.moveUp' | t">↑</button>
+                        [attr.aria-label]="'screen.designer.moveUp' | t"><app-icon name="arrow_upward" size="14" /></button>
                       <button type="button" class="btn btn-ghost btn-sm" (click)="moveBy(item.id, 1)"
-                        [attr.aria-label]="'screen.designer.moveDown' | t">↓</button>
+                        [attr.aria-label]="'screen.designer.moveDown' | t"><app-icon name="arrow_downward" size="14" /></button>
                       <button type="button" class="btn btn-ghost btn-sm" (click)="removeItem(item.id)"
-                        [attr.aria-label]="'screen.inspector.removeFromForm' | t">✕</button>
+                        [attr.aria-label]="'screen.inspector.removeFromForm' | t"><app-icon name="close" size="14" /></button>
                     </span>
                   </li>
                 }
@@ -91,7 +91,7 @@
               {{ labelOf(name) }}
               @if (mustStay().has(name)) { <span class="req" aria-hidden="true">*</span> }
             </span>
-            <span class="palette-chip-type">{{ column(name).dataType }}</span>
+            <span class="palette-chip-type"><app-icon [name]="typeIcon(name)" size="14" /> {{ column(name).dataType }}</span>
           </button>
         } @empty {
           <p class="palette-empty">{{ 'screen.designer.allPlaced' | t }}</p>
@@ -110,7 +110,7 @@
               (keydown.enter)="addColumn(name)" (keydown.space)="addColumn(name); $event.preventDefault()"
               [attr.aria-label]="'screen.designer.placeAria' | t:{ name: labelOf(name) }">
               <span class="palette-chip-label">{{ labelOf(name) }}</span>
-              <span class="palette-chip-type">{{ column(name).dataType }}</span>
+              <span class="palette-chip-type"><app-icon [name]="typeIcon(name)" size="14" /> {{ column(name).dataType }}</span>
             </button>
           }
         </div>
@@ -120,18 +120,18 @@
         <span class="eyebrow palette-title">{{ 'screen.designer.elements' | t }}</span>
         <button type="button" class="palette-chip palette-chip--element"
           (pointerdown)="onElementPointerDown($event, 'spacer')"
-          (keydown.enter)="addElement('spacer')">{{ 'screen.designer.spacer' | t }}</button>
+          (keydown.enter)="addElement('spacer')"><span class="palette-chip-label"><app-icon name="space_bar" size="14" /> {{ 'screen.designer.spacer' | t }}</span></button>
         <button type="button" class="palette-chip palette-chip--element"
           (pointerdown)="onElementPointerDown($event, 'divider')"
-          (keydown.enter)="addElement('divider')">{{ 'screen.designer.divider' | t }}</button>
+          (keydown.enter)="addElement('divider')"><span class="palette-chip-label"><app-icon name="horizontal_rule" size="14" /> {{ 'screen.designer.divider' | t }}</span></button>
         <button type="button" class="palette-chip palette-chip--element"
           (pointerdown)="onElementPointerDown($event, 'note')"
-          (keydown.enter)="addElement('note')">{{ 'screen.designer.note' | t }}</button>
+          (keydown.enter)="addElement('note')"><span class="palette-chip-label"><app-icon name="sticky_note_2" size="14" /> {{ 'screen.designer.note' | t }}</span></button>
         <button type="button" class="palette-chip palette-chip--structure" (click)="addSectionToCurrentTab()">
-          + {{ 'screen.designer.addSection' | t }}
+          <span class="palette-chip-label"><app-icon name="view_agenda" size="14" /> {{ 'screen.designer.addSection' | t }}</span>
         </button>
         <button type="button" class="palette-chip palette-chip--structure" (click)="addTab()">
-          + {{ 'screen.designer.addTab' | t }}
+          <span class="palette-chip-label"><app-icon name="tab" size="14" /> {{ 'screen.designer.addTab' | t }}</span>
         </button>
       </div>
       <p class="palette-help">{{ 'screen.designer.paletteHelp' | t }}</p>
@@ -164,8 +164,7 @@
             <button type="button" class="canvas-section-head" (click)="select(section.id)"
               [attr.aria-pressed]="isSelected(section.id)">
               @if (section.collapsible) {
-                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                     [class.chevron-open]="!section.collapsed"><polyline points="9 18 15 12 9 6"/></svg>
+                <app-icon name="chevron_right" size="14" [class.chevron-open]="!section.collapsed" />
               }
               <span [class.muted-title]="!section.title">{{ section.title || ('screen.designer.untitledSection' | t) }}</span>
               @if (section.collapsible) {
@@ -229,6 +228,7 @@
           </section>
         }
         <button type="button" class="btn btn-ghost btn-sm" (click)="addSectionToCurrentTab()">
+          <app-icon name="add" size="14" />
           + {{ 'screen.designer.addSection' | t }}
         </button>
       }

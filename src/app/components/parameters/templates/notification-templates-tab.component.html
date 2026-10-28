@@ -120,13 +120,14 @@
                 <span class="editor-actions-spacer"></span>
                 @if (template()!.isCustom) {
                   <button type="button" class="btn btn-secondary" [disabled]="resetting()" (click)="requestReset()">
+                    <app-icon name="restart_alt" size="16" />
                     {{ 'parameter.templates.reset' | t }}
                   </button>
                 }
                 <button class="btn btn-primary" type="submit" [disabled]="saving() || !dirty()">
                   @if (saving()) {
                     <span class="spinner" aria-hidden="true"></span>
-                  }
+                  } @else { <app-icon name="save" size="16" /> }
                   {{ 'parameter.templates.save' | t }}
                 </button>
               </div>
@@ -145,7 +146,7 @@
         <button type="button" class="btn btn-ghost btn-sm" [disabled]="previewing()" (click)="refreshPreview()">
           @if (previewing()) {
             <span class="spinner" aria-hidden="true"></span>
-          }
+          } @else { <app-icon name="refresh" size="14" /> }
           {{ 'parameter.templates.refreshPreview' | t }}
         </button>
       </div>
@@ -202,7 +203,7 @@
               <button class="btn btn-secondary" type="submit" [disabled]="testing()">
                 @if (testing()) {
                   <span class="spinner" aria-hidden="true"></span>
-                }
+                } @else { <app-icon name="send" size="16" /> }
                 {{ 'parameter.mail.sendTest' | t }}
               </button>
             </div>

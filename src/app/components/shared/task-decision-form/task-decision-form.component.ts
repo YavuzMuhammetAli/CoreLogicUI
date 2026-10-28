@@ -9,6 +9,7 @@ import { LanguageService } from '../../../services/language.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { inputTypeFor, stepFor, parseEnumValues } from '../../model-data/model-data.util';
 import { TaskSchema, buildTaskForm, parseTaskSchema, readTaskForm } from './task-form.util';
+import { IconComponent } from '../icon/icon.component';
 
 /**
  * Görev karar formu — adım formu + açıklama + Onayla/Reddet.
@@ -29,7 +30,7 @@ import { TaskSchema, buildTaskForm, parseTaskSchema, readTaskForm } from './task
 @Component({
   selector: 'app-task-decision-form',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, IconComponent],
   templateUrl: './task-decision-form.component.html',
   styleUrl: './task-decision-form.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

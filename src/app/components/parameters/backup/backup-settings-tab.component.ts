@@ -24,6 +24,7 @@ import {
   nextOccurrences,
   parseCron
 } from '../../../utils/cron-builder';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Kuyrukta/süren yedek varken geçmişin yoklanma aralığı. */
 const HISTORY_POLL_MS = 3000;
@@ -48,7 +49,7 @@ interface FieldVisibility {
 @Component({
   selector: 'app-backup-settings-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, ConfirmDialogComponent, HelpHintComponent, BackupRestoreDialogComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, ConfirmDialogComponent, HelpHintComponent, BackupRestoreDialogComponent, IconComponent],
   templateUrl: './backup-settings-tab.component.html',
   styleUrls: ['../parameters.shared.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

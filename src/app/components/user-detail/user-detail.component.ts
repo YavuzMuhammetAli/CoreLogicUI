@@ -10,6 +10,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { AppUser } from '../../models/appUser';
 import { markDirty } from '../../utils/change-detection';
+import { IconComponent } from '../shared/icon/icon.component';
 
 interface RoleOption { id: number; name: string; }
 
@@ -24,7 +25,7 @@ interface RoleOption { id: number; name: string; }
 @Component({
   selector: 'app-user-detail',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe, ConfirmDialogComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe, ConfirmDialogComponent, IconComponent],
   templateUrl: './user-detail.component.html',
   styleUrls: ['./user-detail.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

@@ -72,6 +72,7 @@ import { EdgeRef, isNodeSelected, selectNodes } from './designer/workflow-select
 import { WORKFLOW_TEMPLATES, WorkflowTemplate } from '../../utils/workflow/workflow-templates';
 import { packageFileName, serializePackage, toPackage } from '../../utils/workflow/workflow-package';
 import { downloadText } from '../../utils/download';
+import { IconComponent } from '../shared/icon/icon.component';
 
 type TabId = 'steps' | 'canvas' | 'trigger';
 
@@ -131,7 +132,7 @@ interface StepRow {
     CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe,
     WorkflowCanvasComponent, WorkflowStepDialogComponent, ConfirmDialogComponent,
     WorkflowPaletteComponent, WorkflowInspectorComponent, WorkflowIssuesPanelComponent,
-    WorkflowSimulatePanelComponent
+    WorkflowSimulatePanelComponent, IconComponent
   ],
   providers: [WorkflowDesignerStore],
   templateUrl: './workflow-build.component.html',

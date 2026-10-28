@@ -32,6 +32,7 @@ import {
   findField, findItem, moveItemBy, placeField, removeColumnEverywhere, removeItem, setSpan, unhideColumn
 } from './designer/form-layout.commands';
 import { hideListColumn, moveColumnBy, setColumnWidth } from './designer/list-layout.commands';
+import { IconComponent } from '../shared/icon/icon.component';
 
 const EMPTY_FORM: FormLayout = { schemaVersion: 1, tabs: [], hiddenColumns: [] };
 const EMPTY_LIST: ListLayout = { schemaVersion: 1, columns: [] };
@@ -57,7 +58,7 @@ type SaveOutcome = { ok: true; data: ScreenLayoutSaveResultDto; message: string 
 @Component({
   selector: 'app-screen-designer',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, ConfirmDialogComponent, FormDesignerComponent, ListDesignerComponent],
+  imports: [TranslatePipe, RouterLink, ConfirmDialogComponent, FormDesignerComponent, ListDesignerComponent, IconComponent],
   templateUrl: './screen-designer.component.html',
   styleUrls: ['./screen-designer.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

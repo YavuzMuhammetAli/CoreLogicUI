@@ -15,6 +15,7 @@
       class="btn btn-secondary btn-sm"
       [disabled]="isStreaming() || busy()"
       (click)="startNew()">
+      <app-icon name="add" size="14" />
       {{ 'ai.newChat' | t }}
     </button>
   </div>
@@ -56,10 +57,7 @@
                 [attr.aria-label]="'ai.deleteChat' | t"
                 [disabled]="isStreaming() || busy()"
                 (click)="requestDelete(conversation.id)">
-                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
-                </svg>
+                <app-icon name="delete" size="16" />
               </button>
             </li>
           }
@@ -73,7 +71,7 @@
     <div class="panel-body ai-messages" role="log" aria-live="polite">
       @if (messages().length === 0 && !isStreaming()) {
         <div class="empty-state">
-          <div class="empty-icon">🤖</div>
+          <app-icon class="empty-icon" name="smart_toy" size="40" />
           <h3>{{ 'ai.emptyTitle' | t }}</h3>
           <p>{{ 'ai.emptyBody' | t }}</p>
         </div>
@@ -132,6 +130,7 @@
       </div>
       <div class="cluster ai-composer-actions">
         <button type="button" class="btn btn-primary" [disabled]="!canSend()" (click)="send()">
+          <app-icon name="send" size="16" />
           {{ 'ai.send' | t }}
         </button>
       </div>
@@ -179,6 +178,7 @@
         class="btn btn-secondary"
         [disabled]="busy() || isStreaming() || importableCount() === 0"
         (click)="runImport()">
+        <app-icon name="upload" size="16" />
         {{ 'ai.import' | t }} ({{ importableCount() }})
       </button>
       <button
@@ -186,6 +186,7 @@
         class="btn btn-primary"
         [disabled]="busy() || isStreaming() || publishableCount() === 0"
         (click)="requestPublish()">
+        <app-icon name="publish" size="16" />
         {{ 'ai.publishAll' | t }} ({{ publishableCount() }})
       </button>
       @if (busy()) {

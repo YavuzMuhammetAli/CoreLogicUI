@@ -19,6 +19,7 @@ import { LanguageService } from '../../services/language.service';
 import { formatNumber } from '../../utils/locale-format';
 import { parseProposalPayload } from '../../utils/ai-import.mapper';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /** Sağ paneldeki öneri kartının görünüm modeli. */
 interface ProposalCard {
@@ -46,7 +47,7 @@ interface ProposalCard {
 @Component({
   selector: 'app-ai-chat',
   standalone: true,
-  imports: [FormsModule, TranslatePipe, ConfirmDialogComponent],
+  imports: [FormsModule, TranslatePipe, ConfirmDialogComponent, IconComponent],
   templateUrl: './ai-chat.component.html',
   styleUrl: './ai-chat.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

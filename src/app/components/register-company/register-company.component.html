@@ -10,15 +10,15 @@
     <!-- Adım göstergesi -->
     <ol class="regco-steps" [attr.aria-label]="'regco.stepLabel' | t:{ current: step(), total: totalSteps }">
       <li [class.active]="step() === 1" [class.done]="step() > 1">
-        <span class="step-dot">@if (step() > 1) { ✓ } @else { 1 }</span>
+        <span class="step-dot">@if (step() > 1) { <app-icon name="check" size="14" /> } @else { 1 }</span>
         <span class="step-label">{{ 'regco.step1' | t }}</span>
       </li>
       <li [class.active]="step() === 2" [class.done]="step() > 2">
-        <span class="step-dot">@if (step() > 2) { ✓ } @else { 2 }</span>
+        <span class="step-dot">@if (step() > 2) { <app-icon name="check" size="14" /> } @else { 2 }</span>
         <span class="step-label">{{ 'regco.step2' | t }}</span>
       </li>
       <li [class.active]="step() === 3" [class.done]="step() > 3">
-        <span class="step-dot">@if (step() > 3) { ✓ } @else { 3 }</span>
+        <span class="step-dot">@if (step() > 3) { <app-icon name="check" size="14" /> } @else { 3 }</span>
         <span class="step-label">{{ 'regco.step3' | t }}</span>
       </li>
       <li [class.active]="step() === 4">
@@ -66,8 +66,8 @@
         </div>
 
         <div class="regco-actions">
-          <a routerLink="/login" class="btn btn-ghost">{{ 'regco.backToLogin' | t }}</a>
-          <button type="submit" class="btn btn-primary">{{ 'regco.next' | t }}</button>
+          <a routerLink="/login" class="btn btn-ghost"><app-icon name="arrow_back" size="16" />{{ 'regco.backToLogin' | t }}</a>
+          <button type="submit" class="btn btn-primary">{{ 'regco.next' | t }}<app-icon name="arrow_forward" size="16" /></button>
         </div>
       </form>
     }
@@ -125,11 +125,11 @@
         </div>
 
         <div class="regco-actions">
-          <button type="button" class="btn btn-secondary" (click)="backToCompany()">{{ 'regco.back' | t }}</button>
+          <button type="button" class="btn btn-secondary" (click)="backToCompany()"><app-icon name="arrow_back" size="16" />{{ 'regco.back' | t }}</button>
           <button type="submit" class="btn btn-primary" [disabled]="isStarting()">
             @if (isStarting()) {
               <span class="spinner" aria-hidden="true"></span>
-            }
+            } @else { <app-icon name="play_arrow" size="16" /> }
             {{ 'regco.start' | t }}
           </button>
         </div>
@@ -162,8 +162,8 @@
             <li [class]="'state-' + s.state">
               <span class="provision-icon" aria-hidden="true">
                 @switch (s.state) {
-                  @case ('done') { ✓ }
-                  @case ('failed') { ✕ }
+                  @case ('done') { <app-icon name="check" size="16" /> }
+                  @case ('failed') { <app-icon name="close" size="16" /> }
                   @case ('running') { <span class="spinner"></span> }
                   @default { • }
                 }
@@ -178,8 +178,8 @@
 
         @if (provisionFailed()) {
           <div class="regco-actions">
-            <a routerLink="/login" class="btn btn-ghost">{{ 'regco.backToLogin' | t }}</a>
-            <button type="button" class="btn btn-primary" (click)="retry()">{{ 'regco.retry' | t }}</button>
+            <a routerLink="/login" class="btn btn-ghost"><app-icon name="arrow_back" size="16" />{{ 'regco.backToLogin' | t }}</a>
+            <button type="button" class="btn btn-primary" (click)="retry()"><app-icon name="refresh" size="16" />{{ 'regco.retry' | t }}</button>
           </div>
         }
       </div>
@@ -188,7 +188,7 @@
     <!-- Adım 4: Tamamlandı -->
     @if (step() === 4) {
       <div class="regco-form regco-done">
-        <div class="regco-done-icon" aria-hidden="true">✓</div>
+        <div class="regco-done-icon" aria-hidden="true"><app-icon name="check" size="32" /></div>
         <h2>{{ 'regco.done' | t }}</h2>
         @if (!autoLoginFailed()) {
           <p class="regco-hint">
@@ -197,7 +197,7 @@
           </p>
         } @else {
           <p class="regco-hint">{{ 'regco.doneManualLogin' | t }}</p>
-          <a routerLink="/login" class="btn btn-primary">{{ 'regco.goToLogin' | t }}</a>
+          <a routerLink="/login" class="btn btn-primary"><app-icon name="login" size="16" />{{ 'regco.goToLogin' | t }}</a>
         }
       </div>
     }

@@ -175,7 +175,7 @@
             <button class="btn btn-primary" type="submit" [disabled]="saving()">
               @if (saving()) {
                 <span class="spinner" aria-hidden="true"></span>
-              }
+              } @else { <app-icon name="save" size="16" /> }
               {{ 'parameter.mail.save' | t }}
             </button>
           </div>
@@ -211,7 +211,7 @@
               <button class="btn btn-secondary" type="submit" [disabled]="testing()">
                 @if (testing()) {
                   <span class="spinner" aria-hidden="true"></span>
-                }
+                } @else { <app-icon name="send" size="16" /> }
                 {{ 'parameter.mail.sendTest' | t }}
               </button>
             </div>

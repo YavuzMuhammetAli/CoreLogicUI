@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, HostListe
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { closeOnOutsidePointer } from '../../../utils/outside-pointer';
+import { IconComponent } from '../icon/icon.component';
 
 /** Popover'da listelenecek tek bir kolon */
 export interface ColumnVisibilityItem {
@@ -21,7 +22,7 @@ export interface ColumnVisibilityItem {
 @Component({
   selector: 'app-column-visibility',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, IconComponent],
   templateUrl: './column-visibility.component.html',
   styleUrls: ['./column-visibility.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

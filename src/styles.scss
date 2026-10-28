@@ -28,7 +28,7 @@
   --meta-bg: #eff6ff;
   --danger-hover-bg: #fee2e2;
   --invalid-ring: rgba(185, 28, 28, 0.12);
-  --select-chevron-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  --select-chevron-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 -960 960 960' fill='%2364748b'%3E%3Cpath d='M480-338.26 234.26-584 283-632.74l197 197 197-197L725.74-584 480-338.26Z'/%3E%3C/svg%3E");
   --alert-success-border: #bbf7d0;
   --alert-danger-border: #fecaca;
   --alert-warn-border: #fde68a;
@@ -121,7 +121,7 @@
   --meta-bg: #15233f;
   --danger-hover-bg: #3a1d1d;
   --invalid-ring: rgba(248, 113, 113, 0.22);
-  --select-chevron-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  --select-chevron-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 -960 960 960' fill='%2394a3b8'%3E%3Cpath d='M480-338.26 234.26-584 283-632.74l197 197 197-197L725.74-584 480-338.26Z'/%3E%3C/svg%3E");
   --alert-success-border: #14532d;
   --alert-danger-border: #5b1d1d;
   --alert-warn-border: #4a3105;
@@ -805,9 +805,9 @@ input[type="checkbox"] {
     padding: var(--space-8) var(--space-4);
   }
 
+  /* <app-icon class="empty-icon" size="40"> — renk kaptan (--muted) */
   .empty-icon {
-    font-size: 40px;
-    opacity: 0.4;
+    opacity: 0.6;
   }
 
   h3 {
@@ -819,6 +819,13 @@ input[type="checkbox"] {
     font-size: var(--text-sm);
     max-width: 320px;
   }
+}
+
+/* ---- İkon (<app-icon>, Material Symbols) ----
+   Metin içinde satır ortasında dursun; flex/grid kaplarda (.btn, .nav-item…) etkisizdir.
+   Boyut bileşenin size girdisiyle verilir — burada boyut kuralı YOK. */
+app-icon {
+  vertical-align: middle;
 }
 
 /* ---- Sayfa başlığı (global — component SCSS'lerinden tekrar etme) ----

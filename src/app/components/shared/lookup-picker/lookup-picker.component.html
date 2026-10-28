@@ -24,8 +24,7 @@
     @if (selectedLabel() !== null && !disabled()) {
       <button type="button" class="lk-clear" (click)="clear()"
               [attr.aria-label]="'model.lookup.clear' | t">
-        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
+        <app-icon name="close" size="12" />
       </button>
     }
   </div>

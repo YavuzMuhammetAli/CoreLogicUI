@@ -11,6 +11,7 @@ import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { formatDate } from '../../../utils/locale-format';
 import { tap } from 'rxjs';
 import { startVisiblePoll, VisiblePoll } from '../../../utils/visible-poll';
+import { IconComponent } from '../icon/icon.component';
 
 /** Açılır listede gösterilen bildirim sayısı. */
 const LIST_SIZE = 20;
@@ -29,7 +30,7 @@ const LIST_SIZE = 20;
 @Component({
   selector: 'app-notification-bell',
   standalone: true,
-  imports: [RouterLink, TranslatePipe],
+  imports: [RouterLink, TranslatePipe, IconComponent],
   templateUrl: './notification-bell.component.html',
   styleUrl: './notification-bell.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

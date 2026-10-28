@@ -26,6 +26,7 @@ import {
   identifierErrorMessage, identifierValidator, sanitizeIdentifierInputEvent
 } from '../../utils/identifier';
 import { MIN_FILE_LIMIT_MB, fileLimitMbValidator, isFileType, maxFileMbFor } from '../../utils/file-size';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /** Maksimum model ağacı derinliği (kök = 1). */
 export const MAX_DEPTH = 4;
@@ -52,7 +53,7 @@ export const MAX_DEPTH = 4;
     HelpHintComponent,
     DatatypeHelpComponent,
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    forwardRef(() => ModelNodeComponent)
+    forwardRef(() => ModelNodeComponent), IconComponent
   ],
   templateUrl: './model-node.component.html',
   styleUrls: ['./model-node.component.scss'],

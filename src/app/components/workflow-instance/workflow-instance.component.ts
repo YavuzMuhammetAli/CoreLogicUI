@@ -17,6 +17,7 @@ import { buildRuntimeOverlay } from '../../utils/workflow/workflow-runtime.overl
 import { nodeKindInfo, nodeKindOf, nodeTone } from '../../utils/workflow/workflow-node-types';
 import { markDirty } from '../../utils/change-detection';
 import { formatDate, formatDateTime } from '../../utils/locale-format';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /**
  * Süreç detayı — şema üstünde yol, zaman çizelgesi, görevler ve zincir doğrulama.
@@ -33,7 +34,7 @@ import { formatDate, formatDateTime } from '../../utils/locale-format';
 @Component({
   selector: 'app-workflow-instance',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, ConfirmDialogComponent, WorkflowCanvasComponent],
+  imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, ConfirmDialogComponent, WorkflowCanvasComponent, IconComponent],
   templateUrl: './workflow-instance.component.html',
   styleUrl: './workflow-instance.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

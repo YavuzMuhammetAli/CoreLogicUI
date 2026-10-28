@@ -20,6 +20,9 @@ import {
   Rect, colPitch, contains, dropIndex, exceedsDragThreshold, nearestRect, spanFromDrag
 } from './form-layout.hit-test';
 import { FormInspectorComponent } from './form-inspector.component';
+import { IconComponent } from '../../shared/icon/icon.component';
+import { dataTypeIcon } from '../../shared/icon/data-type-icon';
+import type { IconName } from '../../shared/icon/icons.generated';
 
 /** Paletten sürüklenen ya da tıklanan şey. */
 type InsertPayload = { readonly column: string } | { readonly element: ElementKind };
@@ -54,7 +57,7 @@ const EDGE_SCROLL_STEP = 14;
 @Component({
   selector: 'app-form-designer',
   standalone: true,
-  imports: [TranslatePipe, RecordFieldComponent, RecordLayoutComponent, FormInspectorComponent],
+  imports: [TranslatePipe, RecordFieldComponent, RecordLayoutComponent, FormInspectorComponent, IconComponent],
   templateUrl: './form-designer.component.html',
   styleUrls: ['./form-designer.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -150,6 +153,10 @@ export class FormDesignerComponent {
 
   labelOf(column: string): string {
     return this.columnByName().get(column)?.label?.trim() || column;
+  }
+
+  typeIcon(name: string): IconName {
+    return dataTypeIcon(this.column(name)?.dataType);
   }
 
   column(name: string): PublishedColumn {

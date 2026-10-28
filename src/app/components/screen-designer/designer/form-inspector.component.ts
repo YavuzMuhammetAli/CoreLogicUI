@@ -11,6 +11,7 @@ import {
   ItemPatch, SectionPatch, findItem, findSection, hideColumn, moveSectionBy, moveTabBy, patchItem, patchSection,
   removeItem, removeSection, removeTab, renameTab, setSpan
 } from './form-layout.commands';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 type Target =
   | { kind: 'item'; item: FormItem; section: FormSection; tab: FormTab }
@@ -30,7 +31,7 @@ type Target =
 @Component({
   selector: 'app-form-inspector',
   standalone: true,
-  imports: [TranslatePipe, RouterLink],
+  imports: [TranslatePipe, RouterLink, IconComponent],
   templateUrl: './form-inspector.component.html',
   styleUrls: ['./form-inspector.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

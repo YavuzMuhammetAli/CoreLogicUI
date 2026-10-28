@@ -263,7 +263,7 @@
   white-space: nowrap;
   overflow: hidden;
 
-  svg { flex: 0 0 auto; color: var(--node-tone); }
+  app-icon { color: var(--node-tone); }
 }
 
 .canvas-node-meta-text {

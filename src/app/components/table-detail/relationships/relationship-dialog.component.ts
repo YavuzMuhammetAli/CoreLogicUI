@@ -10,6 +10,7 @@ import {
   RELATIONSHIP_TYPE_OPTIONS,
   requiresInverse
 } from '../../../models/relationship.model';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** C# tanımlayıcı deseni — property, FK ve ara tablo adları için ortak. */
 const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -24,7 +25,7 @@ const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 @Component({
   selector: 'app-relationship-dialog',
   standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe, ModelAutocompleteComponent, HelpHintComponent],
+  imports: [ReactiveFormsModule, TranslatePipe, ModelAutocompleteComponent, HelpHintComponent, IconComponent],
   templateUrl: './relationship-dialog.component.html',
   styleUrls: ['./relationships.shared.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

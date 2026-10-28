@@ -26,9 +26,7 @@
               class="btn btn-ghost btn-sm help-btn"
               (click)="typeHelpRequested.emit(selectedType)"
               [attr.aria-label]="'help.openRelHelp' | t">
-              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
-              </svg>
+              <app-icon name="info" size="14" />
               {{ 'help.openRelHelp' | t }}
             </button>
           </div>
@@ -150,6 +148,7 @@
         <button type="button" class="btn btn-primary"
                 [disabled]="saving"
                 (click)="onSubmit()">
+          <app-icon name="save" size="16" />
           {{ 'table.detail.save2' | t }}
         </button>
       </div>

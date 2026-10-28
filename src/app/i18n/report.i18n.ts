@@ -137,6 +137,10 @@ export const REPORT_I18N: Translations = {
   'report.viewer.serverError': { tr: 'Sunucu bağlantı hatası.', en: 'Server connection error.' },
   'report.viewer.excelExportFailed': { tr: 'Excel export başarısız oldu.', en: 'Excel export failed.' },
   'report.viewer.pdfExportFailed': { tr: 'PDF export başarısız oldu.', en: 'PDF export failed.' },
+  'report.viewer.firstPage': { tr: 'İlk sayfa', en: 'First page' },
+  'report.viewer.prevPage': { tr: 'Önceki sayfa', en: 'Previous page' },
+  'report.viewer.nextPage': { tr: 'Sonraki sayfa', en: 'Next page' },
+  'report.viewer.lastPage': { tr: 'Son sayfa', en: 'Last page' },
 
   // ── chart: grafik tipi etiketleri/ipuçları (chart-types.ts) ────────────
   'chart.type.column.label': { tr: 'Sütun', en: 'Column' },

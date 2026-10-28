@@ -1,7 +1,7 @@
 <div class="page-header">
   <span class="eyebrow">{{ 'workflow.instances.title' | t }}</span>
   <div class="cluster">
-    <a routerLink="/workflows" class="btn btn-ghost btn-sm">{{ 'workflow.instance.back' | t }}</a>
+    <a routerLink="/workflows" class="btn btn-ghost btn-sm"><app-icon name="arrow_back" size="14" />{{ 'workflow.instance.back' | t }}</a>
   </div>
 </div>
 
@@ -95,7 +95,7 @@
       @if (totalPages() > 1) {
         <nav class="pagination" [attr.aria-label]="'audit.paginationAriaLabel' | t">
           <button class="page-btn" type="button" (click)="goToPage(pageIndex() - 1)"
-                  [disabled]="pageIndex() === 1" [attr.aria-label]="'audit.prevPage' | t">‹</button>
+                  [disabled]="pageIndex() === 1" [attr.aria-label]="'audit.prevPage' | t"><app-icon name="chevron_left" size="16" /></button>
           @if (visiblePages()[0] > 1) {
             <button class="page-btn" type="button" (click)="goToPage(1)">1</button>
             @if (visiblePages()[0] > 2) { <span class="page-ellipsis">…</span> }
@@ -109,7 +109,7 @@
             <button class="page-btn" type="button" (click)="goToPage(totalPages())">{{ totalPages() }}</button>
           }
           <button class="page-btn" type="button" (click)="goToPage(pageIndex() + 1)"
-                  [disabled]="pageIndex() === totalPages()" [attr.aria-label]="'audit.nextPage' | t">›</button>
+                  [disabled]="pageIndex() === totalPages()" [attr.aria-label]="'audit.nextPage' | t"><app-icon name="chevron_right" size="16" /></button>
         </nav>
       }
       <div class="page-size-selector">

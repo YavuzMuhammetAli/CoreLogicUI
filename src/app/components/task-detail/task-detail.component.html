@@ -1,7 +1,7 @@
 <div class="page-header">
   <span class="eyebrow">{{ 'task.detail.title' | t }}</span>
   <div class="cluster">
-    <a routerLink="/tasks" class="btn btn-ghost btn-sm">{{ 'task.detail.back' | t }}</a>
+    <a routerLink="/tasks" class="btn btn-ghost btn-sm"><app-icon name="arrow_back" size="14" />{{ 'task.detail.back' | t }}</a>
   </div>
 </div>
 
@@ -94,11 +94,13 @@
             <button type="button" class="btn btn-secondary"
                     [disabled]="!reassignRoleId || reassigning"
                     (click)="reassign()">
+              <app-icon name="swap_horiz" size="16" />
               {{ 'task.detail.reassign' | t }}
             </button>
             <button type="button" class="btn btn-ghost wf-skip"
                     [disabled]="skipping"
                     (click)="askSkip()">
+              <app-icon name="skip_next" size="16" />
               {{ 'task.detail.skip' | t }}
             </button>
           </div>

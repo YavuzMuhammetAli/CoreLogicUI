@@ -9,6 +9,7 @@ import { environment } from '../../../environments/environment';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { markDirty } from '../../utils/change-detection';
 import { userInitials } from '../../utils/user-initials';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /** Şifre tekrar eşleşme validasyonu */
 function passwordsMatch(control: AbstractControl) {
@@ -21,7 +22,7 @@ function passwordsMatch(control: AbstractControl) {
 @Component({
   selector: 'app-user-profile',
   standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe],
+  imports: [ReactiveFormsModule, TranslatePipe, IconComponent],
   templateUrl: './user-profile.component.html',
   styleUrls: ['./user-profile.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

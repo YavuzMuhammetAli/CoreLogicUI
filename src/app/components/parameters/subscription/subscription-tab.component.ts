@@ -9,6 +9,7 @@ import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { TenantPlan, TenantPlanFeature, TenantSubscription } from '../../../models/parameter.model';
 import { formatDate, formatNumber } from '../../../utils/locale-format';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /**
  * Abonelik sekmesi — mevcut abonelik + satın alınabilir planlar.
@@ -20,7 +21,7 @@ import { formatDate, formatNumber } from '../../../utils/locale-format';
 @Component({
   selector: 'app-subscription-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, ConfirmDialogComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, ConfirmDialogComponent, IconComponent],
   templateUrl: './subscription-tab.component.html',
   styleUrls: ['../parameters.shared.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

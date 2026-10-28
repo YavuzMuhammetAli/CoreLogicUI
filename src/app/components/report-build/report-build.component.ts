@@ -25,6 +25,7 @@ import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { markDirty } from '../../utils/change-detection';
 import { aggregateAlias, reportColumnLabel } from '../../utils/report-column-label';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /** `labelKey` — şablonda `| t` ile çevrilir (bkz. report.i18n.ts 'report.operator.*'). */
 const OPERATORS: { value: ReportOperator; labelKey: string }[] = [
@@ -76,7 +77,7 @@ function isDateColumnType(type: string): boolean {
 @Component({
   selector: 'app-report-build',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, AppChartComponent, TranslatePipe],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, AppChartComponent, TranslatePipe, IconComponent],
   templateUrl: './report-build.component.html',
   styleUrls: ['./report-build.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

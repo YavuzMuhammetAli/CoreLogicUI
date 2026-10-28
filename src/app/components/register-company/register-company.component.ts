@@ -10,6 +10,7 @@ import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { PROVISION_STEP_ORDER, ProvisionStatus } from '../../models/provision.model';
 import { markDirty } from '../../utils/change-detection';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /** Kurulum ekranındaki tek adım satırının görünüm durumu. */
 interface DisplayStep {
@@ -32,7 +33,7 @@ interface DisplayStep {
 @Component({
   selector: 'app-register-company',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe, IconComponent],
   templateUrl: './register-company.component.html',
   styleUrls: ['./register-company.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

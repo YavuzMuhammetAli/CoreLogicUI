@@ -345,7 +345,7 @@ tablosu, table-detail sütun tablosu). Flex gerekiyorsa hücrenin **içine** `<s
 
 <!-- Boş durum -->
 <div class="empty-state">
-  <div class="empty-icon">📭</div>
+  <app-icon class="empty-icon" name="inbox" size="40" />
   <h3>Henüz kayıt yok</h3>
   <p>İlk tabloyu oluşturmak için "Yeni Model" butonuna tıkla.</p>
 </div>
@@ -458,6 +458,58 @@ tarafından kesilmemeli.
 
 ---
 
+## İkonlar
+
+Tek kaynak `<app-icon>` (`components/shared/icon/`): Google **Material Symbols Outlined** (wght 500),
+satır içi SVG, renk `currentColor`. Font DEĞİL — pakete yalnız kullanılan ikonlar girer, font indirme ya da
+"add" yazısının titremesi yok, çevrimdışı çalışır. Adlar https://fonts.google.com/icons ile birebir aynı.
+
+```html
+<button class="btn btn-primary"><app-icon name="add" size="16" />{{ 'common.add' | t }}</button>
+<button class="btn btn-ghost btn-sm" [attr.aria-label]="'…' | t" [title]="'…' | t"><app-icon name="delete" size="14" /></button>
+<a class="nav-item" routerLinkActive="active" #rla="routerLinkActive"><app-icon name="dashboard" [filled]="rla.isActive" />…</a>
+<app-icon [name]="busy ? 'pause' : 'play_arrow'" size="14" />
+```
+
+- **Yeni ikon:** adı `icons.manifest.json`'a ekle → `npm run icons` (SVG'leri sabit sürümden indirir,
+  `icons.generated.ts`'i yazar; dosya commit'lenir). Ad `IconName` tipidir — yanlış ad derlemede yakalanır.
+  Dolu varyant gerekiyorsa adı `filled` listesine de ekle (bugün yalnız sidebar).
+- **Boyut:** `size` (px) — `.btn-sm` 14, `.btn` 16, menü 18 (varsayılan), boş durum 40. CSS ile boyutlama YOK.
+- **Erişilebilirlik:** ikon varsayılan olarak süstür (`aria-hidden`). Yalnız ikonlu düğmede metni düğmenin
+  `aria-label` + `title`'ına yaz. Anlam taşıyan tek başına ikonda `[label]` ver (`role="img"`).
+- **Kapsülleme:** üst bileşen SCSS'indeki `svg {}` seçicisi ikonun içine ULAŞMAZ — `app-icon {}` seç
+  (renk `color` ile, dönüş `transform` ile host'a uygulanır).
+- **İkon sayılmayanlar:** diyagram/çizim SVG'leri (`datatype-help`, `entity-graph`, akış tuvalinin kenar ve
+  ok işaretçileri) elle yazılır.
+- **Düğme kuralı:** ikon metnin solunda. İptal/Kapat/Tamam (diyalog), sekmeler, sayfa numaraları ve segment
+  seçicilerde ikon kullanılmaz. Meşgul düğmede ikonun yerini spinner alır:
+  `@if (saving) { <span class="spinner" aria-hidden="true"></span> } @else { <app-icon name="save" size="16" /> }`
+
+| Anlam | İkon | Anlam | İkon |
+|---|---|---|---|
+| Ekle / Yeni | `add` | Kaydet | `save` |
+| Düzenle | `edit` | Yayınla | `publish` |
+| Sil | `delete` | Geri yükle (silinen) | `restore_from_trash` |
+| Geri | `arrow_back` | Yenile / Yeniden dene | `refresh` |
+| Ara | `search` | Kapat / Temizle | `close` |
+| Dışa aktar / İndir | `download` | İçe aktar / Yükle | `upload` |
+| Excel / PDF | `table_view` / `picture_as_pdf` | Görüntüle / Önizle | `visibility` |
+| Gizle | `visibility_off` | Kopyala / Çoğalt | `content_copy` |
+| Geçmiş / Sürümler | `history` | Varsayılana dön | `restart_alt` |
+| Onayla | `check` | Reddet | `close` |
+| Başlat / Simüle et | `play_arrow` | Durdur | `pause` |
+| Pasifle / İptal et | `block` | Etkinleştir | `check_circle` |
+| Uyarı / Hata | `warning` / `error` | Bilgi | `info` |
+| Aç-kapa | `keyboard_arrow_down` / `chevron_right` | Sayfa | `chevron_left` `chevron_right` `first_page` `last_page` |
+| Ekran tasarımı | `dashboard_customize` | Akış | `account_tree` |
+
+Veri tipi ikonu: `components/shared/icon/data-type-icon.ts` (`dataTypeIcon(dataType)`). Akış düğümleri
+`NODE_KINDS[].icon`, grafik tipleri `CHART_TYPE_META[].icon`. Material Symbols sürüm geçişinde ad
+değişebilir (`expand_more` → `keyboard_arrow_down`, `auto_awesome` → `star_shine`); script 404 verirse
+yeni adı https://fonts.google.com/icons'tan bul.
+
+---
+
 ## Component Yazım Kuralları
 
 | Kural | Açıklama |
@@ -465,7 +517,7 @@ tarafından kesilmemeli.
 | **Standalone** | `standalone: true` — NgModule yok |
 | **Control flow** | `@if` / `@for` / `@else` (Angular 17+ sözdizimi — `*ngIf`/`*ngFor` değil) |
 | **Reactive Forms** | `FormBuilder` + `FormGroup`/`FormArray`; template-driven form yok |
-| **İkonlar** | Inline stroke SVG, `currentColor`, ikon-font kütüphanesi yok |
+| **İkonlar** | Yalnız `<app-icon>` (Material Symbols, satır içi SVG) — bkz. "İkonlar"; elle `<svg>`, ikon fontu, emoji YOK |
 | **A11y** | `aria-invalid`, `role="alert"`, `aria-describedby`, `.sr-only` zorunlu |
 | **Dil** | Tüm UI metni ve yorumlar Türkçe |
 | **Stil** | Global sınıfları yeniden kullan; component SCSS'inde token kullan; yeni renk icat etme |

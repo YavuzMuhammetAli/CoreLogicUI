@@ -6,6 +6,7 @@ import { parseEnumValues } from '../../model-data/model-data.util';
 import { StepTarget } from './condition-editor.component';
 import { ExpressionCheck, ValueInputKind, checkExpression, valueInputKind } from './condition-form';
 import { addSet, duplicateColumns, removeSet, setColumn, setMode, updateSet, writableColumns } from './action-form';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /**
  * Alan güncelle düğümünün düzenleyicisi: hangi alana ne yazılacağı (sabit
@@ -18,7 +19,7 @@ import { addSet, duplicateColumns, removeSet, setColumn, setMode, updateSet, wri
 @Component({
   selector: 'app-action-editor',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, IconComponent],
   templateUrl: './action-editor.component.html',
   styleUrl: './editors.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

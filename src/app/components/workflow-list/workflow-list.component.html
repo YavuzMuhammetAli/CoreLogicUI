@@ -2,30 +2,22 @@
   <span class="eyebrow">{{ 'workflow.list.title' | t }}</span>
   <div class="cluster">
     <a routerLink="/workflows/instances" class="btn btn-secondary btn-sm">
-      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M4 6h16M4 12h10M4 18h7" />
-      </svg>
+      <app-icon name="format_list_bulleted" size="16" />
       {{ 'workflow.instances.title' | t }}
     </a>
     <a routerLink="/workflows/deleted" class="btn btn-secondary btn-sm">
-      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
-      </svg>
+      <app-icon name="delete" size="16" />
       {{ 'workflow.list.deleted' | t }}
     </a>
     <!-- İçe aktar: gizli dosya seçici, etiket düğme gibi görünür (klavyeyle de açılır). -->
     <label class="btn btn-secondary btn-sm wf-import" [class.wf-import--busy]="importing">
-      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
-      </svg>
+      <app-icon name="download" size="16" />
       {{ 'workflow.package.import' | t }}
       <input type="file" accept="application/json,.json" class="sr-only" [disabled]="importing"
              (change)="onImportFile($event)" />
     </label>
     <a routerLink="/workflows/new" class="btn btn-primary">
-      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 5v14M5 12h14" />
-      </svg>
+      <app-icon name="add" size="16" />
       {{ 'workflow.list.new' | t }}
     </a>
   </div>
@@ -106,18 +98,21 @@
                     <button type="button" class="btn btn-secondary btn-sm"
                             [disabled]="busyId === workflow.id"
                             (click)="publish(workflow)">
+                      <app-icon name="publish" size="14" />
                       {{ 'workflow.list.publish' | t }}
                     </button>
                   } @else if (workflow.status === 'Published') {
                     <button type="button" class="btn btn-ghost btn-sm"
                             [disabled]="busyId === workflow.id"
                             (click)="toggleEnabled(workflow)">
+                      <app-icon [name]="workflow.isEnabled ? 'pause' : 'play_arrow'" size="14" />
                       {{ (workflow.isEnabled ? 'workflow.list.pause' : 'workflow.list.resume') | t }}
                     </button>
                   }
                   <button type="button" class="btn btn-ghost btn-sm wf-danger"
                           [disabled]="busyId === workflow.id"
                           (click)="askDelete(workflow)">
+                    <app-icon name="delete" size="14" />
                     {{ 'common.delete' | t }}
                   </button>
                 </td>
@@ -130,10 +125,10 @@
   } @else {
     <div class="panel">
       <div class="empty-state">
-        <div class="empty-icon" aria-hidden="true">🔀</div>
+        <app-icon class="empty-icon" name="account_tree" size="40" />
         <h3>{{ 'workflow.list.emptyTitle' | t }}</h3>
         <p>{{ 'workflow.list.emptyHint' | t }}</p>
-        <a routerLink="/workflows/new" class="btn btn-primary">{{ 'workflow.list.new' | t }}</a>
+        <a routerLink="/workflows/new" class="btn btn-primary"><app-icon name="add" size="16" />{{ 'workflow.list.new' | t }}</a>
       </div>
     </div>
   }

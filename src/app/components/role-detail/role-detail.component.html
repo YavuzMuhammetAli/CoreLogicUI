@@ -12,9 +12,7 @@
       <h2>{{ 'role.detail.newTitle' | t }}</h2>
       <div class="panel-actions">
         <a [routerLink]="['/roles']" class="btn btn-ghost btn-sm">
-          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="15 18 9 12 15 6"/>
-          </svg>
+          <app-icon name="arrow_back" size="14" />
           {{ 'role.detail.backToList' | t }}
         </a>
       </div>
@@ -38,6 +36,7 @@
             <span class="spinner" [attr.aria-label]="'role.detail.creatingAriaLabel' | t"></span>
             {{ 'role.detail.creating' | t }}
           } @else {
+            <app-icon name="add" size="14" />
             {{ 'common.save' | t }}
           }
         </button>
@@ -65,10 +64,10 @@
   @if (!roleLoading() && roleError()) {
     <div class="panel">
       <div class="empty-state">
-        <div class="empty-icon" aria-hidden="true">⚠️</div>
+        <app-icon class="empty-icon" name="error" size="40" />
         <h3>{{ 'role.detail.notFoundTitle' | t }}</h3>
         <p>{{ roleError() }}</p>
-        <a routerLink="/roles" class="btn btn-primary">{{ 'role.detail.backToRoles' | t }}</a>
+        <a routerLink="/roles" class="btn btn-primary"><app-icon name="arrow_back" size="16" />{{ 'role.detail.backToRoles' | t }}</a>
       </div>
     </div>
   }
@@ -82,9 +81,7 @@
         </div>
         <div class="panel-actions">
           <a [routerLink]="['/roles']" class="btn btn-ghost btn-sm">
-            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
+            <app-icon name="arrow_back" size="14" />
             {{ 'role.detail.backToList' | t }}
           </a>
         </div>
@@ -106,10 +103,12 @@
               autocomplete="off">
             <button class="btn btn-secondary btn-sm" type="button"
                     (click)="renameRole()" [disabled]="renameSaving()">
+              <app-icon name="save" size="14" />
               {{ 'common.save' | t }}
             </button>
             <button class="btn btn-danger btn-sm" type="button"
                     (click)="askDeleteRole()" [disabled]="deleteSaving()">
+              <app-icon name="delete" size="14" />
               {{ 'role.detail.deleteRole' | t }}
             </button>
           </div>
@@ -141,6 +140,7 @@
             </select>
             <button class="btn btn-secondary btn-sm" type="button"
                     (click)="saveLandingPage()" [disabled]="landingPageSaving()">
+              <app-icon name="save" size="14" />
               {{ 'common.save' | t }}
             </button>
           </div>
@@ -200,6 +200,7 @@
                 @if (addMemberSaving()) {
                   <span class="spinner" [attr.aria-label]="'role.detail.addingAriaLabel' | t"></span>
                 } @else {
+                  <app-icon name="person_add" size="14" />
                   {{ 'role.detail.addUser' | t }}
                 }
               </button>
@@ -246,6 +247,7 @@
                             @if (removingUserId() === m.id) {
                               <span class="spinner" [attr.aria-label]="'role.detail.removingAriaLabel' | t"></span>
                             } @else {
+                              <app-icon name="person_remove" size="14" />
                               {{ 'role.detail.removeMember' | t }}
                             }
                           </button>
@@ -291,9 +293,7 @@
               @if (!selectedPermRow()) {
 
                 <div class="search-box">
-                  <svg class="search-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-                  </svg>
+                  <app-icon name="search" size="14" class="search-icon" />
                   <input
                     type="search"
                     class="input search-input"
@@ -306,7 +306,7 @@
                 @if (filteredPermRows().length === 0) {
                   <div class="empty-state">
                     <p>{{ 'role.detail.noSearchResult' | t:{ term: modelSearchTerm() } }}</p>
-                    <button type="button" class="btn btn-ghost btn-sm" (click)="onModelSearchChange('')">{{ 'role.detail.clearSearch' | t }}</button>
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="onModelSearchChange('')"><app-icon name="close" size="14" />{{ 'role.detail.clearSearch' | t }}</button>
                   </div>
                 } @else {
                   <ul class="model-perm-list">
@@ -337,7 +337,7 @@
                     @if (modelTotalPages() > 1) {
                       <nav class="pagination" [attr.aria-label]="'role.detail.paginationAriaLabel' | t">
                         <button class="page-btn" type="button" (click)="goToModelPage(modelPageIndex() - 1)"
-                                [disabled]="modelPageIndex() === 1" [attr.aria-label]="'role.detail.prevPageAriaLabel' | t">‹</button>
+                                [disabled]="modelPageIndex() === 1" [attr.aria-label]="'role.detail.prevPageAriaLabel' | t"><app-icon name="chevron_left" size="16" /></button>
                         @if (modelPages()[0] > 1) {
                           <button class="page-btn" type="button" (click)="goToModelPage(1)">1</button>
                           @if (modelPages()[0] > 2) { <span class="page-ellipsis">…</span> }
@@ -352,7 +352,7 @@
                           <button class="page-btn" type="button" (click)="goToModelPage(modelTotalPages())">{{ modelTotalPages() }}</button>
                         }
                         <button class="page-btn" type="button" (click)="goToModelPage(modelPageIndex() + 1)"
-                                [disabled]="modelPageIndex() === modelTotalPages()" [attr.aria-label]="'role.detail.nextPageAriaLabel' | t">›</button>
+                                [disabled]="modelPageIndex() === modelTotalPages()" [attr.aria-label]="'role.detail.nextPageAriaLabel' | t"><app-icon name="chevron_right" size="16" /></button>
                       </nav>
                     }
                   </div>
@@ -363,6 +363,7 @@
               @if (selectedPermRow(); as row) {
                 <div class="model-perm-detail">
                   <button class="btn btn-ghost btn-sm" type="button" (click)="clearModelPerm()">
+                    <app-icon name="arrow_back" size="14" />
                     {{ 'role.detail.backToModels' | t }}
                   </button>
 
@@ -410,6 +411,7 @@
                         <span class="spinner" [attr.aria-label]="'role.detail.savingAriaLabel' | t"></span>
                         {{ 'role.detail.savingEllipsis' | t }}
                       } @else {
+                        <app-icon name="save" size="16" />
                         {{ 'role.detail.saveModelPermissions' | t }}
                       }
                     </button>

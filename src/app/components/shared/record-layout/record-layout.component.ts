@@ -17,6 +17,7 @@ import { WidthTier, itemSpan, visibleAtTier, widthTier } from '../../../utils/sc
 import {
   firstInvalidLocation, invalidCountByTab, sectionsWithColumns, tabsWithColumns
 } from '../../../utils/screen-layout/form-layout.invalid';
+import { IconComponent } from '../icon/icon.component';
 
 const NONE: ReadonlySet<string> = new Set();
 
@@ -41,7 +42,7 @@ const NONE: ReadonlySet<string> = new Set();
 @Component({
   selector: 'app-record-layout',
   standalone: true,
-  imports: [RecordFieldComponent, TranslatePipe, RouterLink],
+  imports: [RecordFieldComponent, TranslatePipe, RouterLink, IconComponent],
   templateUrl: './record-layout.component.html',
   styleUrls: ['./record-layout.component.scss']
 })

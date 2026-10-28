@@ -14,6 +14,7 @@ import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.
 import { TaskDecisionFormComponent } from '../shared/task-decision-form/task-decision-form.component';
 import { markDirty } from '../../utils/change-detection';
 import { formatDate } from '../../utils/locale-format';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /**
  * Görev detayı — onay/red ekranı.
@@ -25,7 +26,7 @@ import { formatDate } from '../../utils/locale-format';
 @Component({
   selector: 'app-task-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, ConfirmDialogComponent, TaskDecisionFormComponent],
+  imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, ConfirmDialogComponent, TaskDecisionFormComponent, IconComponent],
   templateUrl: './task-detail.component.html',
   styleUrl: './task-detail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

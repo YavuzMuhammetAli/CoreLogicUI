@@ -10,6 +10,7 @@ import { PermissionService } from '../../../services/permission.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { BackupHistoryItem, TenantRestore, isRestoreFinished } from '../../../models/parameter.model';
 import { formatDate } from '../../../utils/locale-format';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** Diyaloğun adımı: onay formu → sunucuya gönderiliyor → ilerleme → sonuç. */
 type Step = 'confirm' | 'submitting' | 'progress' | 'done' | 'failed';
@@ -32,7 +33,7 @@ const POLL_MS = 2000;
 @Component({
   selector: 'app-backup-restore-dialog',
   standalone: true,
-  imports: [FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe, IconComponent],
   templateUrl: './backup-restore-dialog.component.html',
   styleUrls: ['./backup-restore-dialog.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

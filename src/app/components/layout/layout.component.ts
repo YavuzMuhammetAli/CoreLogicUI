@@ -20,11 +20,12 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
 import { markDirty } from '../../utils/change-detection';
 import { userInitials } from '../../utils/user-initials';
 import { computed, signal } from '@angular/core';
+import { IconComponent } from '../shared/icon/icon.component';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, NotificationBellComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, NotificationBellComponent, IconComponent],
   templateUrl: './layout.component.html',
   styleUrls: ['./layout.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

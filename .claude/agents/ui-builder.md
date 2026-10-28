@@ -45,7 +45,7 @@ Yeni component'in stilini taklit et; yeni desen icat etme.
   - `.spinner` / `.empty-state` / `.eyebrow`
   - `.stack` / `.flow` / `.cluster` / `.sr-only`
 - **Layout**: Bootstrap grid değil, CSS Grid (`display: grid; grid-template-columns: …`)
-- **İkonlar**: inline stroke SVG, `stroke="currentColor"` — ikon kütüphanesi yok
+- **İkonlar**: yalnız `<app-icon name="…" size="16" />` (Material Symbols; `components/shared/icon/`) — elle `<svg>`, ikon fontu, emoji yok. Yeni ikon → `icons.manifest.json` + `npm run icons`; sözlük `corelogic-design` "İkonlar"
 - **Dil**: tüm UI metni ve yorumlar Türkçe
 - **Control flow**: `@if` / `@for` / `@else` — `*ngIf` / `*ngFor` değil
 
@@ -138,7 +138,7 @@ Yeni servis gerekiyorsa `angular-api-service` skillini takip et.
 - [ ] Form input'ları için `[attr.aria-invalid]` bağlantısı var mı?
 - [ ] Hata mesajları için `role="alert"` var mı?
 - [ ] Input'lar `aria-describedby` ile hata span'ına bağlı mı?
-- [ ] İkonlar `aria-hidden="true"` ve yanında `.sr-only` metin var mı?
+- [ ] Yalnız ikonlu düğmede `aria-label` + `title` var mı? (`<app-icon>` varsayılan olarak `aria-hidden`)
 - [ ] Sadece dekoratif elementler `aria-hidden="true"` mu?
 
 ## 7. Yeni Component Oluşturmak İçin CLI

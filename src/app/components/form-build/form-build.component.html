@@ -2,9 +2,7 @@
 <div class="page-header">
   <span class="eyebrow">{{ 'formBuild.title' | t }}</span>
   <a [routerLink]="['/build', 'new']" class="btn btn-primary">
-    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-      <path d="M12 5v14M5 12h14"/>
-    </svg>
+    <app-icon name="add" size="16" />
     {{ 'formBuild.createNewTable' | t }}
   </a>
 </div>
@@ -41,9 +39,7 @@
           <a class="model-card-link" [routerLink]="['/build', model.typeName]">
             <div class="model-card-head">
               <div class="model-type-badge">
-                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
-                </svg>
+                <app-icon name="table" size="16" />
               </div>
             </div>
 
@@ -67,7 +63,7 @@
           <!-- Silme — düzenleme linkinden ayrı, nested <a> olmasın diye dışarıda -->
           <div class="model-card-actions">
             <a class="btn btn-ghost btn-sm" [routerLink]="['/build', model.typeName, 'screen']"
-               [attr.aria-label]="'screen.designScreenAria' | t">{{ 'screen.designScreen' | t }}</a>
+               [attr.aria-label]="'screen.designScreenAria' | t"><app-icon name="dashboard_customize" size="14" />{{ 'screen.designScreen' | t }}</a>
             <button
               type="button"
               class="btn btn-ghost btn-sm"
@@ -77,10 +73,7 @@
               @if (isDeleting[model.typeName]) {
                 <span class="spinner" aria-hidden="true"></span>
               } @else {
-                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                </svg>
+                <app-icon name="delete" size="14" />
               }
               {{ 'formBuild.delete' | t }}
             </button>
@@ -102,12 +95,12 @@
     <!-- Henüz model yok -->
     <div class="panel">
       <div class="empty-state">
-        <div class="empty-icon" aria-hidden="true">🗂️</div>
+        <app-icon class="empty-icon" name="folder_open" size="40" />
         <h3>{{ 'formBuild.noModelsYet' | t }}</h3>
         <p>
           {{ 'formBuild.noModelsHint' | t }}
         </p>
-        <a [routerLink]="['/build', 'new']" class="btn btn-primary">{{ 'formBuild.createFirstModel' | t }}</a>
+        <a [routerLink]="['/build', 'new']" class="btn btn-primary"><app-icon name="add" size="16" />{{ 'formBuild.createFirstModel' | t }}</a>
       </div>
     </div>
   }

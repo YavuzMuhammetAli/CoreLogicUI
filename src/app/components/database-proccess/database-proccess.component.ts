@@ -4,11 +4,12 @@ import { DatabaseService } from '../../services/database.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
 import { markDirty } from '../../utils/change-detection';
+import { IconComponent } from '../shared/icon/icon.component';
 
 @Component({
   selector: 'app-database-proccess',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, IconComponent],
   templateUrl: './database-proccess.component.html',
   styleUrl: './database-proccess.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

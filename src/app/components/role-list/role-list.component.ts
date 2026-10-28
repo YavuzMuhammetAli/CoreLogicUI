@@ -10,6 +10,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
 import { markDirty } from '../../utils/change-detection';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /** "İzinli model sayısı" sütununda gösterilen, üye sayısı zenginleştirilmiş rol satırı */
 interface RoleRow extends Role {
@@ -19,7 +20,7 @@ interface RoleRow extends Role {
 @Component({
   selector: 'app-role-list',
   standalone: true,
-  imports: [RouterLink, TranslatePipe, ConfirmDialogComponent],
+  imports: [RouterLink, TranslatePipe, ConfirmDialogComponent, IconComponent],
   templateUrl: './role-list.component.html',
   styleUrls: ['./role-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

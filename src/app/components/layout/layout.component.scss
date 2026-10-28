@@ -117,7 +117,7 @@
   width: 100%;
   text-align: left;
 
-  svg { flex-shrink: 0; }
+  app-icon { flex-shrink: 0; }
 
   &:hover {
     background: var(--sidebar-hover-bg);
@@ -372,13 +372,13 @@
   transition: background var(--motion-fast) var(--ease-standard),
               color var(--motion-fast) var(--ease-standard);
 
-  svg { flex-shrink: 0; color: var(--muted); }
+  app-icon { flex-shrink: 0; color: var(--muted); }
 
   &:hover {
     background: var(--surface-warm);
     color: var(--fg);
 
-    svg { color: var(--fg-2); }
+    app-icon { color: var(--fg-2); }
   }
 
   &:focus-visible {
@@ -390,13 +390,13 @@
 .dropdown-item-danger {
   color: var(--danger);
 
-  svg { color: var(--danger); }
+  app-icon { color: var(--danger); }
 
   &:hover {
     background: var(--danger-bg);
     color: var(--danger);
 
-    svg { color: var(--danger); }
+    app-icon { color: var(--danger); }
   }
 }
 

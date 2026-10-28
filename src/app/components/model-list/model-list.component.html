@@ -5,17 +5,12 @@
     <div class="cluster">
       @if (isAdmin) {
         <a routerLink="/models/deleted" class="btn btn-secondary btn-sm">
-          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-          </svg>
+          <app-icon name="delete" size="14" />
           {{ 'model.list.deletedModels' | t }}
         </a>
       }
       <a routerLink="/build" class="btn btn-primary">
-        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
+        <app-icon name="add" size="16" />
         {{ 'model.list.newModel' | t }}
       </a>
     </div>
@@ -40,7 +35,7 @@
 @if (noPermission) {
   <div class="panel">
     <div class="empty-state">
-      <div class="empty-icon" aria-hidden="true">🔒</div>
+      <app-icon class="empty-icon" name="lock" size="40" />
       <h3>{{ 'model.list.noAccessTitle' | t }}</h3>
       <p>{{ 'model.list.noAccessMessage' | t }}</p>
     </div>
@@ -56,9 +51,7 @@
           <a class="model-card-link" [routerLink]="['/models', model.typeName]">
             <div class="model-card-head">
               <div class="model-type-badge">
-                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
-                </svg>
+                <app-icon name="table" size="16" />
               </div>
             </div>
 
@@ -88,12 +81,13 @@
     <!-- Admin — henüz model yok -->
     <div class="panel">
       <div class="empty-state">
-        <div class="empty-icon" aria-hidden="true">🗂️</div>
+        <app-icon class="empty-icon" name="folder_open" size="40" />
         <h3>{{ 'model.list.emptyTitle' | t }}</h3>
         <p>
           {{ 'model.list.emptyMessage' | t }}
         </p>
         <a routerLink="/build" class="btn btn-primary">
+          <app-icon name="add" size="16" />
           {{ 'model.list.createFirstModel' | t }}
         </a>
       </div>

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, input
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { closeOnOutsidePointer } from '../../../utils/outside-pointer';
+import { IconComponent } from '../icon/icon.component';
 
 /**
  * Model adı seçmek için basit, bağımlılıksız autocomplete (combobox).
@@ -16,7 +17,7 @@ import { closeOnOutsidePointer } from '../../../utils/outside-pointer';
 @Component({
   selector: 'app-model-autocomplete',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, IconComponent],
   templateUrl: './model-autocomplete.component.html',
   styleUrls: ['./model-autocomplete.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

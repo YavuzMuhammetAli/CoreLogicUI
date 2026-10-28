@@ -2,10 +2,7 @@
   @if (node(); as step) {
     <!-- ── Tek adım ─────────────────────────────────────────────────────── -->
     <header class="inspector-head" [attr.data-tone]="kind()?.tone">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path [attr.d]="kind()?.icon ?? ''" />
-      </svg>
+      @if (kind(); as k) { <app-icon [name]="k.icon" size="16" /> }
       <span class="eyebrow">{{ (kind()?.labelKey ?? '') | t }}</span>
       @if (isStart()) {
         <span class="badge badge-meta">{{ 'workflow.canvas.start' | t }}</span>
@@ -194,13 +191,16 @@
       @if (!readonly()) {
         @if (!isStart()) {
           <button type="button" class="btn btn-ghost btn-sm" (click)="makeStart.emit(step.key)">
+            <app-icon name="flag" size="14" />
             {{ 'workflow.canvas.menu.setStart' | t }}
           </button>
         }
         <button type="button" class="btn btn-ghost btn-sm" (click)="duplicate.emit()">
+          <app-icon name="content_copy" size="14" />
           {{ 'workflow.canvas.menu.duplicate' | t }}
         </button>
         <button type="button" class="btn btn-ghost btn-sm inspector-danger" (click)="remove.emit()">
+          <app-icon name="delete" size="14" />
           {{ 'workflow.canvas.menu.delete' | t }}
         </button>
       }
@@ -228,6 +228,7 @@
       @if (!readonly()) {
         <footer class="inspector-actions">
           <button type="button" class="btn btn-ghost btn-sm inspector-danger" (click)="remove.emit()">
+            <app-icon name="delete" size="14" />
             {{ 'workflow.canvas.menu.deleteEdge' | t }}
           </button>
         </footer>
@@ -244,9 +245,11 @@
     @if (!readonly()) {
       <footer class="inspector-actions">
         <button type="button" class="btn btn-ghost btn-sm" (click)="duplicate.emit()">
+          <app-icon name="content_copy" size="14" />
           {{ 'workflow.canvas.menu.duplicate' | t }}
         </button>
         <button type="button" class="btn btn-ghost btn-sm inspector-danger" (click)="remove.emit()">
+          <app-icon name="delete" size="14" />
           {{ 'workflow.canvas.menu.delete' | t }}
         </button>
       </footer>

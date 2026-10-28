@@ -3,17 +3,12 @@
   <div class="cluster">
     @if (isAdmin) {
       <a routerLink="/reports/deleted" class="btn btn-secondary btn-sm">
-        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-        </svg>
+        <app-icon name="delete" size="14" />
         {{ 'report.list.deletedReports' | t }}
       </a>
     }
     <a routerLink="/reports/new" class="btn btn-primary">
-      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="M12 5v14M5 12h14"/>
-      </svg>
+      <app-icon name="add" size="16" />
       {{ 'report.list.newReport' | t }}
     </a>
   </div>
@@ -53,8 +48,8 @@
                 <td>{{ report.chartType }}</td>
                 <td>
                   <div class="td-actions">
-                    <a class="btn btn-ghost btn-sm" [routerLink]="['/reports', report.id]">{{ 'report.list.view' | t }}</a>
-                    <a class="btn btn-secondary btn-sm" [routerLink]="['/reports', report.id, 'edit']">{{ 'report.list.edit' | t }}</a>
+                    <a class="btn btn-ghost btn-sm" [routerLink]="['/reports', report.id]"><app-icon name="visibility" size="14" />{{ 'report.list.view' | t }}</a>
+                    <a class="btn btn-secondary btn-sm" [routerLink]="['/reports', report.id, 'edit']"><app-icon name="edit" size="14" />{{ 'report.list.edit' | t }}</a>
                   </div>
                 </td>
               </tr>
@@ -66,10 +61,10 @@
   } @else {
     <div class="panel">
       <div class="empty-state">
-        <div class="empty-icon" aria-hidden="true">📊</div>
+        <app-icon class="empty-icon" name="bar_chart" size="40" />
         <h3>{{ 'report.list.emptyTitle' | t }}</h3>
         <p>{{ 'report.list.emptySubtitle' | t }}</p>
-        <a routerLink="/reports/new" class="btn btn-primary">{{ 'report.list.createFirst' | t }}</a>
+        <a routerLink="/reports/new" class="btn btn-primary"><app-icon name="add" size="16" />{{ 'report.list.createFirst' | t }}</a>
       </div>
     </div>
   }

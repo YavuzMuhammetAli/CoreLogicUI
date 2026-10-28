@@ -2,17 +2,13 @@
   <div class="page-head">
     <div>
       <a class="back-link" [routerLink]="source().backLink">
-        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M19 12H5M12 19l-7-7 7-7"/>
-        </svg>
+        <app-icon name="arrow_back" size="14" />
         {{ key('backLink') | t }}
       </a>
       <span class="eyebrow">{{ key('title') | t }}</span>
     </div>
     <button class="btn btn-secondary btn-sm" (click)="load()" [disabled]="loading()" type="button">
-      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-      </svg>
+      <app-icon name="refresh" size="14" />
       {{ key('refresh') | t }}
     </button>
   </div>
@@ -31,10 +27,7 @@
   @if (!loading() && !loadError()) {
     @if (items().length === 0) {
       <div class="empty-state">
-        <svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-        </svg>
+        <app-icon name="delete" size="40" />
         <p>{{ key('empty') | t }}</p>
         <p class="muted-hint">{{ key('emptyHint') | t }}</p>
       </div>
@@ -65,9 +58,7 @@
                   <span class="spinner spinner-sm" aria-hidden="true"></span>
                   {{ 'deleted.restoring' | t }}
                 } @else {
-                  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 12a9 9 0 1 0 2.64-6.36M3 12V5m0 7h7"/>
-                  </svg>
+                  <app-icon name="restore_from_trash" size="14" />
                   {{ 'deleted.restore' | t }}
                 }
               </button>

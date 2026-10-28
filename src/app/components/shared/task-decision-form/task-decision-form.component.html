@@ -75,13 +75,13 @@
     <div class="decision-actions">
       @if (schema.allowReject) {
         <button type="button" class="btn btn-danger" [disabled]="!!saving()" (click)="decide('reject')">
-          @if (saving() === 'reject') { <span class="spinner btn-spinner" aria-hidden="true"></span> }
+          @if (saving() === 'reject') { <span class="spinner btn-spinner" aria-hidden="true"></span> } @else { <app-icon name="close" size="16" /> }
           {{ schema.rejectLabel || ('task.detail.reject' | t) }}
         </button>
       }
       @if (!approveOnRecord) {
         <button type="button" class="btn btn-primary" [disabled]="!!saving()" (click)="decide('approve')">
-          @if (saving() === 'approve') { <span class="spinner btn-spinner" aria-hidden="true"></span> }
+          @if (saving() === 'approve') { <span class="spinner btn-spinner" aria-hidden="true"></span> } @else { <app-icon name="check" size="16" /> }
           {{ schema.approveLabel || ('task.detail.approve' | t) }}
         </button>
       }

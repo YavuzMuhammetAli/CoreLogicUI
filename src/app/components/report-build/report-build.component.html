@@ -61,7 +61,7 @@
                 [attr.aria-checked]="f['chartType'].value === ct.value"
                 (click)="selectChartType(ct.value)"
               >
-                <span class="chart-type-icon" [innerHTML]="ct.svg"></span>
+                <app-icon class="chart-type-icon" [name]="ct.icon" size="28" />
                 <span class="chart-type-name">{{ ct.labelKey | t }}</span>
                 <span class="chart-type-hint">{{ ct.hintKey | t }}</span>
               </button>
@@ -139,7 +139,7 @@
             (click)="previewSql()">
             @if (sqlPreviewLoading()) {
               <span class="spinner" aria-hidden="true"></span>
-            }
+            } @else { <app-icon name="code" size="14" /> }
             {{ 'report.build.sqlPreviewButton' | t }}
           </button>
         </div>
@@ -181,7 +181,7 @@
         <div class="panel-head">
           <h3>{{ 'report.build.filters' | t }}</h3>
           <div class="panel-actions">
-            <button class="btn btn-secondary btn-sm" type="button" (click)="addFilter()">{{ 'report.build.addFilter' | t }}</button>
+            <button class="btn btn-secondary btn-sm" type="button" (click)="addFilter()"><app-icon name="add" size="14" />{{ 'report.build.addFilter' | t }}</button>
           </div>
         </div>
         <div class="panel-body">
@@ -203,7 +203,7 @@
                   }
                 </select>
                 <input class="input" type="text" formControlName="value" [placeholder]="'report.build.valuePlaceholder' | t" />
-                <button class="btn btn-danger btn-sm" type="button" (click)="removeFilter(i)">{{ 'report.build.remove' | t }}</button>
+                <button class="btn btn-danger btn-sm" type="button" (click)="removeFilter(i)"><app-icon name="delete" size="14" />{{ 'report.build.remove' | t }}</button>
               </div>
             }
           </div>
@@ -230,7 +230,7 @@
         <div class="panel-head">
           <h3>{{ 'report.build.aggregate' | t }}</h3>
           <div class="panel-actions">
-            <button class="btn btn-secondary btn-sm" type="button" (click)="addAggregate()">{{ 'report.build.addAggregate' | t }}</button>
+            <button class="btn btn-secondary btn-sm" type="button" (click)="addAggregate()"><app-icon name="add" size="14" />{{ 'report.build.addAggregate' | t }}</button>
           </div>
         </div>
         <div class="panel-body">
@@ -255,7 +255,7 @@
                     <option [value]="fn.value">{{ fn.labelKey | t }}</option>
                   }
                 </select>
-                <button class="btn btn-danger btn-sm" type="button" (click)="removeAggregate(i)">{{ 'report.build.remove' | t }}</button>
+                <button class="btn btn-danger btn-sm" type="button" (click)="removeAggregate(i)"><app-icon name="delete" size="14" />{{ 'report.build.remove' | t }}</button>
               </div>
             }
           </div>
@@ -268,7 +268,7 @@
         <div class="panel-head">
           <h3>{{ 'report.build.sortBy' | t }}</h3>
           <div class="panel-actions">
-            <button class="btn btn-secondary btn-sm" type="button" (click)="addSort()">{{ 'report.build.addSort' | t }}</button>
+            <button class="btn btn-secondary btn-sm" type="button" (click)="addSort()"><app-icon name="add" size="14" />{{ 'report.build.addSort' | t }}</button>
           </div>
         </div>
         <div class="panel-body">
@@ -289,7 +289,7 @@
                     <option [value]="dir.value">{{ dir.labelKey | t }}</option>
                   }
                 </select>
-                <button class="btn btn-danger btn-sm" type="button" (click)="removeSort(i)">{{ 'report.build.remove' | t }}</button>
+                <button class="btn btn-danger btn-sm" type="button" (click)="removeSort(i)"><app-icon name="delete" size="14" />{{ 'report.build.remove' | t }}</button>
               </div>
             }
           </div>
@@ -303,7 +303,7 @@
 
     <div class="cluster">
       <button class="btn btn-primary" type="submit" [disabled]="saving">
-        @if (saving) { <span class="spinner" aria-hidden="true"></span> }
+        @if (saving) { <span class="spinner" aria-hidden="true"></span> } @else { <app-icon name="save" size="16" /> }
         {{ 'report.build.save' | t }}
       </button>
       <a routerLink="/reports" class="btn btn-ghost">{{ 'report.build.cancel' | t }}</a>

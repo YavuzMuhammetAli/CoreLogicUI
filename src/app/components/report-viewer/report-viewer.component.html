@@ -1,8 +1,8 @@
 <div class="page-header">
   <span class="eyebrow">{{ report()?.name ?? ('report.viewer.defaultTitle' | t) }}</span>
   <div class="cluster">
-    <a [routerLink]="['/reports', id, 'edit']" class="btn btn-secondary">{{ 'report.viewer.edit' | t }}</a>
-    <a routerLink="/reports" class="btn btn-ghost">{{ 'report.viewer.backToList' | t }}</a>
+    <a [routerLink]="['/reports', id, 'edit']" class="btn btn-secondary"><app-icon name="edit" size="16" />{{ 'report.viewer.edit' | t }}</a>
+    <a routerLink="/reports" class="btn btn-ghost"><app-icon name="arrow_back" size="16" />{{ 'report.viewer.backToList' | t }}</a>
   </div>
 </div>
 
@@ -41,11 +41,11 @@
       <h3>{{ 'report.viewer.export' | t }}</h3>
       <div class="panel-actions">
         <button class="btn btn-secondary btn-sm" type="button" (click)="exportExcel()" [disabled]="exporting() !== null">
-          @if (exporting() === 'excel') { <span class="spinner" aria-hidden="true"></span> }
+          @if (exporting() === 'excel') { <span class="spinner" aria-hidden="true"></span> } @else { <app-icon name="table_view" size="14" /> }
           {{ 'report.viewer.exportExcel' | t }}
         </button>
         <button class="btn btn-secondary btn-sm" type="button" (click)="exportPdf()" [disabled]="exporting() !== null">
-          @if (exporting() === 'pdf') { <span class="spinner" aria-hidden="true"></span> }
+          @if (exporting() === 'pdf') { <span class="spinner" aria-hidden="true"></span> } @else { <app-icon name="picture_as_pdf" size="14" /> }
           {{ 'report.viewer.exportPdf' | t }}
         </button>
       </div>
@@ -97,13 +97,13 @@
           </label>
 
           <button class="btn btn-secondary btn-sm" type="button"
-                  [disabled]="pageIndex() <= 1" (click)="goToPage(1)">«</button>
+                  [disabled]="pageIndex() <= 1" (click)="goToPage(1)" [attr.aria-label]="'report.viewer.firstPage' | t"><app-icon name="first_page" size="14" /></button>
           <button class="btn btn-secondary btn-sm" type="button"
-                  [disabled]="pageIndex() <= 1" (click)="goToPage(pageIndex() - 1)">‹</button>
+                  [disabled]="pageIndex() <= 1" (click)="goToPage(pageIndex() - 1)" [attr.aria-label]="'report.viewer.prevPage' | t"><app-icon name="chevron_left" size="14" /></button>
           <button class="btn btn-secondary btn-sm" type="button"
-                  [disabled]="pageIndex() >= totalPages()" (click)="goToPage(pageIndex() + 1)">›</button>
+                  [disabled]="pageIndex() >= totalPages()" (click)="goToPage(pageIndex() + 1)" [attr.aria-label]="'report.viewer.nextPage' | t"><app-icon name="chevron_right" size="14" /></button>
           <button class="btn btn-secondary btn-sm" type="button"
-                  [disabled]="pageIndex() >= totalPages()" (click)="goToPage(totalPages())">»</button>
+                  [disabled]="pageIndex() >= totalPages()" (click)="goToPage(totalPages())" [attr.aria-label]="'report.viewer.lastPage' | t"><app-icon name="last_page" size="14" /></button>
         </div>
       }
     } @else {
@@ -127,6 +127,7 @@
               type="button"
               (click)="setViewMode('chart')"
             >
+              <app-icon name="bar_chart" size="14" />
               {{ 'report.viewer.chart' | t }}
             </button>
             <button
@@ -136,6 +137,7 @@
               type="button"
               (click)="setViewMode('table')"
             >
+              <app-icon name="table" size="14" />
               {{ 'report.viewer.table' | t }}
             </button>
           </div>

@@ -13,6 +13,7 @@ import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
 import { markDirty } from '../../utils/change-detection';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /**
  * FormBuildComponent — yayınlanmış model listesi + silme.
@@ -22,7 +23,7 @@ import { markDirty } from '../../utils/change-detection';
 @Component({
   selector: 'app-form-build',
   standalone: true,
-  imports: [CommonModule, RouterLink, ConfirmDialogComponent, TranslatePipe],
+  imports: [CommonModule, RouterLink, ConfirmDialogComponent, TranslatePipe, IconComponent],
   templateUrl: './form-build.component.html',
   styleUrls: ['./form-build.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

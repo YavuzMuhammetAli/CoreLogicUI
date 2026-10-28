@@ -18,6 +18,7 @@ import { markDirty } from '../../utils/change-detection';
 import { pageWindow } from '../../utils/pagination';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { HelpHintComponent } from '../shared/help-hint/help-hint.component';
+import { IconComponent } from '../shared/icon/icon.component';
 
 /** Açılış sayfası dropdown'unda gösterilen sabit hedefler key'i — etiketler LanguageService.t() ile çözülür */
 const FIXED_LANDING_PAGE_KEYS: { value: string; labelKey: string }[] = [
@@ -46,7 +47,7 @@ export interface RolePermissionRow {
 @Component({
   selector: 'app-role-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ConfirmDialogComponent, HelpHintComponent],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ConfirmDialogComponent, HelpHintComponent, IconComponent],
   templateUrl: './role-detail.component.html',
   styleUrls: ['./role-detail.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

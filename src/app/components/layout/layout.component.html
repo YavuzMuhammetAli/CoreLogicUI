@@ -14,9 +14,7 @@
         type="button"
         (click)="closeSidebar()"
         [attr.aria-label]="'layout.closeMenuAria' | t">
-        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
+        <app-icon name="close" />
       </button>
     </div>
 
@@ -28,12 +26,10 @@
         <a
           class="nav-item"
           routerLink="/models"
-          routerLinkActive="active"
+          routerLinkActive="active" #rlaModels="routerLinkActive"
           [routerLinkActiveOptions]="{ exact: true }"
           [attr.aria-label]="'layout.modelsAria' | t">
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
-          </svg>
+          <app-icon name="database" [filled]="rlaModels.isActive" />
           {{ 'layout.models' | t }}
         </a>
 
@@ -41,98 +37,74 @@
         <a
           class="nav-item"
           routerLink="/build"
-          routerLinkActive="active"
+          routerLinkActive="active" #rlaBuild="routerLinkActive"
           [attr.aria-label]="'layout.createTableAria' | t">
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
+          <app-icon name="add_box" [filled]="rlaBuild.isActive" />
           {{ 'layout.createTable' | t }}
         </a>
         <a
           class="nav-item"
           routerLink="/drafts"
-          routerLinkActive="active"
+          routerLinkActive="active" #rlaDrafts="routerLinkActive"
           [attr.aria-label]="'layout.unpublishedAria' | t">
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
-          </svg>
+          <app-icon name="draft" [filled]="rlaDrafts.isActive" />
           {{ 'layout.unpublished' | t }}
         </a>
         <a
           class="nav-item"
           routerLink="/users"
-          routerLinkActive="active"
+          routerLinkActive="active" #rlaUsers="routerLinkActive"
           [routerLinkActiveOptions]="{ exact: false }"
           [attr.aria-label]="'layout.usersAria' | t">
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-            <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
-          </svg>
+          <app-icon name="person_add" [filled]="rlaUsers.isActive" />
           {{ 'layout.users' | t }}
         </a>
         <a
           class="nav-item"
           routerLink="/permissions"
-          routerLinkActive="active"
+          routerLinkActive="active" #rlaPerms="routerLinkActive"
           [attr.aria-label]="'layout.userPermissionsAria' | t">
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
+          <app-icon name="admin_panel_settings" [filled]="rlaPerms.isActive" />
           {{ 'layout.userPermissions' | t }}
         </a>
         <a
           class="nav-item"
           routerLink="/roles"
-          routerLinkActive="active"
+          routerLinkActive="active" #rlaRoles="routerLinkActive"
           [attr.aria-label]="'layout.rolesAria' | t">
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.82 0l4.6-4.6a2 2 0 0 0 0-2.82Z"/>
-            <circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/>
-          </svg>
+          <app-icon name="badge" [filled]="rlaRoles.isActive" />
           {{ 'layout.roles' | t }}
         </a>
         <a
           class="nav-item"
           routerLink="/audit-logs"
-          routerLinkActive="active"
+          routerLinkActive="active" #rlaAudit="routerLinkActive"
           [attr.aria-label]="'layout.auditLogsAria' | t">
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13l2 2 4-4"/>
-          </svg>
+          <app-icon name="fact_check" [filled]="rlaAudit.isActive" />
           {{ 'layout.auditLogs' | t }}
         </a>
         <a
           class="nav-item"
           routerLink="/parameters"
-          routerLinkActive="active"
+          routerLinkActive="active" #rlaParams="routerLinkActive"
           [attr.aria-label]="'layout.parametersAria' | t">
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
-          </svg>
+          <app-icon name="settings" [filled]="rlaParams.isActive" />
           {{ 'layout.parameters' | t }}
         </a>
         <a
           class="nav-item"
           routerLink="/ai"
-          routerLinkActive="active"
+          routerLinkActive="active" #rlaAi="routerLinkActive"
           [attr.aria-label]="'layout.aiAria' | t">
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/>
-            <path d="M18 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/>
-          </svg>
+          <app-icon name="star_shine" [filled]="rlaAi.isActive" />
           {{ 'layout.ai' | t }}
         </a>
         <a
           class="nav-item"
           routerLink="/workflows"
-          routerLinkActive="active"
+          routerLinkActive="active" #rlaWorkflows="routerLinkActive"
           [attr.aria-label]="'layout.workflowsAria' | t">
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="16" width="7" height="5" rx="1"/>
-            <path d="M6.5 8v6a2 2 0 0 0 2 2h9"/>
-          </svg>
+          <app-icon name="account_tree" [filled]="rlaWorkflows.isActive" />
           {{ 'layout.workflows' | t }}
         </a>
       }
@@ -145,11 +117,9 @@
       <a
         class="nav-item"
         routerLink="/tasks"
-        routerLinkActive="active"
+        routerLinkActive="active" #rlaTasks="routerLinkActive"
         [attr.aria-label]="'layout.tasksAria' | t">
-        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-        </svg>
+        <app-icon name="task_alt" [filled]="rlaTasks.isActive" />
         {{ 'layout.tasks' | t }}
         @if (pendingTaskCount() > 0) {
           <span class="nav-badge" [attr.aria-label]="'layout.tasksBadgeAria' | t:{ count: pendingTaskCount() }">
@@ -165,11 +135,9 @@
           <a
             class="nav-item"
             [routerLink]="['/models', t.typeName]"
-            routerLinkActive="active"
+            routerLinkActive="active" #rlaTable="routerLinkActive"
             [attr.aria-label]="'layout.tableAria' | t:{ name: t.label || t.typeName }">
-            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
-            </svg>
+            <app-icon name="table" [filled]="rlaTable.isActive" />
             {{ t.label || t.typeName }}
           </a>
         } @empty {
@@ -182,22 +150,18 @@
       <a
         class="nav-item"
         routerLink="/reports"
-        routerLinkActive="active"
+        routerLinkActive="active" #rlaReports="routerLinkActive"
         [attr.aria-label]="'layout.reportsAria' | t">
-        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/>
-        </svg>
+        <app-icon name="bar_chart" [filled]="rlaReports.isActive" />
         {{ 'layout.reports' | t }}
       </a>
       <a
         class="nav-item"
         routerLink="/dashboard"
-        routerLinkActive="active"
+        routerLinkActive="active" #rlaDash="routerLinkActive"
         [routerLinkActiveOptions]="{ exact: true }"
         [attr.aria-label]="'layout.dashboardAria' | t">
-        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
-        </svg>
+        <app-icon name="dashboard" [filled]="rlaDash.isActive" />
         {{ 'layout.dashboard' | t }}
       </a>
 
@@ -206,11 +170,9 @@
         <a
           class="nav-item"
           [routerLink]="['/dashboard', d.id]"
-          routerLinkActive="active"
+          routerLinkActive="active" #rlaDashItem="routerLinkActive"
           [attr.aria-label]="'layout.dashboardNavAria' | t:{ name: d.name }">
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
-          </svg>
+          <app-icon name="dashboard" [filled]="rlaDashItem.isActive" />
           {{ d.name }}
         </a>
       }
@@ -219,9 +181,7 @@
 
     <div class="sidebar-footer">
       <button class="nav-item logout-btn" (click)="logout()" type="button" [attr.aria-label]="'layout.logoutAria' | t">
-        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
-        </svg>
+        <app-icon name="logout" />
         {{ 'layout.logout' | t }}
       </button>
     </div>
@@ -242,9 +202,7 @@
         type="button"
         [attr.aria-expanded]="sidebarOpen()"
         [attr.aria-label]="'layout.toggleMenuAria' | t">
-        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 12h18M3 6h18M3 18h18"/>
-        </svg>
+        <app-icon name="menu" />
       </button>
 
       <div class="topbar-right">
@@ -253,6 +211,7 @@
           type="button"
           (click)="toggleLanguage()"
           [attr.aria-label]="languageService.lang() === 'tr' ? ('layout.switchToEnglish' | t) : ('layout.switchToTurkish' | t)">
+          <app-icon name="translate" size="16" />
           {{ languageService.lang() === 'tr' ? 'EN' : 'TR' }}
         </button>
 
@@ -265,16 +224,11 @@
           (click)="toggleTheme()"
           [attr.aria-label]="themeService.theme() === 'dark' ? ('layout.switchToLight' | t) : ('layout.switchToDark' | t)">
           @if (themeService.theme() === 'dark') {
-            <!-- Güneş ikonu — koyu temadayken gösterilir, tıklayınca açık temaya geçer -->
-            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="4"/>
-              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
-            </svg>
+            <!-- Koyu temadayken güneş: tıklayınca açık temaya geçer -->
+            <app-icon name="light_mode" />
           } @else {
-            <!-- Ay ikonu — açık temadayken gösterilir, tıklayınca koyu temaya geçer -->
-            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-            </svg>
+            <!-- Açık temadayken ay: tıklayınca koyu temaya geçer -->
+            <app-icon name="dark_mode" />
           }
         </button>
 
@@ -304,17 +258,7 @@
               </div>
 
               <!-- Chevron ikonu -->
-              <svg
-                class="menu-chevron"
-                [class.open]="menuOpen"
-                aria-hidden="true"
-                width="14" height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5">
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
+              <app-icon name="keyboard_arrow_down" size="16" class="menu-chevron" [class.open]="menuOpen" />
             </button>
 
             <!-- Dropdown panel -->
@@ -350,11 +294,7 @@
                   role="menuitem"
                   type="button"
                   (click)="goToProfile()">
-                  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"
-                       fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                  </svg>
+                  <app-icon name="person" size="16" />
                   {{ 'layout.editProfile' | t }}
                 </button>
 
@@ -366,10 +306,7 @@
                   role="menuitem"
                   type="button"
                   (click)="logout()">
-                  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"
-                       fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
-                  </svg>
+                  <app-icon name="logout" size="16" />
                   {{ 'layout.logout' | t }}
                 </button>
               </div>
@@ -393,9 +330,7 @@
           (click)="notificationService.clear()"
           [attr.aria-label]="'layout.closeAlertAria' | t"
           style="margin-left: auto; padding: 0 var(--space-2);">
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
+          <app-icon name="close" size="16" />
         </button>
       </div>
     }

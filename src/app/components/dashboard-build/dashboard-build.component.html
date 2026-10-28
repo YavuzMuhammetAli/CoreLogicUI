@@ -21,7 +21,7 @@
       <div class="empty-state">
         <h3>{{ 'dashboard.build.emptyReportsTitle' | t }}</h3>
         <p>{{ 'dashboard.build.emptyReportsText' | t }}</p>
-        <a routerLink="/reports/new" class="btn btn-primary">{{ 'dashboard.build.createReport' | t }}</a>
+        <a routerLink="/reports/new" class="btn btn-primary"><app-icon name="add" size="16" />{{ 'dashboard.build.createReport' | t }}</a>
       </div>
     </div>
   } @else {
@@ -97,7 +97,7 @@
                       class="btn btn-ghost btn-sm"
                       (click)="removeWidget(widget.reportDefinitionId)"
                       [attr.aria-label]="'dashboard.build.removeWidgetAria' | t:{ name: widget.reportName }">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                      <app-icon name="close" size="14" />
                     </button>
                   </li>
                 }
@@ -123,7 +123,7 @@
                       (click)="removeWidget(widget.reportDefinitionId)"
                       [attr.aria-label]="'dashboard.build.removeWidgetAria' | t:{ name: widget.reportName }"
                     >
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                      <app-icon name="close" size="14" />
                     </button>
                   </div>
                   <div
@@ -141,7 +141,7 @@
                         [attr.title]="ct.labelKey | t"
                         (click)="setWidgetChartType(widget.reportDefinitionId, ct.value)"
                       >
-                        <span [innerHTML]="ct.svg"></span>
+                        <app-icon [name]="ct.icon" size="16" />
                       </button>
                     }
                   </div>
@@ -164,7 +164,7 @@
 
       <div class="cluster">
         <button class="btn btn-primary" type="submit" [disabled]="saving">
-          @if (saving) { <span class="spinner" aria-hidden="true"></span> }
+          @if (saving) { <span class="spinner" aria-hidden="true"></span> } @else { <app-icon name="save" size="16" /> }
           {{ 'common.save' | t }}
         </button>
         <a routerLink="/reports" class="btn btn-ghost">{{ 'common.cancel' | t }}</a>

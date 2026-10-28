@@ -15,6 +15,7 @@ import { asFileRef, fileRefUrl } from '../../../utils/record-file';
 import { isColumnRequired } from '../../../utils/record-field/column-required';
 import { fieldErrorText } from '../../../utils/record-field/field-error';
 import { FieldWidget } from '../../../utils/screen-layout/screen-layout.model';
+import { IconComponent } from '../icon/icon.component';
 
 /**
  * RecordFieldComponent — dinamik kayıt formunun TEK bir alanı: etiket (zorunlu işareti,
@@ -35,7 +36,7 @@ import { FieldWidget } from '../../../utils/screen-layout/screen-layout.model';
 @Component({
   selector: 'app-record-field',
   standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe, HelpHintComponent, LookupPickerComponent],
+  imports: [ReactiveFormsModule, TranslatePipe, HelpHintComponent, LookupPickerComponent, IconComponent],
   templateUrl: './record-field.component.html',
   styleUrls: ['./record-field.component.scss'],
   host: {
