@@ -101,14 +101,31 @@
               <p>{{ streamingThinking() }}</p>
             </details>
           }
+          @if (streamSteps().length > 0) {
+            <ul class="ai-steps" [attr.aria-label]="'ai.stepsAria' | t">
+              @for (step of streamSteps(); track step.id) {
+                <li>
+                  <app-icon [name]="step.icon" size="14" />
+                  <span>{{ step.text }}</span>
+                </li>
+              }
+            </ul>
+          }
           @if (streamingText()) {
             <p class="ai-message-text">{{ streamingText() }}</p>
-          } @else {
-            <p class="ai-message-text ai-waiting">
-              <span class="spinner" aria-hidden="true"></span>
-              <span class="sr-only">{{ 'ai.working' | t }}</span>
-            </p>
           }
+          <!-- Faz + geçen süre: model metin yazmadan önce tool çağırabilir; bekleyiş görünür olsun.
+               Süre her saniye değiştiği için ekran okuyucuya duyurulmaz (aria-hidden). -->
+          <p class="ai-progress">
+            <span class="spinner" aria-hidden="true"></span>
+            @if (streamStatus()) {
+              <app-icon name="autorenew" size="14" />
+              <span>{{ streamStatus() }}</span>
+            } @else {
+              <span>{{ ('ai.phase.' + streamPhase()) | t }}</span>
+            }
+            <span class="ai-progress-time" aria-hidden="true">· {{ 'ai.elapsed' | t: { n: elapsedSeconds() } }}</span>
+          </p>
         </article>
       }
     </div>

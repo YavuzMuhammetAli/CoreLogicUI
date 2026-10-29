@@ -130,10 +130,48 @@
   overflow-wrap: anywhere;
 }
 
-.ai-waiting {
+// ── Canlı ilerleme (akış sırasında) ────────────────────────────────────────
+
+// Tamamlanan tool adımları: "Model önerildi: Musteri". Satırlar telefonda sarılır.
+.ai-steps {
   display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    overflow-wrap: anywhere;
+  }
+
+  app-icon {
+    flex: none;
+    margin-top: 2px;
+    color: var(--success);
+  }
+}
+
+// Faz etiketi + yeniden deneme durumu + geçen süre.
+.ai-progress {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.ai-progress-time {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
 }
 
 .ai-thinking {

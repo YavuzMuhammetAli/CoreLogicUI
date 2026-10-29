@@ -189,8 +189,14 @@ export class AiService {
         return { type: 'text', text: String(payload['text'] ?? '') };
       case 'thinking':
         return { type: 'thinking', text: String(payload['text'] ?? '') };
-      case 'tool':
-        return { type: 'tool', name: String(payload['name'] ?? '') };
+      case 'tool': {
+        const subject = payload['subject'];
+        return typeof subject === 'string' && subject
+          ? { type: 'tool', name: String(payload['name'] ?? ''), subject }
+          : { type: 'tool', name: String(payload['name'] ?? '') };
+      }
+      case 'status':
+        return { type: 'status', message: String(payload['message'] ?? '') };
       case 'usage':
         return {
           type: 'usage',

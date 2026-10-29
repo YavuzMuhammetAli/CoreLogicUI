@@ -956,6 +956,25 @@ Geçmiş (`AiMessage`) düz metin tuttuğu için Claude ile başlamış sohbet G
   önek eşleşmesiyle çalışır, statik prompt sistem talimatının başındadır.
 - Bitiş `GeminiMapping.ClassifyEnd`: güvenlik gerekçeli `finishReason`/`blockReason` → refusal;
   `MALFORMED_FUNCTION_CALL` vb. → hata; Gemini tool çağrısında da `STOP` döner, ayrım part'lardan yapılır.
+- **Yoğunluk / geçici hata** (`GeminiMapping.RetryPlan`, `IsTransient`): 503/429/500/504 ve ağ hatası
+  geçicidir. Çağrı ana modelle 3 kez (hemen, 2 sn, 5 sn), olmazsa `ai.gemini.fallbackModel` (master
+  **034**, varsayılan `gemini-3.6-flash`, boş = kapalı) ile 2 kez denenir. **Yalnız part gelmeden düşen
+  deneme** tekrarlanır (yoksa metin/tool iki kez işlenirdi). Yedeğe geçilince turun kalanı yedekle sürer;
+  geçmişteki imzalar `skip_thought_signature_validator` kukla imzasıyla değiştirilir (imzalar modele
+  özgü). SDK'nın kendi yeniden denemesi kapalı (`HttpRetryOptions.Attempts = 1`; 1.28'de varsayılan
+  da tek deneme). Her denemeden önce akışa `Status` parçası → SSE `event: status`; tükenirse
+  `AiStreamChunk.ProviderBusy` → `Messages.AiProviderBusy` (ham İngilizce metin değil). Yedeğin
+  tüketimi de `ai_gemini_*` metriklerine 3.8 Flash fiyatıyla yazılır (ayrı fiyat yok — bilinçli).
+
+### Akışın görünürlüğü
+
+Gemini çoğu zaman metin yazmadan önce tool çağırır; o sürede ekranda yalnız çember kalıyordu.
+SSE `tool` olayı artık `{ name, subject }` taşır (`AiToolSubject.From` — girdideki `entityName/name/typeName`),
+`status` olayı yeniden deneme metnini. `ai-chat` akış balonunda: tamamlanan adımlar ("Model önerildi:
+Musteri"), faz etiketi (`ai.phase.*`) + geçen süre, yoğunluk satırı; öneri kartları `tool` olayında
+canlı tazelenir (`reloadProposals`, mesajlara dokunmaz). Hata da asistan metnine eklenip kalıcılaşır
+(kota kesintisi gibi) — yarıda kalan tur geçmişte boş görünmez. Sistem promptu modelden tool'dan önce
+ne yapacağını bir-iki cümleyle yazmasını, soruyu yanıtın sonunda açıkça sormasını ister.
 
 ### Claude kuralları (`claude-sonnet-5`, tarih soneki yok)
 
@@ -986,11 +1005,12 @@ master PlatformConfig (doluysa)          ← Platform Console → Yapılandırma
 | `ai.provider` | `Ai:Provider` | `gemini` (varsayılan) / `anthropic` |
 | `ai.gemini.apiKey` | `Ai:Gemini:ApiKey` | `IsSecret` — şifreli saklanır, okumada `••••••` |
 | `ai.gemini.model` | `Ai:Gemini:Model` | Varsayılan `gemini-3.8-flash` |
+| `ai.gemini.fallbackModel` | `Ai:Gemini:FallbackModel` | Yoğunlukta yedek; seed `gemini-3.6-flash`, boş = kapalı |
 | `ai.apiKey` | `Ai:ApiKey` | Anthropic anahtarı, `IsSecret` |
 | `ai.model` | `Ai:Model` | Anthropic modeli, varsayılan `claude-sonnet-5` |
 | `ai.effort` | `Ai:Effort` | İki sağlayıcıda ortak: `low` / `medium` / `high` |
 
-Seed: `ai.apiKey/model/effort` master `024`, `ai.provider` + `ai.gemini.*` master `033`. Okuma
+Seed: `ai.apiKey/model/effort` master `024`, `ai.provider` + `ai.gemini.*` master `033`, `ai.gemini.fallbackModel` master `034`. Okuma
 `AiSettings`'te tek yerde. Geliştirmede en hızlısı (CreateDLL dizininde):
 ```bash
 dotnet user-secrets set "Ai:Gemini:ApiKey" "..."

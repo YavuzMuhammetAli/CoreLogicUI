@@ -20,6 +20,26 @@ import { formatNumber } from '../../utils/locale-format';
 import { parseProposalPayload } from '../../utils/ai-import.mapper';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { IconComponent } from '../shared/icon/icon.component';
+import type { IconName } from '../shared/icon/icons.generated';
+
+/** Akış sırasında tamamlanan tek adım (tool çağrısı) — "Model önerildi: Musteri". */
+interface StreamStep {
+  id: number;
+  icon: IconName;
+  text: string;
+}
+
+/** Bilinen tool'ların adım ikonu; bilinmeyen tool genel satırla gösterilir. */
+const STEP_ICONS: Record<string, IconName> = {
+  propose_model: 'table',
+  propose_report: 'bar_chart',
+  propose_dashboard: 'dashboard',
+  list_published_models: 'search',
+  propose_model_change: 'edit_note'
+};
+
+/** Akışın en son ne yaptığı — faz etiketini seçer. */
+type StreamPhase = 'waiting' | 'thinking' | 'proposing' | 'writing';
 
 /** Sağ paneldeki öneri kartının görünüm modeli. */
 interface ProposalCard {
@@ -66,6 +86,17 @@ export class AiChatComponent implements OnInit, OnDestroy {
   readonly streamingText = signal('');
   readonly streamingThinking = signal('');
   readonly isStreaming = signal(false);
+
+  /**
+   * Canlı ilerleme: model metin yazmadan önce tool çağırabilir (Gemini çoğu zaman öyle yapar),
+   * o sürede yalnız çember görünüyordu. Adımlar, faz etiketi ve geçen süre bekleyişi görünür kılar;
+   * sağlayıcı yoğunken sunucunun "yeniden deneniyor" metni `streamStatus`'ta durur.
+   */
+  readonly streamSteps = signal<StreamStep[]>([]);
+  readonly streamStatus = signal('');
+  readonly streamPhase = signal<StreamPhase>('waiting');
+  readonly elapsedSeconds = signal(0);
+  private elapsedTimer?: ReturnType<typeof setInterval>;
 
   readonly loadError = signal('');
   readonly actionError = signal('');
@@ -150,6 +181,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
     // Abonelik sonlandırılınca fetch iptal edilir; sunucu tarafı akış da kapanır.
     this.streamSub?.unsubscribe();
     this.actionSub?.unsubscribe();
+    this.stopElapsed();
   }
 
   // ── Sohbet yönetimi ──────────────────────────────────────────────────────
@@ -205,6 +237,24 @@ export class AiChatComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Akış sürerken yalnız öneri kartlarını tazeler — mesajlara dokunmaz (sunucuda asistan
+   * mesajı tur bitene dek boştur; iyimser kullanıcı balonu da yerinde kalmalı).
+   */
+  private reloadProposals(): void {
+    const id = this.activeId();
+    if (id == null) return;
+
+    this.aiService.getConversation(id).subscribe({
+      next: res => {
+        // Bu arada başka bir sohbete geçildiyse eski sohbetin kartları yazılmaz.
+        if (res.success && res.data && this.activeId() === id) this.proposals.set(res.data.proposals ?? []);
+      },
+      // Sessiz: tur sonundaki tam yeniden yükleme kartları zaten getirir.
+      error: () => undefined
+    });
+  }
+
   requestDelete(id: number): void {
     this.deleteConfirmId.set(id);
   }
@@ -240,7 +290,11 @@ export class AiChatComponent implements OnInit, OnDestroy {
     this.actionError.set('');
     this.streamingText.set('');
     this.streamingThinking.set('');
+    this.streamSteps.set([]);
+    this.streamStatus.set('');
+    this.streamPhase.set('waiting');
     this.isStreaming.set(true);
+    this.startElapsed();
 
     // İyimser gösterim: kullanıcı turu sunucudan dönmeden ekranda belirir.
     // Geçici kimlik negatif — sunucudan gelen gerçek kimliklerle çakışmaz.
@@ -273,9 +327,23 @@ export class AiChatComponent implements OnInit, OnDestroy {
         break;
       case 'text':
         this.streamingText.update(current => current + event.text);
+        this.streamStatus.set('');
+        this.streamPhase.set('writing');
         break;
       case 'thinking':
         this.streamingThinking.update(current => current + event.text);
+        this.streamStatus.set('');
+        this.streamPhase.set('thinking');
+        break;
+      case 'tool':
+        this.addStep(event.name, event.subject);
+        this.streamStatus.set('');
+        this.streamPhase.set('proposing');
+        // Kart oluşur oluşmaz sağ panelde görünsün (önceden tur bitince geliyordu).
+        if (event.name !== 'list_published_models') this.reloadProposals();
+        break;
+      case 'status':
+        this.streamStatus.set(event.message);
         break;
       case 'refusal':
         this.actionError.set(this.languageService.t('ai.refused'));
@@ -286,18 +354,45 @@ export class AiChatComponent implements OnInit, OnDestroy {
       case 'quota':
         this.actionError.set(event.message || this.languageService.t('ai.quotaExhaustedMidStream'));
         break;
-      // 'tool' ve 'usage' akış sonundaki yeniden yüklemeyle zaten yansır.
+      // 'usage' akış sonundaki yeniden yüklemeyle zaten yansır.
     }
+  }
+
+  private addStep(name: string, subject?: string): void {
+    const key = name in STEP_ICONS ? `ai.step.${name}` : 'ai.step.other';
+    const label = this.languageService.t(key);
+    this.streamSteps.update(steps => [
+      ...steps,
+      {
+        id: steps.length,
+        icon: STEP_ICONS[name] ?? 'check_circle',
+        text: subject ? `${label}: ${subject}` : label
+      }
+    ]);
+  }
+
+  private startElapsed(): void {
+    this.stopElapsed();
+    this.elapsedSeconds.set(0);
+    this.elapsedTimer = setInterval(() => this.elapsedSeconds.update(s => s + 1), 1000);
+  }
+
+  private stopElapsed(): void {
+    if (this.elapsedTimer !== undefined) clearInterval(this.elapsedTimer);
+    this.elapsedTimer = undefined;
   }
 
   private finishStream(error?: string): void {
     this.isStreaming.set(false);
+    this.stopElapsed();
     if (error) this.actionError.set(error);
 
-    // Kalıcı hâli sunucudan çekilir: asistan mesajı, öneriler ve kota tek
-    // kaynaktan gelir; akış tamponu böylece atılabilir.
+    // Kalıcı hâli sunucudan çekilir: asistan mesajı (yarıda kalan turun hata notu dahil),
+    // öneriler ve kota tek kaynaktan gelir; akış tamponu böylece atılabilir.
     this.streamingText.set('');
     this.streamingThinking.set('');
+    this.streamSteps.set([]);
+    this.streamStatus.set('');
     this.reloadConversation();
     this.loadUsage();
     this.loadConversations();

@@ -72,6 +72,20 @@ describe('AiService.streamChat', () => {
     ]);
   });
 
+  it('tool olayı konuyu, status olayı yeniden deneme metnini taşır', async () => {
+    fetchSpy.and.resolveTo(sse(
+      'event: tool\ndata: {"name":"propose_model","subject":"Musteri"}\n\n',
+      'event: tool\ndata: {"name":"list_published_models","subject":null}\n\n',
+      'event: status\ndata: {"message":"Yapay zeka şu an yoğun, yeniden deneniyor (2/3)…"}\n\n'
+    ));
+
+    expect(await collect()).toEqual([
+      { type: 'tool', name: 'propose_model', subject: 'Musteri' },
+      { type: 'tool', name: 'list_published_models' },
+      { type: 'status', message: 'Yapay zeka şu an yoğun, yeniden deneniyor (2/3)…' }
+    ]);
+  });
+
   it('tanınmayan olay ve bozuk JSON sessizce atlanır', async () => {
     fetchSpy.and.resolveTo(sse(
       'event: gelecekte-eklenecek\ndata: {}\n\n',

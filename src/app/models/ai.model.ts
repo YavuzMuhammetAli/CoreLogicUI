@@ -188,8 +188,13 @@ export type AiStreamEvent =
   | { type: 'meta'; conversationId: number }
   | { type: 'text'; text: string }
   | { type: 'thinking'; text: string }
-  /** Bir öneri kaydedildi; sağ paneli tazelemek için işaret. */
-  | { type: 'tool'; name: string }
+  /**
+   * Bir tool çalıştı (öneri kaydedildi ya da kolonlar okundu); sağ paneli tazelemek ve akışta
+   * adım satırı göstermek için. `subject` modelin/raporun adıdır (girdiden; yoksa boş).
+   */
+  | { type: 'tool'; name: string; subject?: string }
+  /** Sağlayıcı yoğun: yeniden deneniyor / yedek modele geçiliyor (metin sunucuda, istek dilinde). */
+  | { type: 'status'; message: string }
   | { type: 'usage'; inputTokens: number; outputTokens: number }
   /** Güvenlik denetimi isteği reddetti. */
   | { type: 'refusal' }
