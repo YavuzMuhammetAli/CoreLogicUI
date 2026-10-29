@@ -912,23 +912,52 @@ Kirliyken başka tasarıma geçiş onay ister. Kayıt/liste ekranındaki "Ekran�
 
 ## Yapay Zeka Modülü (G4)
 
-`/ai` (adminGuard) — kullanıcı işini düz metinle anlatır, Claude karşılığında **model
-şeması, rapor ve dashboard önerileri** üretir. Kullanıcı beğendiklerini **"İçeri Aktar"**
-ile taslak olarak yazdırır, **"Hepsini Yayınla"** ile derletir.
+`/ai` (adminGuard) — kullanıcı işini düz metinle anlatır, model (varsayılan **Gemini**,
+seçilebilir **Claude**) karşılığında **model şeması, rapor ve dashboard önerileri** üretir.
+Kullanıcı beğendiklerini **"İçeri Aktar"** ile taslak olarak yazdırır, **"Hepsini Yayınla"**
+ile derletir. UI sağlayıcıdan bağımsızdır — SSE olayları iki sağlayıcıda aynıdır.
 
 ### Güvenlik sözleşmesi — modelin yazma yetkisi YOKTUR
 
-Claude'un tool çağrıları hiçbir yan etki üretmez; yalnızca tenant DB'sinde bir
+Modelin tool çağrıları hiçbir yan etki üretmez; yalnızca tenant DB'sinde bir
 `AiProposal` satırı oluşur. Şema/rapor/dashboard'ın gerçekten yazılması, kullanıcının
 onayıyla ve **mevcut, izin denetimli uçlar** üzerinden `AiImportService` tarafından
 yapılır. Yani AI'a ayrıcalıklı bir kanal açılmaz: aktarım, admin'in elle de
 yapabileceği sıradan bir işlemdir. Prompt injection ya da halüsinasyon en kötü ihtimalle
 reddedilecek bir öneri kartı üretir.
 
-### Model ve API kuralları
+### Sağlayıcı seçimi
 
-`claude-sonnet-5` (tarih soneki yok). `AnthropicChatClient` çözümde Anthropic SDK'sına
-bağımlı **tek dosyadır** — `TenantSmtpEmailSender`'ın MailKit'i sarmalamasıyla aynı desen.
+`ai.provider` (`gemini` | `anthropic`, boş/tanınmayan → `gemini`) master PlatformConfig'te durur
+ve konsoldan **yeniden başlatmadan** değiştirilir. `IAiChatClient` olarak `AiChatClientRouter`
+kayıtlıdır; sağlayıcı `AiConversationManager.ChatAsync` başında **bir kez** çözülür
+(`IAiProviderSelector` → `AiSettings`), hem `AiChatRequest.Provider`'a hem `RecordUsage`'a
+gider — akış ortasında yapılan değişiklik bir isteği iki sağlayıcıya bölmez. Her sağlayıcının
+SDK'ya bağlı **tek dosyası** var (`AnthropicChatClient`, `GeminiChatClient`) —
+`TenantSmtpEmailSender`'ın MailKit'i sarmalamasıyla aynı desen. Tool kataloğu
+(`CoreLogicToolCatalog`) sağlayıcıdan bağımsız düz JSON Schema'dır; her istemci kendi tipine çevirir.
+Geçmiş (`AiMessage`) düz metin tuttuğu için Claude ile başlamış sohbet Gemini ile sürer.
+
+### Gemini kuralları (`gemini-3.8-flash`, resmi `Google.GenAI` SDK'sı)
+
+- Modelin yanıtı geçmişe **bütün part'larıyla aynen** yazılır: Gemini 3 düşünme imzasını
+  (`thoughtSignature`) part'lara iliştirir; imza eksik/değişmişse çok adımlı tool çağrısı 400 alır.
+  Part'lar birleştirilmez (imzalı part imzasızla birleşemez).
+- Tool sonuçları `functionResponse` olarak çağrının `id`'siyle, **tek user mesajında** döner;
+  sonuç nesne değilse `{ result: … }` ile sarılır.
+- Tool şeması `parametersJsonSchema` ile gider; tek uyumsuzluk sayısal `enum` (Gemini'de enum
+  yalnız metin) — `GeminiMapping.ToolSchema` onu `minimum/maximum` + açıklamaya çevirir.
+- `ai.effort` → `thinkingConfig.thinkingLevel` (`low/medium/high`; `max` → `high`; `minimal`
+  3.8 Flash'ta 400 verdiği için hiç üretilmez) + `includeThoughts: true` (özet düşünme).
+- **Kullanım:** `promptTokenCount` önbellekten okunanı İÇERİR → girdi = prompt − cached;
+  `thoughtsTokenCount` ayrı gelir ama çıktıdır → çıktı = candidates + thoughts. Çağrı başına bir kez
+  bütçeye yazılır (`GeminiMapping.Usage`). Örtük önbellekte yazma ücreti yok.
+- `temperature`/`topP` gönderilmez; açık önbellek (CachedContent) kullanılmaz — örtük önbellek
+  önek eşleşmesiyle çalışır, statik prompt sistem talimatının başındadır.
+- Bitiş `GeminiMapping.ClassifyEnd`: güvenlik gerekçeli `finishReason`/`blockReason` → refusal;
+  `MALFORMED_FUNCTION_CALL` vb. → hata; Gemini tool çağrısında da `STOP` döner, ayrım part'lardan yapılır.
+
+### Claude kuralları (`claude-sonnet-5`, tarih soneki yok)
 
 - `Temperature`/`TopP`/`TopK` **kullanılmaz** — Sonnet 5'te varsayılan dışı değer 400 döner.
 - `budget_tokens` **kaldırıldı**; derinlik `OutputConfig.Effort` ile (`ai.effort`, varsayılan `medium`).
@@ -954,14 +983,19 @@ master PlatformConfig (doluysa)          ← Platform Console → Yapılandırma
 
 | PlatformConfig anahtarı | Yapılandırma yolu | Not |
 |---|---|---|
-| `ai.apiKey` | `Ai:ApiKey` | `IsSecret` — şifreli saklanır, okumada `••••••` |
-| `ai.model` | `Ai:Model` | Varsayılan `claude-sonnet-5` |
-| `ai.effort` | `Ai:Effort` | `low` / `medium` / `high` |
+| `ai.provider` | `Ai:Provider` | `gemini` (varsayılan) / `anthropic` |
+| `ai.gemini.apiKey` | `Ai:Gemini:ApiKey` | `IsSecret` — şifreli saklanır, okumada `••••••` |
+| `ai.gemini.model` | `Ai:Gemini:Model` | Varsayılan `gemini-3.8-flash` |
+| `ai.apiKey` | `Ai:ApiKey` | Anthropic anahtarı, `IsSecret` |
+| `ai.model` | `Ai:Model` | Anthropic modeli, varsayılan `claude-sonnet-5` |
+| `ai.effort` | `Ai:Effort` | İki sağlayıcıda ortak: `low` / `medium` / `high` |
 
-Geliştirmede en hızlısı (CreateDLL dizininde):
+Seed: `ai.apiKey/model/effort` master `024`, `ai.provider` + `ai.gemini.*` master `033`. Okuma
+`AiSettings`'te tek yerde. Geliştirmede en hızlısı (CreateDLL dizininde):
 ```bash
-dotnet user-secrets set "Ai:ApiKey" "sk-ant-..."
+dotnet user-secrets set "Ai:Gemini:ApiKey" "..."
 ```
+Sunucuda `.env`'de `GEMINI_API_KEY` (→ `Ai__Gemini__ApiKey`) ya da konsoldan `ai.gemini.apiKey`.
 
 Öncelik sırası bilinçli: konsoldan girilen değer ortam değişkenini **ezer**. Tersi
 olsaydı operatör konsolda kaydeder, hiçbir şey değişmez ve sebebi görünmezdi.
@@ -998,10 +1032,15 @@ bellek içi) **aynı tenant'ın süren diğer istekleri** düşülür; paralel i
 harcayamaz. Aşım en fazla bir çağrının tahmin hatası kadardır. Akış ortasında istemci koparsa
 (sekme kapandı) çıktı akan karakterlerden tahmin edilip yine yazılır — önceden hiç yazılmıyordu.
 
-**Maliyet ayrık:** her tur `ai_input_tokens`, `ai_output_tokens`, `ai_cache_write_tokens`,
-`ai_cache_read_tokens` satırlarını (yalnız maliyet, plana yazılamaz — `UsageMetricKeys`) ve kota
-satırını yazar. Birim fiyatlar `MetricCatalog`'da (claude-sonnet-5 liste fiyatı), konsoldan
-`cost.unit.{metrik}` ile ezilir. `ai_tokens_per_month`'un maliyeti 0'dır; ayrım öncesi yazılmış
+**Maliyet ayrık ve sağlayıcıya göre:** Claude turu `ai_input_tokens`, `ai_output_tokens`,
+`ai_cache_write_tokens`, `ai_cache_read_tokens`; Gemini turu `ai_gemini_input_tokens`,
+`ai_gemini_output_tokens`, `ai_gemini_cache_read_tokens` satırlarını (yalnız maliyet, plana
+yazılamaz — `UsageMetricKeys`) ve **ortak** kota satırını yazar — tek fiyat setini değiştirmek
+geçmiş Claude tüketimini yeniden fiyatlardı. Birim fiyatlar `MetricCatalog`'da (claude-sonnet-5 ve
+gemini-3.8-flash liste fiyatı), konsoldan `cost.unit.{metrik}` ile ezilir. **Gemini fiyatları
+2027-01-01'de ikiye katlanıyor** ($0.75/$3.75/$0.075 → $1.50/$7.50/$0.15 MTok) — o tarihte
+`cost.unit.ai_gemini_*` güncellenmeli. Yeni bir ayrık AI metriği `EfUsageDal.LegacyAiTokenTotals`'a
+da eklenir (yoksa o sağlayıcıyla başlayan tenant'ın kota satırları "ayrım öncesi" sayılır). `ai_tokens_per_month`'un maliyeti 0'dır; ayrım öncesi yazılmış
 kota satırları `ai_tokens_legacy` sanal satırıyla eski harman fiyatla gösterilir. Maliyet ve
 kullanım özeti satırın **kayıt anına** (`RecordedAt`, master `029` indeksi) göre pencerelenir.
 
