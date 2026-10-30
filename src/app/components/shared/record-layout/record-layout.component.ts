@@ -1,6 +1,7 @@
 import {
   Component, DestroyRef, ElementRef, Injector, NgZone, afterNextRender, computed, effect, inject, input,
-  signal, untracked
+  signal, untracked,
+  ChangeDetectionStrategy
 } from '@angular/core';
 import { AbstractControl, FormGroup } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -43,6 +44,7 @@ const NONE: ReadonlySet<string> = new Set();
     selector: 'app-record-layout',
     imports: [RecordFieldComponent, TranslatePipe, RouterLink, IconComponent],
     templateUrl: './record-layout.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
     styleUrls: ['./record-layout.component.scss']
 })
 export class RecordLayoutComponent {
@@ -127,7 +129,7 @@ export class RecordLayoutComponent {
       const steps = this.stepColumns();
       if (!plan || steps.size === 0) return;
       untracked(() => this.revealColumns(plan, steps));
-    }, { allowSignalWrites: true });
+    });
 
     // Form yeniden kurulunca önceki Kaydet denemesinin izi silinir.
     effect(() => {
@@ -136,7 +138,7 @@ export class RecordLayoutComponent {
         this.submitted.set(false);
         if (this.revealed().size > 0) this.revealed.set(NONE);
       });
-    }, { allowSignalWrites: true });
+    });
   }
 
   // ─── Şablon yardımcıları ────────────────────────────────────────────────────

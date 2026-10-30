@@ -87,7 +87,7 @@ export class BackupRestoreDialogComponent {
       const active = this.activeRestore();
       if (!active) return;
       untracked(() => this.track(active));
-    }, { allowSignalWrites: true });
+    });
   }
 
   backupDate(): string {

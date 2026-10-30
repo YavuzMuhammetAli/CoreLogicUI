@@ -60,7 +60,7 @@ export class SubscriptionTabComponent implements OnInit {
         return;
       }
       untracked(() => this.loadPlans());
-    }, { allowSignalWrites: true });
+    });
   }
 
   ngOnInit(): void {

@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, effect, inject, input, signal, untracked, ChangeDetectionStrategy } from '@angular/core';
 import { AbstractControl, FormControl, ReactiveFormsModule } from '@angular/forms';
 import { PublishedColumn } from '../../../services/published-model.service';
 import { PublishedColumnSchema } from '../../../services/published-table.service';
@@ -38,6 +38,7 @@ import { IconComponent } from '../icon/icon.component';
     imports: [ReactiveFormsModule, TranslatePipe, HelpHintComponent, LookupPickerComponent, IconComponent],
     templateUrl: './record-field.component.html',
     styleUrls: ['./record-field.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     host: {
         class: 'field',
         '[class.field--step]': 'step()'
@@ -101,7 +102,7 @@ export class RecordFieldComponent {
         this.fileName.set(null);
         this.fileError.set(null);
       });
-    }, { allowSignalWrites: true });
+    });
   }
 
   /** Alan dokunulduysa gösterilecek hata metni. */

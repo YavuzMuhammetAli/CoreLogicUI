@@ -59,12 +59,12 @@ export class SidebarNavComponent {
     effect(() => {
       const key = this.storageKey();
       untracked(() => this.toggled.set(key ? readState(key) : {}));
-    }, { allowSignalWrites: true });
+    });
 
     effect(() => {
       this.nodes();
       untracked(() => this.syncActiveFolders());
-    }, { allowSignalWrites: true });
+    });
 
     const sub = this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => this.syncActiveFolders());
     inject(DestroyRef).onDestroy(() => sub.unsubscribe());

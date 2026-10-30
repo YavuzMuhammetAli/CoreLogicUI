@@ -115,7 +115,7 @@ export class WorkflowViewDialogComponent {
     effect(() => {
       const id = this.instanceId();
       untracked(() => (id ? this.load(id) : this.reset()));
-    }, { allowSignalWrites: true });
+    });
 
     // İpucu her değişimde önce görünmez çizilir, ölçülüp düğümün yanına konur.
     effect(() => {
@@ -124,7 +124,7 @@ export class WorkflowViewDialogComponent {
         this.tipPos.set(null);
         if (this.isBrowser) afterNextRender(() => this.placeTip(), { injector: this.injector });
       });
-    }, { allowSignalWrites: true });
+    });
   }
 
   private load(id: number): void {

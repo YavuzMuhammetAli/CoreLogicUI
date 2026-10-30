@@ -167,7 +167,7 @@ export class WorkflowInspectorComponent {
     effect(() => {
       this.node()?.key;
       untracked(() => this.keyError.set(null));
-    }, { allowSignalWrites: true });
+    });
   }
 
   // ── Alanlar ───────────────────────────────────────────────────────────────

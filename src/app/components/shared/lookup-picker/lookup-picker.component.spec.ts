@@ -1,4 +1,4 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { provideHttpClient } from '@angular/common/http';
@@ -14,6 +14,7 @@ import { LookupPickerComponent } from './lookup-picker.component';
  */
 @Component({
     imports: [LookupPickerComponent, ReactiveFormsModule],
+    changeDetection: ChangeDetectionStrategy.Eager,
     template: `
     <div class="clipping-panel" style="overflow: hidden; height: 60px; width: 300px;">
       <app-lookup-picker

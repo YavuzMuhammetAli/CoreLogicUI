@@ -69,7 +69,7 @@ export class ModelIconPickerComponent {
         }
         setTimeout(() => this.searchBox()?.nativeElement.focus());
       });
-    }, { allowSignalWrites: true });
+    });
   }
 
   select(name: string | null): void {

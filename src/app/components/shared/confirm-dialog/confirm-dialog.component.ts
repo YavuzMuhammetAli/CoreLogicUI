@@ -56,7 +56,7 @@ export class ConfirmDialogComponent {
       if (this.open()) {
         this.step.set(1);
       }
-    }, { allowSignalWrites: true });
+    });
   }
 
   @HostListener('document:keydown.escape')

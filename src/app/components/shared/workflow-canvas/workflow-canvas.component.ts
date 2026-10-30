@@ -468,7 +468,7 @@ export class WorkflowCanvasComponent {
       untracked(() => {
         if (this.gesture?.kind !== 'node') this.liveOffsets.set({});
       });
-    }, { allowSignalWrites: true });
+    });
 
     // İçerik ilk geldiğinde şema görünüre sığdırılır. Başlangıç hapı ve sağdan
     // dolaşan kenarlar dünya koordinatında negatif/uzak yerlere düşebiliyor;

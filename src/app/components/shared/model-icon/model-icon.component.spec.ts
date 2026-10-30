@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ModelIconComponent } from './model-icon.component';
 import { resolveModelIconPath } from './model-icon-catalog';
@@ -6,6 +6,7 @@ import { ICONS } from '../icon/icons.generated';
 
 @Component({
     imports: [ModelIconComponent],
+    changeDetection: ChangeDetectionStrategy.Eager,
     template: `<app-model-icon [icon]="icon()" size="16" />`
 })
 class HostComponent {

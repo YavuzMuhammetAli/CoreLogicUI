@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { IconComponent } from './icon.component';
 import { ICONS, ICONS_FILLED, IconName } from './icons.generated';
@@ -6,6 +6,7 @@ import manifest from './icons.manifest.json';
 
 @Component({
     imports: [IconComponent],
+    changeDetection: ChangeDetectionStrategy.Eager,
     template: `<app-icon [name]="name()" [size]="size()" [filled]="filled()" [label]="label()" />`
 })
 class HostComponent {

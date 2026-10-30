@@ -45,6 +45,6 @@ export class ModelIconComponent {
       resolveModelIconPath(name).then(d => {
         if (this.icon() === name) this.path.set(d);
       });
-    }, { allowSignalWrites: true });
+    });
   }
 }

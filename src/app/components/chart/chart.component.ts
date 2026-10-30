@@ -46,7 +46,7 @@ export class AppChartComponent {
     if (this.isBrowser) {
       this.tokens.set(readChartTokenColors());
     }
-  }, { allowSignalWrites: true });
+  });
 
   readonly build = computed<ChartBuildOutput | null>(() => {
     const tokens = this.tokens();

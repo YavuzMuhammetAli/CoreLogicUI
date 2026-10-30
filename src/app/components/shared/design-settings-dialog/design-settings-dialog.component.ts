@@ -104,7 +104,7 @@ export class DesignSettingsDialogComponent {
         this.touched.set(false);
       });
       queueMicrotask(() => this.nameInput()?.nativeElement.focus());
-    }, { allowSignalWrites: true });
+    });
   }
 
   @HostListener('document:keydown.escape')

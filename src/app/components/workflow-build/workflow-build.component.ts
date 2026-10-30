@@ -377,7 +377,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
         if (lastSemantic !== null && key !== lastSemantic) this.simOverlay.set(null);
         lastSemantic = key;
       });
-    }, { allowSignalWrites: true });
+    });
 
     // Canlı doğrulama: belge (konumlar hariç) değişip durulunca sunucuya sorulur;
     // yeni düzenleme gelirse önceki istek iptal edilir. Ağ hatasında son sonuç

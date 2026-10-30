@@ -1,11 +1,12 @@
 import {
   ApplicationConfig,
-  APP_INITIALIZER,
   PLATFORM_ID,
+  inject,
+  provideAppInitializer,
   provideZoneChangeDetection
 } from '@angular/core';
 import { provideRouter, withEnabledBlockingInitialNavigation } from '@angular/router';
-import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
 import { firstValueFrom, of, switchMap } from 'rxjs';
 
@@ -30,30 +31,28 @@ import { PermissionService } from './services/permission.service';
  * Oturum açık değilse istek 401 ile döner, hata sessizce yutulur ve
  * authGuard normal akışta /login'e yönlendirir.
  */
-function permissionInitializerFactory(
+function loadInitialPermissions(
   auth: AuthService,
   permissionService: PermissionService,
   platformId: Object
-): () => Promise<void> {
-  return () => {
-    // Tarayıcı dışında (artık olmasa da guard yapısını bozmamak için korundu)
-    if (!isPlatformBrowser(platformId)) return Promise.resolve();
+): Promise<void> {
+  // Tarayıcı dışında (artık olmasa da guard yapısını bozmamak için korundu)
+  if (!isPlatformBrowser(platformId)) return Promise.resolve();
 
-    // Oturum yoksa (anonim ziyaretçi — /login veya /register-company) izin isteği
-    // atma: aksi halde /Permission/my 401 döner ve error interceptor kullanıcıyı
-    // yanıltıcı "oturum süresi doldu" mesajıyla login'e yönlendirirdi
-    // (kayıt sihirbazına deep-link'i kırıyordu).
-    //
-    // ensureSession/ensureLoaded: uçuştaki isteği guard'larla PAYLAŞIR. Router'ın ilk gezinmesi de
-    // bir initializer'dır ve bununla paralel başlar; doğrudan loadMyPermissions çağrılınca guard'lar
-    // isteği göremiyor, korumalı her sayfa açılışında /Permission/my ikinci kez gidiyordu.
-    const permissions$ = auth.ensureSession().pipe(
-      switchMap(session => (session ? permissionService.ensureLoaded() : of(null)))
-    );
-    return firstValueFrom(permissions$)
-      .then(() => {}) // başarılı — sinyal set edildi
-      .catch(() => {}); // hata (401, ağ vb.) — sessizce geç, authGuard devralır
-  };
+  // Oturum yoksa (anonim ziyaretçi — /login veya /register-company) izin isteği
+  // atma: aksi halde /Permission/my 401 döner ve error interceptor kullanıcıyı
+  // yanıltıcı "oturum süresi doldu" mesajıyla login'e yönlendirirdi
+  // (kayıt sihirbazına deep-link'i kırıyordu).
+  //
+  // ensureSession/ensureLoaded: uçuştaki isteği guard'larla PAYLAŞIR. Router'ın ilk gezinmesi de
+  // bir initializer'dır ve bununla paralel başlar; doğrudan loadMyPermissions çağrılınca guard'lar
+  // isteği göremiyor, korumalı her sayfa açılışında /Permission/my ikinci kez gidiyordu.
+  const permissions$ = auth.ensureSession().pipe(
+    switchMap(session => (session ? permissionService.ensureLoaded() : of(null)))
+  );
+  return firstValueFrom(permissions$)
+    .then(() => {}) // başarılı — sinyal set edildi
+    .catch(() => {}); // hata (401, ağ vb.) — sessizce geç, authGuard devralır
 }
 
 export const appConfig: ApplicationConfig = {
@@ -62,14 +61,9 @@ export const appConfig: ApplicationConfig = {
     // withEnabledBlockingInitialNavigation: APP_INITIALIZER (izin yüklemesi) tamamlanana
     // dek navigasyon başlamaz; guard'lar sinyal dolu olduğunda çalışır → login flash yok.
     provideRouter(routes, withEnabledBlockingInitialNavigation()),
-    provideHttpClient(withFetch(), withInterceptors([languageInterceptor, errorInterceptor])),
+    provideHttpClient(withInterceptors([languageInterceptor, errorInterceptor])),
 
     // Guard yarış durumu düzeltmesi: izinleri router etkinleşmeden yükle
-    {
-      provide: APP_INITIALIZER,
-      useFactory: permissionInitializerFactory,
-      deps: [AuthService, PermissionService, PLATFORM_ID],
-      multi: true
-    }
+    provideAppInitializer(() => loadInitialPermissions(inject(AuthService), inject(PermissionService), inject(PLATFORM_ID)))
   ]
 };
