@@ -101,7 +101,7 @@ CoreLogicUI-master/
         │   ├── dashboard-list/             # Dashboard tanım listesi
         │   ├── dashboard-build/             # Dashboard builder (widget grid yerleşimi)
         │   ├── dashboard/                   # Dashboard çalıştırma/görüntüleme
-        │   ├── chart/                       # ApexCharts tabanlı grafik component'i (rapor/dashboard tarafından kullanılır)
+        │   ├── chart/                       # Rapor/dashboard grafikleri: chart-mapping seçenekleri kurar, shared/apex-chart çizer
         │   ├── workflow-list/               # Akış listesi — durdur/sürdür, dışa/içe aktar, plan kotası şeridi (admin)
         │   ├── workflow-build/              # Görsel tasarımcı (admin) — bkz. "İş Akışı Tasarımcısı"
         │   │   ├── designer/                #   Signal store (belge+geçmiş+seçim+kamera), saf komutlar, palet, sağ panel,
@@ -122,6 +122,7 @@ CoreLogicUI-master/
         │       ├── icon/                   # <app-icon> — TEK ikon kaynağı (Material Symbols); icons.manifest.json → `npm run icons` → icons.generated.ts
         │       ├── model-icon/             # <app-model-icon> + seçici diyaloğu — admin'in yayınlarken seçtiği model ikonu (kategori başına lazy katalog)
         │       ├── column-visibility/      # Admin-managed model kolon görünürlüğü (liste/detay/alt-model sekmeleri)
+        │       ├── apex-chart/             # ApexCharts'ın ince sarmalayıcısı. apexcharts 4.7.0'da sabit: 5.1+ ve ng-apexcharts 1.17.1+ ticari lisans ister, YÜKSELTME
         │       ├── confirm-dialog/         # Onay diyaloğu — native confirm() YERİNE her zaman bu kullanılır
         │       ├── role-picker/            # Rol seçici çipler (tasarımın atanacağı roller) + roleNames()
         │       ├── design-settings-dialog/ # Tasarım ayarları (ad + roller, ek seçenekler ng-content) — ekran varyantı ve navigasyon ortak

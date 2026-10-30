@@ -18,37 +18,13 @@
     <span class="kpi-value">{{ kpiValueFormatted() }}</span>
     @if (build()!.apexType === 'line') {
       <div class="kpi-sparkline" aria-hidden="true">
-        <apx-chart
-          [chart]="build()!.chart"
-          [series]="build()!.series"
-          [colors]="build()!.colors"
-          [stroke]="build()!.stroke"
-          [legend]="build()!.legend"
-          [dataLabels]="build()!.dataLabels">
-        </apx-chart>
+        <app-apex-chart [options]="apexOptions()!" />
       </div>
     }
   </div>
 } @else {
   <div class="chart-canvas" role="img" [attr.aria-label]="ariaSummary()">
-    <apx-chart
-      [chart]="build()!.chart"
-      [series]="build()!.series"
-      [labels]="build()!.labels"
-      [xaxis]="build()!.xaxis"
-      [yaxis]="build()!.yaxis"
-      [legend]="build()!.legend"
-      [colors]="build()!.colors"
-      [dataLabels]="build()!.dataLabels"
-      [tooltip]="build()!.tooltip"
-      [fill]="build()!.fill"
-      [stroke]="build()!.stroke"
-      [plotOptions]="build()!.plotOptions"
-      [grid]="build()!.grid"
-      [theme]="build()!.theme"
-      [responsive]="build()!.responsive"
-      [noData]="build()!.noData">
-    </apx-chart>
+    <app-apex-chart [options]="apexOptions()!" />
   </div>
   @if (build()!.note) {
     <p class="chart-note">{{ build()!.note }}</p>

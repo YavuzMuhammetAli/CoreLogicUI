@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, PLATFORM_ID, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { ChartComponent as ApexChartComponent } from 'ng-apexcharts';
+import { ApexChartComponent } from '../shared/apex-chart/apex-chart.component';
 import { ChartType, ReportColumnInfo } from '../../models/report.model';
 import { ThemeService } from '../../services/theme.service';
 import { LanguageService } from '../../services/language.service';
 import { ChartTokenColors, readChartTokenColors } from './chart-colors';
-import { ChartBuildOutput, buildChartOptions, buildKpiOutput } from './chart-mapping';
+import { ChartBuildOutput, buildChartOptions, buildKpiOutput, toApexOptions, toSparklineOptions } from './chart-mapping';
 import { chartTypeMeta } from './chart-types';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { formatNumber } from '../../utils/locale-format';
@@ -65,6 +65,13 @@ export class AppChartComponent {
     return this.chartType() === 'kpi'
       ? buildKpiOutput(result, tokens, mode, locale)
       : buildChartOptions(this.chartType(), result, tokens, mode, locale);
+  });
+
+  /** Tek referans: `build` değişmedikçe grafik yeniden çizilmesin. */
+  readonly apexOptions = computed(() => {
+    const build = this.build();
+    if (!build) return null;
+    return this.chartType() === 'kpi' ? toSparklineOptions(build) : toApexOptions(build);
   });
 
   readonly typeLabel = computed(() => {

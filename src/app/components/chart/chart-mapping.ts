@@ -1,27 +1,29 @@
-import {
-  ApexAxisChartSeries,
-  ApexChart,
-  ApexDataLabels,
-  ApexFill,
-  ApexGrid,
-  ApexLegend,
-  ApexNonAxisChartSeries,
-  ApexNoData,
-  ApexPlotOptions,
-  ApexResponsive,
-  ApexStroke,
-  ApexTheme,
-  ApexTooltip,
-  ApexXAxis,
-  ApexYAxis
-} from 'ng-apexcharts';
+import type ApexCharts from 'apexcharts';
 import { ChartType, ReportColumnInfo, ReportRunResult } from '../../models/report.model';
 import { ChartTokenColors, buildSeriesPalette } from './chart-colors';
 import { Lang } from '../../services/language.service';
 import { formatNumber, formatDate } from '../../utils/locale-format';
 
-/** ApexCharts'ın gerçekten çizdiği tip — `kpi`/`table` apx-chart kullanmaz (host render eder). */
+/** ApexCharts'ın gerçekten çizdiği tip — `table` çizilmez, `kpi` yalnız küçük eğri çizer. */
 export type ApexRenderType = 'bar' | 'line' | 'area' | 'pie' | 'donut' | 'radialBar';
+
+/** Seçeneklerin çizime giden kısmı. Tipler apexcharts'ın genel bildirimlerinden gelir. */
+export function toApexOptions(build: ChartBuildOutput): ApexCharts.ApexOptions {
+  const {
+    chart, series, labels, xaxis, yaxis, legend, colors, dataLabels, tooltip,
+    fill, stroke, plotOptions, grid, theme, responsive, noData
+  } = build;
+  return {
+    chart, series, labels, xaxis, yaxis, legend, colors, dataLabels, tooltip,
+    fill, stroke, plotOptions, grid, theme, responsive, noData
+  };
+}
+
+/** KPI kartındaki küçük eğri: eksen ve ipucu yok. */
+export function toSparklineOptions(build: ChartBuildOutput): ApexCharts.ApexOptions {
+  const { chart, series, colors, stroke, legend, dataLabels } = build;
+  return { chart, series, colors, stroke, legend, dataLabels };
+}
 
 export interface KpiResult {
   label: string;
