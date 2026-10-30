@@ -7,12 +7,11 @@ import { markDirty } from '../../utils/change-detection';
 import { IconComponent } from '../shared/icon/icon.component';
 
 @Component({
-  selector: 'app-database-proccess',
-  standalone: true,
-  imports: [CommonModule, TranslatePipe, IconComponent],
-  templateUrl: './database-proccess.component.html',
-  styleUrl: './database-proccess.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-database-proccess',
+    imports: [CommonModule, TranslatePipe, IconComponent],
+    templateUrl: './database-proccess.component.html',
+    styleUrl: './database-proccess.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DatabaseProccessComponent {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

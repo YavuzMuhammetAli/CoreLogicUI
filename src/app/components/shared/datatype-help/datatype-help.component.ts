@@ -24,12 +24,11 @@ type RegexTestResult = 'idle' | 'match' | 'nomatch' | 'invalid';
  * kapatır (bkz. table-detail `onEscape()` zinciri).
  */
 @Component({
-  selector: 'app-datatype-help',
-  standalone: true,
-  imports: [TranslatePipe],
-  templateUrl: './datatype-help.component.html',
-  styleUrls: ['./datatype-help.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-datatype-help',
+    imports: [TranslatePipe],
+    templateUrl: './datatype-help.component.html',
+    styleUrls: ['./datatype-help.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DatatypeHelpComponent {
   private readonly languageService = inject(LanguageService);

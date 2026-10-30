@@ -15,12 +15,11 @@ export interface DashboardWidgetView {
 }
 
 @Component({
-  selector: 'app-dashboard',
-  standalone: true,
-  imports: [AppChartComponent, TranslatePipe],
-  templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-dashboard',
+    imports: [AppChartComponent, TranslatePipe],
+    templateUrl: './dashboard.component.html',
+    styleUrls: ['./dashboard.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);

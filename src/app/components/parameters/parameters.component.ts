@@ -16,18 +16,17 @@ type TabId = 'backup' | 'mail' | 'templates' | 'subscription';
  * gizli sekmenin canlı kalmasını gerektiren bir rozet/sayaç yok.
  */
 @Component({
-  selector: 'app-parameters',
-  standalone: true,
-  imports: [
-    TranslatePipe,
-    BackupSettingsTabComponent,
-    MailSettingsTabComponent,
-    NotificationTemplatesTabComponent,
-    SubscriptionTabComponent
-  ],
-  templateUrl: './parameters.component.html',
-  styleUrl: './parameters.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-parameters',
+    imports: [
+        TranslatePipe,
+        BackupSettingsTabComponent,
+        MailSettingsTabComponent,
+        NotificationTemplatesTabComponent,
+        SubscriptionTabComponent
+    ],
+    templateUrl: './parameters.component.html',
+    styleUrl: './parameters.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ParametersComponent {
   readonly activeTab = signal<TabId>('backup');

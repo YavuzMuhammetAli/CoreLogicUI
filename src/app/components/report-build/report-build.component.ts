@@ -75,12 +75,11 @@ function isDateColumnType(type: string): boolean {
  * sunucu tarafında yeniden doğrular.
  */
 @Component({
-  selector: 'app-report-build',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, AppChartComponent, TranslatePipe, IconComponent],
-  templateUrl: './report-build.component.html',
-  styleUrls: ['./report-build.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-report-build',
+    imports: [CommonModule, ReactiveFormsModule, RouterLink, AppChartComponent, TranslatePipe, IconComponent],
+    templateUrl: './report-build.component.html',
+    styleUrls: ['./report-build.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ReportBuildComponent implements OnInit {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

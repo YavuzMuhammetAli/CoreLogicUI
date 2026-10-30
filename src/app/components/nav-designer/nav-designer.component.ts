@@ -92,15 +92,14 @@ const PAGE_ICONS: Record<NavPage, IconName> = {
  * Telefonda sürükleme yok: özellik panelindeki düğmelerle taşınır.
  */
 @Component({
-  selector: 'app-nav-designer',
-  standalone: true,
-  imports: [
-    TranslatePipe, RouterLink, IconComponent, ModelIconComponent, ModelIconPickerComponent, ConfirmDialogComponent,
-    DesignSettingsDialogComponent, SidebarNavComponent
-  ],
-  templateUrl: './nav-designer.component.html',
-  styleUrls: ['./nav-designer.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-nav-designer',
+    imports: [
+        TranslatePipe, RouterLink, IconComponent, ModelIconComponent, ModelIconPickerComponent, ConfirmDialogComponent,
+        DesignSettingsDialogComponent, SidebarNavComponent
+    ],
+    templateUrl: './nav-designer.component.html',
+    styleUrls: ['./nav-designer.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NavDesignerComponent implements HasUnsavedChanges {
   private readonly route = inject(ActivatedRoute);

@@ -11,12 +11,11 @@ import { IconComponent } from '../../shared/icon/icon.component';
  * (tetik sorunu tetikleyici sekmesini açar).
  */
 @Component({
-  selector: 'app-workflow-issues-panel',
-  standalone: true,
-  imports: [TranslatePipe, IconComponent],
-  templateUrl: './workflow-issues-panel.component.html',
-  styleUrl: './workflow-issues-panel.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-workflow-issues-panel',
+    imports: [TranslatePipe, IconComponent],
+    templateUrl: './workflow-issues-panel.component.html',
+    styleUrl: './workflow-issues-panel.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WorkflowIssuesPanelComponent {
   readonly rows = input<IssueRow[]>([]);

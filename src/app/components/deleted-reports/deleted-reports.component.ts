@@ -13,11 +13,10 @@ import { DeletedItem, DeletedListSource } from '../shared/deleted-list/deleted-l
  * bu ekrana özel veri kaynağı tanımlanır.
  */
 @Component({
-  selector: 'app-deleted-reports',
-  standalone: true,
-  imports: [DeletedListComponent],
-  template: '<app-deleted-list [source]="source" />',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-deleted-reports',
+    imports: [DeletedListComponent],
+    template: '<app-deleted-list [source]="source" />',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DeletedReportsComponent {
   private readonly reportService = inject(ReportService);

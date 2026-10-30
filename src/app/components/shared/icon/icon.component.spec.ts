@@ -5,9 +5,8 @@ import { ICONS, ICONS_FILLED, IconName } from './icons.generated';
 import manifest from './icons.manifest.json';
 
 @Component({
-  standalone: true,
-  imports: [IconComponent],
-  template: `<app-icon [name]="name()" [size]="size()" [filled]="filled()" [label]="label()" />`
+    imports: [IconComponent],
+    template: `<app-icon [name]="name()" [size]="size()" [filled]="filled()" [label]="label()" />`
 })
 class HostComponent {
   name = signal<IconName>('add');

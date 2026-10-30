@@ -28,12 +28,11 @@ const LIST_SIZE = 20;
  * anlamsız olurdu. Zil bu durumda rozetsiz kalır.
  */
 @Component({
-  selector: 'app-notification-bell',
-  standalone: true,
-  imports: [RouterLink, TranslatePipe, IconComponent],
-  templateUrl: './notification-bell.component.html',
-  styleUrl: './notification-bell.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-notification-bell',
+    imports: [RouterLink, TranslatePipe, IconComponent],
+    templateUrl: './notification-bell.component.html',
+    styleUrl: './notification-bell.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NotificationBellComponent implements OnInit, OnDestroy {
   /** Rozet yenileme aralığı (ms) — görev rozetiyle aynı. */

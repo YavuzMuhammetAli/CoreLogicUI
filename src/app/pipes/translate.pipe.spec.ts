@@ -20,10 +20,9 @@ import { TranslatePipe } from './translate.pipe';
  * için önbelleğe takılır ve eski metni döndürür.
  */
 @Component({
-  standalone: true,
-  imports: [TranslatePipe],
-  template: `<span data-testid="text">{{ 'layout.models' | t }}</span>`,
-  changeDetection: ChangeDetectionStrategy.OnPush
+    imports: [TranslatePipe],
+    template: `<span data-testid="text">{{ 'layout.models' | t }}</span>`,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 class OnPushHostComponent {}
 

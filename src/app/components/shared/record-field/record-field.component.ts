@@ -34,15 +34,14 @@ import { IconComponent } from '../icon/icon.component';
  * kontrol edilir; yani davranış alanların ata şablonda durduğu eski hâliyle aynıdır.
  */
 @Component({
-  selector: 'app-record-field',
-  standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe, HelpHintComponent, LookupPickerComponent, IconComponent],
-  templateUrl: './record-field.component.html',
-  styleUrls: ['./record-field.component.scss'],
-  host: {
-    class: 'field',
-    '[class.field--step]': 'step()'
-  }
+    selector: 'app-record-field',
+    imports: [ReactiveFormsModule, TranslatePipe, HelpHintComponent, LookupPickerComponent, IconComponent],
+    templateUrl: './record-field.component.html',
+    styleUrls: ['./record-field.component.scss'],
+    host: {
+        class: 'field',
+        '[class.field--step]': 'step()'
+    }
 })
 export class RecordFieldComponent {
   private readonly cdr = inject(ChangeDetectorRef);

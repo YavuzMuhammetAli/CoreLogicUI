@@ -18,12 +18,11 @@ interface RoleRow extends Role {
 }
 
 @Component({
-  selector: 'app-role-list',
-  standalone: true,
-  imports: [RouterLink, TranslatePipe, ConfirmDialogComponent, IconComponent],
-  templateUrl: './role-list.component.html',
-  styleUrls: ['./role-list.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-role-list',
+    imports: [RouterLink, TranslatePipe, ConfirmDialogComponent, IconComponent],
+    templateUrl: './role-list.component.html',
+    styleUrls: ['./role-list.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoleListComponent implements OnInit {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

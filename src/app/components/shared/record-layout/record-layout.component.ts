@@ -40,11 +40,10 @@ const NONE: ReadonlySet<string> = new Set();
  * sekme hata rozetleri ve alan hataları bunu girdiler değişmeden görmeli (bkz. record-field).
  */
 @Component({
-  selector: 'app-record-layout',
-  standalone: true,
-  imports: [RecordFieldComponent, TranslatePipe, RouterLink, IconComponent],
-  templateUrl: './record-layout.component.html',
-  styleUrls: ['./record-layout.component.scss']
+    selector: 'app-record-layout',
+    imports: [RecordFieldComponent, TranslatePipe, RouterLink, IconComponent],
+    templateUrl: './record-layout.component.html',
+    styleUrls: ['./record-layout.component.scss']
 })
 export class RecordLayoutComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);

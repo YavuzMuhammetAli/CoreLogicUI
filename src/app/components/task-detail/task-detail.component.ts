@@ -24,12 +24,11 @@ import { IconComponent } from '../shared/icon/icon.component';
  * künyesini, yönetici işlemlerini ve süreç geçmişini ekler.
  */
 @Component({
-  selector: 'app-task-detail',
-  standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, ConfirmDialogComponent, TaskDecisionFormComponent, IconComponent],
-  templateUrl: './task-detail.component.html',
-  styleUrl: './task-detail.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-task-detail',
+    imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, ConfirmDialogComponent, TaskDecisionFormComponent, IconComponent],
+    templateUrl: './task-detail.component.html',
+    styleUrl: './task-detail.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TaskDetailComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);

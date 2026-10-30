@@ -28,12 +28,11 @@ import { IconComponent } from '../icon/icon.component';
  * gösterir, tanım o sırada yeni bir sürüme geçmiş olabilir.
  */
 @Component({
-  selector: 'app-task-decision-form',
-  standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, IconComponent],
-  templateUrl: './task-decision-form.component.html',
-  styleUrl: './task-decision-form.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-task-decision-form',
+    imports: [ReactiveFormsModule, RouterLink, TranslatePipe, IconComponent],
+    templateUrl: './task-decision-form.component.html',
+    styleUrl: './task-decision-form.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TaskDecisionFormComponent implements OnChanges {
   readonly task = input.required<WorkflowTask>();

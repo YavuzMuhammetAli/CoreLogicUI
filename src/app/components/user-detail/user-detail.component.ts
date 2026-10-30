@@ -23,12 +23,11 @@ interface RoleOption { id: number; name: string; }
  * Yıkıcı işlemler kendi hesabı için kapatılır — backend zaten reddeder, UI baştan engeller.
  */
 @Component({
-  selector: 'app-user-detail',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe, ConfirmDialogComponent, IconComponent],
-  templateUrl: './user-detail.component.html',
-  styleUrls: ['./user-detail.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-user-detail',
+    imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe, ConfirmDialogComponent, IconComponent],
+    templateUrl: './user-detail.component.html',
+    styleUrls: ['./user-detail.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserDetailComponent {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

@@ -45,12 +45,11 @@ interface TableRef {
 }
 
 @Component({
-  selector: 'app-draft-models',
-  standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, ConfirmDialogComponent, IconComponent],
-  templateUrl: './draft-models.component.html',
-  styleUrls: ['./draft-models.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-draft-models',
+    imports: [CommonModule, RouterLink, TranslatePipe, ConfirmDialogComponent, IconComponent],
+    templateUrl: './draft-models.component.html',
+    styleUrls: ['./draft-models.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DraftModelsComponent implements OnInit {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

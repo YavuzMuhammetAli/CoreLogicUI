@@ -53,12 +53,11 @@ const MAX_PEOPLE = 8;
  * uçlarını çağıramaz. Görme yetkisi sunucuda (IWorkflowAccessPolicy).
  */
 @Component({
-  selector: 'app-workflow-view-dialog',
-  standalone: true,
-  imports: [TranslatePipe, WorkflowCanvasComponent, IconComponent],
-  templateUrl: './workflow-view-dialog.component.html',
-  styleUrl: './workflow-view-dialog.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-workflow-view-dialog',
+    imports: [TranslatePipe, WorkflowCanvasComponent, IconComponent],
+    templateUrl: './workflow-view-dialog.component.html',
+    styleUrl: './workflow-view-dialog.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WorkflowViewDialogComponent {
   /** Gösterilecek süreç; null → diyalog kapalı. */

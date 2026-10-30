@@ -45,12 +45,11 @@ export interface RolePermissionRow {
 }
 
 @Component({
-  selector: 'app-role-detail',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ConfirmDialogComponent, HelpHintComponent, IconComponent],
-  templateUrl: './role-detail.component.html',
-  styleUrls: ['./role-detail.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-role-detail',
+    imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ConfirmDialogComponent, HelpHintComponent, IconComponent],
+    templateUrl: './role-detail.component.html',
+    styleUrls: ['./role-detail.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoleDetailComponent implements OnInit {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

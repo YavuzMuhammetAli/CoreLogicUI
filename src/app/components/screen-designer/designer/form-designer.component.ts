@@ -55,12 +55,11 @@ const EDGE_SCROLL_STEP = 14;
  * belge çalışma anı bileşeniyle (app-record-layout) aynen çizilir.
  */
 @Component({
-  selector: 'app-form-designer',
-  standalone: true,
-  imports: [TranslatePipe, RecordFieldComponent, RecordLayoutComponent, FormInspectorComponent, IconComponent],
-  templateUrl: './form-designer.component.html',
-  styleUrls: ['./form-designer.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-form-designer',
+    imports: [TranslatePipe, RecordFieldComponent, RecordLayoutComponent, FormInspectorComponent, IconComponent],
+    templateUrl: './form-designer.component.html',
+    styleUrls: ['./form-designer.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FormDesignerComponent {
   private readonly zone = inject(NgZone);

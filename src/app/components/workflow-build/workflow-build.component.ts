@@ -126,18 +126,17 @@ interface StepRow {
  * Events ile yazıldı (dashboard-build'in sürükleme deseni).
  */
 @Component({
-  selector: 'app-workflow-build',
-  standalone: true,
-  imports: [
-    CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe,
-    WorkflowCanvasComponent, WorkflowStepDialogComponent, ConfirmDialogComponent,
-    WorkflowPaletteComponent, WorkflowInspectorComponent, WorkflowIssuesPanelComponent,
-    WorkflowSimulatePanelComponent, IconComponent
-  ],
-  providers: [WorkflowDesignerStore],
-  templateUrl: './workflow-build.component.html',
-  styleUrl: './workflow-build.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-workflow-build',
+    imports: [
+        CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe,
+        WorkflowCanvasComponent, WorkflowStepDialogComponent, ConfirmDialogComponent,
+        WorkflowPaletteComponent, WorkflowInspectorComponent, WorkflowIssuesPanelComponent,
+        WorkflowSimulatePanelComponent, IconComponent
+    ],
+    providers: [WorkflowDesignerStore],
+    templateUrl: './workflow-build.component.html',
+    styleUrl: './workflow-build.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   private readonly platformId = inject(PLATFORM_ID);

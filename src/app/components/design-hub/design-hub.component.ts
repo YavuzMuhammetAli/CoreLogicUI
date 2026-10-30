@@ -37,14 +37,13 @@ type Tab = 'screens' | 'navigation';
  *   tasarım; eşleşme yoksa Varsayılan; o da yoksa uygulamanın otomatik menüsü.
  */
 @Component({
-  selector: 'app-design-hub',
-  standalone: true,
-  imports: [
-    TranslatePipe, RouterLink, IconComponent, ModelIconComponent, ConfirmDialogComponent, DesignSettingsDialogComponent
-  ],
-  templateUrl: './design-hub.component.html',
-  styleUrls: ['./design-hub.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-design-hub',
+    imports: [
+        TranslatePipe, RouterLink, IconComponent, ModelIconComponent, ConfirmDialogComponent, DesignSettingsDialogComponent
+    ],
+    templateUrl: './design-hub.component.html',
+    styleUrls: ['./design-hub.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DesignHubComponent {
   private readonly route = inject(ActivatedRoute);

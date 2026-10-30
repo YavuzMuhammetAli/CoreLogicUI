@@ -11,11 +11,10 @@ import { DeletedItem, DeletedListSource } from '../shared/deleted-list/deleted-l
  * bu ekrana özel veri kaynağı tanımlanır (deleted-reports ile aynı desen).
  */
 @Component({
-  selector: 'app-deleted-workflows',
-  standalone: true,
-  imports: [DeletedListComponent],
-  template: '<app-deleted-list [source]="source" />',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-deleted-workflows',
+    imports: [DeletedListComponent],
+    template: '<app-deleted-list [source]="source" />',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DeletedWorkflowsComponent {
   private readonly workflowService = inject(WorkflowService);

@@ -17,12 +17,11 @@ interface UserRow extends AppUser {
 }
 
 @Component({
-  selector: 'app-user-permission-list',
-  standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, IconComponent],
-  templateUrl: './user-permission-list.component.html',
-  styleUrls: ['./user-permission-list.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-user-permission-list',
+    imports: [CommonModule, RouterLink, TranslatePipe, IconComponent],
+    templateUrl: './user-permission-list.component.html',
+    styleUrls: ['./user-permission-list.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserPermissionListComponent implements OnInit {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

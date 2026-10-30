@@ -16,12 +16,11 @@ import { IconComponent } from '../shared/icon/icon.component';
  * Satır tıklanınca /users/:id detayına gidilir.
  */
 @Component({
-  selector: 'app-user-list',
-  standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, IconComponent],
-  templateUrl: './user-list.component.html',
-  styleUrls: ['./user-list.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-user-list',
+    imports: [CommonModule, RouterLink, TranslatePipe, IconComponent],
+    templateUrl: './user-list.component.html',
+    styleUrls: ['./user-list.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserListComponent {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

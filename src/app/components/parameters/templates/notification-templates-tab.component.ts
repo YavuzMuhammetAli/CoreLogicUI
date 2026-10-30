@@ -36,12 +36,11 @@ interface PendingSwitch {
  * motordan geçsin ve bilinmeyen yer tutucu hatası kaydetmeden görünsün.
  */
 @Component({
-  selector: 'app-notification-templates-tab',
-  standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe, ConfirmDialogComponent, IconComponent],
-  templateUrl: './notification-templates-tab.component.html',
-  styleUrls: ['../parameters.shared.scss', './notification-templates-tab.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-notification-templates-tab',
+    imports: [ReactiveFormsModule, TranslatePipe, ConfirmDialogComponent, IconComponent],
+    templateUrl: './notification-templates-tab.component.html',
+    styleUrls: ['../parameters.shared.scss', './notification-templates-tab.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NotificationTemplatesTabComponent implements OnInit {
   private readonly fb = inject(FormBuilder);

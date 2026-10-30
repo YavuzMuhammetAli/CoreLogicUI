@@ -18,12 +18,11 @@ export interface KpiCard {
 }
 
 @Component({
-  selector: 'app-report-viewer',
-  standalone: true,
-  imports: [RouterLink, AppChartComponent, NgTemplateOutlet, TranslatePipe, IconComponent],
-  templateUrl: './report-viewer.component.html',
-  styleUrls: ['./report-viewer.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-report-viewer',
+    imports: [RouterLink, AppChartComponent, NgTemplateOutlet, TranslatePipe, IconComponent],
+    templateUrl: './report-viewer.component.html',
+    styleUrls: ['./report-viewer.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ReportViewerComponent implements OnInit {
   private readonly languageService = inject(LanguageService);

@@ -37,19 +37,18 @@ let instanceCounter = 0;
  * olduğu ve DOM id'leri sabit olduğu için doğrudan kullanılamadı.)
  */
 @Component({
-  selector: 'app-lookup-picker',
-  standalone: true,
-  imports: [TranslatePipe, IconComponent],
-  templateUrl: './lookup-picker.component.html',
-  styleUrls: ['./lookup-picker.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [
-    {
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => LookupPickerComponent),
-      multi: true
-    }
-  ]
+    selector: 'app-lookup-picker',
+    imports: [TranslatePipe, IconComponent],
+    templateUrl: './lookup-picker.component.html',
+    styleUrls: ['./lookup-picker.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    providers: [
+        {
+            provide: NG_VALUE_ACCESSOR,
+            useExisting: forwardRef(() => LookupPickerComponent),
+            multi: true
+        }
+    ]
 })
 export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);

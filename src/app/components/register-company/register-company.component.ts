@@ -34,12 +34,11 @@ interface DisplayStep {
  * token saklanıp izinler yüklenerek doğrudan çalışma alanına girilir.
  */
 @Component({
-  selector: 'app-register-company',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe, IconComponent],
-  templateUrl: './register-company.component.html',
-  styleUrls: ['./register-company.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-register-company',
+    imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe, IconComponent],
+    templateUrl: './register-company.component.html',
+    styleUrls: ['./register-company.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RegisterCompanyComponent implements OnInit, OnDestroy {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

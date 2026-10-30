@@ -26,12 +26,11 @@ export interface TaskActionResult {
  * reddetmede açıklama yazılabilsin diye her zaman açılır.
  */
 @Component({
-  selector: 'app-task-action-dialog',
-  standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe],
-  templateUrl: './task-action-dialog.component.html',
-  styleUrl: './task-action-dialog.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-task-action-dialog',
+    imports: [ReactiveFormsModule, TranslatePipe],
+    templateUrl: './task-action-dialog.component.html',
+    styleUrl: './task-action-dialog.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TaskActionDialogComponent implements OnChanges {
   readonly open = input(false);

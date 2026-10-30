@@ -6,10 +6,9 @@ import { RecordMetadataService } from '../services/record-metadata.service';
 import { ModelLabelPipe } from './model-label.pipe';
 
 @Component({
-  standalone: true,
-  imports: [ModelLabelPipe],
-  template: `<span>{{ 'SatinalmaTalebi' | modelLabel }}</span>|<span>{{ 'Etiketsiz' | modelLabel }}</span>|<span>{{ '' | modelLabel }}</span>`,
-  changeDetection: ChangeDetectionStrategy.OnPush
+    imports: [ModelLabelPipe],
+    template: `<span>{{ 'SatinalmaTalebi' | modelLabel }}</span>|<span>{{ 'Etiketsiz' | modelLabel }}</span>|<span>{{ '' | modelLabel }}</span>`,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 class OnPushHostComponent {}
 

@@ -32,12 +32,11 @@ const ID_WIDTH = 80;
  * verilir (çift tık → otomatik). ID sabit ilk kolondur; tasarıma girmez.
  */
 @Component({
-  selector: 'app-list-designer',
-  standalone: true,
-  imports: [TranslatePipe, IconComponent],
-  templateUrl: './list-designer.component.html',
-  styleUrls: ['./list-designer.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-list-designer',
+    imports: [TranslatePipe, IconComponent],
+    templateUrl: './list-designer.component.html',
+    styleUrls: ['./list-designer.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ListDesignerComponent {
   private readonly zone = inject(NgZone);

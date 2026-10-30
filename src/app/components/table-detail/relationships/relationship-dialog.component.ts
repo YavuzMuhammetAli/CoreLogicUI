@@ -23,12 +23,11 @@ const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
  * zorunluluğu, SelfReference'ta hedefin otomatik dolması) tek yerde durur.
  */
 @Component({
-  selector: 'app-relationship-dialog',
-  standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe, ModelAutocompleteComponent, HelpHintComponent, IconComponent],
-  templateUrl: './relationship-dialog.component.html',
-  styleUrls: ['./relationships.shared.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-relationship-dialog',
+    imports: [ReactiveFormsModule, TranslatePipe, ModelAutocompleteComponent, HelpHintComponent, IconComponent],
+    templateUrl: './relationship-dialog.component.html',
+    styleUrls: ['./relationships.shared.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RelationshipDialogComponent {
   private readonly fb = inject(FormBuilder);

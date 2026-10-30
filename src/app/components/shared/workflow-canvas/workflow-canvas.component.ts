@@ -188,13 +188,12 @@ type Gesture =
  * modüllerde — bu component yalnızca sinyal, DOM dinleyicisi ve output tutar.
  */
 @Component({
-  selector: 'app-workflow-canvas',
-  standalone: true,
-  imports: [TranslatePipe, HelpHintComponent, IconComponent],
-  templateUrl: './workflow-canvas.component.html',
-  styleUrl: './workflow-canvas.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class.canvas--fill]': 'fillHeight()' }
+    selector: 'app-workflow-canvas',
+    imports: [TranslatePipe, HelpHintComponent, IconComponent],
+    templateUrl: './workflow-canvas.component.html',
+    styleUrl: './workflow-canvas.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    host: { '[class.canvas--fill]': 'fillHeight()' }
 })
 export class WorkflowCanvasComponent {
   readonly graph = input<WorkflowGraph | null>(null);

@@ -31,12 +31,11 @@ const POLL_MS = 2000;
  * Durum ucu bakım sırasında ve oturum geçersizken de yanıt verir (sunucuda muaf).
  */
 @Component({
-  selector: 'app-backup-restore-dialog',
-  standalone: true,
-  imports: [FormsModule, TranslatePipe, IconComponent],
-  templateUrl: './backup-restore-dialog.component.html',
-  styleUrls: ['./backup-restore-dialog.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-backup-restore-dialog',
+    imports: [FormsModule, TranslatePipe, IconComponent],
+    templateUrl: './backup-restore-dialog.component.html',
+    styleUrls: ['./backup-restore-dialog.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class BackupRestoreDialogComponent {
   private readonly parameterService = inject(ParameterService);

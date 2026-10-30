@@ -10,12 +10,11 @@ import { markDirty } from '../../utils/change-detection';
 import { IconComponent } from '../shared/icon/icon.component';
 
 @Component({
-  selector: 'app-report-list',
-  standalone: true,
-  imports: [RouterLink, TranslatePipe, ModelLabelPipe, IconComponent],
-  templateUrl: './report-list.component.html',
-  styleUrls: ['./report-list.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-report-list',
+    imports: [RouterLink, TranslatePipe, ModelLabelPipe, IconComponent],
+    templateUrl: './report-list.component.html',
+    styleUrls: ['./report-list.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ReportListComponent implements OnInit {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

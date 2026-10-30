@@ -65,15 +65,14 @@ type SaveOutcome = { ok: true; data: ScreenLayoutSaveResultDto; message: string 
  * ilk yayınlanmış varyant, yoksa varsayılan. Depo, seçili tasarımın belgesini tutar (`?layout=ID`).
  */
 @Component({
-  selector: 'app-screen-designer',
-  standalone: true,
-  imports: [
-    TranslatePipe, RouterLink, ConfirmDialogComponent, FormDesignerComponent, ListDesignerComponent, IconComponent,
-    DesignSettingsDialogComponent
-  ],
-  templateUrl: './screen-designer.component.html',
-  styleUrls: ['./screen-designer.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-screen-designer',
+    imports: [
+        TranslatePipe, RouterLink, ConfirmDialogComponent, FormDesignerComponent, ListDesignerComponent, IconComponent,
+        DesignSettingsDialogComponent
+    ],
+    templateUrl: './screen-designer.component.html',
+    styleUrls: ['./screen-designer.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ScreenDesignerComponent implements HasUnsavedChanges {
   private readonly route = inject(ActivatedRoute);

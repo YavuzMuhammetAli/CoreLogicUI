@@ -9,12 +9,11 @@ import { markDirty } from '../../utils/change-detection';
 import { IconComponent } from '../shared/icon/icon.component';
 
 @Component({
-  selector: 'app-dashboard-list',
-  standalone: true,
-  imports: [RouterLink, TranslatePipe, IconComponent],
-  templateUrl: './dashboard-list.component.html',
-  styleUrls: ['./dashboard-list.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-dashboard-list',
+    imports: [RouterLink, TranslatePipe, IconComponent],
+    templateUrl: './dashboard-list.component.html',
+    styleUrls: ['./dashboard-list.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardListComponent implements OnInit {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

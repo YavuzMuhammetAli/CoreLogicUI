@@ -18,12 +18,11 @@ import { IconComponent } from '../icon/icon.component';
  * Ekranlar artık yalnızca bir <see cref="DeletedListSource"/> sağlar.
  */
 @Component({
-  selector: 'app-deleted-list',
-  standalone: true,
-  imports: [RouterLink, TranslatePipe, ConfirmDialogComponent, IconComponent],
-  templateUrl: './deleted-list.component.html',
-  styleUrls: ['./deleted-list.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-deleted-list',
+    imports: [RouterLink, TranslatePipe, ConfirmDialogComponent, IconComponent],
+    templateUrl: './deleted-list.component.html',
+    styleUrls: ['./deleted-list.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DeletedListComponent implements OnInit {
   /** Başarılı geri yüklemeden sonra satırın listede kalma süresi (ms). */

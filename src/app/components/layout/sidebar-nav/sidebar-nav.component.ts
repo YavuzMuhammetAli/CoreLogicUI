@@ -20,12 +20,11 @@ const SUBSET: IsActiveMatchOptions = { paths: 'subset', queryParams: 'ignored', 
  * `preview` kipinde (tasarımcı önizlemesi) bağlantılar gezinmez — kap `inert`'tir.
  */
 @Component({
-  selector: 'app-sidebar-nav',
-  standalone: true,
-  imports: [NgTemplateOutlet, RouterLink, RouterLinkActive, TranslatePipe, IconComponent, ModelIconComponent],
-  templateUrl: './sidebar-nav.component.html',
-  styleUrls: ['./sidebar-nav.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-sidebar-nav',
+    imports: [NgTemplateOutlet, RouterLink, RouterLinkActive, TranslatePipe, IconComponent, ModelIconComponent],
+    templateUrl: './sidebar-nav.component.html',
+    styleUrls: ['./sidebar-nav.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SidebarNavComponent {
   private readonly router = inject(Router);

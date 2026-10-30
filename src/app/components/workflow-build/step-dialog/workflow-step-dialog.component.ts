@@ -45,15 +45,14 @@ export interface StepDialogResult {
  * (formda karşılığı olmayan alanlar korunur).
  */
 @Component({
-  selector: 'app-workflow-step-dialog',
-  standalone: true,
-  imports: [
-    CommonModule, ReactiveFormsModule, TranslatePipe,
-    ConditionEditorComponent, EndEditorComponent, ActionEditorComponent, NotifyEditorComponent, TimerEditorComponent, IconComponent
-  ],
-  templateUrl: './workflow-step-dialog.component.html',
-  styleUrl: './workflow-step-dialog.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-workflow-step-dialog',
+    imports: [
+        CommonModule, ReactiveFormsModule, TranslatePipe,
+        ConditionEditorComponent, EndEditorComponent, ActionEditorComponent, NotifyEditorComponent, TimerEditorComponent, IconComponent
+    ],
+    templateUrl: './workflow-step-dialog.component.html',
+    styleUrl: './workflow-step-dialog.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WorkflowStepDialogComponent implements OnInit {
   private readonly fb = inject(FormBuilder);

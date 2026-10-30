@@ -17,12 +17,11 @@ import { IconComponent } from '../../shared/icon/icon.component';
  * ISO tarih ve nokta ondalık bekler. Formül otomatik değer dilindedir.
  */
 @Component({
-  selector: 'app-action-editor',
-  standalone: true,
-  imports: [TranslatePipe, IconComponent],
-  templateUrl: './action-editor.component.html',
-  styleUrl: './editors.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-action-editor',
+    imports: [TranslatePipe, IconComponent],
+    templateUrl: './action-editor.component.html',
+    styleUrl: './editors.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ActionEditorComponent implements OnInit {
   readonly step = input.required<WorkflowStep>();

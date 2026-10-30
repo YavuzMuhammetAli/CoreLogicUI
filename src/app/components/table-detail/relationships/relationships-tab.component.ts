@@ -32,15 +32,14 @@ import { IconComponent } from '../../shared/icon/icon.component';
  * kayıttan sonra sırayla POST edilir.
  */
 @Component({
-  selector: 'app-relationships-tab',
-  standalone: true,
-  imports: [
-    TranslatePipe, ConfirmDialogComponent,
-    RelationshipDialogComponent, PublishPreviewDialogComponent, IconComponent
-  ],
-  templateUrl: './relationships-tab.component.html',
-  styleUrls: ['./relationships.shared.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-relationships-tab',
+    imports: [
+        TranslatePipe, ConfirmDialogComponent,
+        RelationshipDialogComponent, PublishPreviewDialogComponent, IconComponent
+    ],
+    templateUrl: './relationships-tab.component.html',
+    styleUrls: ['./relationships.shared.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RelationshipsTabComponent implements OnChanges {
   private readonly cdr = inject(ChangeDetectorRef);

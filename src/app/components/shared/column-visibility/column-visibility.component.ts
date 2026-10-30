@@ -20,12 +20,11 @@ export interface ColumnVisibilityItem {
  * emit edilir; parent bunu backend'e yazar.
  */
 @Component({
-  selector: 'app-column-visibility',
-  standalone: true,
-  imports: [CommonModule, TranslatePipe, IconComponent],
-  templateUrl: './column-visibility.component.html',
-  styleUrls: ['./column-visibility.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-column-visibility',
+    imports: [CommonModule, TranslatePipe, IconComponent],
+    templateUrl: './column-visibility.component.html',
+    styleUrls: ['./column-visibility.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ColumnVisibilityComponent implements OnChanges {
   @Input() columns: ColumnVisibilityItem[] = [];

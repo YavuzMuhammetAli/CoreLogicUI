@@ -47,12 +47,11 @@ interface FieldVisibility {
  * durur ve orada test edilir; burada yalnızca form durumu ve HTTP çağrıları var.
  */
 @Component({
-  selector: 'app-backup-settings-tab',
-  standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, ConfirmDialogComponent, HelpHintComponent, BackupRestoreDialogComponent, IconComponent],
-  templateUrl: './backup-settings-tab.component.html',
-  styleUrls: ['../parameters.shared.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-backup-settings-tab',
+    imports: [CommonModule, FormsModule, TranslatePipe, ConfirmDialogComponent, HelpHintComponent, BackupRestoreDialogComponent, IconComponent],
+    templateUrl: './backup-settings-tab.component.html',
+    styleUrls: ['../parameters.shared.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class BackupSettingsTabComponent implements OnInit {
   private readonly parameterService = inject(ParameterService);

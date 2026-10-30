@@ -36,15 +36,14 @@ interface FilterColumn {
 }
 
 @Component({
-  selector: 'app-model-data',
-  standalone: true,
-  imports: [
-    CommonModule, RouterLink, DatePipe, ColumnVisibilityComponent,
-    ConfirmDialogComponent, TranslatePipe, IconComponent
-  ],
-  templateUrl: './model-data.component.html',
-  styleUrls: ['./model-data.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-model-data',
+    imports: [
+        CommonModule, RouterLink, DatePipe, ColumnVisibilityComponent,
+        ConfirmDialogComponent, TranslatePipe, IconComponent
+    ],
+    templateUrl: './model-data.component.html',
+    styleUrls: ['./model-data.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ModelDataComponent implements OnInit {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

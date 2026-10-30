@@ -15,11 +15,10 @@ import { DeletedItem, DeletedListSource } from '../shared/deleted-list/deleted-l
  * bu ekrana özel veri kaynağı tanımlanır.
  */
 @Component({
-  selector: 'app-deleted-drafts',
-  standalone: true,
-  imports: [DeletedListComponent],
-  template: '<app-deleted-list [source]="source" />',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-deleted-drafts',
+    imports: [DeletedListComponent],
+    template: '<app-deleted-list [source]="source" />',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DeletedDraftsComponent {
   private readonly publishedTable = inject(PublishedTableService);

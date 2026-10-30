@@ -11,12 +11,11 @@ import { pageWindow } from '../../utils/pagination';
 import { IconComponent } from '../shared/icon/icon.component';
 
 @Component({
-  selector: 'app-audit-log',
-  standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, IconComponent],
-  templateUrl: './audit-log.component.html',
-  styleUrl: './audit-log.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-audit-log',
+    imports: [CommonModule, FormsModule, TranslatePipe, IconComponent],
+    templateUrl: './audit-log.component.html',
+    styleUrl: './audit-log.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AuditLogComponent implements OnInit {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

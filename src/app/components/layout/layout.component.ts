@@ -29,15 +29,14 @@ import { parseNavLayout } from '../../utils/nav-layout/nav-layout.parse';
 import { resolveNav } from '../../utils/nav-layout/nav-layout.resolve';
 
 @Component({
-  selector: 'app-layout',
-  standalone: true,
-  imports: [
-    RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, NotificationBellComponent, IconComponent, ModelIconComponent,
-    SidebarNavComponent
-  ],
-  templateUrl: './layout.component.html',
-  styleUrls: ['./layout.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-layout',
+    imports: [
+        RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, NotificationBellComponent, IconComponent, ModelIconComponent,
+        SidebarNavComponent
+    ],
+    templateUrl: './layout.component.html',
+    styleUrls: ['./layout.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LayoutComponent implements OnInit, OnDestroy {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

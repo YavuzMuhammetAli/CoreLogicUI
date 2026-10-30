@@ -23,12 +23,11 @@ const HTTP_URL = /^https?:\/\/\S+$/i;
  * maske geri gider ve backend mevcut parolayı korur.
  */
 @Component({
-  selector: 'app-mail-settings-tab',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslatePipe, IconComponent],
-  templateUrl: './mail-settings-tab.component.html',
-  styleUrls: ['../parameters.shared.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-mail-settings-tab',
+    imports: [CommonModule, ReactiveFormsModule, TranslatePipe, IconComponent],
+    templateUrl: './mail-settings-tab.component.html',
+    styleUrls: ['../parameters.shared.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MailSettingsTabComponent implements OnInit {
   private readonly fb = inject(FormBuilder);

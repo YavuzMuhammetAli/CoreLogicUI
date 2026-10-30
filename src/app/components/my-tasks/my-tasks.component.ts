@@ -20,12 +20,11 @@ import { IconComponent } from '../shared/icon/icon.component';
  * markDirty gerekmiyor.
  */
 @Component({
-  selector: 'app-my-tasks',
-  standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, IconComponent],
-  templateUrl: './my-tasks.component.html',
-  styleUrl: './my-tasks.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-my-tasks',
+    imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, IconComponent],
+    templateUrl: './my-tasks.component.html',
+    styleUrl: './my-tasks.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MyTasksComponent {
   private readonly taskService = inject(WorkflowTaskService);

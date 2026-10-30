@@ -15,12 +15,11 @@ import { IconComponent } from '../icon/icon.component';
  * ↑/↓ gezinme, Enter ile seçme, Esc ile kapatma.
  */
 @Component({
-  selector: 'app-model-autocomplete',
-  standalone: true,
-  imports: [CommonModule, TranslatePipe, IconComponent],
-  templateUrl: './model-autocomplete.component.html',
-  styleUrls: ['./model-autocomplete.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-model-autocomplete',
+    imports: [CommonModule, TranslatePipe, IconComponent],
+    templateUrl: './model-autocomplete.component.html',
+    styleUrls: ['./model-autocomplete.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ModelAutocompleteComponent {
   private readonly host = inject(ElementRef<HTMLElement>);

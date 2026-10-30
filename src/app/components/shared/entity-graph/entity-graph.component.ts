@@ -14,12 +14,11 @@ import { layoutGraph } from './entity-graph.layout';
  * layoutGraph() fonksiyonundadır — bkz. o dosyanın başlığı.
  */
 @Component({
-  selector: 'app-entity-graph',
-  standalone: true,
-  imports: [TranslatePipe],
-  templateUrl: './entity-graph.component.html',
-  styleUrls: ['./entity-graph.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-entity-graph',
+    imports: [TranslatePipe],
+    templateUrl: './entity-graph.component.html',
+    styleUrls: ['./entity-graph.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EntityGraphComponent {
   graph = input<EntityGraph | null>(null);

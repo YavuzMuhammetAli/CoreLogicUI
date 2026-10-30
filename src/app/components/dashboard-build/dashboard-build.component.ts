@@ -31,12 +31,11 @@ const ROW_PITCH_PX = 56;
  * Sürükleme harici bir kütüphane kullanmaz — native Pointer Events ile uygulanır.
  */
 @Component({
-  selector: 'app-dashboard-build',
-  standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, ModelLabelPipe, IconComponent],
-  templateUrl: './dashboard-build.component.html',
-  styleUrls: ['./dashboard-build.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-dashboard-build',
+    imports: [ReactiveFormsModule, RouterLink, TranslatePipe, ModelLabelPipe, IconComponent],
+    templateUrl: './dashboard-build.component.html',
+    styleUrls: ['./dashboard-build.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardBuildComponent implements OnInit {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

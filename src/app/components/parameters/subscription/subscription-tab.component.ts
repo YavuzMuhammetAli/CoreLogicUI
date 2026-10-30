@@ -19,12 +19,11 @@ import { IconComponent } from '../../shared/icon/icon.component';
  * ücret alınmadığını bilmeden plan değiştirmesi yanıltıcı olurdu.
  */
 @Component({
-  selector: 'app-subscription-tab',
-  standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, ConfirmDialogComponent, IconComponent],
-  templateUrl: './subscription-tab.component.html',
-  styleUrls: ['../parameters.shared.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-subscription-tab',
+    imports: [CommonModule, FormsModule, TranslatePipe, ConfirmDialogComponent, IconComponent],
+    templateUrl: './subscription-tab.component.html',
+    styleUrls: ['../parameters.shared.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SubscriptionTabComponent implements OnInit {
   private readonly parameterService = inject(ParameterService);

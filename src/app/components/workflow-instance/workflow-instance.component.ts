@@ -32,12 +32,11 @@ import { IconComponent } from '../shared/icon/icon.component';
  * okunurdu.
  */
 @Component({
-  selector: 'app-workflow-instance',
-  standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, ConfirmDialogComponent, WorkflowCanvasComponent, IconComponent],
-  templateUrl: './workflow-instance.component.html',
-  styleUrl: './workflow-instance.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-workflow-instance',
+    imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, ConfirmDialogComponent, WorkflowCanvasComponent, IconComponent],
+    templateUrl: './workflow-instance.component.html',
+    styleUrl: './workflow-instance.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WorkflowInstanceComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);

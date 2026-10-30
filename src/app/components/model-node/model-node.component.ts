@@ -44,21 +44,20 @@ export const MAX_DEPTH = 4;
  *   subModels    : FormArray  (her eleman yine bu FormGroup yapısında)
  */
 @Component({
-  selector: 'app-model-node',
-  standalone: true,
-  // forwardRef ile kendi kendine import — Angular recursive component çözümü
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    TranslatePipe,
-    HelpHintComponent,
-    DatatypeHelpComponent,
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    forwardRef(() => ModelNodeComponent), IconComponent
-  ],
-  templateUrl: './model-node.component.html',
-  styleUrls: ['./model-node.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-model-node',
+    // forwardRef ile kendi kendine import — Angular recursive component çözümü
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        TranslatePipe,
+        HelpHintComponent,
+        DatatypeHelpComponent,
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
+        forwardRef(() => ModelNodeComponent), IconComponent
+    ],
+    templateUrl: './model-node.component.html',
+    styleUrls: ['./model-node.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ModelNodeComponent implements OnChanges, OnDestroy {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

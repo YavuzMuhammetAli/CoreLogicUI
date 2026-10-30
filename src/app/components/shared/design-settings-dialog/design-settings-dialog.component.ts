@@ -17,10 +17,9 @@ export interface DesignSettings {
  * (ör. "Varsayılan", "Mevcut tasarımdan kopyala").
  */
 @Component({
-  selector: 'app-design-settings-dialog',
-  standalone: true,
-  imports: [TranslatePipe, RolePickerComponent],
-  template: `
+    selector: 'app-design-settings-dialog',
+    imports: [TranslatePipe, RolePickerComponent],
+    template: `
     @if (open()) {
       <div class="dialog-overlay" (click)="cancel()">
         <form class="dialog-panel panel" role="dialog" aria-modal="true" [attr.aria-label]="title()"
@@ -62,9 +61,9 @@ export interface DesignSettings {
       </div>
     }
   `,
-  styleUrls: ['../confirm-dialog/confirm-dialog.component.scss'],
-  styles: [`.field-label { font-weight: 600; font-size: var(--text-sm); color: var(--fg-2); }`],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    styleUrls: ['../confirm-dialog/confirm-dialog.component.scss'],
+    styles: [`.field-label { font-weight: 600; font-size: var(--text-sm); color: var(--fg-2); }`],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DesignSettingsDialogComponent {
   open = input(false);

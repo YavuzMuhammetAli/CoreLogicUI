@@ -24,12 +24,11 @@ const STATUSES: ReadonlyArray<WorkflowInstanceStatus> = ['Running', 'Completed',
  * Satır sürecin şemalı ekranına götürür.
  */
 @Component({
-  selector: 'app-workflow-instances',
-  standalone: true,
-  imports: [RouterLink, TranslatePipe, ModelLabelPipe, IconComponent],
-  templateUrl: './workflow-instances.component.html',
-  styleUrl: './workflow-instances.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-workflow-instances',
+    imports: [RouterLink, TranslatePipe, ModelLabelPipe, IconComponent],
+    templateUrl: './workflow-instances.component.html',
+    styleUrl: './workflow-instances.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WorkflowInstancesComponent implements OnInit {
   private readonly instanceService = inject(WorkflowInstanceService);

@@ -137,16 +137,15 @@ const SEQUENCE_TEMPLATE = "TODAY('ddMMyyyy') & '-' & SEQ(3, TODAY('ddMMyyyy'))";
  * akışı (flattenTree/saveNode$) geriye dönük uyumluluk için korunur.
  */
 @Component({
-  selector: 'app-table-detail',
-  standalone: true,
-  imports: [
-    CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe,
-    ModelNodeComponent, HelpHintComponent, DatatypeHelpComponent,
-    RelationshipsTabComponent, IconComponent, ModelIconComponent, ModelIconPickerComponent
-  ],
-  templateUrl: './table-detail.component.html',
-  styleUrls: ['./table-detail.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-table-detail',
+    imports: [
+        CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe,
+        ModelNodeComponent, HelpHintComponent, DatatypeHelpComponent,
+        RelationshipsTabComponent, IconComponent, ModelIconComponent, ModelIconPickerComponent
+    ],
+    templateUrl: './table-detail.component.html',
+    styleUrls: ['./table-detail.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TableDetailComponent implements OnDestroy {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

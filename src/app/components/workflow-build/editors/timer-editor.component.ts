@@ -15,12 +15,11 @@ const UNIT_MINUTES: Record<WorkflowTimerUnit, number> = { minutes: 1, hours: 60,
  * Adımın KOPYASIYLA çalışır (bkz. condition-editor).
  */
 @Component({
-  selector: 'app-timer-editor',
-  standalone: true,
-  imports: [TranslatePipe],
-  templateUrl: './timer-editor.component.html',
-  styleUrl: './editors.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-timer-editor',
+    imports: [TranslatePipe],
+    templateUrl: './timer-editor.component.html',
+    styleUrl: './editors.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TimerEditorComponent implements OnInit {
   readonly step = input.required<WorkflowStep>();

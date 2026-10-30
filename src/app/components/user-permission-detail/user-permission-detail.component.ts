@@ -33,12 +33,11 @@ export interface PermissionRow {
 }
 
 @Component({
-  selector: 'app-user-permission-detail',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, HelpHintComponent, IconComponent],
-  templateUrl: './user-permission-detail.component.html',
-  styleUrls: ['./user-permission-detail.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-user-permission-detail',
+    imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, HelpHintComponent, IconComponent],
+    templateUrl: './user-permission-detail.component.html',
+    styleUrls: ['./user-permission-detail.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserPermissionDetailComponent implements OnInit {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

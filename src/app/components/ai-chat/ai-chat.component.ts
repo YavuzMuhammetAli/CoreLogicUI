@@ -65,12 +65,11 @@ interface ProposalCard {
  * servisler üzerinden yazılır (bkz. AiImportService).
  */
 @Component({
-  selector: 'app-ai-chat',
-  standalone: true,
-  imports: [FormsModule, TranslatePipe, ConfirmDialogComponent, IconComponent],
-  templateUrl: './ai-chat.component.html',
-  styleUrl: './ai-chat.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-ai-chat',
+    imports: [FormsModule, TranslatePipe, ConfirmDialogComponent, IconComponent],
+    templateUrl: './ai-chat.component.html',
+    styleUrl: './ai-chat.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AiChatComponent implements OnInit, OnDestroy {
   private readonly aiService = inject(AiService);

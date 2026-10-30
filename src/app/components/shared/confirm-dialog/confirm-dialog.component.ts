@@ -8,13 +8,11 @@ import { TranslatePipe } from '../../../pipes/translate.pipe';
  * listesi gösterilir, "Yine de Sil" ile ikinci aşamaya geçilir ve orada son onay istenir.
  */
 @Component({
-  selector: 'app-confirm-dialog',
-  standalone: true,
-  imports: [TranslatePipe],
-  templateUrl: './confirm-dialog.component.html',
-  styleUrls: ['./confirm-dialog.component.scss']
-,
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-confirm-dialog',
+    imports: [TranslatePipe],
+    templateUrl: './confirm-dialog.component.html',
+    styleUrls: ['./confirm-dialog.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ConfirmDialogComponent {
   open = input(false);

@@ -14,12 +14,11 @@ export interface EndDraft {
  * yoksa düğümün adı yazılır — kayıt süreç sonunda boş kalmaz.
  */
 @Component({
-  selector: 'app-end-editor',
-  standalone: true,
-  imports: [TranslatePipe],
-  templateUrl: './end-editor.component.html',
-  styleUrl: './editors.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-end-editor',
+    imports: [TranslatePipe],
+    templateUrl: './end-editor.component.html',
+    styleUrl: './editors.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EndEditorComponent implements OnInit {
   readonly step = input.required<WorkflowStep>();

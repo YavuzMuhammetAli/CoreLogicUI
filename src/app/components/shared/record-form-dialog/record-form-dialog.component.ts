@@ -51,21 +51,20 @@ interface ChildTabView {
  * "kaydete kadar bekle" semantiği anlamsızdır.
  */
 @Component({
-  selector: 'app-record-form-dialog',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    TranslatePipe,
-    ModelLabelPipe,
-    ConfirmDialogComponent,
-    RecordLayoutComponent,
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    forwardRef(() => RecordFormDialogComponent), IconComponent
-  ],
-  templateUrl: './record-form-dialog.component.html',
-  styleUrls: ['./record-form-dialog.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-record-form-dialog',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        TranslatePipe,
+        ModelLabelPipe,
+        ConfirmDialogComponent,
+        RecordLayoutComponent,
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
+        forwardRef(() => RecordFormDialogComponent), IconComponent
+    ],
+    templateUrl: './record-form-dialog.component.html',
+    styleUrls: ['./record-form-dialog.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RecordFormDialogComponent implements OnInit, OnDestroy {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

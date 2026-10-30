@@ -20,12 +20,11 @@ function passwordsMatch(control: AbstractControl) {
 }
 
 @Component({
-  selector: 'app-user-profile',
-  standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe, IconComponent],
-  templateUrl: './user-profile.component.html',
-  styleUrls: ['./user-profile.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-user-profile',
+    imports: [ReactiveFormsModule, TranslatePipe, IconComponent],
+    templateUrl: './user-profile.component.html',
+    styleUrls: ['./user-profile.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserProfileComponent implements OnInit {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

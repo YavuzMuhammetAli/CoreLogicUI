@@ -38,12 +38,11 @@ interface PathRow {
  * yazılmaz. Sonuç şemada boyanır (overlay).
  */
 @Component({
-  selector: 'app-workflow-simulate-panel',
-  standalone: true,
-  imports: [TranslatePipe, IconComponent],
-  templateUrl: './workflow-simulate-panel.component.html',
-  styleUrl: './workflow-simulate-panel.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-workflow-simulate-panel',
+    imports: [TranslatePipe, IconComponent],
+    templateUrl: './workflow-simulate-panel.component.html',
+    styleUrl: './workflow-simulate-panel.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WorkflowSimulatePanelComponent {
   private readonly workflowService = inject(WorkflowService);

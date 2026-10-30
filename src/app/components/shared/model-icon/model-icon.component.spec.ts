@@ -5,9 +5,8 @@ import { resolveModelIconPath } from './model-icon-catalog';
 import { ICONS } from '../icon/icons.generated';
 
 @Component({
-  standalone: true,
-  imports: [ModelIconComponent],
-  template: `<app-model-icon [icon]="icon()" size="16" />`
+    imports: [ModelIconComponent],
+    template: `<app-model-icon [icon]="icon()" size="16" />`
 })
 class HostComponent {
   icon = signal<string | null>(null);

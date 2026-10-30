@@ -22,12 +22,11 @@ import { IconComponent } from '../shared/icon/icon.component';
  * Silme onayı için native confirm() değil shared/confirm-dialog kullanılır.
  */
 @Component({
-  selector: 'app-workflow-list',
-  standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, ConfirmDialogComponent, IconComponent],
-  templateUrl: './workflow-list.component.html',
-  styleUrl: './workflow-list.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-workflow-list',
+    imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, ConfirmDialogComponent, IconComponent],
+    templateUrl: './workflow-list.component.html',
+    styleUrl: './workflow-list.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WorkflowListComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);

@@ -29,12 +29,11 @@ type Target =
  * alana yazılan harfler tek geri al adımında birleşir.
  */
 @Component({
-  selector: 'app-form-inspector',
-  standalone: true,
-  imports: [TranslatePipe, RouterLink, IconComponent],
-  templateUrl: './form-inspector.component.html',
-  styleUrls: ['./form-inspector.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-form-inspector',
+    imports: [TranslatePipe, RouterLink, IconComponent],
+    templateUrl: './form-inspector.component.html',
+    styleUrls: ['./form-inspector.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FormInspectorComponent {
   readonly store = input.required<LayoutDesignerStore<FormLayout>>();

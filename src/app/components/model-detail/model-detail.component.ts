@@ -128,16 +128,15 @@ interface TabColumnsMemo {
 const TAB_RENDER_STEP = 100;
 
 @Component({
-  selector: 'app-model-detail',
-  standalone: true,
-  imports: [
-    CommonModule, ReactiveFormsModule, RouterLink, ColumnVisibilityComponent,
-    TranslatePipe, RecordFormDialogComponent, ConfirmDialogComponent, RecordLayoutComponent,
-    TaskActionDialogComponent, WorkflowViewDialogComponent, IconComponent
-  ],
-  templateUrl: './model-detail.component.html',
-  styleUrls: ['./model-detail.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-model-detail',
+    imports: [
+        CommonModule, ReactiveFormsModule, RouterLink, ColumnVisibilityComponent,
+        TranslatePipe, RecordFormDialogComponent, ConfirmDialogComponent, RecordLayoutComponent,
+        TaskActionDialogComponent, WorkflowViewDialogComponent, IconComponent
+    ],
+    templateUrl: './model-detail.component.html',
+    styleUrls: ['./model-detail.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ModelDetailComponent implements OnInit, OnDestroy {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

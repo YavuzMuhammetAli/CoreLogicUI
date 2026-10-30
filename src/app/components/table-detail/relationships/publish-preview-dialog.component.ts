@@ -17,12 +17,11 @@ type PreviewTab = 'graph' | 'code' | 'sql';
  * sonucu bırakır. Böylece ana ekran önizleme durumunu hiç taşımaz.
  */
 @Component({
-  selector: 'app-publish-preview-dialog',
-  standalone: true,
-  imports: [TranslatePipe, EntityGraphComponent],
-  templateUrl: './publish-preview-dialog.component.html',
-  styleUrls: ['./relationships.shared.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-publish-preview-dialog',
+    imports: [TranslatePipe, EntityGraphComponent],
+    templateUrl: './publish-preview-dialog.component.html',
+    styleUrls: ['./relationships.shared.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PublishPreviewDialogComponent {
   private readonly cdr = inject(ChangeDetectorRef);

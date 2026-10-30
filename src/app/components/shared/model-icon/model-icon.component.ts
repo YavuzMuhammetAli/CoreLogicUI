@@ -13,10 +13,9 @@ import { peekModelIconPath, resolveModelIconPath } from './model-icon-catalog';
  *            <app-model-icon [icon]="t.icon" [filled]="rla.isActive" />   (filled yalnız varsayılan ikonda)
  */
 @Component({
-  selector: 'app-model-icon',
-  standalone: true,
-  imports: [IconComponent],
-  template: `
+    selector: 'app-model-icon',
+    imports: [IconComponent],
+    template: `
     @if (path(); as d) {
       <svg viewBox="0 -960 960 960" fill="currentColor" focusable="false" aria-hidden="true"
            [attr.width]="size()" [attr.height]="size()">
@@ -26,8 +25,8 @@ import { peekModelIconPath, resolveModelIconPath } from './model-icon-catalog';
       <app-icon name="table" [size]="size()" [filled]="filled()" />
     }
   `,
-  styles: [':host { display: inline-flex; flex-shrink: 0; line-height: 0; } svg { display: block; }'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    styles: [':host { display: inline-flex; flex-shrink: 0; line-height: 0; } svg { display: block; }'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ModelIconComponent {
   icon = input<string | null | undefined>(null);

@@ -22,12 +22,11 @@ import { ModelIconComponent } from '../shared/model-icon/model-icon.component';
  * (`TableDetailComponent`, route: `/build/new` ve `/build/:typeName`) yapılır.
  */
 @Component({
-  selector: 'app-form-build',
-  standalone: true,
-  imports: [CommonModule, RouterLink, ConfirmDialogComponent, TranslatePipe, IconComponent, ModelIconComponent],
-  templateUrl: './form-build.component.html',
-  styleUrls: ['./form-build.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-form-build',
+    imports: [CommonModule, RouterLink, ConfirmDialogComponent, TranslatePipe, IconComponent, ModelIconComponent],
+    templateUrl: './form-build.component.html',
+    styleUrls: ['./form-build.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FormBuildComponent {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

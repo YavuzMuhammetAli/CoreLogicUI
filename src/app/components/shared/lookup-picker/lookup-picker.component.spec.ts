@@ -13,9 +13,8 @@ import { LookupPickerComponent } from './lookup-picker.component';
  * Host burada o durumu birebir taklit eder: dar, `overflow: hidden` bir kutu.
  */
 @Component({
-  standalone: true,
-  imports: [LookupPickerComponent, ReactiveFormsModule],
-  template: `
+    imports: [LookupPickerComponent, ReactiveFormsModule],
+    template: `
     <div class="clipping-panel" style="overflow: hidden; height: 60px; width: 300px;">
       <app-lookup-picker
         [typeName]="'Depo'"

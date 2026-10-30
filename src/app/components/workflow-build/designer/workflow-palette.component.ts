@@ -13,12 +13,11 @@ import { IconComponent } from '../../shared/icon/icon.component';
  * kullanıldığı için dokunmatik desteği gerekmiyor; tıklama yolu her yerde çalışır.
  */
 @Component({
-  selector: 'app-workflow-palette',
-  standalone: true,
-  imports: [TranslatePipe, IconComponent],
-  templateUrl: './workflow-palette.component.html',
-  styleUrl: './workflow-palette.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-workflow-palette',
+    imports: [TranslatePipe, IconComponent],
+    templateUrl: './workflow-palette.component.html',
+    styleUrl: './workflow-palette.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WorkflowPaletteComponent {
   readonly disabled = input(false);

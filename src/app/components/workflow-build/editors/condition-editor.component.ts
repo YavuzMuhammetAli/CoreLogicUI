@@ -24,12 +24,11 @@ export interface StepTarget {
  * yazarken istemcide denetlenir (sözdizimi, SEQ, bilinmeyen alan).
  */
 @Component({
-  selector: 'app-condition-editor',
-  standalone: true,
-  imports: [TranslatePipe, IconComponent],
-  templateUrl: './condition-editor.component.html',
-  styleUrl: './editors.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-condition-editor',
+    imports: [TranslatePipe, IconComponent],
+    templateUrl: './condition-editor.component.html',
+    styleUrl: './editors.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ConditionEditorComponent implements OnInit {
   private readonly languageService = inject(LanguageService);

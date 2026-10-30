@@ -22,12 +22,11 @@ import { IconComponent } from '../../shared/icon/icon.component';
  * `{{record.Alan}}` vb. ekler. Adımın KOPYASIYLA çalışır (bkz. condition-editor).
  */
 @Component({
-  selector: 'app-notify-editor',
-  standalone: true,
-  imports: [TranslatePipe, IconComponent],
-  templateUrl: './notify-editor.component.html',
-  styleUrl: './editors.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-notify-editor',
+    imports: [TranslatePipe, IconComponent],
+    templateUrl: './notify-editor.component.html',
+    styleUrl: './editors.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NotifyEditorComponent implements OnInit {
   private readonly languageService = inject(LanguageService);

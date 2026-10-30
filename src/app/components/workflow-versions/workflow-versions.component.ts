@@ -21,12 +21,11 @@ import { IconComponent } from '../shared/icon/icon.component';
  * denetimde sıkça sorulur ve arşiv satırları silinmediği için cevaplanabilir.
  */
 @Component({
-  selector: 'app-workflow-versions',
-  standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, WorkflowCanvasComponent, IconComponent],
-  templateUrl: './workflow-versions.component.html',
-  styleUrl: './workflow-versions.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-workflow-versions',
+    imports: [CommonModule, RouterLink, TranslatePipe, WorkflowCanvasComponent, IconComponent],
+    templateUrl: './workflow-versions.component.html',
+    styleUrl: './workflow-versions.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WorkflowVersionsComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);

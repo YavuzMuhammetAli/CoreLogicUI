@@ -18,12 +18,11 @@ import { formatNumber } from '../../utils/locale-format';
  * (`ThemeService.theme`) palet `getComputedStyle` ile token'lardan yeniden okunur.
  */
 @Component({
-  selector: 'app-chart',
-  standalone: true,
-  imports: [ApexChartComponent, TranslatePipe],
-  templateUrl: './chart.component.html',
-  styleUrls: ['./chart.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-chart',
+    imports: [ApexChartComponent, TranslatePipe],
+    templateUrl: './chart.component.html',
+    styleUrls: ['./chart.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AppChartComponent {
   private readonly platformId = inject(PLATFORM_ID);

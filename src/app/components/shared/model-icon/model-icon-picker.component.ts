@@ -20,12 +20,11 @@ import { MODEL_ICON_CATEGORIES, ModelIconCategory } from './model-icons.generate
  *     (confirmed)="onIconConfirmed($event)" (cancelled)="pickerOpen.set(false)" />
  */
 @Component({
-  selector: 'app-model-icon-picker',
-  standalone: true,
-  imports: [TranslatePipe, IconComponent, ModelIconComponent],
-  templateUrl: './model-icon-picker.component.html',
-  styleUrl: './model-icon-picker.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-model-icon-picker',
+    imports: [TranslatePipe, IconComponent, ModelIconComponent],
+    templateUrl: './model-icon-picker.component.html',
+    styleUrl: './model-icon-picker.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ModelIconPickerComponent {
   open = input(false);

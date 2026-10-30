@@ -11,12 +11,11 @@ import { IconComponent } from '../shared/icon/icon.component';
 import { ModelIconComponent } from '../shared/model-icon/model-icon.component';
 
 @Component({
-  selector: 'app-model-list',
-  standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, IconComponent, ModelIconComponent],
-  templateUrl: './model-list.component.html',
-  styleUrls: ['./model-list.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-model-list',
+    imports: [CommonModule, RouterLink, TranslatePipe, IconComponent, ModelIconComponent],
+    templateUrl: './model-list.component.html',
+    styleUrls: ['./model-list.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ModelListComponent implements OnInit {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */

@@ -11,10 +11,9 @@ import { IconComponent } from '../icon/icon.component';
  * basılan aç/kapa çipleri (`aria-pressed`).
  */
 @Component({
-  selector: 'app-role-picker',
-  standalone: true,
-  imports: [TranslatePipe, RouterLink, IconComponent],
-  template: `
+    selector: 'app-role-picker',
+    imports: [TranslatePipe, RouterLink, IconComponent],
+    template: `
     @if (roles().length === 0) {
       <p class="field-help">
         {{ 'design.roles.none' | t }}
@@ -35,7 +34,7 @@ import { IconComponent } from '../icon/icon.component';
       }
     }
   `,
-  styles: [`
+    styles: [`
     .role-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
     .role-chip {
       display: inline-flex; align-items: center; gap: var(--space-1);
@@ -49,7 +48,7 @@ import { IconComponent } from '../icon/icon.component';
     .role-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .role-chip:disabled { opacity: .6; cursor: default; }
   `],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RolePickerComponent {
   roles = input<readonly Role[]>([]);

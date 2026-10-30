@@ -44,12 +44,11 @@ interface EdgeView {
  * pop-up'ındadır; panel onu "Tüm ayarlar…" ile açar. Telefonda panel gösterilmez.
  */
 @Component({
-  selector: 'app-workflow-inspector',
-  standalone: true,
-  imports: [TranslatePipe, IconComponent],
-  templateUrl: './workflow-inspector.component.html',
-  styleUrl: './workflow-inspector.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-workflow-inspector',
+    imports: [TranslatePipe, IconComponent],
+    templateUrl: './workflow-inspector.component.html',
+    styleUrl: './workflow-inspector.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WorkflowInspectorComponent {
   private readonly languageService = inject(LanguageService);
