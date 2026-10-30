@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { forkJoin, of, Subject } from 'rxjs';
+import { catchError, debounceTime, map } from 'rxjs/operators';
 import { PublishedModelService, PublishedModel, PublishedColumn, PagedData } from '../../services/published-model.service';
 import { PublishModelService } from '../../services/publish-model.service';
 import { PermissionService } from '../../services/permission.service';
@@ -12,16 +13,27 @@ import { ColumnVisibilityComponent, ColumnVisibilityItem } from '../shared/colum
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
-import { cellValue, fieldValue } from './model-data.util';
+import { cellValue, fieldValue, parseEnumValues } from './model-data.util';
 import { asFileRef, FileRef, fileRefUrl } from '../../utils/record-file';
 import { markDirty } from '../../utils/change-detection';
 import { RecordMetadataService } from '../../services/record-metadata.service';
 import { ListLayout } from '../../utils/screen-layout/screen-layout.model';
 import { ResolvedListColumn, resolveListColumns } from '../../utils/screen-layout/list-layout.resolve';
 import { pageWindow } from '../../utils/pagination';
+import {
+  ColumnFilter, ColumnFilters, FilterKind, ListSort, activeFilterCount, ariaSortOf, filterKindOf, isSortable, nextSort,
+  toListFilters
+} from '../../utils/list-query';
 import { IconComponent } from '../shared/icon/icon.component';
 
 type DataRow = Record<string, unknown>;
+
+/** Filtre panelindeki kolon — `kind` ve seçenekler her turda yeniden hesaplanmasın diye hazır tutulur. */
+interface FilterColumn {
+  column: PublishedColumn;
+  kind: FilterKind;
+  options: string[];
+}
 
 @Component({
   selector: 'app-model-data',
@@ -40,6 +52,11 @@ export class ModelDataComponent implements OnInit {
 
   private readonly languageService = inject(LanguageService);
   private readonly metadata = inject(RecordMetadataService);
+
+  private readonly destroyRef = inject(DestroyRef);
+
+  /** Arama ve filtre yazılırken her tuşta sorgu atılmasın. */
+  private static readonly QUERY_DEBOUNCE_MS = 300;
 
   /** Sabit genişlikli tabloda genişliği verilmemiş kolonun ve sabit kolonların genişliği (px). */
   static readonly AUTO_COLUMN_PX = 160;
@@ -60,6 +77,15 @@ export class ModelDataComponent implements OnInit {
   pageSize  = 20;
   total     = 0;
   readonly pageSizeOptions = [20, 50, 100];
+
+  // Arama, sıralama ve filtre — sunucuda uygulanır, sayfa değişince korunur
+  searchTerm = '';
+  sort: ListSort | null = null;
+  columnFilters: ColumnFilters = {};
+  readonly filtersOpen = signal(false);
+  private readonly queryChanges = new Subject<void>();
+  /** Yanıtlar sırasız dönebilir: yalnız son isteğin sonucu uygulanır. */
+  private rowsRequest = 0;
 
   // Sürüm paneli durumu
   versions = signal<ModelVersion[]>([]);
@@ -106,6 +132,10 @@ export class ModelDataComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.queryChanges
+      .pipe(debounceTime(ModelDataComponent.QUERY_DEBOUNCE_MS), takeUntilDestroyed(this.destroyRef), markDirty(this.cdr))
+      .subscribe(() => this.applyQuery());
+
     // snapshot yerine paramMap observable'ına abone ol;
     // aynı component örneği farklı modeller için yeniden kullanıldığında
     // (Angular route-reuse) her parametre değişiminde tetiklenir.
@@ -128,6 +158,10 @@ export class ModelDataComponent implements OnInit {
     this.versions.set([]);
     this.pageIndex = 1;
     this.total     = 0;
+    this.searchTerm = '';
+    this.sort = null;
+    this.columnFilters = {};
+    this.filtersOpen.set(false);
     this.visibleColumnNames = null;
     this.listLayout = null;
     this.clearSelection();
@@ -157,7 +191,8 @@ export class ModelDataComponent implements OnInit {
     visible: string[] | null;
     resolved: ResolvedListColumn[];
     display: PublishedColumn[];
-    headers: { key: string; label: string }[];
+    headers: { key: string; label: string; sortable: boolean }[];
+    filterable: FilterColumn[];
     visibilityItems: ColumnVisibilityItem[];
     effectiveVisible: string[];
   };
@@ -175,7 +210,13 @@ export class ModelDataComponent implements OnInit {
       visible: this.visibleColumnNames,
       resolved,
       display,
-      headers: [{ key: 'ID', label: 'ID' }, ...display.map(c => ({ key: c.columnName, label: this.colLabel(c) }))],
+      headers: [
+        { key: 'ID', label: 'ID', sortable: true },
+        ...display.map(c => ({ key: c.columnName, label: this.colLabel(c), sortable: isSortable(c.dataType) }))
+      ],
+      filterable: display
+        .map(column => ({ column, kind: filterKindOf(column.dataType), options: parseEnumValues(column.enumValues) }))
+        .filter(f => f.kind !== 'none'),
       visibilityItems: this.columns.map(c => ({ name: c.columnName, required: false })),
       effectiveVisible: this.visibleColumnNames ?? this.columns.map(c => c.columnName)
     };
@@ -269,9 +310,16 @@ export class ModelDataComponent implements OnInit {
   loadRows(): void {
     this.loadingRows = true;
     this.loadError = null;
+    const request = ++this.rowsRequest;
 
-    this.publishedModel.getAllPaged(this.typeName, this.pageIndex, this.pageSize).pipe(markDirty(this.cdr)).subscribe({
+    this.publishedModel.getAllPaged(this.typeName, this.pageIndex, this.pageSize, undefined, undefined, {
+      search: this.searchTerm.trim(),
+      sortBy: this.sort?.column,
+      sortDir: this.sort?.direction,
+      filters: toListFilters(this.displayColumns, this.columnFilters)
+    }).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
+        if (request !== this.rowsRequest) return;
         if (res.success) {
           this.loadingRows = false;
           const paged: PagedData<Record<string, unknown>> = res.data;
@@ -308,10 +356,63 @@ export class ModelDataComponent implements OnInit {
         }
       },
       error: err => {
+        if (request !== this.rowsRequest) return;
         this.loadingRows = false;
         this.loadError = err?.error?.message ?? this.languageService.t('model.data.loadFailed');
       }
     });
+  }
+
+  // ─── Arama, sıralama, filtre ───────────────────────────────────────────────────
+
+  /** Filtre paneli kolonları — yalnız listede görünen ve filtrelenebilen kolonlar. */
+  get filterColumns(): FilterColumn[] {
+    return this.cols.filterable;
+  }
+
+  get activeFilters(): number {
+    return activeFilterCount(this.columnFilters);
+  }
+
+  /** Liste bir seçimle daraltılmış mı (boş sonuçta "kayıt yok" değil "eşleşme yok" denir). */
+  get isQueryActive(): boolean {
+    return !!this.searchTerm.trim() || this.activeFilters > 0;
+  }
+
+  onSearchInput(value: string): void {
+    this.searchTerm = value;
+    this.queryChanges.next();
+  }
+
+  onFilterInput(column: string, part: keyof ColumnFilter, value: string): void {
+    this.columnFilters = { ...this.columnFilters, [column]: { ...this.columnFilters[column], [part]: value } };
+    this.queryChanges.next();
+  }
+
+  toggleSort(column: string): void {
+    this.sort = nextSort(this.sort, column);
+    this.applyQuery();
+  }
+
+  ariaSort(column: string): 'ascending' | 'descending' | 'none' {
+    return ariaSortOf(this.sort, column);
+  }
+
+  toggleFilters(): void {
+    this.filtersOpen.update(open => !open);
+  }
+
+  clearQuery(): void {
+    this.searchTerm = '';
+    this.columnFilters = {};
+    this.applyQuery();
+  }
+
+  /** Seçim değişti: ilk sayfadan başlanır, seçili satırlar başka bir listeye taşınmaz. */
+  private applyQuery(): void {
+    this.pageIndex = 1;
+    this.clearSelection();
+    this.loadRows();
   }
 
   /** Başlıkta gösterilecek model adı — model etiketi (ör. "Teklif"), yoksa tablo adı. */
@@ -329,7 +430,7 @@ export class ModelDataComponent implements OnInit {
    * key: veri/lookup anahtarı (ham columnName) — hücre değeri bu anahtarla okunur.
    * label: kullanıcıya gösterilen metin (admin Label tanımlamışsa onu kullanır).
    */
-  get tableHeaders(): { key: string; label: string }[] {
+  get tableHeaders(): { key: string; label: string; sortable: boolean }[] {
     return this.cols.headers;
   }
 

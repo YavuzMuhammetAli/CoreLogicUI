@@ -85,6 +85,83 @@
       </div>
     }
 
+    <!-- Arama ve filtre: seçim sonucu boş kalsa da açık kalmalı, yoksa seçimden çıkılamazdı -->
+    @if (total > 0 || isQueryActive) {
+      <div class="list-toolbar">
+        <div class="list-search">
+          <app-icon class="list-search__icon" name="search" size="16" />
+          <input
+            class="input list-search__input"
+            type="search"
+            [value]="searchTerm"
+            (input)="onSearchInput($any($event.target).value)"
+            [placeholder]="'model.data.searchPlaceholder' | t"
+            [attr.aria-label]="'model.data.searchPlaceholder' | t">
+        </div>
+        @if (filterColumns.length > 0) {
+          <button class="btn btn-ghost btn-sm" type="button" (click)="toggleFilters()" [attr.aria-expanded]="filtersOpen()">
+            <app-icon name="filter_list" size="14" />{{ 'model.data.filters' | t }}
+            @if (activeFilters > 0) {
+              <span class="badge">{{ activeFilters }}</span>
+            }
+          </button>
+        }
+        @if (isQueryActive) {
+          <button class="btn btn-ghost btn-sm" type="button" (click)="clearQuery()">
+            <app-icon name="close" size="14" />{{ 'model.data.clearFilters' | t }}
+          </button>
+        }
+      </div>
+
+      @if (filtersOpen()) {
+        <div class="filter-panel">
+          @for (filter of filterColumns; track filter.column.columnName) {
+            @let name = filter.column.columnName;
+            @let label = colLabel(filter.column);
+            <div class="field">
+              <label [attr.for]="'filter-' + name">{{ label }}</label>
+              @switch (filter.kind) {
+                @case ('text') {
+                  <input class="input" type="text" [id]="'filter-' + name"
+                    [value]="columnFilters[name]?.value ?? ''"
+                    (input)="onFilterInput(name, 'value', $any($event.target).value)">
+                }
+                @case ('enum') {
+                  <select class="input" [id]="'filter-' + name" [value]="columnFilters[name]?.value ?? ''"
+                    (change)="onFilterInput(name, 'value', $any($event.target).value)">
+                    <option value="">{{ 'model.data.filterAll' | t }}</option>
+                    @for (option of filter.options; track option) {
+                      <option [value]="option">{{ option }}</option>
+                    }
+                  </select>
+                }
+                @case ('boolean') {
+                  <select class="input" [id]="'filter-' + name" [value]="columnFilters[name]?.value ?? ''"
+                    (change)="onFilterInput(name, 'value', $any($event.target).value)">
+                    <option value="">{{ 'model.data.filterAll' | t }}</option>
+                    <option value="true">{{ 'common.yes' | t }}</option>
+                    <option value="false">{{ 'common.no' | t }}</option>
+                  </select>
+                }
+                @default {
+                  <div class="filter-range">
+                    <input class="input" [type]="filter.kind === 'number' ? 'number' : 'date'" [id]="'filter-' + name"
+                      [value]="columnFilters[name]?.from ?? ''"
+                      [attr.aria-label]="('model.data.filterFrom' | t) + ': ' + label"
+                      (input)="onFilterInput(name, 'from', $any($event.target).value)">
+                    <input class="input" [type]="filter.kind === 'number' ? 'number' : 'date'"
+                      [value]="columnFilters[name]?.to ?? ''"
+                      [attr.aria-label]="('model.data.filterTo' | t) + ': ' + label"
+                      (input)="onFilterInput(name, 'to', $any($event.target).value)">
+                  </div>
+                }
+              }
+            </div>
+          }
+        </div>
+      }
+    }
+
     <!-- Yükleniyor -->
     @if (loadingRows && rows.length === 0) {
       <div class="empty-state">
@@ -95,7 +172,13 @@
 
     <!-- Tablo -->
     @if (!loadingRows || rows.length > 0) {
-      @if (total === 0 && !loadError) {
+      @if (total === 0 && !loadError && isQueryActive) {
+        <div class="empty-state">
+          <app-icon class="empty-icon" name="search" size="40" />
+          <h3>{{ 'model.data.noMatchTitle' | t }}</h3>
+          <p>{{ 'model.data.noMatchMessage' | t }}</p>
+        </div>
+      } @else if (total === 0 && !loadError) {
         <div class="empty-state">
           <app-icon class="empty-icon" name="inbox" size="40" />
           <h3>{{ 'model.data.emptyTitle' | t }}</h3>
@@ -129,7 +212,18 @@
                   </th>
                 }
                 @for (header of tableHeaders; track header.key) {
-                  <th scope="col">{{ header.label }}</th>
+                  <th scope="col" [attr.aria-sort]="header.sortable ? ariaSort(header.key) : null">
+                    @if (header.sortable) {
+                      <button type="button" class="sort-btn" (click)="toggleSort(header.key)">
+                        {{ header.label }}
+                        @if (sort?.column === header.key) {
+                          <app-icon [name]="sort?.direction === 'asc' ? 'arrow_upward' : 'arrow_downward'" size="14" />
+                        }
+                      </button>
+                    } @else {
+                      {{ header.label }}
+                    }
+                  </th>
                 }
                 <!--
                   H: Süreç durumu kolonu — YALNIZCA bu modelde akış varsa çizilir.

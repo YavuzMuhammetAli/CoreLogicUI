@@ -7,6 +7,7 @@ import { DataResponseModel } from '../models/dataResponseModel';
 import { environment } from '../../environments/environment';
 import { SKIP_FORBIDDEN_REDIRECT } from '../interceptors/error.interceptor';
 import type { PublishedTableSchema } from './published-table.service';
+import type { ListQueryParams } from '../utils/list-query';
 
 /** Kolon meta verisi — backend PublishedColumnInfo ile eşleşir */
 export interface PublishedColumn {
@@ -215,13 +216,15 @@ export class PublishedModelService {
   /**
    * Sayfalı kayıt listesi getirir. Backend'e page + pageSize gönderilir; yalnız ilgili
    * sayfa döner. Alt-model sekmeleri paramsız getAll kullanmaya devam eder.
+   * `query`: arama, sıralama ve filtre (bkz. utils/list-query).
    */
   getAllPaged(
     typeName: string,
     page: number,
     pageSize: number,
     parentColumn?: string,
-    parentId?: number
+    parentId?: number,
+    query?: ListQueryParams
   ): Observable<PagedResponseModel<Record<string, unknown>>> {
     let params = new HttpParams()
       .set('typeName', typeName)
@@ -230,6 +233,9 @@ export class PublishedModelService {
     if (parentColumn && parentId != null) {
       params = params.set('parentColumn', parentColumn).set('parentId', parentId);
     }
+    if (query?.search) params = params.set('search', query.search);
+    if (query?.sortBy) params = params.set('sortBy', query.sortBy).set('sortDir', query.sortDir ?? 'asc');
+    if (query?.filters?.length) params = params.set('filters', JSON.stringify(query.filters));
     return this.http.get<PagedResponseModel<Record<string, unknown>>>(`${this.baseUrl}/getall`, { params });
   }
 
