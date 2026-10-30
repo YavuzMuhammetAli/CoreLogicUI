@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, Output, ViewChild, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { closeOnOutsidePointer } from '../../../utils/outside-pointer';
 import { IconComponent } from '../icon/icon.component';
@@ -21,7 +21,7 @@ export interface ColumnVisibilityItem {
  */
 @Component({
     selector: 'app-column-visibility',
-    imports: [CommonModule, TranslatePipe, IconComponent],
+    imports: [TranslatePipe, IconComponent],
     templateUrl: './column-visibility.component.html',
     styleUrls: ['./column-visibility.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush

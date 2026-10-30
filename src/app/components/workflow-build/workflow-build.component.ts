@@ -3,7 +3,7 @@ import {
   afterNextRender, computed, effect, inject, signal, untracked, viewChild
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { CommonModule, Location, isPlatformBrowser } from '@angular/common';
+import { Location, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable, catchError, debounceTime, distinctUntilChanged, filter, of, switchMap, tap } from 'rxjs';
@@ -128,11 +128,18 @@ interface StepRow {
 @Component({
     selector: 'app-workflow-build',
     imports: [
-        CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe,
-        WorkflowCanvasComponent, WorkflowStepDialogComponent, ConfirmDialogComponent,
-        WorkflowPaletteComponent, WorkflowInspectorComponent, WorkflowIssuesPanelComponent,
-        WorkflowSimulatePanelComponent, IconComponent
-    ],
+    ReactiveFormsModule,
+    RouterLink,
+    TranslatePipe,
+    WorkflowCanvasComponent,
+    WorkflowStepDialogComponent,
+    ConfirmDialogComponent,
+    WorkflowPaletteComponent,
+    WorkflowInspectorComponent,
+    WorkflowIssuesPanelComponent,
+    WorkflowSimulatePanelComponent,
+    IconComponent
+],
     providers: [WorkflowDesignerStore],
     templateUrl: './workflow-build.component.html',
     styleUrl: './workflow-build.component.scss',

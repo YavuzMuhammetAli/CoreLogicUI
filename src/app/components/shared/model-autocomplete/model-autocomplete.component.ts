@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, input, model, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { closeOnOutsidePointer } from '../../../utils/outside-pointer';
 import { IconComponent } from '../icon/icon.component';
@@ -16,7 +16,7 @@ import { IconComponent } from '../icon/icon.component';
  */
 @Component({
     selector: 'app-model-autocomplete',
-    imports: [CommonModule, TranslatePipe, IconComponent],
+    imports: [TranslatePipe, IconComponent],
     templateUrl: './model-autocomplete.component.html',
     styleUrls: ['./model-autocomplete.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush

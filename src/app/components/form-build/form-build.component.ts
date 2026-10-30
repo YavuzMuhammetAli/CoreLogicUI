@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs';
@@ -23,7 +23,7 @@ import { ModelIconComponent } from '../shared/model-icon/model-icon.component';
  */
 @Component({
     selector: 'app-form-build',
-    imports: [CommonModule, RouterLink, ConfirmDialogComponent, TranslatePipe, IconComponent, ModelIconComponent],
+    imports: [RouterLink, ConfirmDialogComponent, TranslatePipe, IconComponent, ModelIconComponent],
     templateUrl: './form-build.component.html',
     styleUrls: ['./form-build.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { CommonModule, Location } from '@angular/common';
+import { Location } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin, of, Observable, Subscription } from 'rxjs';
@@ -130,10 +130,17 @@ const TAB_RENDER_STEP = 100;
 @Component({
     selector: 'app-model-detail',
     imports: [
-        CommonModule, ReactiveFormsModule, RouterLink, ColumnVisibilityComponent,
-        TranslatePipe, RecordFormDialogComponent, ConfirmDialogComponent, RecordLayoutComponent,
-        TaskActionDialogComponent, WorkflowViewDialogComponent, IconComponent
-    ],
+    ReactiveFormsModule,
+    RouterLink,
+    ColumnVisibilityComponent,
+    TranslatePipe,
+    RecordFormDialogComponent,
+    ConfirmDialogComponent,
+    RecordLayoutComponent,
+    TaskActionDialogComponent,
+    WorkflowViewDialogComponent,
+    IconComponent
+],
     templateUrl: './model-detail.component.html',
     styleUrls: ['./model-detail.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush

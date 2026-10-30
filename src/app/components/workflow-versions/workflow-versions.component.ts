@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { WorkflowService } from '../../services/workflow.service';
 import { WorkflowDefinition, WorkflowGraph, parseDefinition } from '../../models/workflow.model';
@@ -22,7 +22,7 @@ import { IconComponent } from '../shared/icon/icon.component';
  */
 @Component({
     selector: 'app-workflow-versions',
-    imports: [CommonModule, RouterLink, TranslatePipe, WorkflowCanvasComponent, IconComponent],
+    imports: [RouterLink, TranslatePipe, WorkflowCanvasComponent, IconComponent],
     templateUrl: './workflow-versions.component.html',
     styleUrl: './workflow-versions.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush

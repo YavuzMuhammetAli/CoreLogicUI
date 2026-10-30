@@ -1,7 +1,7 @@
 import {
   ChangeDetectionStrategy, Component, HostListener, OnInit, computed, inject, input, output, signal
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import {
   ASSIGNMENT_MODE_OPTIONS,
@@ -47,9 +47,15 @@ export interface StepDialogResult {
 @Component({
     selector: 'app-workflow-step-dialog',
     imports: [
-        CommonModule, ReactiveFormsModule, TranslatePipe,
-        ConditionEditorComponent, EndEditorComponent, ActionEditorComponent, NotifyEditorComponent, TimerEditorComponent, IconComponent
-    ],
+    ReactiveFormsModule,
+    TranslatePipe,
+    ConditionEditorComponent,
+    EndEditorComponent,
+    ActionEditorComponent,
+    NotifyEditorComponent,
+    TimerEditorComponent,
+    IconComponent
+],
     templateUrl: './workflow-step-dialog.component.html',
     styleUrl: './workflow-step-dialog.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush

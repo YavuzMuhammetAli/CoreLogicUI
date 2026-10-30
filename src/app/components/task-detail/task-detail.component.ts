@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, ViewChild, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { WorkflowTaskService, WorkflowInstanceService } from '../../services/workflow-task.service';
 import { WorkflowEvent, WorkflowTask } from '../../models/workflow.model';
@@ -25,7 +25,7 @@ import { IconComponent } from '../shared/icon/icon.component';
  */
 @Component({
     selector: 'app-task-detail',
-    imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, ConfirmDialogComponent, TaskDecisionFormComponent, IconComponent],
+    imports: [RouterLink, TranslatePipe, ModelLabelPipe, ConfirmDialogComponent, TaskDecisionFormComponent, IconComponent],
     templateUrl: './task-detail.component.html',
     styleUrl: './task-detail.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush

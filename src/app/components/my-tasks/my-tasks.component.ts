@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterLink } from '@angular/router';
 import { WorkflowTaskService } from '../../services/workflow-task.service';
 import { WorkflowTask } from '../../models/workflow.model';
@@ -21,7 +21,7 @@ import { IconComponent } from '../shared/icon/icon.component';
  */
 @Component({
     selector: 'app-my-tasks',
-    imports: [CommonModule, RouterLink, TranslatePipe, ModelLabelPipe, IconComponent],
+    imports: [RouterLink, TranslatePipe, ModelLabelPipe, IconComponent],
     templateUrl: './my-tasks.component.html',
     styleUrl: './my-tasks.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush

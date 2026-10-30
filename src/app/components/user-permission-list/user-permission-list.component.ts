@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterLink } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
@@ -18,7 +18,7 @@ interface UserRow extends AppUser {
 
 @Component({
     selector: 'app-user-permission-list',
-    imports: [CommonModule, RouterLink, TranslatePipe, IconComponent],
+    imports: [RouterLink, TranslatePipe, IconComponent],
     templateUrl: './user-permission-list.component.html',
     styleUrls: ['./user-permission-list.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush

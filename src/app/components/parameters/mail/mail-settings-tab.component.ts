@@ -1,7 +1,7 @@
 import {
   ChangeDetectionStrategy, Component, OnInit, computed, inject, signal
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ParameterService } from '../../../services/parameter.service';
 import { LanguageService } from '../../../services/language.service';
@@ -24,7 +24,7 @@ const HTTP_URL = /^https?:\/\/\S+$/i;
  */
 @Component({
     selector: 'app-mail-settings-tab',
-    imports: [CommonModule, ReactiveFormsModule, TranslatePipe, IconComponent],
+    imports: [ReactiveFormsModule, TranslatePipe, IconComponent],
     templateUrl: './mail-settings-tab.component.html',
     styleUrls: ['../parameters.shared.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush

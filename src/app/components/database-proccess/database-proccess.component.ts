@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { DatabaseService } from '../../services/database.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { LanguageService } from '../../services/language.service';
@@ -8,7 +8,7 @@ import { IconComponent } from '../shared/icon/icon.component';
 
 @Component({
     selector: 'app-database-proccess',
-    imports: [CommonModule, TranslatePipe, IconComponent],
+    imports: [TranslatePipe, IconComponent],
     templateUrl: './database-proccess.component.html',
     styleUrl: './database-proccess.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush

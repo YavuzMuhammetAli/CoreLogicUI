@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -46,7 +46,7 @@ export interface RolePermissionRow {
 
 @Component({
     selector: 'app-role-detail',
-    imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ConfirmDialogComponent, HelpHintComponent, IconComponent],
+    imports: [FormsModule, RouterLink, TranslatePipe, ConfirmDialogComponent, HelpHintComponent, IconComponent],
     templateUrl: './role-detail.component.html',
     styleUrls: ['./role-detail.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush

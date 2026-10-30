@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { UserAdminService } from '../../services/user-admin.service';
@@ -24,7 +24,7 @@ interface RoleOption { id: number; name: string; }
  */
 @Component({
     selector: 'app-user-detail',
-    imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe, ConfirmDialogComponent, IconComponent],
+    imports: [ReactiveFormsModule, RouterLink, TranslatePipe, ConfirmDialogComponent, IconComponent],
     templateUrl: './user-detail.component.html',
     styleUrls: ['./user-detail.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush

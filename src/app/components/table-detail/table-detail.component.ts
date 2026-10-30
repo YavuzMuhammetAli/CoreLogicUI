@@ -1,6 +1,6 @@
 import '../../i18n/lazy/datatype-help'; // help.* sözlüğü bu parçayla iner
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, ViewChild, inject, OnDestroy, signal } from '@angular/core';
-import { CommonModule, Location } from '@angular/common';
+import { Location } from '@angular/common';
 import { ReactiveFormsModule, AbstractControl, FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
@@ -139,10 +139,17 @@ const SEQUENCE_TEMPLATE = "TODAY('ddMMyyyy') & '-' & SEQ(3, TODAY('ddMMyyyy'))";
 @Component({
     selector: 'app-table-detail',
     imports: [
-        CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe,
-        ModelNodeComponent, HelpHintComponent, DatatypeHelpComponent,
-        RelationshipsTabComponent, IconComponent, ModelIconComponent, ModelIconPickerComponent
-    ],
+    ReactiveFormsModule,
+    RouterLink,
+    TranslatePipe,
+    ModelNodeComponent,
+    HelpHintComponent,
+    DatatypeHelpComponent,
+    RelationshipsTabComponent,
+    IconComponent,
+    ModelIconComponent,
+    ModelIconPickerComponent
+],
     templateUrl: './table-detail.component.html',
     styleUrls: ['./table-detail.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush

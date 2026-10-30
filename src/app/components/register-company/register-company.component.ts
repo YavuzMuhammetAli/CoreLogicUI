@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription, interval, of } from 'rxjs';
@@ -35,7 +35,7 @@ interface DisplayStep {
  */
 @Component({
     selector: 'app-register-company',
-    imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe, IconComponent],
+    imports: [ReactiveFormsModule, RouterLink, TranslatePipe, IconComponent],
     templateUrl: './register-company.component.html',
     styleUrls: ['./register-company.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush

@@ -3,7 +3,7 @@ import {
   ChangeDetectionStrategy, ChangeDetectorRef, Component, forwardRef, Input, inject,
   OnChanges, OnDestroy, SimpleChanges, signal
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import {
   AbstractControl,
   ReactiveFormsModule,
@@ -47,14 +47,13 @@ export const MAX_DEPTH = 4;
     selector: 'app-model-node',
     // forwardRef ile kendi kendine import — Angular recursive component çözümü
     imports: [
-        CommonModule,
-        ReactiveFormsModule,
-        TranslatePipe,
-        HelpHintComponent,
-        DatatypeHelpComponent,
-        // eslint-disable-next-line @typescript-eslint/no-use-before-define
-        forwardRef(() => ModelNodeComponent), IconComponent
-    ],
+    ReactiveFormsModule,
+    TranslatePipe,
+    HelpHintComponent,
+    DatatypeHelpComponent,
+    forwardRef(() => ModelNodeComponent),
+    IconComponent
+],
     templateUrl: './model-node.component.html',
     styleUrls: ['./model-node.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush

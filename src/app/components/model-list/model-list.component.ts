@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterLink, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { PublishedModelService, PublishedModel } from '../../services/published-model.service';
@@ -12,7 +12,7 @@ import { ModelIconComponent } from '../shared/model-icon/model-icon.component';
 
 @Component({
     selector: 'app-model-list',
-    imports: [CommonModule, RouterLink, TranslatePipe, IconComponent, ModelIconComponent],
+    imports: [RouterLink, TranslatePipe, IconComponent, ModelIconComponent],
     templateUrl: './model-list.component.html',
     styleUrls: ['./model-list.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush

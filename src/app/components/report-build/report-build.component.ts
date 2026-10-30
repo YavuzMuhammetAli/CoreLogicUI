@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable, debounceTime } from 'rxjs';
@@ -76,7 +76,7 @@ function isDateColumnType(type: string): boolean {
  */
 @Component({
     selector: 'app-report-build',
-    imports: [CommonModule, ReactiveFormsModule, RouterLink, AppChartComponent, TranslatePipe, IconComponent],
+    imports: [ReactiveFormsModule, RouterLink, AppChartComponent, TranslatePipe, IconComponent],
     templateUrl: './report-build.component.html',
     styleUrls: ['./report-build.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, forwardRef, HostListener, Input, inject, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
@@ -53,15 +53,14 @@ interface ChildTabView {
 @Component({
     selector: 'app-record-form-dialog',
     imports: [
-        CommonModule,
-        ReactiveFormsModule,
-        TranslatePipe,
-        ModelLabelPipe,
-        ConfirmDialogComponent,
-        RecordLayoutComponent,
-        // eslint-disable-next-line @typescript-eslint/no-use-before-define
-        forwardRef(() => RecordFormDialogComponent), IconComponent
-    ],
+    ReactiveFormsModule,
+    TranslatePipe,
+    ModelLabelPipe,
+    ConfirmDialogComponent,
+    RecordLayoutComponent,
+    forwardRef(() => RecordFormDialogComponent),
+    IconComponent
+],
     templateUrl: './record-form-dialog.component.html',
     styleUrls: ['./record-form-dialog.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush
