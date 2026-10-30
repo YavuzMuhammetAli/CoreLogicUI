@@ -1003,7 +1003,7 @@ Tek platform anahtarı; tenant kendi anahtarını giremez, plan kotasından harc
 İki kaynak var, **PlatformConfig kazanır**:
 
 ```
-master PlatformConfig (doluysa)          ← Platform Console → Yapılandırma
+master PlatformConfig (doluysa)          ← Platform Console → Ayarlar → Platform Yapılandırması
   └── boşsa → IConfiguration             ← User Secrets (dev) / ortam değişkeni (prod)
 ```
 
