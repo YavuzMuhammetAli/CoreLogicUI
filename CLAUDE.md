@@ -3,7 +3,7 @@
 ## Project Overview
 
 CoreLogicUI is the Angular 18 frontend for the **CoreLogic** dynamic model publishing platform.
-Backend: ASP.NET Core 8.0 Web API at `C:\Users\muham\source\repos\YavuzMuhammetAli\CoreLogic`, compiles C# entity
+Backend: ASP.NET Core 10 Web API at `C:\Users\muham\source\repos\YavuzMuhammetAli\CoreLogic`, compiles C# entity
 code at runtime via Roslyn and exposes dynamic CRUD endpoints.
 
 Users can:
