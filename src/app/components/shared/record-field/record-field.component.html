@@ -82,7 +82,7 @@
   <textarea
     class="input"
     [id]="inputId()"
-    [rows]="rows() ?? 3"
+    [rows]="textareaRows()"
     [formControl]="formControl()"
     [attr.required]="required() || null"
     [attr.aria-invalid]="invalid() || null"

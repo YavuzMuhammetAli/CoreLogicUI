@@ -256,7 +256,7 @@
                     </td>
                   }
                   @for (header of tableHeaders; track header.key) {
-                    <td [attr.data-label]="header.label">
+                    <td [attr.data-label]="header.label" [class.cell-clamp]="header.longText">
                       @if (fileRefOf(row, header.key); as file) {
                         @if (file.kind === 'image') {
                           <img

@@ -139,7 +139,7 @@ function isIntegerIn(value: unknown, min: number, max: number): value is number 
 
 /** "Çok satırlı" yalnız metin, "seçenek düğmeleri" yalnız enum kolonunda anlamlı. */
 function widgetFits(widget: string, dataType: string): boolean {
-  return widget === 'multiline' ? dataType === 'string' : dataType === 'enum';
+  return widget === 'multiline' ? dataType === 'string' || dataType === 'text' : dataType === 'enum';
 }
 
 class Walker {

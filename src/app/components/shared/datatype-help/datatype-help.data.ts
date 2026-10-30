@@ -137,6 +137,19 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
     showRegexLab: true
   },
 
+  text: {
+    titleKey: 'help.type.text.title',
+    csharpType: 'string',
+    summaryKey: 'help.type.text.summary',
+    useCaseKeys: ['help.type.text.useCase1', 'help.type.text.useCase2'],
+    rules: STRING_RULES,
+    samples: [
+      sample('text', 1, 'Müşteri teslimatı öne çekilmesini istedi…', true),
+      sample('text', 2, '100.001 karakter', false)
+    ],
+    notesKey: 'help.type.text.notes'
+  },
+
   int: integerTopic('int', 'int', '1250', '3000000000'),
   long: integerTopic('long', 'long', '9007199254740991', '1e30'),
   short: integerTopic('short', 'short', '1200', '40000'),

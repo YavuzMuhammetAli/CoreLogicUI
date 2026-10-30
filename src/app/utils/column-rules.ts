@@ -4,6 +4,11 @@ import { parseExpression, usesSequence } from './auto-value/expression';
 /** Sayısal (Min/Max kurallı) tipler. */
 export const NUMERIC_COLUMN_TYPES = new Set(['int', 'long', 'short', 'byte', 'decimal', 'double', 'float']);
 
+/** Uzunluk ve regex kurallı tipler: `string` (250 karakter) ve çok satırlı `text`. */
+export function isTextColumn(dataType: string | null | undefined): boolean {
+  return dataType === 'string' || dataType === 'text';
+}
+
 /** Şema ekranındaki sütun formunun kural alanları (model-node sütun FormGroup'u). */
 export interface ColumnRuleValue {
   dataType: string;
@@ -36,7 +41,7 @@ export interface ColumnRuleValue {
  * 1004 KB) kayıtlı değeri kaydırmasın.
  */
 export function normalizeColumnRules<T extends ColumnRuleValue>(v: T): T & Required<ColumnRuleValue> {
-  const isString = v.dataType === 'string';
+  const isString = isTextColumn(v.dataType);
   const isFile = isFileType(v.dataType);
   const isNumeric = NUMERIC_COLUMN_TYPES.has(v.dataType);
 
@@ -98,7 +103,7 @@ export function autoValueKey(c: Pick<ColumnRuleValue, 'autoValueTrigger' | 'auto
 // ── Kayıtlı kolonun meta verisi (updateMemberMetadata) ─────────────────────────
 
 /** Zorunluluğu yalnız çalışma anında denetlenen tipler — derlenen C# tipi değişmez. */
-const REQUIRED_RUNTIME_ONLY_TYPES = new Set(['string', 'enum', 'file', 'image']);
+const REQUIRED_RUNTIME_ONLY_TYPES = new Set(['string', 'text', 'enum', 'file', 'image']);
 
 /**
  * Zorunluluk derlenen C# tipini değiştirir mi? Değer tiplerinde evet (`int` ⇄ `int?`).
@@ -175,7 +180,7 @@ function memberMetadata(
     regex?: string | null; regexMessage?: string | null; enumValues?: string | null; lookupDisplayColumn?: string | null;
   }
 ): MemberMetadata {
-  const isText = dataType === 'string';
+  const isText = isTextColumn(dataType);
   const isNumeric = NUMERIC_COLUMN_TYPES.has(dataType);
   return {
     label:               text(v.label),

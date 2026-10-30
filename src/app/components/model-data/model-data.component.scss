@@ -78,6 +78,15 @@
 }
 
 /* ---- Tablo ---- */
+
+/* Uzun metin tek satırda kırpılır: aksi halde tablo sayfa genişliğini aşardı */
+.cell-clamp {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Tıklanabilir satır — detay sayfasına navigasyon */
 /* ── Satır seçimi (toplu silme) ────────────────────────────────────────────── */
 

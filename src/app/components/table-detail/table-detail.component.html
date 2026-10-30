@@ -500,8 +500,8 @@
           <div class="alert alert-warn" role="status">{{ 'table.detail.requiredExistingRowsWarning' | t }}</div>
         }
 
-        <!-- String'e özel: MinLength, MaxLength, Regex -->
-        @if (columnDraft.get('dataType')!.value === 'string') {
+        <!-- Metne özel: MinLength, MaxLength, Regex -->
+        @if (isTextColumn(columnDraft.get('dataType')!.value)) {
           <div class="field-row">
             <div class="field">
               <label for="col-minlen">

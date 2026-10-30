@@ -39,6 +39,14 @@ describe('normalizeColumnRules', () => {
     expect(r.maxFileSizeMb).toBeNull();
   });
 
+  it('çok satırlı metin kolonu uzunluk ve regex kurallarını korur', () => {
+    const r = normalizeColumnRules({ dataType: 'text', minLength: 2, maxLength: 5000, regex: '^x', enumValues: 'A' });
+    expect(r.minLength).toBe(2);
+    expect(r.maxLength).toBe(5000);
+    expect(r.regex).toBe('^x');
+    expect(r.enumValues).toBe('');
+  });
+
   it('dosya kolonunda izinli türler korunur, taslaktan kalan enum değeri atılır', () => {
     expect(normalizeColumnRules({ dataType: 'file', enumValues: 'office|pdf' }).enumValues).toBe('pdf|office');
     expect(normalizeColumnRules({ dataType: 'file', enumValues: 'Aktif|Pasif' }).enumValues).toBe('');

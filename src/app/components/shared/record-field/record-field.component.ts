@@ -83,7 +83,10 @@ export class RecordFieldComponent {
   readonly stepAttr = computed(() => stepFor(this.column().dataType));
   readonly description = computed(() => this.column().description?.trim() ?? '');
   /** Gösterim biçimi yalnız uygun tipte uygulanır (tasarım doğrulaması da bunu ister). */
-  readonly isMultiline = computed(() => this.widget() === 'multiline' && this.column().dataType === 'string');
+  readonly isMultiline = computed(() =>
+    this.column().dataType === 'text' || (this.widget() === 'multiline' && this.column().dataType === 'string'));
+  /** Uzun metin alanı içeriğine yer açılmış başlar; tasarımcıdaki satır sayısı önceliklidir. */
+  readonly textareaRows = computed(() => this.rows() ?? (this.column().dataType === 'text' ? 6 : 3));
   readonly isRadio = computed(() => this.widget() === 'radio' && this.column().dataType === 'enum');
 
   readonly isImage = isImage;

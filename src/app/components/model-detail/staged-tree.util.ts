@@ -3,6 +3,7 @@ import { DynamicTreeNodeDto, PublishedColumn } from '../../services/published-mo
 import { PublishedColumnSchema, PublishedTableSchema } from '../../services/published-table.service';
 import { fieldValue, sanitizePayload } from '../model-data/model-data.util';
 import { isFileType, maxFileSizeValidator } from '../../utils/file-size';
+import { isTextColumn } from '../../utils/column-rules';
 import { isColumnRequired } from '../../utils/record-field/column-required';
 
 /** Dinamik tablo satırı — alan adı → değer. */
@@ -214,7 +215,7 @@ export function validatorsFor(
 
   if (!rule) return validators;
 
-  if (col.dataType === 'string') {
+  if (isTextColumn(col.dataType)) {
     if (rule.minLength != null) validators.push(Validators.minLength(rule.minLength));
     if (rule.maxLength != null) validators.push(Validators.maxLength(rule.maxLength));
     if (rule.regex) {

@@ -4026,6 +4026,100 @@
           "severity": "error"
         }
       ]
+    },
+    {
+      "name": "çok satırlı metin kolonu: yazı kutusu uygun, seçenek düğmesi değil",
+      "viewType": "form",
+      "mode": "draft",
+      "extraFacts": [
+        {
+          "name": "Notlar",
+          "dataType": "text",
+          "mustStayVisible": false
+        },
+        {
+          "name": "Yorum",
+          "dataType": "text",
+          "mustStayVisible": false
+        }
+      ],
+      "layout": {
+        "schemaVersion": 1,
+        "tabs": [
+          {
+            "id": "t1",
+            "title": "Genel",
+            "sections": [
+              {
+                "id": "s1",
+                "title": "Bölüm",
+                "items": [
+                  {
+                    "kind": "field",
+                    "id": "f1",
+                    "column": "Plaka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "column": "Marka",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f3",
+                    "column": "ModelYili",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f4",
+                    "column": "Tur",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f5",
+                    "column": "Aciklama",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f6",
+                    "column": "Durum",
+                    "span": 6
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f7",
+                    "column": "Notlar",
+                    "span": 6,
+                    "widget": "multiline",
+                    "rows": 5
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f8",
+                    "column": "Yorum",
+                    "span": 6,
+                    "widget": "radio"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hiddenColumns": []
+      },
+      "expected": [
+        {
+          "code": "widgetType",
+          "severity": "warning",
+          "targetId": "f8",
+          "column": "Yorum"
+        }
+      ]
     }
   ]
 }

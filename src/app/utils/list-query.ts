@@ -41,7 +41,8 @@ const NUMBER_TYPES = new Set(['int', 'long', 'short', 'byte', 'decimal', 'double
 export function filterKindOf(dataType: string): FilterKind {
   if (NUMBER_TYPES.has(dataType)) return 'number';
   switch (dataType) {
-    case 'string':   return 'text';
+    case 'string':
+    case 'text':     return 'text';
     case 'enum':     return 'enum';
     case 'dateonly': return 'date';
     case 'datetime': return 'datetime';
@@ -52,6 +53,8 @@ export function filterKindOf(dataType: string): FilterKind {
 }
 
 export function isSortable(dataType: string): boolean {
+  // Uzun metne göre sıralamak anlamsız ve indekssiz nvarchar(max) üzerinde pahalı.
+  if (dataType === 'text') return false;
   return filterKindOf(dataType) !== 'none' || dataType === 'timeonly';
 }
 

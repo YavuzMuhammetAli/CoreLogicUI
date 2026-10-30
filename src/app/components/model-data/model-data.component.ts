@@ -191,7 +191,7 @@ export class ModelDataComponent implements OnInit {
     visible: string[] | null;
     resolved: ResolvedListColumn[];
     display: PublishedColumn[];
-    headers: { key: string; label: string; sortable: boolean }[];
+    headers: { key: string; label: string; sortable: boolean; longText: boolean }[];
     filterable: FilterColumn[];
     visibilityItems: ColumnVisibilityItem[];
     effectiveVisible: string[];
@@ -211,8 +211,10 @@ export class ModelDataComponent implements OnInit {
       resolved,
       display,
       headers: [
-        { key: 'ID', label: 'ID', sortable: true },
-        ...display.map(c => ({ key: c.columnName, label: this.colLabel(c), sortable: isSortable(c.dataType) }))
+        { key: 'ID', label: 'ID', sortable: true, longText: false },
+        ...display.map(c => ({
+          key: c.columnName, label: this.colLabel(c), sortable: isSortable(c.dataType), longText: c.dataType === 'text'
+        }))
       ],
       filterable: display
         .map(column => ({ column, kind: filterKindOf(column.dataType), options: parseEnumValues(column.enumValues) }))
@@ -430,7 +432,7 @@ export class ModelDataComponent implements OnInit {
    * key: veri/lookup anahtarı (ham columnName) — hücre değeri bu anahtarla okunur.
    * label: kullanıcıya gösterilen metin (admin Label tanımlamışsa onu kullanır).
    */
-  get tableHeaders(): { key: string; label: string; sortable: boolean }[] {
+  get tableHeaders(): { key: string; label: string; sortable: boolean; longText: boolean }[] {
     return this.cols.headers;
   }
 

@@ -33,6 +33,15 @@ export const DATATYPE_HELP_I18N: Translations = {
 
   // ══ VERİ TİPLERİ ═══════════════════════════════════════════════════════════
 
+  // ── Text ───────────────────────────────────────────────────────────────
+  'help.type.text.title':    { tr: 'Text — çok satırlı metin', en: 'Text — multi-line text' },
+  'help.type.text.summary':  { tr: 'Açıklama, not ve adres gibi uzun içerikleri saklar. Kayıt formunda geniş bir metin kutusu olarak açılır.', en: 'Stores long content such as descriptions, notes and addresses. It appears as a large text box on the record form.' },
+  'help.type.text.useCase1': { tr: 'Açıklama, not, sözleşme maddesi gibi serbest uzun metinler', en: 'Free long text such as descriptions, notes and contract clauses' },
+  'help.type.text.useCase2': { tr: '250 karakteri aşabilecek her metin; daha kısası için String yeterlidir', en: 'Any text that may exceed 250 characters; String is enough for shorter text' },
+  'help.type.text.sample1':  { tr: 'Birden çok satır içerebilir', en: 'Can span several lines' },
+  'help.type.text.sample2':  { tr: 'En fazla 100.000 karakter girilebilir', en: 'At most 100,000 characters can be entered' },
+  'help.type.text.notes':    { tr: 'Listede kısaltılmış görünür ve sıralamada kullanılamaz; arama ve filtrede çalışır. Kayıtlı kolonun tipi sonradan değişmez: String olarak açılmış bir kolon Text yapılamaz.', en: 'It is shortened in lists and cannot be used for sorting; search and filters work. A saved column cannot change type: a column created as String cannot become Text.' },
+
   // ── String ─────────────────────────────────────────────────────────────────
   'help.type.string.title':    { tr: 'String — metin', en: 'String — text' },
   'help.type.string.summary':  { tr: 'Serbest metin saklar: ad, açıklama, kod, e-posta, telefon. Uzunluk sınırı ve regex deseni ile hangi metinlerin kabul edileceğini siz belirlersiniz.', en: 'Stores free text: names, descriptions, codes, e-mail, phone. You decide which text is accepted via length limits and a regex pattern.' },

@@ -26,6 +26,7 @@ import {
   identifierErrorMessage, identifierValidator, sanitizeIdentifierInputEvent
 } from '../../utils/identifier';
 import { MIN_FILE_LIMIT_MB, fileLimitMbValidator, isFileType, maxFileMbFor } from '../../utils/file-size';
+import { isTextColumn } from '../../utils/column-rules';
 import { IconComponent } from '../shared/icon/icon.component';
 
 /** Maksimum model ağacı derinliği (kök = 1). */
@@ -93,12 +94,14 @@ export class ModelNodeComponent implements OnChanges, OnDestroy {
 
   readonly identifierErrorMessage = identifierErrorMessage;
   readonly isFileType = isFileType;
+  readonly isTextColumn = isTextColumn;
   readonly maxFileMbFor = maxFileMbFor;
   readonly MIN_FILE_LIMIT_MB = MIN_FILE_LIMIT_MB;
 
   /** Dropdown seçenekleri — value backend'e gönderilen anahtar, label kullanıcıya gösterilen ad. */
   primitiveTypes: { value: string; label: string }[] = [
     { value: 'string',   label: 'String' },
+    { value: 'text',     label: 'Text' },
     { value: 'int',      label: 'Int' },
     { value: 'long',     label: 'Long' },
     { value: 'short',    label: 'Short' },

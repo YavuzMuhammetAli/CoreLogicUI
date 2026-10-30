@@ -14,6 +14,7 @@ export function dataTypeIcon(dataType: string | null | undefined): IconName {
     case 'enum': return 'list';
     case 'image': return 'image';
     case 'file': return 'attach_file';
+    case 'text': return 'notes';
     default: return 'text_fields';
   }
 }

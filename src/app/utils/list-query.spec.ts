@@ -6,6 +6,7 @@ describe('list-query', () => {
   describe('filterKindOf', () => {
     it('kolon tipini filtre denetimine çevirir', () => {
       expect(filterKindOf('string')).toBe('text');
+      expect(filterKindOf('text')).toBe('text');
       expect(filterKindOf('enum')).toBe('enum');
       expect(filterKindOf('int')).toBe('number');
       expect(filterKindOf('decimal')).toBe('number');
@@ -26,6 +27,7 @@ describe('list-query', () => {
     expect(isSortable('timeonly')).toBeTrue();
     expect(isSortable('lookup')).toBeFalse();
     expect(isSortable('image')).toBeFalse();
+    expect(isSortable('text')).toBeFalse();
   });
 
   describe('toListFilters', () => {

@@ -8,6 +8,8 @@ interface VectorCase {
   mode: LayoutValidationMode;
   layout?: unknown;
   raw?: string;
+  /** Yalnız bu vakanın kolonları: ortak liste her vakada "yerleştirilmemiş" bilgisi üretir. */
+  extraFacts?: LayoutColumnFact[];
   expected: { code: string; severity: string; targetId?: string; column?: string }[];
 }
 
@@ -23,7 +25,8 @@ describe('screen-layout.validate', () => {
       it(c.name, () => {
         // Sunucu ham metni görür; aynı yoldan geçilir (12.0 → 12 dönüşümü dahil).
         const text = c.raw ?? JSON.stringify(c.layout);
-        const actual = validateLayoutText(text, c.viewType, facts, c.mode).map(key).sort();
+        const columns = [...facts, ...(c.extraFacts ?? [])];
+        const actual = validateLayoutText(text, c.viewType, columns, c.mode).map(key).sort();
         expect(actual).toEqual(c.expected.map(key).sort());
       });
     }

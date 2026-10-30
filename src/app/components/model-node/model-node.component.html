@@ -196,8 +196,8 @@
                 </div>
               </div>
 
-              <!-- String'e özel: MinLength, MaxLength, Regex -->
-              @if (getColumnGroup($index).get('dataType')!.value === 'string') {
+              <!-- Metne özel: MinLength, MaxLength, Regex -->
+              @if (isTextColumn(getColumnGroup($index).get('dataType')!.value)) {
                 <div class="field-row">
                   <div class="field">
                     <label [attr.for]="'col-minlen-' + depth + '-' + $index">

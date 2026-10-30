@@ -29,7 +29,7 @@ import {
   kbToMb, maxFileKbFor, maxFileMbFor, parseFileGroups
 } from '../../utils/file-size';
 import {
-  MetadataColumn, NUMERIC_COLUMN_TYPES, autoValueKey, metadataKey, normalizeColumnRules, requiredChangeAllowed,
+  MetadataColumn, NUMERIC_COLUMN_TYPES, autoValueKey, isTextColumn, metadataKey, normalizeColumnRules, requiredChangeAllowed,
   schemaMetadataKey, toMemberMetadataUpdate
 } from '../../utils/column-rules';
 import {
@@ -209,6 +209,7 @@ export class TableDetailComponent implements OnDestroy {
   readonly identifierErrorMessage = identifierErrorMessage;
   readonly isFileType = isFileType;
   readonly FILE_TYPE_GROUPS = FILE_TYPE_GROUPS;
+  readonly isTextColumn = isTextColumn;
   readonly maxFileMbFor = maxFileMbFor;
   readonly MIN_FILE_LIMIT_MB = MIN_FILE_LIMIT_MB;
 
@@ -250,6 +251,7 @@ export class TableDetailComponent implements OnDestroy {
   /** Dropdown seçenekleri — value backend'e gönderilen anahtar, label kullanıcıya gösterilen ad. */
   primitiveTypes: { value: string; label: string }[] = [
     { value: 'string',   label: 'String' },
+    { value: 'text',     label: 'Text' },
     { value: 'int',      label: 'Int' },
     { value: 'long',     label: 'Long' },
     { value: 'short',    label: 'Short' },

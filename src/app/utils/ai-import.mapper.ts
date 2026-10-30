@@ -38,7 +38,7 @@ import { COLUMN_NAME_PATTERN, MODEL_NAME_PATTERN } from './identifier';
 const DATA_TYPES = new Set([
   'string', 'int', 'long', 'short', 'byte', 'decimal', 'double', 'float',
   'boolean', 'datetime', 'timeonly', 'dateonly', 'guid',
-  'lookup', 'enum', 'image', 'file'
+  'lookup', 'enum', 'image', 'file', 'text'
 ]);
 
 const CHART_TYPES = new Set<ChartType>([
