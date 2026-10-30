@@ -14,6 +14,13 @@ export interface CompanyRegisterDto {
   password: string;
 }
 
+/** POST /Auth/register-company yanıtı. Doğrulama açıksa kurulum henüz başlamamıştır. */
+export interface CompanyRegistrationResult {
+  verificationRequired: boolean;
+  /** Yalnız doğrulama kapalıyken (geliştirme) dolu. */
+  provisionId: string | null;
+}
+
 /** Tek kurulum adımı — ProvisionLog satırının UI izdüşümü. */
 export interface ProvisionStep {
   /** Backend adım sabiti (örn. "CreateDatabase") — i18n anahtarına eşlenir. */

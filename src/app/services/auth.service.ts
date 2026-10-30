@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { DataResponseModel } from '../models/dataResponseModel';
-import { CompanyRegisterDto, ProvisionStatus } from '../models/provision.model';
+import { CompanyRegisterDto, CompanyRegistrationResult, ProvisionStatus } from '../models/provision.model';
 import { initialsFromFullName } from '../utils/user-initials';
 
 export interface LoginDto {
@@ -47,11 +47,16 @@ export class AuthService {
   // Yönetimi"); dışarıdan mevcut bir şirkete kayıt akışı YOKTUR.
 
   /**
-   * Yeni şirket kaydı — kurulum backend'de arka planda ilerler; data alanı
-   * provisionId (GUID) döner, ilerleme getProvisionStatus ile poll'lanır.
+   * Yeni şirket başvurusu. Kurulum e-postadaki bağlantı açılınca başlar (bkz. verifyCompany);
+   * e-posta kayıtlı olsa da yanıt aynıdır, ekran hangisi olduğunu bilemez.
    */
-  registerCompany(dto: CompanyRegisterDto): Observable<DataResponseModel<string>> {
-    return this.http.post<DataResponseModel<string>>(`${this.baseUrl}/register-company`, dto);
+  registerCompany(dto: CompanyRegisterDto): Observable<DataResponseModel<CompanyRegistrationResult>> {
+    return this.http.post<DataResponseModel<CompanyRegistrationResult>>(`${this.baseUrl}/register-company`, dto);
+  }
+
+  /** E-postadaki bağlantının token'ıyla kurulumu başlatır; data alanı provisionId döner. */
+  verifyCompany(token: string): Observable<DataResponseModel<string>> {
+    return this.http.post<DataResponseModel<string>>(`${this.baseUrl}/verify-company`, { token });
   }
 
   /** Kurulum durumu — adım listesi + süreler; tamamlandıysa otomatik login token'ı içerir. */

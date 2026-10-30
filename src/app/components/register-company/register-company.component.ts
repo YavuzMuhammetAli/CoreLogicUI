@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnDestroy, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription, interval, of } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
@@ -25,6 +25,9 @@ interface DisplayStep {
  * 1. Şirket Bilgileri → 2. Yönetici Bilgileri → 3. Kurulum (gerçek ilerleme,
  * provision-status polling) → 4. Tamamlandı (otomatik login).
  *
+ * Doğrulama açıkken başvuru 2. adımda biter: "e-postanızı kontrol edin" gösterilir ve kurulum,
+ * e-postadaki `?token=` bağlantısı bu ekranı yeniden açınca 3. adımdan başlar.
+ *
  * Kurulum backend'de arka planda çalışır; bu component provisionId ile
  * ~1.5 sn'de bir durumu poll'lar ve ProvisionLog adımlarını gerçek
  * durumlarıyla gösterir. Tamamlanan kurulumun yanıtı JWT içerir —
@@ -38,13 +41,14 @@ interface DisplayStep {
   styleUrls: ['./register-company.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class RegisterCompanyComponent implements OnDestroy {
+export class RegisterCompanyComponent implements OnInit, OnDestroy {
   /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly permissionService = inject(PermissionService);
   private readonly languageService = inject(LanguageService);
 
@@ -63,6 +67,10 @@ export class RegisterCompanyComponent implements OnDestroy {
     password: ['', [Validators.required, Validators.minLength(8)]]
   });
 
+  /** Başvuru alındı, doğrulama bağlantısı bekleniyor. */
+  readonly verificationSent = signal(false);
+  /** E-postadaki bağlantı geçersiz ya da kurulum başlatılamadı. */
+  readonly verifyError = signal<string | null>(null);
   readonly isStarting = signal(false);
   readonly startError = signal<string | null>(null);
   readonly provisionStatus = signal<ProvisionStatus | null>(null);
@@ -98,8 +106,29 @@ export class RegisterCompanyComponent implements OnDestroy {
   get cf() { return this.companyForm.controls; }
   get af() { return this.adminForm.controls; }
 
+  ngOnInit(): void {
+    const token = this.route.snapshot.queryParamMap.get('token');
+    if (token) this.verify(token);
+  }
+
   ngOnDestroy(): void {
     this.stopPolling();
+  }
+
+  /** E-postadaki bağlantıdan gelindi: kurulum ekranı açılır, doğrulanınca ilerleme izlenir. */
+  private verify(token: string): void {
+    this.step.set(3);
+    this.auth.verifyCompany(token).pipe(markDirty(this.cdr)).subscribe({
+      next: res => {
+        if (res.success && res.data) {
+          this.provisionId = res.data;
+          this.startPolling();
+        } else {
+          this.verifyError.set(res.message || this.languageService.t('regco.verifyFailed'));
+        }
+      },
+      error: err => this.verifyError.set(err?.error?.message ?? this.languageService.t('regco.verifyFailed'))
+    });
   }
 
   nextFromCompany(): void {
@@ -134,8 +163,10 @@ export class RegisterCompanyComponent implements OnDestroy {
     }).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         this.isStarting.set(false);
-        if (res.success && res.data) {
-          this.provisionId = res.data;
+        if (res.success && res.data?.verificationRequired) {
+          this.verificationSent.set(true);
+        } else if (res.success && res.data?.provisionId) {
+          this.provisionId = res.data.provisionId;
           this.provisionStatus.set(null);
           this.step.set(3);
           this.startPolling();

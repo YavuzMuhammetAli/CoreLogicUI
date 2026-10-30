@@ -72,8 +72,18 @@
       </form>
     }
 
+    <!-- Başvuru alındı: kurulum e-postadaki bağlantıyla başlar -->
+    @if (verificationSent()) {
+      <div class="regco-form regco-done" role="status">
+        <div class="regco-done-icon" aria-hidden="true"><app-icon name="mail" size="32" /></div>
+        <h2>{{ 'regco.verifySentTitle' | t }}</h2>
+        <p class="regco-hint">{{ 'regco.verifySentHint' | t:{ email: af.email.value ?? '' } }}</p>
+        <a routerLink="/login" class="btn btn-ghost"><app-icon name="arrow_back" size="16" />{{ 'regco.backToLogin' | t }}</a>
+      </div>
+    }
+
     <!-- Adım 2: Yönetici Bilgileri -->
-    @if (step() === 2) {
+    @if (step() === 2 && !verificationSent()) {
       <form class="regco-form" [formGroup]="adminForm" (ngSubmit)="startProvisioning()" novalidate>
         @if (startError()) {
           <div class="alert alert-danger" role="alert">{{ startError() }}</div>
@@ -137,7 +147,14 @@
     }
 
     <!-- Adım 3: Kurulum (gerçek ilerleme) -->
-    @if (step() === 3) {
+    @if (step() === 3 && verifyError()) {
+      <div class="regco-form">
+        <div class="alert alert-danger" role="alert">{{ verifyError() }}</div>
+        <div class="regco-actions">
+          <a routerLink="/login" class="btn btn-ghost"><app-icon name="arrow_back" size="16" />{{ 'regco.backToLogin' | t }}</a>
+        </div>
+      </div>
+    } @else if (step() === 3) {
       <div class="regco-form">
         @if (!provisionFailed()) {
           <p class="regco-provision-title">
