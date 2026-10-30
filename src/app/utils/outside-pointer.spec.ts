@@ -2,7 +2,7 @@ import { Component, ElementRef, inject, signal, ChangeDetectionStrategy } from '
 import { TestBed } from '@angular/core/testing';
 import { closeOnOutsidePointer } from './outside-pointer';
 
-@Component({ standalone: true, changeDetection: ChangeDetectionStrategy.Eager,
+@Component({ changeDetection: ChangeDetectionStrategy.Eager,
  template: '<span class="inside">x</span>' })
 class HostComponent {
   readonly open = signal(false);

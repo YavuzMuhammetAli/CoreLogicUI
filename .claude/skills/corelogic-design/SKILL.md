@@ -518,7 +518,7 @@ yeni adı https://fonts.google.com/icons'tan bul.
 
 | Kural | Açıklama |
 |-------|----------|
-| **Standalone** | `standalone: true` — NgModule yok |
+| **Standalone** | Varsayılan, `standalone: true` yazılmaz — NgModule yok |
 | **Control flow** | `@if` / `@for` / `@else` (Angular 17+ sözdizimi — `*ngIf`/`*ngFor` değil) |
 | **Reactive Forms** | `FormBuilder` + `FormGroup`/`FormArray`; template-driven form yok |
 | **İkonlar** | Yalnız `<app-icon>` (Material Symbols, satır içi SVG) — bkz. "İkonlar"; elle `<svg>`, ikon fontu, emoji YOK |

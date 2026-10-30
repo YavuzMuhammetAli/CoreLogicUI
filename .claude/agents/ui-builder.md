@@ -59,7 +59,6 @@ import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 
 @Component({
   selector: 'app-<ad>',
-  standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './<ad>.component.html',
   styleUrl: './<ad>.component.scss'
@@ -149,4 +148,4 @@ ng generate component components/<ad>
 ```
 
 Bu komut `.ts`, `.html`, `.scss` dosyalarını oluşturur.
-`standalone: true` ve `styleUrl` (plural değil) olduğunu kontrol et.
+`styleUrl` (plural değil) olduğunu kontrol et; `standalone: true` yazılmaz, varsayılandır.

@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-CoreLogicUI is the Angular 18 frontend for the **CoreLogic** dynamic model publishing platform.
+CoreLogicUI is the Angular 22 frontend for the **CoreLogic** dynamic model publishing platform.
 Backend: ASP.NET Core 10 Web API at `C:\Users\muham\source\repos\YavuzMuhammetAli\CoreLogic`, compiles C# entity
 code at runtime via Roslyn and exposes dynamic CRUD endpoints.
 
@@ -31,15 +31,15 @@ Users can:
 
 | Bileşen | Teknoloji |
 |---------|-----------|
-| **Framework** | Angular 18.1 (standalone components) |
-| **Dil** | TypeScript 5.5 |
+| **Framework** | Angular 22 (standalone components, zone.js) |
+| **Dil** | TypeScript 6.0 |
 | **Stil** | Özel token-tabanlı tasarım sistemi (SCSS) — Bootstrap runtime'da kullanılmaz |
 | **Render** | Client-side only — SSR kaldırıldı (bkz. not aşağıda) |
 | **Formlar** | Angular Reactive Forms |
-| **HTTP** | `HttpClient` (`withFetch()` + interceptor'lar) |
+| **HTTP** | `HttpClient` (fetch varsayılan + interceptor'lar) |
 | **State** | Signal (`signal`/`computed`/`effect`) — component-local state ve guard senkronizasyonu için; RxJS hâlâ HTTP servislerinde kullanılır |
 | **Test** | Karma + Jasmine — saf çekirdekler (`utils/`), interceptor/guard'lar, temel servisler ve tasarımcılar spec'li; component kapsamı seçici. Commit öncesi `npm run test:ci` |
-| **Build** | Angular CLI 18 / `@angular-devkit/build-angular` |
+| **Build** | Angular CLI 22 / `@angular/build` (esbuild); testler Karma |
 
 > **Bootstrap notu:** Bootstrap projede **hiç kullanılmıyor** — ne `package.json`'da
 > ne de `angular.json`'da (test target'ından da kaldırıldı). Uygulama tamamen özel CSS
@@ -66,7 +66,7 @@ CoreLogicUI-master/
     └── app/
         ├── app.component.ts               # Kök bileşen — RouterOutlet
         ├── app.routes.ts                  # Route tablosu (lazy + authGuard/adminGuard/modelPermissionGuard)
-        ├── app.config.ts                  # Provider'lar: router, HttpClient, interceptor'lar, APP_INITIALIZER (izin önyükleme)
+        ├── app.config.ts                  # Provider'lar: router, HttpClient, interceptor'lar, provideAppInitializer (oturum + izin önyükleme)
         ├── components/
         │   ├── login/                     # Giriş ekranı (public, JWT alır)
         │   ├── layout/                     # App shell (sidebar + topbar CSS Grid, tema + dil toggle)
@@ -147,7 +147,7 @@ CoreLogicUI-master/
         │   ├── published-model.service.ts    # /PublishedModel getall(sayfalı)/get/add/update/delete + meta
         │   ├── publish-model.service.ts       # /PublishModel — Roslyn derleme
         │   ├── database.service.ts            # /Database createtable, checkdatabase
-        │   ├── permission.service.ts          # /Permission — signal tabanlı izin durumu (isAdmin, can()), APP_INITIALIZER ile önyüklenir
+        │   ├── permission.service.ts          # /Permission — signal tabanlı izin durumu (isAdmin, can()), provideAppInitializer ile önyüklenir
         │   ├── permission-admin.service.ts    # /Permission — admin tarafından kullanıcı izinlerini yönetme
         │   ├── role-admin.service.ts          # /Role — RBAC rol CRUD, izin atama, üyelik yönetimi
         │   ├── user-profile.service.ts        # /Profile — me/update/change-password/upload-photo
@@ -314,7 +314,7 @@ eklenir (üst `authGuard` otomatik miras alınır); admin-only sayfalar için ek
 
 `src/app/app.config.ts`:
 ```typescript
-provideHttpClient(withFetch(), withInterceptors([languageInterceptor, errorInterceptor]))
+provideHttpClient(withInterceptors([languageInterceptor, errorInterceptor]))
 ```
 
 - **`provideHttpClient` zaten yapılandırılmış** — yeniden ekleme.
@@ -329,8 +329,8 @@ provideHttpClient(withFetch(), withInterceptors([languageInterceptor, errorInter
   context token'ını taşır; yoksa admin'e özel ya da okuma izni olmayan bir uca giden
   istek kullanıcıyı bulunduğu sayfadan koparır (admin olmayan kullanıcının açılış
   dashboard'unu ve kayıt ekranını bozan hata buydu).
-- `APP_INITIALIZER` (`permissionInitializerFactory`): router etkinleşmeden önce
-  `PermissionService.loadMyPermissions()`'ı çağırıp izin signal'ini doldurur — `adminGuard` ve
+- `provideAppInitializer` (`loadInitialPermissions`): router etkinleşmeden önce oturumu okur, oturum varsa
+  `PermissionService.ensureLoaded()` ile izin signal'ini doldurur — `adminGuard` ve
   `modelPermissionGuard` bu sinyali **senkron** okuyabilir (sayfa yenilemesindeki guard yarış
   durumunu önler).
 
@@ -346,7 +346,7 @@ Tüm servisler `@Injectable({ providedIn: 'root' })`, `inject(HttpClient)` (veya
 | `PublishedModelService` | `/PublishedModel/getall`, `get`, `add`, `update`, `delete`, `schema` (kayıt formu kuralları — Read izni yeter; admin'e özel `/Published/getTable`'ın form ikizi) |
 | `PublishModelService` | `/PublishModel/loadAssembly` (yardımcı). İstemci C# göndermez: ham kod ucu güvenlik nedeniyle kaldırıldı |
 | `DatabaseService` | `POST /Database/createdatabase`, `createtable`, `checkdatabase` (yazan uç GET olamaz) |
-| `PermissionService` | `/Permission` — kendi izin durumu, signal (`isAdmin()`, `can()`), APP_INITIALIZER ile önyüklenir |
+| `PermissionService` | `/Permission` — kendi izin durumu, signal (`isAdmin()`, `can()`), provideAppInitializer ile önyüklenir |
 | `PermissionAdminService` | `/Permission` — admin: kullanıcı bazlı izin atama |
 | `RoleAdminService` | `/Role` — RBAC rol CRUD, izin/üyelik yönetimi |
 | `UserProfileService` | `/Profile` — me/update/change-password/upload-photo/sil + `language` (bildirim e-postası dili; layout açılışta ve TR/EN değişiminde yazar) |
@@ -435,7 +435,8 @@ tasarım sistemi kullanır (artık açık/koyu tema desteği dahil). Detaylar i�
 - Kırılma noktaları: `@media (max-width: 900px)` ve `768px`
 
 ### Yazım Kuralları
-- Standalone component'ler (`standalone: true`)
+- Standalone component'ler (varsayılan, `standalone: true` yazılmaz)
+- `ChangeDetectionStrategy.OnPush` varsayılandır; 22 öncesi davranış isteyen bileşen açıkça `Eager` yazar
 - Yeni control flow: `@if` / `@for` / `@else` (`*ngIf`/`*ngFor` değil)
 - İkonlar: yalnız `<app-icon name="…">` (Material Symbols Outlined, satır içi SVG, `currentColor`) — elle `<svg>` ikon, ikon fontu, emoji/Unicode glif YOK. Sözlük ve kurallar: `corelogic-design` skill'i "İkonlar"
 - A11y: `aria-invalid`, `role="alert"`, `aria-describedby`, `.sr-only`
@@ -1123,8 +1124,8 @@ blokları geçmişe geri yazılmadığı için modelin hafızası bu listedir.
 ## Geliştirme
 
 ### Ön Koşullar
-- Node.js 18+
-- Angular CLI 18: `npm install -g @angular/cli`
+- Node.js `^22.22.3 || ^24.15.0` (Angular 22 şartı; Docker derlemesi 24)
+- Angular CLI 22: `npm install -g @angular/cli`
 
 ### Uygulamayı Çalıştırma
 ```bash
@@ -1273,5 +1274,4 @@ Stres ve güvenlik denetiminin (2026-10-30) bıraktığı kurallar; backend tara
 7. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
 8. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
 9. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor
-10. **Angular 18 destek dışı** — `npm audit` 4 high + 5 moderate; hepsi major yükseltme ister (18.2.14 yaması da kapatmaz). SSR/transfer-cache maddeleri bu projede geçersiz (yalnız CSR), XSS maddelerine CSP arka plan savunmasıdır
-11. **Kayıtlı model kaynağı `Audit` modunda** — izin listesi ihlali loglanır ama derlenir; loglar temizse `MODEL_SOURCE_MODE=Enforce`
+10. **Kayıtlı model kaynağı `Audit` modunda** — izin listesi ihlali loglanır ama derlenir; loglar temizse `MODEL_SOURCE_MODE=Enforce`

@@ -10,7 +10,6 @@ import { ModelLabelService } from '../services/model-label.service';
  */
 @Pipe({
   name: 'modelLabel',
-  standalone: true,
   pure: false
 })
 export class ModelLabelPipe implements PipeTransform {

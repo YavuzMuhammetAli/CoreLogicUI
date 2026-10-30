@@ -45,7 +45,6 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 
 @Component({
   selector: 'app-user-profile',
-  standalone: true,
   imports: [ReactiveFormsModule],            // sadece ihtiyaç duyulan modüller/component'ler
   templateUrl: './user-profile.component.html',
   styleUrls: ['./user-profile.component.scss']
@@ -66,11 +65,11 @@ export class UserProfileComponent implements OnInit {
 ```
 
 **Kurallar:**
-- `standalone: true` her zaman, `NgModule` yok.
+- Standalone varsayılandır, `standalone: true` yazılmaz; `NgModule` yok.
 - `inject()` fonksiyonu tercih edilen DI yolu — constructor injection da çalışır ama
   mevcut component'lerin çoğu `inject()` kullanıyor, tutarlılık için onu izle.
 - `imports` dizisine sadece gerçekten kullanılan şeyleri ekle (`ReactiveFormsModule`,
-  başka standalone component'ler) — `CommonModule`'ü gereksiz import etme, Angular 18'de
+  başka standalone component'ler) — `CommonModule`'ü gereksiz import etme, Angular 22'de
   `@if`/`@for` yerleşik control flow için modül gerekmez.
 
 ## Signal Kullanımı — `BehaviorSubject` Değil
@@ -92,7 +91,7 @@ loadMyPermissions(): Observable<UserPermissionSummary> {
 }
 ```
 
-Bu, **APP_INITIALIZER ile guard yarış durumu** çözümünün temelidir: `app.config.ts`'teki
+Bu, **`provideAppInitializer` ile guard yarış durumu** çözümünün temelidir: `app.config.ts`'teki
 `permissionInitializerFactory`, router etkinleşmeden önce `loadMyPermissions()`'ı çağırıp
 signal'i doldurur — `adminGuard` gibi guard'lar `isAdmin()` sinyalini **senkron** okuyabilir.
 Yeni bir admin-only veya izin-bağımlı route eklersen, guard'ının senkron sinyal okuduğundan
@@ -168,7 +167,7 @@ export class MyComponent {
   çalışmasa da bu kontroller kasıtlı korunuyor, yeni kodda da uygula.
 - ❌ Component state için `BehaviorSubject` + `async` pipe kurmak — `signal()` kullan.
 - ❌ Guard'da senkron sinyal yerine `Observable.subscribe` ile async kontrol yazmak —
-  APP_INITIALIZER deseni bunu önlemek için var, bozma.
+  `provideAppInitializer` deseni bunu önlemek için var, bozma.
 - ❌ Route'a `:id` segmentini sabit segmentten (`new`/`edit`/`deleted`) önce tanımlamak.
 - ❌ Şablona hard-coded UI metni yazmak — `'key' | t` pipe'ı veya `lang.t('key')` kullan.
 
@@ -178,7 +177,7 @@ export class MyComponent {
 |-------|---------------|
 | `src/app/components/user-profile/user-profile.component.ts` | Tam standalone + signal şablonu |
 | `src/app/components/audit-log/audit-log.component.ts` | TranslatePipe kullanımı + client-side sayfalama |
-| `src/app/app.config.ts` | `APP_INITIALIZER` guard yarış durumu çözümü, `isPlatformBrowser`, 3 interceptor |
+| `src/app/app.config.ts` | `provideAppInitializer` guard yarış durumu çözümü, `isPlatformBrowser`, 3 interceptor |
 | `src/app/app.routes.ts` | Lazy route kaydı, segment sıralama tuzağı (`deleted`/`new`/`edit` önce gelmeli) |
 | `src/app/services/permission.service.ts` | Signal + RxJS birlikte kullanım |
 | `src/app/services/language.service.ts` | `t()` metodu, `lang` signal, ThemeService ile aynı desen |

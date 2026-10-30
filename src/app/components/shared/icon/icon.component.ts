@@ -19,7 +19,6 @@ import { ICONS, ICONS_FILLED, IconName } from './icons.generated';
  */
 @Component({
   selector: 'app-icon',
-  standalone: true,
   template: `
     <svg viewBox="0 -960 960 960" fill="currentColor" focusable="false"
          [attr.width]="size()" [attr.height]="size()">

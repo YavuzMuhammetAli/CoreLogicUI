@@ -10,7 +10,6 @@ import type ApexCharts from 'apexcharts';
  */
 @Component({
   selector: 'app-apex-chart',
-  standalone: true,
   template: '',
   styles: ':host { display: block; }',
   changeDetection: ChangeDetectionStrategy.OnPush

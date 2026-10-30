@@ -9,8 +9,8 @@ description: >
 # Animasyon Mühendisliği
 
 Emil Kowalski'nin felsefesini ([animations.dev](https://animations.dev/)) CoreLogicUI'nin
-Angular 18 + SCSS stack'ine uyarlar. Framer Motion kullanılmaz; `@angular/animations` ve
-WAAPI tercih edilir.
+Angular 22 + SCSS stack'ine uyarlar. Framer Motion kullanılmaz; CSS geçişleri ve WAAPI
+tercih edilir. `@angular/animations` projede kurulu değildir: aşağıdaki örnek için paket önce eklenir.
 
 ## İlk Yanıt
 
@@ -142,6 +142,8 @@ daha hızlı hissettiriyor.
 ## Angular Animasyon Desenleri
 
 ### `@angular/animations` ile Giriş/Çıkış
+
+> Paket 2026-10-30'da kaldırıldı (kullanılmıyordu). Önce CSS geçişini dene.
 
 ```typescript
 // component.ts

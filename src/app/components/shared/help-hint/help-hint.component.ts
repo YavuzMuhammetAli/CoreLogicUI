@@ -26,7 +26,6 @@ import { ChangeDetectionStrategy, Component, ElementRef, input, OnDestroy, signa
  */
 @Component({
   selector: 'app-help-hint',
-  standalone: true,
   templateUrl: './help-hint.component.html',
   styleUrls: ['./help-hint.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

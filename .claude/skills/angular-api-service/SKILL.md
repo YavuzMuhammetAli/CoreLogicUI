@@ -168,7 +168,7 @@ import { Component, inject } from '@angular/core';
 import { PublishedTableService } from '../../services/published-table.service';
 import { ResponseModel } from '../../models/responseModel';
 
-@Component({ standalone: true, ... })
+@Component({ ... })
 export class MyComponent {
   // inject() ile DI (constructor injection da kabul edilir)
   private tableService = inject(PublishedTableService);
