@@ -1144,13 +1144,13 @@ npm run test:ci                 # Tek koşu, ChromeHeadless — commit öncesi d
 
 Sunucu kurulumu backend reposundaki `deploy/` klasöründedir (adım adım rehber:
 `deploy/README.md`). Docker Compose dört servis kaldırır: `mssql` (2025 Express,
-`Turkish_CI_AS`), `backend`, `web` (nginx + iki SPA) ve tek seferlik `mssql-init`. Erişim
+`Turkish_CI_AS`), `backend`, `web` (nginx + iki SPA, ayrı origin) ve tek seferlik `mssql-init`. Erişim
 Tailscale üzerinden HTTPS ile olur. Üç repo sunucuda yan yana durur
 (`~/corelogic/{CoreLogic,CoreLogicUI,CoreLogicPlatformConsole}`), güncelleme `deploy/update.sh` ile yapılır.
 
-- **Tek origin:** `/` Tenant UI, `/console/` Platform Console (`--base-href /console/`),
-  `/api/platform/` olduğu gibi, `/api/` ise önek soyularak backend'e gider
-  (`/api/Auth/login` → `/Auth/login`).
+- **İki origin:** Tenant UI `https://host/`, Platform Console `https://host:8443/` (nginx `:8081`, `tailscale serve --https=8443`).
+  Tenant tarafında `/api/` önek soyularak backend'e gider (`/api/Auth/login` → `/Auth/login`), `/api/platform/` 404'tür; konsol
+  tarafında yalnız `/api/platform/` vardır. Tenant arayüzündeki bir XSS konsolun sayfasına ve depolamasına erişemez.
 - Production build `fileReplacements` ile `environment.prod.ts`'i kullanır (`apiBaseUrl: '/api'`).
   `ng serve` development yapılandırmasıyla `environment.ts`'te kalır.
 - Yeni bir backend controller'ı için nginx'te bir şey yapmak gerekmez: `/api/` altındaki her yol iletilir.
@@ -1167,7 +1167,7 @@ Uygulama sunucuda gerçekten kullanılıyor; geliştirme Windows'ta sürüyor. H
    (üç repoyu `pull --ff-only` ile çeker, imajları yeniden derler). Claude sunucuya erişmez.
    `--ff-only` yüzünden sunucudaki repolarda elle değişiklik yapılmaz, yoksa pull düşer.
 4. **Sürüm (tenant migrasyonu)** — iş yeni bir `migrations/NNN_*.sql` eklediyse, dağıtımdan
-   sonra Platform Console → `/console/operations/migrations` → **Koşu Başlat**. Master
+   sonra Platform Console → `:8443/operations/migrations` → **Koşu Başlat**. Master
    migrasyonları backend açılışında kendiliğinden koşar; tenant migrasyonları KOŞMAZ.
 
 Claude her işin sonunda kullanıcıya şunları açıkça yazar: hangi repolar değişti, hangi imaj
