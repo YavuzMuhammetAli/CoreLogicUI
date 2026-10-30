@@ -105,7 +105,6 @@ Backend `IDataResult<T>` → `{ Success, Message, Data }` ile eşleşir.
 
 | Interceptor | Dosya | Ne Yapar |
 |-------------|-------|----------|
-| `authInterceptor` | `src/app/interceptors/auth.interceptor.ts` | `localStorage`'dan JWT alır, `Authorization: Bearer <token>` header'ı ekler (SSR-safe) |
 | `errorInterceptor` | `src/app/interceptors/error.interceptor.ts` | HTTP hata yanıtlarını yakalar |
 
 Servis içinde manuel header ya da hata yakalama **ekleme** — interceptor'lar halleder.
@@ -137,7 +136,7 @@ return this.http.get<ListResponseModel<T>>(url, { params });
 
 | Servis | Dosya | Kapsadığı Backend Endpoint |
 |--------|-------|---------------------------|
-| `AuthService` | `src/app/services/auth.service.ts` | `/Auth/login`, `/Auth/register` — JWT yönetimi, `localStorage('access_token')` |
+| `AuthService` | `src/app/services/auth.service.ts` | `/Auth` — çerezli giriş/çıkış; oturum ve kullanıcı `/Auth/session` sinyalinden, token JavaScript'te yok |
 | `PublishedTableService` | `src/app/services/published-table.service.ts` | `/Published/addTable`, `/Published/addMember` |
 | `PublishedModelService` | `src/app/services/published-model.service.ts` | `/PublishedModel/getall`, `get`, `add`, `update`, `delete` |
 | `PublishModelService` | `src/app/services/publish-model.service.ts` | `/PublishModel` — Roslyn derleme |
@@ -209,6 +208,6 @@ export class MyComponent {
 - [ ] `private readonly baseUrl = \`${environment.apiBaseUrl}/Endpoint\`` — ortam değişkeni
 - [ ] Her metot `Observable<ResponseModel>` veya `Observable<ListResponseModel<T>>` döner
 - [ ] GET parametreleri `HttpParams` ile, body POST olarak geç
-- [ ] `auth.interceptor` ve `error.interceptor` otomatik çalışır — elle ekleme
+- [ ] `language.interceptor` ve `error.interceptor` otomatik çalışır, kimlik çerezle gider — elle `Authorization` ekleme
 - [ ] Türkçe JSDoc yorum satırları ekle (`/** Açıklama */`)
 - [ ] Yeni servis dosyasını `src/app/services/` altına ekle

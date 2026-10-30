@@ -10,7 +10,7 @@ import { AiStreamEvent } from '../models/ai.model';
  *
  * Akış HttpClient'tan değil fetch'ten geçer (EventSource POST yapamaz); bu yüzden çerçeveleme,
  * başlıklar ve akış öncesi hata gövdesi elle işlenir — ve interceptor'lar baypas edildiği için
- * Authorization/Accept-Language servis tarafından eklenmek zorunda.
+ * Accept-Language servis tarafından eklenmek zorunda. Kimlik çerezle kendiliğinden gider.
  */
 describe('AiService.streamChat', () => {
   let service: AiService;
@@ -41,7 +41,6 @@ describe('AiService.streamChat', () => {
   });
 
   afterEach(() => {
-    localStorage.removeItem('access_token');
     localStorage.removeItem('lang');
   });
 
@@ -105,8 +104,7 @@ describe('AiService.streamChat', () => {
     expect(await collect()).toEqual([{ type: 'error', message: 'Aylık kota doldu.' }]);
   });
 
-  it('interceptor baypas edildiği için kimlik ve dil başlıklarını kendisi ekler', async () => {
-    localStorage.setItem('access_token', 'jwt-123');
+  it('interceptor baypas edildiği için dil başlığını kendisi ekler, token taşımaz', async () => {
     localStorage.setItem('lang', 'en');
     fetchSpy.and.resolveTo(sse('event: done\ndata: {}\n\n'));
 
@@ -114,7 +112,7 @@ describe('AiService.streamChat', () => {
 
     const init = fetchSpy.calls.mostRecent().args[1] as RequestInit;
     const headers = init.headers as Record<string, string>;
-    expect(headers['Authorization']).toBe('Bearer jwt-123');
+    expect(headers['Authorization']).toBeUndefined();
     expect(headers['Accept-Language']).toBe('en');
     expect(JSON.parse(init.body as string)).toEqual({ conversationId: 7, message: 'merhaba' });
   });

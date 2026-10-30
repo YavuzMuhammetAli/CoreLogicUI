@@ -2,93 +2,173 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { environment } from '../../environments/environment';
-import { AuthService } from './auth.service';
+import { AuthService, SessionInfo } from './auth.service';
 
 /**
- * Oturum token'ı ve JWT payload okuması.
- *
- * Korunan hatalar: düz `atob` base64url ('-', '_') içeren token'da patlıyordu ve UTF-8
- * çözmediği için Türkçe adlar bozuk görünüyordu; backend claim'leri kısa adla değil
- * .NET ClaimTypes URI'siyle yazar.
+ * Oturum HttpOnly çerezdedir: arayüz token'ı hiç görmez, oturumu ve kullanıcıyı /Auth/session'dan
+ * öğrenir. Korunan kural: token tarayıcı depolamasına yazılmaz.
  */
 describe('AuthService', () => {
-  const ns = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/';
+  const base = `${environment.apiBaseUrl}/Auth`;
+  const session: SessionInfo = {
+    authenticated: true, expiration: '2026-11-01T00:00:00Z', userId: 42,
+    name: 'Ayşe Yılmaz', email: 'ayse@acme.test', tenantId: 'acme', companyId: '7'
+  };
+  const anonymous: SessionInfo = {
+    authenticated: false, expiration: null, userId: null, name: null, email: null, tenantId: null, companyId: null
+  };
+
   let service: AuthService;
   let httpMock: HttpTestingController;
 
-  /** Payload'ı UTF-8 → base64url kodlayıp imzasız bir JWT üretir. */
-  function jwt(payload: object): string {
-    const bytes = new TextEncoder().encode(JSON.stringify(payload));
-    const b64 = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    return `e30.${b64}.sig`;
-  }
-
-  beforeEach(() => {
-    localStorage.removeItem('access_token');
+  function create(): void {
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()]
     });
     service = TestBed.inject(AuthService);
     httpMock = TestBed.inject(HttpTestingController);
-  });
+  }
+
+  function flushSession(data: SessionInfo): void {
+    httpMock.expectOne(`${base}/session`).flush({ success: true, message: '', data });
+  }
 
   afterEach(() => {
     httpMock.verify();
     localStorage.removeItem('access_token');
   });
 
-  it('başarılı girişte token saklanır, başarısızda saklanmaz', () => {
+  it('çerezli girişi ister, başarıda oturumu sunucudan okur', () => {
+    create();
     service.login({ email: 'a@b', password: 'x' }).subscribe();
-    httpMock.expectOne(`${environment.apiBaseUrl}/Auth/login`)
-      .flush({ success: false, message: 'Hatalı', data: null });
-    expect(service.isLoggedIn()).toBeFalse();
 
-    service.login({ email: 'a@b', password: 'y' }).subscribe();
-    httpMock.expectOne(`${environment.apiBaseUrl}/Auth/login`)
-      .flush({ success: true, message: '', data: { token: 't1', expiration: '' } });
-    expect(localStorage.getItem('access_token')).toBe('t1');
+    const login = httpMock.expectOne(r => r.url === `${base}/login`);
+    expect(login.request.params.get('useCookie')).toBe('true');
+    login.flush({ success: true, message: '', data: { expiration: session.expiration } });
+    flushSession(session);
 
-    service.logout();
+    expect(service.isLoggedIn()).toBeTrue();
+    expect(localStorage.getItem('access_token')).toBeNull();
+  });
+
+  it('başarısız girişte oturum açılmaz, session sorulmaz', () => {
+    create();
+    service.login({ email: 'a@b', password: 'x' }).subscribe();
+    httpMock.expectOne(r => r.url === `${base}/login`).flush({ success: false, message: 'Hatalı' });
+
     expect(service.isLoggedIn()).toBeFalse();
   });
 
-  it('URI anahtarlı claim\'leri ve UTF-8 adı okur', () => {
-    // Çok baytlı UTF-8 harfler: atob tek başına bunları Latin-1 olarak bozardı.
-    service.storeToken(jwt({
-      [`${ns}name`]: 'Işıl Şahin',
-      [`${ns}emailaddress`]: 'isil@acme.test',
-      [`${ns}nameidentifier`]: '42',
-      tenant_id: 'acme',
-      company_id: '7'
-    }));
+  it('kullanıcı bilgisi oturumdan gelir', () => {
+    create();
+    service.ensureSession().subscribe();
+    flushSession(session);
 
-    const user = service.getUserFromToken();
-    expect(user?.name).toBe('Işıl Şahin');
-    expect(user?.email).toBe('isil@acme.test');
+    const user = service.getSessionUser();
+    expect(user?.name).toBe('Ayşe Yılmaz');
+    expect(user?.email).toBe('ayse@acme.test');
     expect(user?.tenantId).toBe('acme');
     expect(user?.companyId).toBe('7');
     expect(service.getCurrentUserId()).toBe(42);
   });
 
-  it('kısa claim adlarını da okur; ad yoksa e-postanın yerel kısmı görünür', () => {
-    service.storeToken(jwt({ email: 'mehmet@acme.test', nameid: 5 }));
-    expect(service.getUserFromToken()?.name).toBe('mehmet');
-    expect(service.getCurrentUserId()).toBe(5);
+  it('ad yoksa e-postanın @ öncesi görünen ad olur', () => {
+    create();
+    service.ensureSession().subscribe();
+    flushSession({ ...session, name: '' });
+
+    expect(service.getSessionUser()?.name).toBe('ayse');
   });
 
-  it('geçersiz ya da eksik kullanıcı kimliğinde null', () => {
-    service.storeToken(jwt({ nameid: 'abc' }));
-    expect(service.getCurrentUserId()).toBeNull();
+  it('anonim ziyaretçide oturum yok', () => {
+    create();
+    service.ensureSession().subscribe();
+    flushSession(anonymous);
 
-    service.storeToken(jwt({ nameid: 0 }));
-    expect(service.getCurrentUserId()).toBeNull();
+    expect(service.isLoggedIn()).toBeFalse();
+    expect(service.getSessionUser()).toBeNull();
+    expect(service.sessionKey()).toBeNull();
   });
 
-  it('bozuk ya da olmayan token\'da null döner, hata fırlatmaz', () => {
-    expect(service.getUserFromToken()).toBeNull();
+  it('ensureSession aynı anda gelen çağrıları tek isteğe indirir, sonra yeniden sormaz', () => {
+    create();
+    const seen: unknown[] = [];
+    service.ensureSession().subscribe(s => seen.push(s));
+    service.ensureSession().subscribe(s => seen.push(s));
+    flushSession(session);
+    service.ensureSession().subscribe(s => seen.push(s));
 
-    service.storeToken('bozuk-token');
-    expect(service.getUserFromToken()).toBeNull();
-    expect(service.getCurrentUserId()).toBeNull();
+    expect(seen.length).toBe(3);
+    expect(seen.every(s => (s as SessionInfo).userId === 42)).toBeTrue();
+  });
+
+  it('session hatasında anonim sayılır, guard takılmaz', () => {
+    create();
+    let result: unknown = 'bekliyor';
+    service.ensureSession().subscribe(s => (result = s));
+    httpMock.expectOne(`${base}/session`).flush(null, { status: 500, statusText: 'err' });
+
+    expect(result).toBeNull();
+  });
+
+  it('çıkış sunucudan çerezi siler, yerel oturum hemen biter', () => {
+    create();
+    service.ensureSession().subscribe();
+    flushSession(session);
+
+    let done = false;
+    service.logout().subscribe(() => (done = true));
+    expect(service.isLoggedIn()).toBeFalse();
+
+    httpMock.expectOne(`${base}/logout`).flush({ success: true, message: '' });
+    expect(done).toBeTrue();
+  });
+
+  it('çıkış isteği başarısız olsa da akış tamamlanır', () => {
+    create();
+    let done = false;
+    service.logout().subscribe(() => (done = true));
+    httpMock.expectOne(`${base}/logout`).flush(null, { status: 500, statusText: 'err' });
+
+    expect(done).toBeTrue();
+  });
+
+  it('clearSession oturumun açık olup olmadığını bildirir', () => {
+    create();
+    service.ensureSession().subscribe();
+    flushSession(session);
+
+    expect(service.clearSession()).toBeTrue();
+    expect(service.clearSession()).toBeFalse();
+  });
+
+  it('önbellek sahibi kullanıcıya bağlıdır', () => {
+    create();
+    service.ensureSession().subscribe();
+    flushSession(session);
+    const first = service.sessionKey();
+
+    service.clearSession();
+    service.login({ email: 'b@b', password: 'x' }).subscribe();
+    httpMock.expectOne(r => r.url === `${base}/login`).flush({ success: true, message: '' });
+    flushSession({ ...session, userId: 43 });
+
+    expect(service.sessionKey()).not.toBe(first);
+  });
+
+  it('otomatik giriş oturumu sunucudan açar', () => {
+    create();
+    service.startProvisionSession('abc').subscribe();
+    httpMock.expectOne(`${base}/provision-session/abc`).flush({ success: true, message: '' });
+    flushSession(session);
+
+    expect(service.isLoggedIn()).toBeTrue();
+  });
+
+  it('eski sürümün localStorage token\'ı silinir', () => {
+    localStorage.setItem('access_token', 'eski');
+    create();
+
+    expect(localStorage.getItem('access_token')).toBeNull();
   });
 });

@@ -36,8 +36,8 @@ export interface ProvisionStatus {
   status: 'Running' | 'Completed' | 'Failed' | 'RolledBack';
   steps: ProvisionStep[];
   error: string | null;
-  /** Yalnızca Completed + ~10 dk penceresinde dolu gelir — otomatik login için. */
-  token: { token: string; expiration: string } | null;
+  /** Yalnızca Completed + ~10 dk penceresinde true — oturum startProvisionSession ile açılır. */
+  autoLoginAvailable: boolean;
 }
 
 /** Kurulum sırasında UI'da gösterilen adımların sabit sırası (backend adım adları). */

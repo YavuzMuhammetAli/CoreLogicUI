@@ -61,7 +61,7 @@ export class BackupRestoreDialogComponent {
   readonly passwordInput = signal('');
 
   /** Onay için aynen yazılacak şirket kodu (JWT'deki tenant). */
-  readonly companyCode = this.auth.getUserFromToken()?.tenantId ?? '';
+  readonly companyCode = this.auth.getSessionUser()?.tenantId ?? '';
 
   readonly open = computed(() => !!this.backup() || !!this.activeRestore() || this.step() !== 'confirm');
 
@@ -133,9 +133,10 @@ export class BackupRestoreDialogComponent {
 
   /** Bittikten sonra herkesin oturumu geçersiz — yeniden giriş zorunlu. */
   signInAgain(): void {
-    this.auth.logout();
-    this.permissions.clear();
-    this.router.navigate(['/login'], { queryParams: { reason: 'tenant_restored' } });
+    this.auth.logout().subscribe(() => {
+      this.permissions.clear();
+      this.router.navigate(['/login'], { queryParams: { reason: 'tenant_restored' } });
+    });
   }
 
   close(): void {

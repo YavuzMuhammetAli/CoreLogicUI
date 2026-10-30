@@ -2,6 +2,7 @@ import { HttpInterceptorFn, HttpErrorResponse, HttpContextToken } from '@angular
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
+import { AuthService } from '../services/auth.service';
 import { LanguageService } from '../services/language.service';
 import { NotificationService } from '../services/notification.service';
 
@@ -25,6 +26,7 @@ export const SKIP_FORBIDDEN_REDIRECT = new HttpContextToken<boolean>(() => false
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
+  const auth = inject(AuthService);
   const notifications = inject(NotificationService);
   const language = inject(LanguageService);
 
@@ -35,19 +37,15 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         return throwError(() => err);
       }
 
-      // 401: token süresi dolmuş veya geçersiz → oturumu temizle.
-      // "Oturum süresi doldu" yönlendirmesi yalnızca gerçekten bir token varken
+      // 401: oturum süresi dolmuş veya geçersiz → oturumu temizle.
+      // "Oturum süresi doldu" yönlendirmesi yalnızca gerçekten bir oturum varken
       // anlamlıdır — anonim bir isteğin 401'i (örn. public sayfadan yapılan çağrı)
       // kullanıcıyı bulunduğu public sayfadan koparmamalı.
-      if (err.status === 401) {
-        const hadToken = !!localStorage.getItem('access_token');
-        if (hadToken) {
-          localStorage.removeItem('access_token');
-          // Şirket verisi geri yüklendiyse eski oturumlar sunucuda geçersiz kılınır —
-          // giriş ekranı "süreniz doldu" yerine nedenini söyler.
-          const reason = errorCode(err) === 'session_invalidated' ? 'tenant_restored' : 'session_expired';
-          router.navigate(['/login'], { queryParams: { reason } });
-        }
+      if (err.status === 401 && auth.clearSession()) {
+        // Şirket verisi geri yüklendiyse eski oturumlar sunucuda geçersiz kılınır —
+        // giriş ekranı "süreniz doldu" yerine nedenini söyler.
+        const reason = errorCode(err) === 'session_invalidated' ? 'tenant_restored' : 'session_expired';
+        router.navigate(['/login'], { queryParams: { reason } });
       }
 
       // 503 + tenant_maintenance: şirket veritabanı geri yükleniyor (birkaç dakika). Oturum

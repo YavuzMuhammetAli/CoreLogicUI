@@ -141,7 +141,7 @@ CoreLogicUI-master/
         │       ├── workflow-view-dialog/   # "Akışı görüntüle" — yalnız ilerlenen yol + düğüm ipucu (kim onayladı / bekliyor)
         │       └── notification-bell/      # Topbar zili — okunmamış rozeti (30 sn poll) + bildirim listesi (/UserNotification)
         ├── services/
-        │   ├── auth.service.ts               # /Auth login/register, JWT → localStorage
+        │   ├── auth.service.ts               # /Auth — çerezli giriş/çıkış; oturum sinyali /Auth/session'dan (JWT arayüzde yok)
         │   ├── published-table.service.ts    # /Published addTable, addMember + soft-delete/restore
         │   ├── published-model.service.ts    # /PublishedModel getall(sayfalı)/get/add/update/delete + meta
         │   ├── publish-model.service.ts       # /PublishModel — Roslyn derleme
@@ -203,7 +203,6 @@ CoreLogicUI-master/
         │   ├── model-permission.guard.ts       # Factory: modelPermissionGuard('read'|'create'|'update'|'delete')
         │   └── unsaved-changes.guard.ts        # canDeactivate — kaydedilmemiş tasarımdan ayrılırken onay diyaloğu
         ├── interceptors/
-        │   ├── auth.interceptor.ts            # Authorization: Bearer header ekler
         │   ├── language.interceptor.ts         # Accept-Language header ekler (LanguageService'den okur)
         │   └── error.interceptor.ts            # HTTP hata yakalamak
         ├── i18n/                              # TR/EN çeviri sözlüğü (TRANSLATIONS map)
@@ -231,7 +230,7 @@ CoreLogicUI-master/
         │   ├── translate.pipe.ts              # TranslatePipe — şablonlarda `{{ 'key' | t }}` şeklinde kullanılır
         │   └── model-label.pipe.ts            # ModelLabelPipe — `{{ modelName | modelLabel }}`: tablo adı yerine model etiketi (impure)
         ├── environments/
-        │   ├── environment.ts                  # apiBaseUrl: 'https://localhost:7254'
+        │   ├── environment.ts                  # apiBaseUrl: '/api' — ng serve proxy.conf.json ile 5245'e iletir
         │   └── environment.prod.ts             # apiBaseUrl: '/api' — göreli, nginx aynı origin'den backend'e iletir
         └── models/
             ├── responseModel.ts                # ResponseModel { success, message }
@@ -314,11 +313,12 @@ eklenir (üst `authGuard` otomatik miras alınır); admin-only sayfalar için ek
 
 `src/app/app.config.ts`:
 ```typescript
-provideHttpClient(withFetch(), withInterceptors([authInterceptor, errorInterceptor]))
+provideHttpClient(withFetch(), withInterceptors([languageInterceptor, errorInterceptor]))
 ```
 
 - **`provideHttpClient` zaten yapılandırılmış** — yeniden ekleme.
-- `authInterceptor`: `localStorage('access_token')` JWT'yi alır, `Authorization: Bearer` header'ı ekler.
+- **Kimlik çerezdedir, başlık eklenmez:** token HttpOnly `cl_session` çerezinde (`Path=/api`, `SameSite=Strict`), JavaScript onu göremez.
+  Oturum ve kullanıcı `AuthService`'ten okunur (`/Auth/session`); bkz. [Güvenlik Kuralları](#güvenlik-kuralları).
 - `languageInterceptor`: `localStorage('lang')` dil tercihini alır, `Accept-Language` header'ı ekler.
   Yalnız dil kodu gider (`en`/`tr`); backend `Core/Utilities/Localization/AppCultures` bunu desteklenen
   kültüre (`en-US`/`tr-TR`) çevirir — ASP.NET'in varsayılan sağlayıcısı `en`'i `en-US` ile eşleştirmiyordu.
@@ -340,11 +340,11 @@ Tüm servisler `@Injectable({ providedIn: 'root' })`, `inject(HttpClient)` (veya
 
 | Servis | Endpoint |
 |--------|----------|
-| `AuthService` | `/Auth/login`, `/Auth/register-company`, `/Auth/verify-company`, `/Auth/provision-status` |
+| `AuthService` | `/Auth/login?useCookie=true`, `/Auth/session`, `/Auth/logout`, `/Auth/register-company`, `/Auth/verify-company`, `/Auth/provision-status`, `/Auth/provision-session/{id}` |
 | `PublishedTableService` | `/Published/addTable`, `/Published/addMember` |
 | `PublishedModelService` | `/PublishedModel/getall`, `get`, `add`, `update`, `delete`, `schema` (kayıt formu kuralları — Read izni yeter; admin'e özel `/Published/getTable`'ın form ikizi) |
 | `PublishModelService` | `/PublishModel/loadAssembly` (yardımcı). İstemci C# göndermez: ham kod ucu güvenlik nedeniyle kaldırıldı |
-| `DatabaseService` | `/Database/createtable`, `/Database/checkdatabase` |
+| `DatabaseService` | `POST /Database/createdatabase`, `createtable`, `checkdatabase` (yazan uç GET olamaz) |
 | `PermissionService` | `/Permission` — kendi izin durumu, signal (`isAdmin()`, `can()`), APP_INITIALIZER ile önyüklenir |
 | `PermissionAdminService` | `/Permission` — admin: kullanıcı bazlı izin atama |
 | `RoleAdminService` | `/Role` — RBAC rol CRUD, izin/üyelik yönetimi |
@@ -1078,8 +1078,8 @@ Plan limitleri `migrations/master/024`'te seed edilir (free 100K, pro 1M, enterp
 
 `POST /Ai/chat` `text/event-stream` döner. Angular tarafında `HttpClient` yerine `fetch`
 kullanılır (`EventSource` POST yapamaz, header ekleyemez) — bu yol **interceptor'ları
-baypas eder**, bu yüzden `ai.service.ts` `Authorization` ve `Accept-Language` başlıklarını
-kendisi ekler. Kota hatası akıştan ÖNCE kontrol edilir ki düzgün bir 400 dönebilsin.
+baypas eder**, bu yüzden `ai.service.ts` `Accept-Language` başlığını kendisi ekler; kimlik
+çerezle kendiliğinden gider. Kota hatası akıştan ÖNCE kontrol edilir ki düzgün bir 400 dönebilsin.
 
 ### İçeri aktarma sırası — bağlayıcı
 
@@ -1230,6 +1230,12 @@ Stres ve güvenlik denetiminin (2026-10-30) bıraktığı kurallar; backend tara
 - **Liste:** arama/filtre sunucuda (`getAllPaged` + `utils/list-query`). Yanıtlar sırasız dönebilir, yalnız son istek uygulanır.
 - **429:** `errorInterceptor` uyarı gösterir; gövdesi boştur, ekranlar `err.status === 429` için kendi metnini kullanır.
 - **Şirket kaydı:** başvuru kurulum başlatmaz; e-posta kayıtlıysa da aynı yanıt gelir, ekran bunu ayırt etmeye çalışmaz.
+- **Oturum:** token tarayıcı depolamasına ASLA yazılmaz. `isLoggedIn()`, `getSessionUser()`, `getCurrentUserId()` `/Auth/session` sinyalinden
+  okur; guard'lar `ensureSession()` bekler (router'ın ilk gezinmesi initializer ile paralel başlar). Kullanıcıya bağlı önbellek `sessionKey()`'e
+  bağlanır. Çıkış `logout()` Observable'ıdır: çerezi yalnız sunucu silebilir.
+- **Yerel geliştirme:** `apiBaseUrl: '/api'` + `proxy.conf.json` üretimle aynı yolu kurar; çerez ayrı origin'de çalışmaz. Backend `http://localhost:5245`'te açık olmalı.
+- **Yazma isteği kaynağı:** çerez her isteğe eklendiği için backend `CsrfPolicy` yazma isteklerinin `Origin`'ini denetler (`Security:TrustedOrigins`).
+  Yazan uç GET olamaz; yeni bir arayüz origin'i bu listeye eklenmeden yazamaz.
 - **Parola** en az 8 karakter (`PasswordPolicy` ile eşit tutulur).
 
 ## Konvansiyonlar
@@ -1267,5 +1273,4 @@ Stres ve güvenlik denetiminin (2026-10-30) bıraktığı kurallar; backend tara
 8. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
 9. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor
 10. **Angular 18 destek dışı** — `npm audit` 4 high + 5 moderate; hepsi major yükseltme ister (18.2.14 yaması da kapatmaz). SSR/transfer-cache maddeleri bu projede geçersiz (yalnız CSR), XSS maddelerine CSP arka plan savunmasıdır
-11. **JWT ve konsol refresh token'ı `localStorage`'da, UI ve konsol aynı origin'de** — CSP riski azaltır, kaldırmaz. HttpOnly cookie geçişi SSE `fetch` ve CSRF dahil ayrı iş
-12. **Kayıtlı model kaynağı `Audit` modunda** — izin listesi ihlali loglanır ama derlenir; loglar temizse `MODEL_SOURCE_MODE=Enforce`
+11. **Kayıtlı model kaynağı `Audit` modunda** — izin listesi ihlali loglanır ama derlenir; loglar temizse `MODEL_SOURCE_MODE=Enforce`

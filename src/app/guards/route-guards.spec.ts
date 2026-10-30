@@ -5,7 +5,7 @@ import { Observable, firstValueFrom, isObservable, of } from 'rxjs';
 import { authGuard } from './auth.guard';
 import { adminGuard } from './admin.guard';
 import { modelPermissionGuard } from './model-permission.guard';
-import { AuthService } from '../services/auth.service';
+import { AuthService, SessionInfo } from '../services/auth.service';
 import { PermissionService } from '../services/permission.service';
 import { NotificationService } from '../services/notification.service';
 import { LanguageService } from '../services/language.service';
@@ -23,7 +23,7 @@ describe('route guards', () => {
 
   beforeEach(() => {
     platformId = 'browser';
-    auth = jasmine.createSpyObj<AuthService>('AuthService', ['isLoggedIn']);
+    auth = jasmine.createSpyObj<AuthService>('AuthService', ['ensureSession']);
     permissions = jasmine.createSpyObj<PermissionService>('PermissionService', ['ensureLoaded', 'isAdmin', 'can']);
     notify = jasmine.createSpyObj<NotificationService>('NotificationService', ['warn']);
     permissions.ensureLoaded.and.returnValue(of(null));
@@ -59,17 +59,17 @@ describe('route guards', () => {
 
   describe('authGuard', () => {
     it('oturum varsa geçirir, yoksa /login', async () => {
-      auth.isLoggedIn.and.returnValue(true);
+      auth.ensureSession.and.returnValue(of({ authenticated: true } as SessionInfo));
       expect(await run(authGuard)).toBeTrue();
 
-      auth.isLoggedIn.and.returnValue(false);
+      auth.ensureSession.and.returnValue(of(null));
       expect(serialized(await run(authGuard))).toBe('/login');
     });
 
     it('tarayıcı dışı ortamda kararı istemciye bırakır', async () => {
       platformId = 'server';
       expect(await run(authGuard)).toBeTrue();
-      expect(auth.isLoggedIn).not.toHaveBeenCalled();
+      expect(auth.ensureSession).not.toHaveBeenCalled();
     });
   });
 

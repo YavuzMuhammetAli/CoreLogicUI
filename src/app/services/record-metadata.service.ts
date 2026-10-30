@@ -4,6 +4,7 @@ import { map, shareReplay, catchError } from 'rxjs/operators';
 import { PublishedModelService, PublishedModel, PublishedColumn } from './published-model.service';
 import { PublishedColumnSchema } from './published-table.service';
 import { ScreenLayoutService } from './screen-layout.service';
+import { AuthService } from './auth.service';
 import { FormLayout, ListLayout, ScreenViewType } from '../utils/screen-layout/screen-layout.model';
 import { parseFormLayout, parseListLayout } from '../utils/screen-layout/screen-layout.parse';
 
@@ -35,6 +36,7 @@ export interface TypeMeta {
 export class RecordMetadataService {
   private readonly publishedModel = inject(PublishedModelService);
   private readonly screenLayouts = inject(ScreenLayoutService);
+  private readonly auth = inject(AuthService);
 
   /** typeName → kolonlar (tek bir /models yanıtından indekslenir; yanıtla birlikte yenilenir). */
   private columnsIndex?: { source: Observable<unknown>; index$: Observable<Map<string, PublishedColumn[]>> };
@@ -46,7 +48,7 @@ export class RecordMetadataService {
    * kullanıcının ROLÜNE göre seçer; bu yüzden girdi oturum token'ına bağlıdır — çıkış yapıp başka
    * kullanıcıyla girilince öncekinin tasarımı gösterilmez.
    */
-  private readonly layoutCache = new Map<string, { at: number; token: string | null; layout$: Observable<FormLayout | ListLayout | null> }>();
+  private readonly layoutCache = new Map<string, { at: number; owner: string | null; layout$: Observable<FormLayout | ListLayout | null> }>();
   /** `${typeName}|${viewType}` → sunucunun seçtiği tasarımın kimliği (admin "Ekranı tasarla" ile aynısını açar). */
   private readonly layoutIds = new Map<string, number>();
 
@@ -193,9 +195,9 @@ export class RecordMetadataService {
   private layout$(typeName: string, viewType: ScreenViewType): Observable<FormLayout | ListLayout | null> {
     const key = `${typeName}|${viewType}`;
     const now = Date.now();
-    const token = currentToken();
+    const owner = this.auth.sessionKey();
     const cached = this.layoutCache.get(key);
-    if (cached && cached.token === token && now - cached.at < RecordMetadataService.LAYOUT_TTL_MS) return cached.layout$;
+    if (cached && cached.owner === owner && now - cached.at < RecordMetadataService.LAYOUT_TTL_MS) return cached.layout$;
 
     const layout$ = this.screenLayouts.getPublished(typeName, viewType).pipe(
       map(res => {
@@ -209,7 +211,7 @@ export class RecordMetadataService {
       catchError(() => of(null)),
       shareReplay(1)
     );
-    this.layoutCache.set(key, { at: now, token, layout$ });
+    this.layoutCache.set(key, { at: now, owner, layout$ });
     return layout$;
   }
 
@@ -223,13 +225,4 @@ export class RecordMetadataService {
   // Yan fayda: eski önbellek yalnız tablo adına göre anahtarlanıp displayColumn'u
   // yok sayıyordu — aynı tabloya farklı etiket kolonuyla bakan iki kolon birbirinin
   // etiketini gösteriyordu. LookupLabelService anahtarı (tablo|kolon) çiftidir.
-}
-
-/** Oturum token'ı — yerleşim önbelleğinin sahibi (PublishedModelService.getModels ile aynı yaklaşım). */
-function currentToken(): string | null {
-  try {
-    return typeof localStorage === 'undefined' ? null : localStorage.getItem('access_token');
-  } catch {
-    return null;
-  }
 }

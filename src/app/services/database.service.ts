@@ -12,16 +12,16 @@ export class DatabaseService {
 
   /** Veritabanını (ve temel şemayı) sıfırdan oluşturur */
   createDatabase(): Observable<ResponseModel> {
-    return this.http.get<ResponseModel>(`${this.baseUrl}/createdatabase`);
+    return this.http.post<ResponseModel>(`${this.baseUrl}/createdatabase`, {});
   }
 
   /** Yayınlanan dinamik tipler için SQL tabloları oluşturur */
   createTable(): Observable<ResponseModel> {
-    return this.http.get<ResponseModel>(`${this.baseUrl}/createtable`);
+    return this.http.post<ResponseModel>(`${this.baseUrl}/createtable`, {});
   }
 
   /** Veritabanı bağlantısını ve şemasını kontrol eder */
   checkDatabase(): Observable<ResponseModel> {
-    return this.http.get<ResponseModel>(`${this.baseUrl}/checkdatabase`);
+    return this.http.post<ResponseModel>(`${this.baseUrl}/checkdatabase`, {});
   }
 }

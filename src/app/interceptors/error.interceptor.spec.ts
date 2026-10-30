@@ -3,6 +3,7 @@ import { HttpClient, HttpContext, provideHttpClient, withInterceptors } from '@a
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
 import { errorInterceptor, SKIP_FORBIDDEN_REDIRECT } from './error.interceptor';
+import { AuthService } from '../services/auth.service';
 import { NotificationService } from '../services/notification.service';
 
 /**
@@ -16,15 +17,19 @@ describe('errorInterceptor', () => {
   let http: HttpClient;
   let httpMock: HttpTestingController;
   let router: jasmine.SpyObj<Router>;
+  let auth: jasmine.SpyObj<AuthService>;
 
   beforeEach(() => {
     router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+    auth = jasmine.createSpyObj<AuthService>('AuthService', ['clearSession']);
+    auth.clearSession.and.returnValue(true);
 
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptors([errorInterceptor])),
         provideHttpClientTesting(),
-        { provide: Router, useValue: router }
+        { provide: Router, useValue: router },
+        { provide: AuthService, useValue: auth }
       ]
     });
 
@@ -32,10 +37,7 @@ describe('errorInterceptor', () => {
     httpMock = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => {
-    httpMock.verify();
-    localStorage.removeItem('access_token');
-  });
+  afterEach(() => httpMock.verify());
 
   /** İsteği atar, verilen durum koduyla yanıtlar; hatanın zincirde devam ettiğini doğrular. */
   function failWith(status: number, context?: HttpContext, body: object = { success: false }): void {
@@ -55,30 +57,28 @@ describe('errorInterceptor', () => {
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('401: token varken oturumu temizleyip login\'e yönlendirir (işaretten bağımsız)', () => {
-    localStorage.setItem('access_token', 'x');
+  it('401: oturum varken temizleyip login\'e yönlendirir (işaretten bağımsız)', () => {
     failWith(401, new HttpContext().set(SKIP_FORBIDDEN_REDIRECT, true));
-    expect(localStorage.getItem('access_token')).toBeNull();
+    expect(auth.clearSession).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { reason: 'session_expired' } });
   });
 
-  it('401: token yokken yönlendirmez', () => {
+  it('401: oturum yokken yönlendirmez', () => {
+    auth.clearSession.and.returnValue(false);
     failWith(401);
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
   it('401 session_invalidated: veri geri yüklendi nedeniyle login\'e yönlendirir', () => {
-    localStorage.setItem('access_token', 'x');
     failWith(401, undefined, { success: false, code: 'session_invalidated' });
     expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { reason: 'tenant_restored' } });
   });
 
   it('503 tenant_maintenance: oturumu korur, yalnız uyarı gösterir', () => {
-    localStorage.setItem('access_token', 'x');
     const warn = spyOn(TestBed.inject(NotificationService), 'warn');
     failWith(503, undefined, { success: false, code: 'tenant_maintenance', message: 'Geri yükleniyor' });
     expect(router.navigate).not.toHaveBeenCalled();
-    expect(localStorage.getItem('access_token')).toBe('x');
+    expect(auth.clearSession).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalledWith('Geri yükleniyor');
   });
 

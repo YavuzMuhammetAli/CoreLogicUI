@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { environment } from '../../environments/environment';
 import { PublishedModelService } from './published-model.service';
+import { AuthService } from './auth.service';
 
 /**
  * Model listesi önbelleği. Korunan davranışlar: aynı oturumda tek istek (sayfa açılışı eskiden
@@ -13,21 +14,16 @@ describe('PublishedModelService.getModels', () => {
   const url = `${environment.apiBaseUrl}/PublishedModel/models`;
   let service: PublishedModelService;
   let httpMock: HttpTestingController;
-  let savedToken: string | null;
+  let sessionKey: jasmine.Spy;
 
   beforeEach(() => {
-    savedToken = localStorage.getItem('access_token');
-    localStorage.setItem('access_token', 'token-a');
     TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
     service = TestBed.inject(PublishedModelService);
     httpMock = TestBed.inject(HttpTestingController);
+    sessionKey = spyOn(TestBed.inject(AuthService), 'sessionKey').and.returnValue('kullanici-a');
   });
 
-  afterEach(() => {
-    httpMock.verify();
-    if (savedToken === null) localStorage.removeItem('access_token');
-    else localStorage.setItem('access_token', savedToken);
-  });
+  afterEach(() => httpMock.verify());
 
   const ok = { success: true, message: '', data: [{ typeName: 'Urun', columns: [] }] };
 
@@ -54,11 +50,11 @@ describe('PublishedModelService.getModels', () => {
     expect(invalidated).toBe(1);
   });
 
-  it('başka kullanıcıyla girişte (token değişince) yeniden ister', () => {
+  it('başka kullanıcıyla girişte yeniden ister', () => {
     service.getModels().subscribe();
     httpMock.expectOne(url).flush(ok);
 
-    localStorage.setItem('access_token', 'token-b');
+    sessionKey.and.returnValue('kullanici-b');
     service.getModels().subscribe();
     httpMock.expectOne(url).flush(ok);
   });

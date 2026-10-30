@@ -145,7 +145,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // Token'dan temel kullanıcı bilgisini al (anlık, SSR-safe)
-    const tokenUser = this.auth.getUserFromToken();
+    const tokenUser = this.auth.getSessionUser();
     this.tokenUser.set(tokenUser);
 
     if (!isPlatformBrowser(this.platformId)) return;
@@ -253,9 +253,10 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   logout(): void {
     this.menuOpen = false;
-    this.auth.logout();
-    this.permissionService.clear();
-    this.router.navigate(['/login']);
+    this.auth.logout().subscribe(() => {
+      this.permissionService.clear();
+      this.router.navigate(['/login']);
+    });
   }
 
   toggleSidebar(): void {
@@ -306,7 +307,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     // (PUT /Profile/language). Son yazılan (kullanıcı, dil) tarayıcıda tutulur; başka
     // kullanıcıyla girişte ya da dil değişince yeniden yazılır.
     const lang = this.languageService.lang();
-    const user = this.auth.getUserFromToken();
+    const user = this.auth.getSessionUser();
     const marker = `${user?.tenantId ?? ''}|${user?.email ?? ''}|${lang}`;
     if (this.readLanguageMarker() === marker) return;
 

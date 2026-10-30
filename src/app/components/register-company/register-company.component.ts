@@ -221,21 +221,28 @@ export class RegisterCompanyComponent implements OnInit, OnDestroy {
     this.pollSub = null;
   }
 
-  /** Tamamlanan kurulumun token'ı ile oturum açıp açılış sayfasına yönlendirir. */
+  /** Tamamlanan kurulumda oturum açıp açılış sayfasına yönlendirir. */
   private autoLogin(status: ProvisionStatus): void {
-    const token = status.token?.token;
-    if (!token) {
+    if (!status.autoLoginAvailable) {
       this.autoLoginFailed.set(true);
       return;
     }
 
-    this.auth.storeToken(token);
-    // LoginComponent.onLogin ile aynı akış: eski yetki sinyalini temizle,
-    // yeni kullanıcının yetkilerini yükle, rolünün açılış sayfasına git.
-    this.permissionService.clear();
-    this.permissionService.loadMyPermissions().pipe(markDirty(this.cdr)).subscribe({
-      next: () => this.router.navigateByUrl(this.permissionService.getLandingPage()),
-      error: () => this.router.navigate(['/models'])
+    this.auth.startProvisionSession(status.provisionId).pipe(markDirty(this.cdr)).subscribe({
+      next: res => {
+        if (!res.success) {
+          this.autoLoginFailed.set(true);
+          return;
+        }
+        // LoginComponent.onLogin ile aynı akış: eski yetki sinyalini temizle,
+        // yeni kullanıcının yetkilerini yükle, rolünün açılış sayfasına git.
+        this.permissionService.clear();
+        this.permissionService.loadMyPermissions().pipe(markDirty(this.cdr)).subscribe({
+          next: () => this.router.navigateByUrl(this.permissionService.getLandingPage()),
+          error: () => this.router.navigate(['/models'])
+        });
+      },
+      error: () => this.autoLoginFailed.set(true)
     });
   }
 }

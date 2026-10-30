@@ -1,6 +1,7 @@
 import { CanActivateFn, Router } from '@angular/router';
 import { inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { map } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
 
 export const authGuard: CanActivateFn = () => {
@@ -16,9 +17,8 @@ export const authGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  if (auth.isLoggedIn()) {
-    return true;
-  }
-
-  return router.createUrlTree(['/login']);
+  // Oturum sunucudan okunur (çerez HttpOnly); sayfa yenilemesinde henüz boş olabilir.
+  return auth.ensureSession().pipe(
+    map(session => session ? true : router.createUrlTree(['/login']))
+  );
 };

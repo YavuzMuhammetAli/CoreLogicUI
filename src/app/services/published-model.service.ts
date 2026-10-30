@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Observable, Subject, shareReplay, tap } from 'rxjs';
 import { ResponseModel } from '../models/responseModel';
@@ -6,6 +6,7 @@ import { ListResponseModel } from '../models/responseModelList';
 import { DataResponseModel } from '../models/dataResponseModel';
 import { environment } from '../../environments/environment';
 import { SKIP_FORBIDDEN_REDIRECT } from '../interceptors/error.interceptor';
+import { AuthService } from './auth.service';
 import type { PublishedTableSchema } from './published-table.service';
 import type { ListQueryParams } from '../utils/list-query';
 
@@ -104,10 +105,12 @@ export class PublishedModelService {
    */
   static readonly MODELS_TTL_MS = 5 * 60 * 1000;
 
-  private modelsCache: { at: number; token: string | null; models$: Observable<ListResponseModel<PublishedModel>> } | null = null;
+  private modelsCache: { at: number; owner: string | null; models$: Observable<ListResponseModel<PublishedModel>> } | null = null;
 
   /** Model listesi geçersiz kılındı — türetilmiş önbellekler (RecordMetadataService) de düşsün. */
   readonly modelsInvalidated$ = new Subject<void>();
+
+  private readonly auth = inject(AuthService);
 
   constructor(private http: HttpClient) {}
 
@@ -116,14 +119,14 @@ export class PublishedModelService {
    *
    * Kabuk, model listesi, kayıt/liste ekranları, şema/rapor/akış tasarımcıları ve izin ekranları
    * bunu ayrı ayrı istiyordu: tek bir sayfa açılışı 2-3 kez, sunucuda da her biri model başına
-   * izin + şema sorgusu. Liste kullanıcının izinlerine göre süzüldüğü için önbellek oturum
-   * token'ına bağlıdır: çıkış yapıp başka kullanıcıyla girilince yeniden istenir.
+   * izin + şema sorgusu. Liste kullanıcının izinlerine göre süzüldüğü için önbellek oturuma
+   * bağlıdır: çıkış yapıp başka kullanıcıyla girilince yeniden istenir.
    */
   getModels(): Observable<ListResponseModel<PublishedModel>> {
     const now = Date.now();
-    const token = this.currentToken();
+    const owner = this.auth.sessionKey();
     const cached = this.modelsCache;
-    if (cached && cached.token === token && now - cached.at < PublishedModelService.MODELS_TTL_MS) {
+    if (cached && cached.owner === owner && now - cached.at < PublishedModelService.MODELS_TTL_MS) {
       return cached.models$;
     }
 
@@ -135,7 +138,7 @@ export class PublishedModelService {
       }),
       shareReplay(1)
     );
-    this.modelsCache = { at: now, token, models$ };
+    this.modelsCache = { at: now, owner, models$ };
     return models$;
   }
 
@@ -147,14 +150,6 @@ export class PublishedModelService {
 
   private dropCache(models$: Observable<unknown>): void {
     if (this.modelsCache?.models$ === models$) this.modelsCache = null;
-  }
-
-  private currentToken(): string | null {
-    try {
-      return typeof localStorage === 'undefined' ? null : localStorage.getItem('access_token');
-    } catch {
-      return null;
-    }
   }
 
   /** Tüm kayıtları getirir. parentColumn + parentId verilirse FK filtrelemesi yapılır. */

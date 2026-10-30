@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testin
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
+import { of } from 'rxjs';
 import { BackupRestoreDialogComponent } from './backup-restore-dialog.component';
 import { AuthService } from '../../../services/auth.service';
 import { PermissionService } from '../../../services/permission.service';
@@ -16,7 +17,7 @@ describe('BackupRestoreDialogComponent', () => {
   let fixture: ComponentFixture<BackupRestoreDialogComponent>;
   let component: BackupRestoreDialogComponent;
   let httpMock: HttpTestingController;
-  const auth = jasmine.createSpyObj<AuthService>('AuthService', ['getUserFromToken', 'logout']);
+  const auth = jasmine.createSpyObj<AuthService>('AuthService', ['getSessionUser', 'logout']);
   const permissions = jasmine.createSpyObj<PermissionService>('PermissionService', ['clear']);
 
   const backup: BackupHistoryItem = {
@@ -25,7 +26,8 @@ describe('BackupRestoreDialogComponent', () => {
   };
 
   beforeEach(() => {
-    auth.getUserFromToken.and.returnValue({ name: 'A', email: 'a@acme', initials: 'A', tenantId: 'acme', companyId: 'acme' });
+    auth.getSessionUser.and.returnValue({ name: 'A', email: 'a@acme', initials: 'A', tenantId: 'acme', companyId: 'acme' });
+    auth.logout.and.returnValue(of(undefined));
     TestBed.configureTestingModule({
       imports: [BackupRestoreDialogComponent],
       providers: [

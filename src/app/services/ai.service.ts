@@ -145,8 +145,6 @@ export class AiService {
     };
 
     if (typeof localStorage !== 'undefined') {
-      const token = localStorage.getItem('access_token');
-      if (token) headers['Authorization'] = `Bearer ${token}`;
       headers['Accept-Language'] = localStorage.getItem('lang') === 'en' ? 'en' : 'tr';
     }
 

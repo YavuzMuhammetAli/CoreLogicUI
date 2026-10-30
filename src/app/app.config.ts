@@ -7,12 +7,12 @@ import {
 import { provideRouter, withEnabledBlockingInitialNavigation } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, of, switchMap } from 'rxjs';
 
 import { routes } from './app.routes';
-import { authInterceptor } from './interceptors/auth.interceptor';
 import { errorInterceptor } from './interceptors/error.interceptor';
 import { languageInterceptor } from './interceptors/language.interceptor';
+import { AuthService } from './services/auth.service';
 import { PermissionService } from './services/permission.service';
 
 /**
@@ -31,6 +31,7 @@ import { PermissionService } from './services/permission.service';
  * authGuard normal akışta /login'e yönlendirir.
  */
 function permissionInitializerFactory(
+  auth: AuthService,
   permissionService: PermissionService,
   platformId: Object
 ): () => Promise<void> {
@@ -38,16 +39,18 @@ function permissionInitializerFactory(
     // Tarayıcı dışında (artık olmasa da guard yapısını bozmamak için korundu)
     if (!isPlatformBrowser(platformId)) return Promise.resolve();
 
-    // Token yoksa (anonim ziyaretçi — /login veya /register-company) hiç istek
+    // Oturum yoksa (anonim ziyaretçi — /login veya /register-company) izin isteği
     // atma: aksi halde /Permission/my 401 döner ve error interceptor kullanıcıyı
     // yanıltıcı "oturum süresi doldu" mesajıyla login'e yönlendirirdi
     // (kayıt sihirbazına deep-link'i kırıyordu).
-    if (!localStorage.getItem('access_token')) return Promise.resolve();
-
-    // ensureLoaded: uçuştaki isteği guard'larla PAYLAŞIR. Router'ın ilk gezinmesi de bir
-    // initializer'dır ve bununla paralel başlar; doğrudan loadMyPermissions çağrılınca guard'lar
+    //
+    // ensureSession/ensureLoaded: uçuştaki isteği guard'larla PAYLAŞIR. Router'ın ilk gezinmesi de
+    // bir initializer'dır ve bununla paralel başlar; doğrudan loadMyPermissions çağrılınca guard'lar
     // isteği göremiyor, korumalı her sayfa açılışında /Permission/my ikinci kez gidiyordu.
-    return firstValueFrom(permissionService.ensureLoaded())
+    const permissions$ = auth.ensureSession().pipe(
+      switchMap(session => (session ? permissionService.ensureLoaded() : of(null)))
+    );
+    return firstValueFrom(permissions$)
       .then(() => {}) // başarılı — sinyal set edildi
       .catch(() => {}); // hata (401, ağ vb.) — sessizce geç, authGuard devralır
   };
@@ -59,13 +62,13 @@ export const appConfig: ApplicationConfig = {
     // withEnabledBlockingInitialNavigation: APP_INITIALIZER (izin yüklemesi) tamamlanana
     // dek navigasyon başlamaz; guard'lar sinyal dolu olduğunda çalışır → login flash yok.
     provideRouter(routes, withEnabledBlockingInitialNavigation()),
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor, languageInterceptor, errorInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([languageInterceptor, errorInterceptor])),
 
     // Guard yarış durumu düzeltmesi: izinleri router etkinleşmeden yükle
     {
       provide: APP_INITIALIZER,
       useFactory: permissionInitializerFactory,
-      deps: [PermissionService, PLATFORM_ID],
+      deps: [AuthService, PermissionService, PLATFORM_ID],
       multi: true
     }
   ]
