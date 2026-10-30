@@ -10,7 +10,7 @@ Users can:
 - Giriş yaparak uygulamaya erişmek (JWT tabanlı auth)
 - Dinamik entity şeması tanımlamak (kolon adı, tipi, nullable)
 - C# model kodu oluşturup backend'e göndermek (Roslyn derleme)
-- Dinamik olarak oluşturulan tablolardaki kayıtları CRUD ile yönetmek (master-detail, alt-model ilişkileri)
+- Dinamik olarak oluşturulan tablolardaki kayıtları CRUD ile yönetmek (master-detail, alt-model ilişkileri); listelerde arama, sıralama ve filtre
 - Kayıtlı model listesini ve taslak modelleri görüntülemek
 - Kullanıcı/rol bazlı izin yönetimi yapmak (admin)
 - Model bazlı kolon görünürlüğü yapılandırmak (admin)
@@ -180,6 +180,7 @@ CoreLogicUI-master/
         │   ├── identifier.ts                    # Model/alan adı: etiket → ad üretimi (Türkçe harf), ad doğrulayıcıları, LabelNameSync (spec'li)
         │   ├── locale-format.ts                 # Aktif dile göre sayı/tarih biçimlendirme (sabit 'tr-TR' KULLANMA)
         │   ├── pagination.ts                    # Saf: sayfalama penceresi (pageWindow, en fazla 5 düğme, spec'li)
+        │   ├── list-query.ts                    # Saf: liste araması, sıralama döngüsü, tipe göre filtre → sunucu biçimi (spec'li)
         │   ├── download.ts                      # downloadBlob / downloadText (rapor dışa aktarımı, akış paketi)
         │   ├── record-file.ts                   # FileRef (sunucudaki dosya/resim kolonu: boyut + imzalı url) yardımcıları (spec'li)
         │   ├── visible-poll.ts                  # Sekme görünürken yoklama + hatada geri çekilme (zil, görev rozeti; spec'li)
@@ -252,6 +253,7 @@ CoreLogicUI-master/
 
 ```
 /login                      → LoginComponent                (public, authGuard yok)
+/register-company           → RegisterCompanyComponent      (public; ?token= e-postadaki doğrulama bağlantısı)
 /                           → LayoutComponent                (authGuard korumalı app shell)
   /                         → redirect → /models
   /models                   → ModelListComponent
@@ -338,10 +340,10 @@ Tüm servisler `@Injectable({ providedIn: 'root' })`, `inject(HttpClient)` (veya
 
 | Servis | Endpoint |
 |--------|----------|
-| `AuthService` | `/Auth/login`, `/Auth/register` |
+| `AuthService` | `/Auth/login`, `/Auth/register-company`, `/Auth/verify-company`, `/Auth/provision-status` |
 | `PublishedTableService` | `/Published/addTable`, `/Published/addMember` |
 | `PublishedModelService` | `/PublishedModel/getall`, `get`, `add`, `update`, `delete`, `schema` (kayıt formu kuralları — Read izni yeter; admin'e özel `/Published/getTable`'ın form ikizi) |
-| `PublishModelService` | `/PublishModel` — Roslyn derleme |
+| `PublishModelService` | `/PublishModel/loadAssembly` (yardımcı). İstemci C# göndermez: ham kod ucu güvenlik nedeniyle kaldırıldı |
 | `DatabaseService` | `/Database/createtable`, `/Database/checkdatabase` |
 | `PermissionService` | `/Permission` — kendi izin durumu, signal (`isAdmin()`, `can()`), APP_INITIALIZER ile önyüklenir |
 | `PermissionAdminService` | `/Permission` — admin: kullanıcı bazlı izin atama |
@@ -799,8 +801,7 @@ değil `roundAway` (1.005 → 1.01), sayı → metin en kısa gidiş-dönüş + 
   oturumdaki formlar eski kuralı kullanırdı.
 
 > Kapsam dışı: alt kayıtlara referans (`SUM([Kalemler.Tutar])`), başka modelin kolonları,
-> AI önerilerinde otomatik değer. `PublishedModelManager.Update` hâlâ `DynamicEntityValidator`'ı
-> çağırmıyor (önceden var olan boşluk).
+> AI önerilerinde otomatik değer.
 
 ## Kayıtlı Kolonun Düzenlenmesi
 
@@ -813,11 +814,17 @@ anında şemadan okunduğu için **yeniden yayın gerekmez**. Önceden popup tip
 yalnız etiketi yazıyor, gerisini **sessizce atıyordu**.
 
 - **Zorunluluk kuralı** (`requiredChangeAllowed` ↔ backend `CoreLogicTypeMap.RequiredAffectsClrType`):
-  string/enum/file/image'da serbest; değer tiplerinde (sayı, tarih, mantıksal, guid, lookup) yalnız model
+  string/text/enum/file/image'da serbest; değer tiplerinde (sayı, tarih, mantıksal, guid, lookup) yalnız model
   **hiç yayınlanmamışsa** — aksi halde `int` ⇄ `int?` değişir ve NULL değerli satırlar okunamaz olur.
 - Yayındaki modelde alanı zorunlu yapmak ya da enum değeri kaldırmak popup'ta uyarı gösterir: eski
   kayıtlar ancak bir sonraki düzenlemede takılır.
 - Sunucu tipe uymayan kuralı yok sayar, metin `MaxLength` ≤ 250 (`nvarchar(250)`) ve `Min ≤ Max` ister.
+- **Çok satırlı metin (`text`):** SQL'de `nvarchar(max)`, üst sınır 100.000 karakter; form geniş metin kutusu açar, liste
+  kırpar ve sıralamaz, arama/filtre çalışır. Derlenen sınıfta `string` olduğu için üretilen kod `[LongText]` işareti taşır
+  ve tablo oluşturma SQL tipini ondan okur. Kayıtlı `string` kolon `text` yapılamaz (tip kilitli).
+- **Dosya türleri:** `file` kolonunda izinli gruplar (`pdf|image|office|text`) `enumValues`'ta durur, boşsa serbest; `image`
+  kolonu her zaman gerçek resim ister. Sunucu türü baytlardan okur, `accept` yalnız seçicide kolaylıktır. Kurulu dosyalar
+  geriye dönük denetlenmez. Doğrulama güncellemede de çalışır, ama yalnız gönderilen kolonlarda.
 - Yayında `CheckDb` (ALTER ADD) hatası artık yayını durdurur; önceden sonucu atılıyordu.
 
 ## Ekran Tasarımı
@@ -1213,6 +1220,18 @@ CLAUDE.md'de "Performans kuralları".
   (`help.*` → şema ekranı, `parameter.*` → Parametreler). Anahtar başka bir ekranda da kullanılacaksa sözlük
   `index.ts`'e geri alınır — yoksa o ekranda ham anahtar görünür.
 
+## Güvenlik Kuralları
+
+Stres ve güvenlik denetiminin (2026-10-30) bıraktığı kurallar; backend tarafı backend CLAUDE.md → Current Security State.
+
+- **CSP:** `deploy/nginx/security-headers.conf` satır içi betiğe izin vermez. `index.html`'e `<script>` yazılmaz (tema:
+  `public/theme-init.js`), `on*` özniteliği üretilmez. `inlineCritical` kapalı kalmalı: açılırsa stil dosyası `onload` ile
+  açılır, CSP engeller ve uygulama **stilsiz** kalır. Yeni dış kaynak (font, API) politikaya eklenmeden çalışmaz.
+- **Liste:** arama/filtre sunucuda (`getAllPaged` + `utils/list-query`). Yanıtlar sırasız dönebilir, yalnız son istek uygulanır.
+- **429:** `errorInterceptor` uyarı gösterir; gövdesi boştur, ekranlar `err.status === 429` için kendi metnini kullanır.
+- **Şirket kaydı:** başvuru kurulum başlatmaz; e-posta kayıtlıysa da aynı yanıt gelir, ekran bunu ayırt etmeye çalışmaz.
+- **Parola** en az 8 karakter (`PasswordPolicy` ile eşit tutulur).
+
 ## Konvansiyonlar
 
 - **Standalone component'ler** — NgModule yok
@@ -1247,3 +1266,6 @@ CLAUDE.md'de "Performans kuralları".
 7. **Bekleme boyunca kayıt kilidi sürer** — kayıt alanlı adımı olan akış beklemedeyken kayıt kilitli kalır (ürün kararı)
 8. **Ekran tasarımı model silinince temizlenmez** — `ModelScreenLayout` satırı kalır (`ModelColumnSetting`'te de böyle); çalışma anı silinmiş kolonları yok saydığı için zararsız
 9. **`task-decision-form` alanları ayrı kopya** — kayıt sayfası ve pop-up `app-record-field`'a taşındı, görev karar formu hâlâ kendi (daha dar) alan bloğunu çiziyor
+10. **Angular 18 destek dışı** — `npm audit` 4 high + 5 moderate; hepsi major yükseltme ister (18.2.14 yaması da kapatmaz). SSR/transfer-cache maddeleri bu projede geçersiz (yalnız CSR), XSS maddelerine CSP arka plan savunmasıdır
+11. **JWT ve konsol refresh token'ı `localStorage`'da, UI ve konsol aynı origin'de** — CSP riski azaltır, kaldırmaz. HttpOnly cookie geçişi SSE `fetch` ve CSRF dahil ayrı iş
+12. **Kayıtlı model kaynağı `Audit` modunda** — izin listesi ihlali loglanır ama derlenir; loglar temizse `MODEL_SOURCE_MODE=Enforce`
