@@ -177,8 +177,9 @@ export class RegisterCompanyComponent implements OnInit, OnDestroy {
       error: err => {
         this.isStarting.set(false);
         // Duplicate code/email gibi senkron 400 hataları burada kullanıcıya döner
-        this.startError.set(
-          err?.error?.message ?? this.languageService.t('regco.serverUnreachable'));
+        this.startError.set(err?.status === 429
+          ? this.languageService.t('common.rateLimited')
+          : err?.error?.message ?? this.languageService.t('regco.serverUnreachable'));
       }
     });
   }

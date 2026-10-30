@@ -79,7 +79,9 @@ export class LoginComponent {
       },
       error: err => {
         this.isLoading = false;
-        this.errorMessage = err?.error?.message ?? err?.message ?? this.languageService.t('login.serverUnreachable');
+        this.errorMessage = err?.status === 429
+          ? this.languageService.t('common.rateLimited')
+          : err?.error?.message ?? err?.message ?? this.languageService.t('login.serverUnreachable');
       }
     });
   }
