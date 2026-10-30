@@ -10,7 +10,7 @@ import {
   downloadFile, imageSrc, inputTypeFor, isImage, parseEnumValues, stepFor
 } from '../../model-data/model-data.util';
 import { AutoValueRule } from '../../../utils/auto-value/auto-value';
-import { fileSizeError } from '../../../utils/file-size';
+import { fileAccept, fileSizeError } from '../../../utils/file-size';
 import { asFileRef, fileRefUrl } from '../../../utils/record-file';
 import { isColumnRequired } from '../../../utils/record-field/column-required';
 import { fieldErrorText } from '../../../utils/record-field/field-error';
@@ -79,6 +79,7 @@ export class RecordFieldComponent {
   readonly required = computed(() => isColumnRequired(this.column(), this.rule()));
   readonly inputType = computed(() => inputTypeFor(this.column().dataType));
   readonly enumValues = computed(() => parseEnumValues(this.column().enumValues));
+  readonly accept = computed(() => fileAccept(this.column().dataType, this.column().enumValues));
   readonly stepAttr = computed(() => stepFor(this.column().dataType));
   readonly description = computed(() => this.column().description?.trim() ?? '');
   /** Gösterim biçimi yalnız uygun tipte uygulanır (tasarım doğrulaması da bunu ister). */

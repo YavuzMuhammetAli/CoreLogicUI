@@ -5,11 +5,14 @@ import {
   base64ByteLength,
   effectiveFileLimitKb,
   fileLimitMbValidator,
+  fileAccept,
   fileSizeError,
   formatFileSize,
   isFileType,
+  joinFileGroups,
   kbToMb,
   maxFileMbFor,
+  parseFileGroups,
   maxFileSizeValidator,
   mbToKb
 } from './file-size';
@@ -115,6 +118,32 @@ describe('file-size', () => {
 
     it('sınır içindeki dosyayı kabul eder', () => {
       expect(fileSizeError(file(2 * 1024), 'file', 2, 'tr')).toBeNull();
+    });
+  });
+
+  describe('izinli dosya türleri', () => {
+    it('bilinmeyen grubu atar, sırayı sabitler', () => {
+      expect(parseFileGroups('office|bilinmeyen| pdf ')).toEqual(['pdf', 'office']);
+      expect(parseFileGroups(null)).toEqual([]);
+      expect(joinFileGroups(['text', 'pdf'])).toBe('pdf|text');
+    });
+
+    it('resim kolonu yalnız sunucunun kabul ettiği biçimleri seçtirir', () => {
+      expect(fileAccept('image', null)).toContain('image/jpeg');
+      expect(fileAccept('image', null)).not.toContain('image/svg');
+      expect(fileAccept('image', null)).not.toContain('image/*');
+    });
+
+    it('dosya kolonunda kısıt yoksa seçici serbesttir', () => {
+      expect(fileAccept('file', '')).toBeNull();
+      expect(fileAccept('file', null)).toBeNull();
+    });
+
+    it('dosya kolonunda seçili grupların uzantılarını verir', () => {
+      const accept = fileAccept('file', 'pdf|office')!;
+      expect(accept).toContain('.pdf');
+      expect(accept).toContain('.xlsx');
+      expect(accept).not.toContain('.csv');
     });
   });
 

@@ -426,12 +426,6 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
           this.openEditMode();
           this.loadWorkflowState();
           this.loadLatestInstance();
-        } else if (record.success && !record.data) {
-          // Kayıt yok ya da kullanıcı göremez (yalnız-kendi-kayıtları kapsamı). Assembly
-          // eksikliği burada değil, success=false + AssemblyNotLoaded olarak gelir — eskiden
-          // burada loadAssembly yeniden denenirdi: admin'de sonsuz döngü, admin olmayanda
-          // 403 → /models yönlendirmesi.
-          this.recordError = this.languageService.t('model.detail.recordNotFound');
         } else {
           this.recordError = record.message ?? this.languageService.t('model.detail.recordNotFound');
         }

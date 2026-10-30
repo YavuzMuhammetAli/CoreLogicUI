@@ -1,4 +1,4 @@
-import { isFileType, kbToMb, mbToKb } from './file-size';
+import { isFileType, joinFileGroups, kbToMb, mbToKb, parseFileGroups } from './file-size';
 import { parseExpression, usesSequence } from './auto-value/expression';
 
 /** Sayısal (Min/Max kurallı) tipler. */
@@ -57,7 +57,7 @@ export function normalizeColumnRules<T extends ColumnRuleValue>(v: T): T & Requi
     regexMessage:        isString ? (v.regexMessage ?? '') : '',
     min:                 isNumeric ? (v.min ?? null) : null,
     max:                 isNumeric ? (v.max ?? null) : null,
-    enumValues:          v.dataType === 'enum' ? (v.enumValues ?? '') : '',
+    enumValues:          valueListOf(v.dataType, v.enumValues) ?? '',
     lookupTargetTable:   v.dataType === 'lookup' ? (v.lookupTargetTable ?? '') : '',
     lookupDisplayColumn: v.dataType === 'lookup' ? (v.lookupDisplayColumn ?? '') : '',
     maxFileSizeMb:       isFile ? kbToMb(maxLength) : null,
@@ -148,6 +148,15 @@ export interface MetadataColumn extends ColumnRuleValue {
 const text = (v: string | null | undefined): string | null => (v ?? '').trim() || null;
 const num = (v: number | null | undefined): number | null => (v === undefined || v === null || Number.isNaN(v) ? null : v);
 
+/**
+ * `enumValues` alanının tipe göre değeri: enum seçenekleri ya da dosyanın izinli tür grupları
+ * (bkz. utils/file-size). Taslakta tip değişince kalan eski değer sunucuya gitmesin.
+ */
+function valueListOf(dataType: string, value: string | null | undefined): string | null {
+  if (dataType === 'enum') return enumKey(value);
+  return dataType === 'file' ? (joinFileGroups(parseFileGroups(value)) || null) : null;
+}
+
 /** "a | b ||a" → "a|b": backend NormalizeEnumValues ile aynı (sıra korunur, yinelenen atılır). */
 function enumKey(v: string | null | undefined): string | null {
   const values = [...new Set((v ?? '').split('|').map(s => s.trim()).filter(Boolean))];
@@ -178,7 +187,7 @@ function memberMetadata(
     max:                 isNumeric ? num(v.max) : null,
     regex:               isText ? text(v.regex) : null,
     regexMessage:        isText ? text(v.regexMessage) : null,
-    enumValues:          dataType === 'enum' ? enumKey(v.enumValues) : null,
+    enumValues:          valueListOf(dataType, v.enumValues),
     lookupDisplayColumn: dataType === 'lookup' ? text(v.lookupDisplayColumn) : null
   };
 }

@@ -584,6 +584,22 @@
           </div>
         }
 
+        <!-- File'a özel: izinli tür grupları (içerik sunucuda baytlardan denetlenir) -->
+        @if (columnDraft.get('dataType')!.value === 'file') {
+          <fieldset class="field file-groups">
+            <legend>{{ 'table.detail.fileTypes' | t }}</legend>
+            <div class="cluster">
+              @for (group of FILE_TYPE_GROUPS; track group) {
+                <label class="checkbox-label">
+                  <input type="checkbox" [checked]="isFileGroupSelected(group)" (change)="toggleFileGroup(group, $any($event.target).checked)">
+                  {{ 'table.detail.fileType.' + group | t }}
+                </label>
+              }
+            </div>
+            <span class="field-help">{{ 'table.detail.fileTypesHelp' | t }}</span>
+          </fieldset>
+        }
+
         <!-- Enum'a özel: izinli değerler -->
         @if (columnDraft.get('dataType')!.value === 'enum') {
           <div class="field-row">

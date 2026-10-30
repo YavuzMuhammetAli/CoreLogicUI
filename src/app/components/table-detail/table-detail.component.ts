@@ -25,7 +25,8 @@ import { RelationshipType } from '../../models/relationship.model';
 import { RelationshipsTabComponent } from './relationships/relationships-tab.component';
 import { markDirty } from '../../utils/change-detection';
 import {
-  MIN_FILE_LIMIT_MB, fileLimitMbValidator, formatFileSize, isFileType, kbToMb, maxFileKbFor, maxFileMbFor
+  FILE_TYPE_GROUPS, FileTypeGroup, MIN_FILE_LIMIT_MB, fileLimitMbValidator, formatFileSize, isFileType, joinFileGroups,
+  kbToMb, maxFileKbFor, maxFileMbFor, parseFileGroups
 } from '../../utils/file-size';
 import {
   MetadataColumn, NUMERIC_COLUMN_TYPES, autoValueKey, metadataKey, normalizeColumnRules, requiredChangeAllowed,
@@ -207,6 +208,7 @@ export class TableDetailComponent implements OnDestroy {
   readonly LABEL_MAX_LENGTH = LABEL_MAX_LENGTH;
   readonly identifierErrorMessage = identifierErrorMessage;
   readonly isFileType = isFileType;
+  readonly FILE_TYPE_GROUPS = FILE_TYPE_GROUPS;
   readonly maxFileMbFor = maxFileMbFor;
   readonly MIN_FILE_LIMIT_MB = MIN_FILE_LIMIT_MB;
 
@@ -660,6 +662,18 @@ export class TableDetailComponent implements OnDestroy {
     return [...this.primitiveTypes, ...this.referenceTypes].find(t => t.value === value)?.label ?? value;
   }
 
+  /** Dosya kolonunda izinli tür seçili mi (seçim taslakta `enumValues` alanında durur). */
+  isFileGroupSelected(group: FileTypeGroup): boolean {
+    return parseFileGroups(this.columnDraft.get('enumValues')!.value).includes(group);
+  }
+
+  toggleFileGroup(group: FileTypeGroup, checked: boolean): void {
+    const control = this.columnDraft.get('enumValues')!;
+    const others = parseFileGroups(control.value).filter(g => g !== group);
+    control.setValue(joinFileGroups(checked ? [...others, group] : others));
+    control.markAsDirty();
+  }
+
   /** Bir sütun satırı için kısa kural özeti (tablo görünümünde gösterilir). */
   ruleSummary(col: AbstractControl): string {
     // Yalnız sütunun tipine ait kurallar gösterilir (formda eski tipin değeri kalmış olabilir).
@@ -672,6 +686,9 @@ export class TableDetailComponent implements OnDestroy {
       parts.push(this.languageService.t(
         v.maxLength != null ? 'table.detail.ruleMaxFileSize' : 'table.detail.ruleMaxFileSizeDefault',
         { value: formatFileSize(limitKb * 1024, this.languageService.lang()) }));
+      if (v.dataType === 'file') {
+        parts.push(...parseFileGroups(v.enumValues).map(g => this.languageService.t('table.detail.fileType.' + g)));
+      }
       return parts.join(', ');
     }
 

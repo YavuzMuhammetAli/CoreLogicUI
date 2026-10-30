@@ -52,7 +52,7 @@
   <!-- Dosya girişi form kontrolüne bağlanamaz: değer seçimde base64 olarak yazılır. -->
   <input [id]="inputId()" type="file" class="file-input"
     [disabled]="control().disabled"
-    [attr.accept]="column().dataType === 'image' ? 'image/*' : null"
+    [attr.accept]="accept()"
     (change)="onFileSelected($event)">
   @if (fileError(); as fileErr) {
     <span class="field-error" role="alert">{{ fileErr }}</span>

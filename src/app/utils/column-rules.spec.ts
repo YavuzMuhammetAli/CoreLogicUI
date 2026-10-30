@@ -39,6 +39,12 @@ describe('normalizeColumnRules', () => {
     expect(r.maxFileSizeMb).toBeNull();
   });
 
+  it('dosya kolonunda izinli türler korunur, taslaktan kalan enum değeri atılır', () => {
+    expect(normalizeColumnRules({ dataType: 'file', enumValues: 'office|pdf' }).enumValues).toBe('pdf|office');
+    expect(normalizeColumnRules({ dataType: 'file', enumValues: 'Aktif|Pasif' }).enumValues).toBe('');
+    expect(normalizeColumnRules({ dataType: 'image', enumValues: 'pdf' }).enumValues).toBe('');
+  });
+
   it('sayısal tipte yalnız Min/Max kalır', () => {
     const r = normalizeColumnRules({ dataType: 'int', min: 0, max: 10, maxLength: 20 });
     expect(r.min).toBe(0);

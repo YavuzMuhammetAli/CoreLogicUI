@@ -19,6 +19,41 @@ export function isFileType(dataType: string | null | undefined): boolean {
   return FILE_TYPES.has(dataType ?? '');
 }
 
+/**
+ * Dosya kolonunun izinli tür grupları. Şemada `enumValues` içinde `pdf|office` olarak durur;
+ * boşsa serbest. Sunucu içeriği baytlardan denetler (backend `Core/Utilities/Files/FileSignature`),
+ * buradaki `accept` yalnız dosya seçicide kolaylıktır.
+ */
+export const FILE_TYPE_GROUPS = ['pdf', 'image', 'office', 'text'] as const;
+export type FileTypeGroup = (typeof FILE_TYPE_GROUPS)[number];
+
+/** Sunucunun resim olarak kabul ettikleri. Listeli `accept`, iOS'ta HEIC'i JPEG'e çevirtir. */
+const IMAGE_ACCEPT = 'image/png,image/jpeg,image/gif,image/webp,image/bmp';
+
+const GROUP_ACCEPT: Record<FileTypeGroup, string> = {
+  pdf: '.pdf,application/pdf',
+  image: IMAGE_ACCEPT,
+  office: '.doc,.docx,.xls,.xlsx,.ppt,.pptx',
+  text: '.txt,.csv,.tsv,.json,.xml,.md,.log,text/plain,text/csv'
+};
+
+export function parseFileGroups(value: string | null | undefined): FileTypeGroup[] {
+  const selected = new Set((value ?? '').split('|').map(s => s.trim()));
+  return FILE_TYPE_GROUPS.filter(group => selected.has(group));
+}
+
+/** Gruplar şemada sabit sırayla durur: kayıtlı değer ile form anahtarı eşleşsin. */
+export function joinFileGroups(groups: readonly FileTypeGroup[]): string {
+  return FILE_TYPE_GROUPS.filter(group => groups.includes(group)).join('|');
+}
+
+/** Dosya seçicinin `accept` değeri; kısıt yoksa null. */
+export function fileAccept(dataType: string, enumValues: string | null | undefined): string | null {
+  if (dataType === 'image') return IMAGE_ACCEPT;
+  const groups = parseFileGroups(enumValues);
+  return groups.length ? groups.map(group => GROUP_ACCEPT[group]).join(',') : null;
+}
+
 /** Resim tavanı: 50 MB. */
 export const IMAGE_MAX_FILE_KB = 50 * 1024;
 
