@@ -32,6 +32,7 @@ export const COMMON_I18N: Translations = {
   'common.inactive': { tr: 'Pasif', en: 'Inactive' },
   // Sunucu hata mesajı boş geldiğinde kullanılan son çare metni.
   'common.error': { tr: 'Bir hata oluştu.', en: 'An error occurred.' },
+  'common.rateLimited': { tr: 'Çok fazla istek gönderildi. Lütfen biraz bekleyip yeniden deneyin.', en: 'Too many requests. Please wait a moment and try again.' },
 
   // confirm-dialog.component.html — paylaşılan onay modalı statik metinleri
   'confirm.usageIntro': { tr: "'{name}' kullanılıyor:", en: "'{name}' is in use:" },

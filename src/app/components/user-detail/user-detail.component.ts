@@ -81,11 +81,11 @@ export class UserDetailComponent {
     });
 
     this.resetForm = this.fb.group({
-      newPassword: ['', [Validators.required, Validators.minLength(6)]]
+      newPassword: ['', [Validators.required, Validators.minLength(8)]]
     });
 
     if (this.isNew) {
-      this.form.get('password')!.setValidators([Validators.required, Validators.minLength(6)]);
+      this.form.get('password')!.setValidators([Validators.required, Validators.minLength(8)]);
       this.form.get('passwordRepeat')!.setValidators([Validators.required]);
       this.loadRoles();
     } else if (this.userId) {

@@ -115,7 +115,7 @@
         <div class="field">
           <label for="regco-password">{{ 'login.password' | t }} <span class="req">*</span></label>
           <input id="regco-password" type="password" formControlName="password"
-            [placeholder]="'login.passwordPlaceholderMin6' | t" autocomplete="new-password" required
+            [placeholder]="'login.passwordPlaceholderMin8' | t" autocomplete="new-password" required
             [attr.aria-invalid]="af.password.touched && af.password.invalid">
           @if (af.password.touched && af.password.hasError('required')) {
             <span class="field-error" role="alert">{{ 'login.passwordRequired' | t }}</span>

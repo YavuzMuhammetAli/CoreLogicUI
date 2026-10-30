@@ -60,7 +60,7 @@ export class RegisterCompanyComponent implements OnDestroy {
     adminName: ['', Validators.required],
     adminSurname: ['', Validators.required],
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]]
+    password: ['', [Validators.required, Validators.minLength(8)]]
   });
 
   readonly isStarting = signal(false);

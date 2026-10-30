@@ -69,7 +69,7 @@ export const USER_I18N: Translations = {
     tr: 'E-postayı değiştirirseniz kullanıcı bundan sonra yeni adresle giriş yapar.',
     en: 'If you change the email, the user will sign in with the new address from now on.'
   },
-  'user.detail.passwordHelp': { tr: 'En az 6 karakter.', en: 'At least 6 characters.' },
+  'user.detail.passwordHelp': { tr: 'En az 8 karakter.', en: 'At least 8 characters.' },
   'user.detail.isAdmin': { tr: 'Admin yetkisi ver', en: 'Grant admin rights' },
   'user.detail.isAdminHelp': {
     tr: 'Admin kullanıcılar model oluşturabilir, kullanıcı ve izin yönetebilir.',
@@ -109,7 +109,7 @@ export const USER_I18N: Translations = {
   'user.detail.emailRequired': { tr: 'E-posta zorunludur.', en: 'Email is required.' },
   'user.detail.emailInvalid': { tr: 'Geçerli bir e-posta adresi girin.', en: 'Enter a valid email address.' },
   'user.detail.passwordRequired': { tr: 'Parola zorunludur.', en: 'Password is required.' },
-  'user.detail.passwordTooShort': { tr: 'Parola en az 6 karakter olmalıdır.', en: 'The password must be at least 6 characters.' },
+  'user.detail.passwordTooShort': { tr: 'Parola en az 8 karakter olmalıdır.', en: 'The password must be at least 8 characters.' },
   'user.detail.passwordMismatch': { tr: 'Parolalar eşleşmiyor.', en: 'Passwords do not match.' },
 
   'user.detail.created': { tr: 'Kullanıcı oluşturuldu.', en: 'User created.' },

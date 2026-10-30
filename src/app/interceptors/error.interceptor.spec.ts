@@ -82,6 +82,13 @@ describe('errorInterceptor', () => {
     expect(warn).toHaveBeenCalledWith('Geri yükleniyor');
   });
 
+  it('429: yönlendirmez, kullanıcıya hız sınırını söyler', () => {
+    const warn = spyOn(TestBed.inject(NotificationService), 'warn');
+    failWith(429);
+    expect(warn).toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
   it('diğer hatalarda yönlendirmez', () => {
     failWith(500);
     expect(router.navigate).not.toHaveBeenCalled();

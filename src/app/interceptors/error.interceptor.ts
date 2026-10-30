@@ -2,11 +2,13 @@ import { HttpInterceptorFn, HttpErrorResponse, HttpContextToken } from '@angular
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
+import { LanguageService } from '../services/language.service';
 import { NotificationService } from '../services/notification.service';
 
-/** Bakım uyarısı art arda gelen isteklerde tekrar tekrar gösterilmesin (ms). */
+/** Bakım ve hız sınırı uyarıları art arda gelen isteklerde tekrar tekrar gösterilmesin (ms). */
 const MAINTENANCE_NOTICE_INTERVAL = 10_000;
 let lastMaintenanceNotice = 0;
+let lastRateLimitNotice = 0;
 
 /**
  * 403'te `/models`'e yönlendirmeyi bu istek için kapatır.
@@ -24,6 +26,7 @@ export const SKIP_FORBIDDEN_REDIRECT = new HttpContextToken<boolean>(() => false
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const notifications = inject(NotificationService);
+  const language = inject(LanguageService);
 
   return next(req).pipe(
     catchError((err: HttpErrorResponse) => {
@@ -54,6 +57,15 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         if (now - lastMaintenanceNotice > MAINTENANCE_NOTICE_INTERVAL) {
           lastMaintenanceNotice = now;
           notifications.warn((err.error as { message?: string })?.message ?? 'Bakım');
+        }
+      }
+
+      // 429: hız sınırı (backend ya da nginx). Yanıtın gövdesi boştur, kullanıcı nedenini bilsin.
+      if (err.status === 429) {
+        const now = Date.now();
+        if (now - lastRateLimitNotice > MAINTENANCE_NOTICE_INTERVAL) {
+          lastRateLimitNotice = now;
+          notifications.warn(language.t('common.rateLimited'));
         }
       }
 

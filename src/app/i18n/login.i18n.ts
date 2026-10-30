@@ -19,8 +19,8 @@ export const LOGIN_I18N: Translations = {
   'login.password': { tr: 'Şifre', en: 'Password' },
   'login.passwordRequired': { tr: 'Şifre zorunludur.', en: 'Password is required.' },
   'login.loggingIn': { tr: 'Giriş yapılıyor...', en: 'Logging in...' },
-  'login.passwordPlaceholderMin6': { tr: 'Min. 6 karakter', en: 'Min. 6 characters' },
-  'login.passwordMinLength': { tr: 'Şifre en az 6 karakter olmalıdır.', en: 'Password must be at least 6 characters.' },
+  'login.passwordPlaceholderMin8': { tr: 'Min. 8 karakter', en: 'Min. 8 characters' },
+  'login.passwordMinLength': { tr: 'Şifre en az 8 karakter olmalıdır.', en: 'Password must be at least 8 characters.' },
   'login.loginFailed': { tr: 'Giriş başarısız.', en: 'Login failed.' },
   'login.serverUnreachable': { tr: 'Sunucuya bağlanılamadı.', en: 'Could not connect to the server.' }
 };
