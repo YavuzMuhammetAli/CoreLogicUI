@@ -1030,7 +1030,7 @@ Sunucuda `.env`'de `GEMINI_API_KEY` (→ `Ai__Gemini__ApiKey`) ya da konsoldan `
 olsaydı operatör konsolda kaydeder, hiçbir şey değişmez ve sebebi görünmezdi.
 
 > **Tenant migration'ı şart.** `AiConversation`/`AiMessage`/`AiProposal` tabloları
-> `migrations/016_ai-sohbet.sql` ile gelir ve tenant migrasyonları **uygulama
+> `migrations/016_ai-chat.sql` ile gelir ve tenant migrasyonları **uygulama
 > açılışında koşmaz** (master koşar, tenant koşmaz — asimetri kasıtlı). Platform
 > Console → `operations/migrations` üzerinden uygulanır: ya **Koşu Başlat** ile
 > elle, ya da aynı sayfadaki **otomatik yükseltme** cron zamanlamasıyla
