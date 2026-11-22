@@ -1,5 +1,5 @@
 {
-  "_note": "Ekran tasarımı doğrulama vektörleri — CoreLogicUI src/app/utils/screen-layout ve CoreLogic Tests/Business.Tests/ScreenLayout altında BİREBİR kopya. Değiştiren iki tarafı birlikte günceller.",
+  "_note": "Screen layout validation vectors — an EXACT copy under CoreLogicUI src/app/utils/screen-layout and CoreLogic Tests/Business.Tests/ScreenLayout. Whoever changes it updates both sides together.",
   "facts": [
     {
       "name": "Plaka",
@@ -34,7 +34,7 @@
   ],
   "cases": [
     {
-      "name": "geçerli form — sorun yok",
+      "name": "valid form — no issues",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -117,7 +117,7 @@
       "expected": []
     },
     {
-      "name": "gizli opsiyonel kolon yerleştirilmiş sayılmaz ama uyarı da üretmez",
+      "name": "hidden optional column does not count as placed but produces no warning either",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -173,7 +173,7 @@
       "expected": []
     },
     {
-      "name": "yerleştirilmemiş kolonlar bilgi uyarısıdır (yayında da)",
+      "name": "unplaced columns are an info warning (also when publishing)",
       "viewType": "form",
       "mode": "publish",
       "layout": {
@@ -227,7 +227,7 @@
       ]
     },
     {
-      "name": "zorunlu kolon gizlenemez — taslakta uyarı",
+      "name": "required column cannot be hidden — warning in draft",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -293,7 +293,7 @@
       ]
     },
     {
-      "name": "zorunlu kolon gizlenemez — yayında hata",
+      "name": "required column cannot be hidden — error when publishing",
       "viewType": "form",
       "mode": "publish",
       "layout": {
@@ -359,7 +359,7 @@
       ]
     },
     {
-      "name": "bilinmeyen kolon",
+      "name": "unknown column",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -435,7 +435,7 @@
       ]
     },
     {
-      "name": "bilinmeyen gizli kolon",
+      "name": "unknown hidden column",
       "viewType": "form",
       "mode": "publish",
       "layout": {
@@ -507,7 +507,7 @@
       ]
     },
     {
-      "name": "aynı kolon iki kez yerleştirilemez",
+      "name": "same column cannot be placed twice",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -589,7 +589,7 @@
       ]
     },
     {
-      "name": "yerleştirilen kolon gizli listede olamaz",
+      "name": "placed column cannot be in the hidden list",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -662,7 +662,7 @@
       ]
     },
     {
-      "name": "widget kolon tipine uymalı",
+      "name": "widget must match the column type",
       "viewType": "form",
       "mode": "publish",
       "layout": {
@@ -738,7 +738,7 @@
       ]
     },
     {
-      "name": "boş sekme taslakta uyarı, boş bölüm hep uyarı",
+      "name": "empty tab warns in draft, empty section always warns",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -834,7 +834,7 @@
       ]
     },
     {
-      "name": "boş sekme yayında hata",
+      "name": "empty tab is an error when publishing",
       "viewType": "form",
       "mode": "publish",
       "layout": {
@@ -930,7 +930,7 @@
       ]
     },
     {
-      "name": "span 1-12 tam sayı olmalı",
+      "name": "span must be an integer 1-12",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -1051,7 +1051,7 @@
       ]
     },
     {
-      "name": "kimlik deseni ve tekilliği",
+      "name": "id pattern and uniqueness",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -1150,7 +1150,7 @@
       ]
     },
     {
-      "name": "bilinmeyen öğe türü",
+      "name": "unknown item type",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -1224,7 +1224,7 @@
       ]
     },
     {
-      "name": "satır sayısı 2-20",
+      "name": "row count 2-20",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -1292,7 +1292,7 @@
       ]
     },
     {
-      "name": "not tonu ve uzunluğu",
+      "name": "note tone and length",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -1392,7 +1392,7 @@
       ]
     },
     {
-      "name": "başlık en fazla 120 karakter",
+      "name": "title at most 120 characters",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -1477,7 +1477,7 @@
       ]
     },
     {
-      "name": "sekmesiz form",
+      "name": "form without tabs",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -1523,7 +1523,7 @@
       ]
     },
     {
-      "name": "en fazla 12 sekme",
+      "name": "at most 12 tabs",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -1771,7 +1771,7 @@
       ]
     },
     {
-      "name": "en fazla 400 öğe",
+      "name": "at most 400 items",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -3420,7 +3420,7 @@
       ]
     },
     {
-      "name": "şema sürümü 1 olmalı",
+      "name": "schema version must be 1",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -3489,7 +3489,7 @@
       ]
     },
     {
-      "name": "bozuk JSON",
+      "name": "corrupt JSON",
       "viewType": "form",
       "mode": "draft",
       "raw": "{\"schemaVersion\":1,\"tabs\":",
@@ -3501,7 +3501,7 @@
       ]
     },
     {
-      "name": "tabs dizi olmalı",
+      "name": "tabs must be an array",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -3516,7 +3516,7 @@
       ]
     },
     {
-      "name": "başlık metin olmalı",
+      "name": "title must be text",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -3585,7 +3585,7 @@
       ]
     },
     {
-      "name": "kolonsuz alan öğesi",
+      "name": "field item without column",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -3659,7 +3659,7 @@
       ]
     },
     {
-      "name": "bilinmeyen widget",
+      "name": "unknown widget",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -3735,7 +3735,7 @@
       ]
     },
     {
-      "name": "gizli kolon listesi metin dizisi olmalı",
+      "name": "hidden column list must be an array of text",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -3806,7 +3806,7 @@
       ]
     },
     {
-      "name": "katlanır bayrağı mantıksal olmalı",
+      "name": "collapsible flag must be boolean",
       "viewType": "form",
       "mode": "draft",
       "layout": {
@@ -3876,7 +3876,7 @@
       ]
     },
     {
-      "name": "geçerli liste",
+      "name": "valid list",
       "viewType": "list",
       "mode": "draft",
       "layout": {
@@ -3898,7 +3898,7 @@
       "expected": []
     },
     {
-      "name": "kolonsuz liste taslakta uyarı",
+      "name": "list without columns warns in draft",
       "viewType": "list",
       "mode": "draft",
       "layout": {
@@ -3913,7 +3913,7 @@
       ]
     },
     {
-      "name": "kolonsuz liste yayında hata",
+      "name": "list without columns is an error when publishing",
       "viewType": "list",
       "mode": "publish",
       "layout": {
@@ -3928,7 +3928,7 @@
       ]
     },
     {
-      "name": "liste genişliği 60-800 tam sayı",
+      "name": "list width is an integer 60-800",
       "viewType": "list",
       "mode": "draft",
       "layout": {
@@ -3980,7 +3980,7 @@
       ]
     },
     {
-      "name": "liste tekrar ve bilinmeyen kolon",
+      "name": "list duplicate and unknown column",
       "viewType": "list",
       "mode": "draft",
       "layout": {
@@ -4011,7 +4011,7 @@
       ]
     },
     {
-      "name": "liste kolonu nesne olmalı",
+      "name": "list column must be an object",
       "viewType": "list",
       "mode": "draft",
       "layout": {
@@ -4028,7 +4028,7 @@
       ]
     },
     {
-      "name": "çok satırlı metin kolonu: yazı kutusu uygun, seçenek düğmesi değil",
+      "name": "multiline text column: text box fits, radio button does not",
       "viewType": "form",
       "mode": "draft",
       "extraFacts": [
