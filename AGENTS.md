@@ -68,7 +68,7 @@ CoreLogicUI-master/
         │   ├── model-node/                 # Model ağacı/şema düğümü gösterimi
         │   ├── form-build/                # Dinamik schema builder + C# önizleme (admin)
         │   ├── draft-models/               # Taslak (henüz yayınlanmamış) modeller (admin)
-        │   ├── database-proccess/          # /Database endpoint'lerini saran ekran (admin) — implement edildi
+        │   ├── database-process/          # /Database endpoint'lerini saran ekran (admin) — implement edildi
         │   ├── user-permission-list/       # Kullanıcı bazlı izin listesi (admin)
         │   ├── user-permission-detail/     # Kullanıcı bazlı izin detay/düzenleme (admin)
         │   ├── role-list/                  # Rol (RBAC) listesi (admin)
@@ -131,7 +131,7 @@ CoreLogicUI-master/
   /models/:typeName/:id → ModelDetailComponent           (modelPermissionGuard('read'))
   /build                → FormBuildComponent             (adminGuard)
   /drafts               → DraftModelsComponent           (adminGuard)
-  /database             → DatabaseProccessComponent       (adminGuard)
+  /database             → DatabaseProcessComponent       (adminGuard)
   /permissions          → UserPermissionListComponent     (adminGuard)
   /permissions/:id      → UserPermissionDetailComponent   (adminGuard)
   /roles                → RoleListComponent                (adminGuard)
@@ -259,7 +259,7 @@ tasarım sistemi kullanır (artık açık/koyu tema desteği dahil). Detaylar i�
 - Yeni control flow: `@if` / `@for` / `@else` (`*ngIf`/`*ngFor` değil)
 - İkonlar: yalnız `<app-icon name="…">` (Material Symbols Outlined, satır içi SVG, `currentColor`) — elle `<svg>` ikon, ikon fontu, emoji/Unicode glif YOK. Sözlük ve kurallar: `corelogic-design` skill'i "İkonlar"
 - A11y: `aria-invalid`, `role="alert"`, `aria-describedby`, `.sr-only`
-- **Tüm UI metni ve yorumlar Türkçe**
+- **UI metni i18n üzerinden (TR/EN); kod yorumları, tanımlayıcılar ve test başlıkları İngilizce**
 
 ## Backend Entegrasyonu
 
@@ -307,7 +307,7 @@ Sonra `src/app/app.routes.ts`'e route ekle. Component yapısı/signal/guard konv
 - **Reactive Forms** — `FormBuilder` + `FormGroup`/`FormArray`
 - **Yanıt tipleri** — `ResponseModel`, `ListResponseModel<T>` veya `DataResponseModel<T>`
 - **Component state** — `signal()`/`computed()`/`effect()`; `BehaviorSubject` kullanılmaz
-- **Türkçe yorumlar ve mesajlar** — backend ile tutarlı
+- **İngilizce yorumlar ve geliştirici mesajları** — backend ile tutarlı; kullanıcı metni i18n üzerinden
 
 ## Bilinen Eksikler ve TODO'lar
 

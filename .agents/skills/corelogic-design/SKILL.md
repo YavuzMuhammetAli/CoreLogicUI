@@ -329,7 +329,7 @@ CSS Grid: `grid-template-columns: var(--sidebar-w) 1fr`
 | **Reactive Forms** | `FormBuilder` + `FormGroup`/`FormArray`; template-driven form yok |
 | **İkonlar** | Inline stroke SVG, `currentColor`, ikon-font kütüphanesi yok |
 | **A11y** | `aria-invalid`, `role="alert"`, `aria-describedby`, `.sr-only` zorunlu |
-| **Dil** | Tüm UI metni ve yorumlar Türkçe |
+| **Dil** | UI metni i18n üzerinden (TR/EN); kod yorumları ve tanımlayıcılar İngilizce |
 | **Stil** | Global sınıfları yeniden kullan; component SCSS'inde token kullan; yeni renk icat etme |
 
 ---

@@ -523,7 +523,7 @@ yeni adı https://fonts.google.com/icons'tan bul.
 | **Reactive Forms** | `FormBuilder` + `FormGroup`/`FormArray`; template-driven form yok |
 | **İkonlar** | Yalnız `<app-icon>` (Material Symbols, satır içi SVG) — bkz. "İkonlar"; elle `<svg>`, ikon fontu, emoji YOK |
 | **A11y** | `aria-invalid`, `role="alert"`, `aria-describedby`, `.sr-only` zorunlu |
-| **Dil** | Tüm UI metni ve yorumlar Türkçe |
+| **Dil** | UI metni i18n üzerinden (TR/EN); kod yorumları ve tanımlayıcılar İngilizce |
 | **Stil** | Global sınıfları yeniden kullan; component SCSS'inde token kullan; yeni renk icat etme |
 
 ---

@@ -209,5 +209,5 @@ export class MyComponent {
 - [ ] Her metot `Observable<ResponseModel>` veya `Observable<ListResponseModel<T>>` döner
 - [ ] GET parametreleri `HttpParams` ile, body POST olarak geç
 - [ ] `language.interceptor` ve `error.interceptor` otomatik çalışır, kimlik çerezle gider — elle `Authorization` ekleme
-- [ ] Türkçe JSDoc yorum satırları ekle (`/** Açıklama */`)
+- [ ] İngilizce JSDoc yorum satırları ekle (`/** Description */`)
 - [ ] Yeni servis dosyasını `src/app/services/` altına ekle

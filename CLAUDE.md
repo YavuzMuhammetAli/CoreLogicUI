@@ -89,7 +89,7 @@ CoreLogicUI-master/
         │   │   ├── templates/              #   Bildirim e-posta şablonları — tür×dil HTML editörü, sandbox iframe önizleme
         │   │   └── subscription/           #   Plan kartları + mevcut abonelik + satın alma (ödeme şimdilik stub)
         │   ├── ai-chat/                    # Yapay Zeka asistanı (admin) — sohbet + öneri kartları + içeri aktar/yayınla
-        │   ├── database-proccess/          # /Database endpoint'lerini saran ekran (admin)
+        │   ├── database-process/          # /Database endpoint'lerini saran ekran (admin)
         │   ├── user-permission-list/       # Kullanıcı bazlı izin listesi (admin)
         │   ├── user-permission-detail/     # Kullanıcı bazlı izin detay/düzenleme (admin)
         │   ├── role-list/                  # Rol (RBAC) listesi (admin)
@@ -269,7 +269,7 @@ CoreLogicUI-master/
   /design/navigation/:id    → NavDesignerComponent           (adminGuard, canDeactivate: unsavedChangesGuard)
   /drafts                   → DraftModelsComponent           (adminGuard)
   /drafts/deleted           → DeletedDraftsComponent         (adminGuard)
-  /database                 → DatabaseProccessComponent       (adminGuard)
+  /database                 → DatabaseProcessComponent       (adminGuard)
   /users                    → UserListComponent               (adminGuard — şirket kullanıcıları)
   /users/new                → UserDetailComponent             (adminGuard, data.mode='new')
   /users/:id                → UserDetailComponent             (adminGuard)
@@ -440,7 +440,7 @@ tasarım sistemi kullanır (artık açık/koyu tema desteği dahil). Detaylar i�
 - Yeni control flow: `@if` / `@for` / `@else` (`*ngIf`/`*ngFor` değil)
 - İkonlar: yalnız `<app-icon name="…">` (Material Symbols Outlined, satır içi SVG, `currentColor`) — elle `<svg>` ikon, ikon fontu, emoji/Unicode glif YOK. Sözlük ve kurallar: `corelogic-design` skill'i "İkonlar"
 - A11y: `aria-invalid`, `role="alert"`, `aria-describedby`, `.sr-only`
-- **Tüm UI metni ve yorumlar Türkçe**
+- **UI metni i18n üzerinden (TR/EN); kod yorumları, tanımlayıcılar ve test başlıkları İngilizce**
 
 ## Şirket İçi Kullanıcı Yönetimi (G2)
 
@@ -1258,7 +1258,7 @@ Stres ve güvenlik denetiminin (2026-10-30) bıraktığı kurallar; backend tara
 - **Tablo sarmalayıcısı** — her `.data-table` global `.table-wrapper` içinde durur: `.panel` `overflow: hidden` olduğundan sarmalayıcısız geniş tablo mobilde kırpılır ve kaydırılamaz. Component SCSS'inde `.table-wrapper`'ı yeniden TANIMLAMA
 - **Tablo hücreleri** — `<td>`'ye `display` değiştiren sınıf (`muted-hint`, `cluster`, `stack`…) VERME: hücre tablo hücresi olmaktan çıkar, komşusuyla tek hücreye birleşir (düğmeler alt satıra düşer). Soluk metin için `.td-muted`, aksiyonlar için `<td class="td-actions">` (sağa yaslı)
 - **Sayfa başlığı** — her ekranın üstünde tek satır: `.page-header` içinde `<span class="eyebrow">` + sayfanın/modelin adı, sağda aksiyonlar. Büyük `h1` başlık ve açıklama paragrafı KULLANILMAZ (`.page-title`/`.page-subtitle` kaldırıldı)
-- **Türkçe kod yorumları** — backend ile tutarlı; UI metinleri çeviri sistemi üzerinden gelir
+- **İngilizce kod** — yorumlar, JSDoc, tanımlayıcılar, spec başlıkları, log/console mesajları İngilizce (backend ile tutarlı); kullanıcıya görünen metin yalnız i18n sözlüğünden gelir
 
 ## Bilinen Eksikler ve TODO'lar
 

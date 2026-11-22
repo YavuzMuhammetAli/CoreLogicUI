@@ -46,7 +46,7 @@ Yeni component'in stilini taklit et; yeni desen icat etme.
   - `.stack` / `.flow` / `.cluster` / `.sr-only`
 - **Layout**: Bootstrap grid değil, CSS Grid (`display: grid; grid-template-columns: …`)
 - **İkonlar**: yalnız `<app-icon name="…" size="16" />` (Material Symbols; `components/shared/icon/`) — elle `<svg>`, ikon fontu, emoji yok. Yeni ikon → `icons.manifest.json` + `npm run icons`; sözlük `corelogic-design` "İkonlar"
-- **Dil**: tüm UI metni ve yorumlar Türkçe
+- **Dil**: UI metni i18n üzerinden (TR/EN); kod yorumları ve tanımlayıcılar İngilizce
 - **Control flow**: `@if` / `@for` / `@else` — `*ngIf` / `*ngFor` değil
 
 ## 3. Component Şablonu
