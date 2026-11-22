@@ -3,7 +3,7 @@ import { parseFormLayout, parseListLayout, serializeLayout } from './screen-layo
 
 describe('screen-layout.parse', () => {
   it('output matches the server-normalized text — key order, defaults omitted', () => {
-    // Same input/output as backend ScreenLayoutNormalizeTests.Normalize_varsayilanlari_atlar…
+    // Same input/output as backend ScreenLayoutNormalizeTests.Normalize_omits_defaults_and_drops_unknown_fields
     const parsed = parseFormLayout(JSON.stringify({
       schemaVersion: 1, extra: true,
       tabs: [{ title: 'Genel', id: 't1', sections: [{
