@@ -2,16 +2,16 @@ import { ChangeDetectionStrategy, Component, OnInit, input, output, signal } fro
 import { WorkflowEndOutcome, WorkflowStep } from '../../../models/workflow.model';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 
-/** Bitiş düğümünün düzenlenen hali: adım + kayda yazılacak durum metni. */
+/** Edited state of the end node: step + status text to write to the record. */
 export interface EndDraft {
   step: WorkflowStep;
   statusLabel: string;
 }
 
 /**
- * Bitiş düğümünün düzenleyicisi: ad, anahtar, sonuç (tamamlandı/reddedildi) ve
- * kayda yazılacak durum metni. Durum metni boşsa sonucun genel eşlemesi, o da
- * yoksa düğümün adı yazılır — kayıt süreç sonunda boş kalmaz.
+ * Editor of the end node: name, key, result (completed/rejected) and the
+ * status text to write to the record. If the status text is empty, the result's general
+ * mapping is written, failing that the node's name — the record is never left blank at process end.
  */
 @Component({
     selector: 'app-end-editor',

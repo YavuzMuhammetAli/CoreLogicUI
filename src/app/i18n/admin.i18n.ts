@@ -1,11 +1,11 @@
 import { Translations } from './translations.model';
 
 /**
- * form-build, draft-models, database-proccess ve deleted-* (silinmiş öğe yönetimi)
- * ekranlarına özel statik metinler. Paylaşılan anahtarlar için bkz. common.i18n.ts.
+ * Static texts specific to the form-build, draft-models, database-process and deleted-* (deleted item
+ * management) screens. For shared keys see common.i18n.ts.
  */
 export const ADMIN_I18N: Translations = {
-  // ── form-build.component.html / .ts — yayınlanmış model listesi + pasifleştirme ──
+  // ── form-build.component.html / .ts — published model list + deactivation ──
   'formBuild.title': { tr: 'Tablo Oluştur', en: 'Create Table' },
   'formBuild.createNewTable': { tr: 'Yeni Tablo Oluştur', en: 'Create New Table' },
   'formBuild.loadingAria': { tr: 'Yükleniyor', en: 'Loading' },
@@ -30,7 +30,7 @@ export const ADMIN_I18N: Translations = {
   'formBuild.modelDeactivated': { tr: "'{name}' modeli pasif alındı.", en: "Model '{name}' was deactivated." },
   'formBuild.modelDeactivateFailed': { tr: "'{name}' pasif yapılamadı.", en: "Model '{name}' could not be deactivated." },
 
-  // ── draft-models.component.html / .ts — taslak modeller (yayınlanmamış) ──
+  // ── draft-models.component.html / .ts — draft models (unpublished) ──
   'draft.title': { tr: 'Yayınlanmamış Modeller', en: 'Unpublished Models' },
   'draft.deletedDrafts': { tr: 'Silinen Taslaklar', en: 'Deleted Drafts' },
   'draft.refresh': { tr: 'Yenile', en: 'Refresh' },
@@ -59,7 +59,7 @@ export const ADMIN_I18N: Translations = {
   'draft.andSubModels': { tr: ' ve alt modellerini', en: ' and its sub-models' },
   'draft.deactivateFailed': { tr: 'Taslak pasif yapılamadı.', en: 'Draft could not be deactivated.' },
 
-  // ── database-proccess.component.html / .ts — /Database işlemleri ──
+  // ── database-process.component.html / .ts — /Database operations ──
   'database.title': { tr: 'Veritabanı İşlemleri', en: 'Database Operations' },
   'database.inProgress': { tr: 'İşlem devam ediyor…', en: 'Operation in progress…' },
   'database.createDbTitle': { tr: 'Veritabanı Oluştur', en: 'Create Database' },

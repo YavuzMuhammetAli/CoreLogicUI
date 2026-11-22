@@ -1,19 +1,19 @@
 import { CanDeactivateFn } from '@angular/router';
 
 /**
- * Kaydedilmemiş değişikliği olan ekranların sözleşmesi. Ekran soruyu KENDİSİ
- * sorar (kendi `app-confirm-dialog`'u ile) ve cevabı döner: guard bir
- * component render edemez, native `confirm()` ise projede yasak.
+ * Contract for screens with unsaved changes. The screen asks the question ITSELF
+ * (with its own `app-confirm-dialog`) and returns the answer: a guard cannot
+ * render a component, and native `confirm()` is banned in the project.
  */
 export interface HasUnsavedChanges {
-  /** true → ayrılmak serbest; false → ekranda kal. Soru açıksa cevap gelene kadar bekler. */
+  /** true → free to leave; false → stay on the screen. If the question is open, waits for the answer. */
   canLeave(): boolean | Promise<boolean>;
 }
 
 /**
- * Ekrandan ayrılmadan önce kaydedilmemiş değişikliği sorar. Sekme kapatma ve
- * sayfa yenileme bu guard'a uğramaz; onları ekranın `beforeunload` dinleyicisi
- * yakalar.
+ * Asks about unsaved changes before leaving the screen. Closing the tab and
+ * reloading the page do not go through this guard; the screen's `beforeunload` listener
+ * catches them.
  */
 export const unsavedChangesGuard: CanDeactivateFn<HasUnsavedChanges> = component =>
   typeof component?.canLeave === 'function' ? component.canLeave() : true;

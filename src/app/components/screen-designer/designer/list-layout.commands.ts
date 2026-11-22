@@ -1,8 +1,8 @@
 import { LAYOUT_LIMITS, ListColumn, ListLayout } from '../../../utils/screen-layout/screen-layout.model';
 
 /**
- * Liste yerleşimi komutları — SAF. Değişiklik yoksa aynı referans döner.
- * Listede olan kolon görünür; çıkarılan kolon gizlidir.
+ * List layout commands — PURE. If nothing changes, the same reference is returned.
+ * A column in the list is visible; a removed column is hidden.
  */
 
 export function showColumn(doc: ListLayout, column: string, index = doc.columns.length): ListLayout {
@@ -18,7 +18,7 @@ export function hideListColumn(doc: ListLayout, column: string): ListLayout {
     : doc;
 }
 
-/** Kolonu verilen sıraya taşır (sıra, kolon çıkarıldıktan sonraki diziye göredir). */
+/** Moves the column to the given index (the index refers to the array after the column is removed). */
 export function moveColumn(doc: ListLayout, column: string, index: number): ListLayout {
   const from = doc.columns.findIndex(c => c.column === column);
   if (from < 0) return doc;
@@ -35,7 +35,7 @@ export function moveColumnBy(doc: ListLayout, column: string, delta: -1 | 1): Li
   return from < 0 ? doc : moveColumn(doc, column, from + delta);
 }
 
-/** Genişlik (px, 60–800 aralığına sıkıştırılır); null → otomatik. */
+/** Width (px, clamped to the 60–800 range); null → automatic. */
 export function setColumnWidth(doc: ListLayout, column: string, width: number | null): ListLayout {
   const index = doc.columns.findIndex(c => c.column === column);
   if (index < 0) return doc;
@@ -49,7 +49,7 @@ export function setColumnWidth(doc: ListLayout, column: string, width: number | 
   return { ...doc, columns };
 }
 
-/** Şemada olmayan kolonu listeden çıkarır. */
+/** Removes a column not in the schema from the list. */
 export function removeListColumn(doc: ListLayout, column: string): ListLayout {
   return hideListColumn(doc, column);
 }

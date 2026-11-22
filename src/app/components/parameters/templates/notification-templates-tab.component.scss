@@ -1,6 +1,6 @@
 /*
- * Bildirim Şablonları sekmesi. Ortak sekme gövdesi stilleri parameters.shared.scss'te;
- * burada yalnız bu ekrana özgü düzen (tür listesi + düzenleyici + önizleme) var.
+ * Notification Templates tab. Common tab body styles are in parameters.shared.scss;
+ * here only the layout specific to this screen (kind list + editor + preview).
  */
 
 .panel-head {
@@ -10,7 +10,7 @@
   gap: var(--space-4);
 }
 
-/* ── Şablon dili (TR/EN) ─────────────────────────────────────────────────── */
+/* ── Template language (TR/EN) ───────────────────────────────────────────── */
 
 .lang-switch {
   display: inline-flex;
@@ -47,7 +47,7 @@
   }
 }
 
-/* ── Tür listesi + düzenleyici ───────────────────────────────────────────── */
+/* ── Kind list + editor ──────────────────────────────────────────────────── */
 
 .template-layout {
   display: grid;
@@ -139,7 +139,7 @@
   }
 }
 
-/* HTML düzenleyici — satır kaydırma kapalı ki etiket yapısı okunabilsin. */
+/* HTML editor — line wrapping is off so the tag structure stays readable. */
 .code-input {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -161,7 +161,7 @@
   flex: 1;
 }
 
-/* ── Önizleme ────────────────────────────────────────────────────────────── */
+/* ── Preview ─────────────────────────────────────────────────────────────── */
 
 .preview-frame {
   margin-top: var(--space-4);
@@ -187,15 +187,15 @@
 }
 
 /*
- * E-posta istemcileri koyu temayı çoğu zaman uygulamaz; önizleme de gerçek
- * maile benzesin diye iframe arka planı temadan bağımsız beyaz.
+ * Email clients often do not apply dark theme; so the preview also resembles
+ * the real mail, the iframe background is white regardless of theme.
  */
 .preview-iframe {
   display: block;
   width: 100%;
   height: 640px;
 
-  /* Telefonda tüm ekranı kaplayıp sayfa kaydırmasını yutmasın */
+  /* On phones it must not cover the whole screen and swallow page scrolling */
   @media (max-width: 768px) {
     height: min(640px, 70dvh);
   }

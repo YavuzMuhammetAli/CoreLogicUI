@@ -1,6 +1,6 @@
-// OTOMATİK ÜRETİLDİ — elle düzenleme. Kaynak: model-icons.manifest.json, komut: `npm run icons`.
+// AUTO-GENERATED — do not edit by hand. Source: model-icons.manifest.json, command: `npm run icons`.
 // Material Symbols Outlined (wght 500, opsz 48) · @material-symbols/svg-500@0.48.0 · Apache-2.0
-// viewBox "0 -960 960 960". Yalnız model-icons.generated.ts → MODEL_ICON_PATH_LOADERS dinamik import eder.
+// viewBox "0 -960 960 960". Dynamically imported only by model-icons.generated.ts → MODEL_ICON_PATH_LOADERS.
 
 export const PATHS: Readonly<Record<string, string>> = {
   accessibility: 'M426.59-757.65q-22.22-22.22-22.22-53.41 0-31.2 22.11-53.54 22.1-22.33 53.41-22.33 31.31 0 53.52 22.21 22.22 22.22 22.22 53.41 0 31.2-22.11 53.54-22.1 22.34-53.41 22.34-31.31 0-53.52-22.22Zm-57.7 679.56v-530.84H120v-65.5h720v65.5H591.35v530.84h-65.5V-340h-91.7v261.91h-65.26Z',

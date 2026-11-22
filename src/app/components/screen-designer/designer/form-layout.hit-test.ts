@@ -1,11 +1,11 @@
 import { GRID_COLUMNS } from '../../../utils/screen-layout/screen-layout.model';
 
 /**
- * Sürükle-bırak geometrisi — SAF (DOM yok; dikdörtgenler çağırandan gelir).
+ * Drag-and-drop geometry — PURE (no DOM; rectangles come from the caller).
  *
- * Tuval öğeleri CSS grid'de soldan sağa, satır satır akar. Bırakma sırası: imleç bir satırın
- * üstündeyse o satırın başı; satırın içindeyse imlecin solunda kalan ilk öğenin önü; hiçbirine
- * uymuyorsa bölümün sonu.
+ * Canvas items flow left to right, row by row, in a CSS grid. Drop index: if the pointer is
+ * above a row, the start of that row; if inside a row, before the first item to the right of the
+ * pointer; if neither applies, the end of the section.
  */
 
 export interface Rect {
@@ -20,14 +20,14 @@ export interface Point {
   readonly y: number;
 }
 
-/** Aynı satırda sayılan öğelerin üst kenar farkı (px). */
+/** Top-edge difference (px) within which items count as the same row. */
 const ROW_TOLERANCE = 6;
 
-/** Bölüm içindeki bırakma sırası; öğeler DOM (akış) sırasıyla verilir. */
+/** Drop index within a section; items are given in DOM (flow) order. */
 export function dropIndex(items: readonly Rect[], point: Point): number {
   let i = 0;
   while (i < items.length) {
-    // Aynı satırdaki öğeleri topla.
+    // Collect the items on the same row.
     const rowTop = items[i].top;
     let j = i;
     let rowBottom = items[i].bottom;
@@ -48,7 +48,7 @@ export function dropIndex(items: readonly Rect[], point: Point): number {
   return items.length;
 }
 
-/** İmlecin üstünde olduğu (yoksa dikeyde en yakın) dikdörtgenin sırası; liste boşsa -1. */
+/** Index of the rectangle under the pointer (otherwise the vertically nearest); -1 if the list is empty. */
 export function nearestRect(rects: readonly Rect[], point: Point): number {
   let best = -1;
   let bestDistance = Infinity;
@@ -62,7 +62,7 @@ export function nearestRect(rects: readonly Rect[], point: Point): number {
     if (bestDistance < 0) return;
     const dy = point.y < r.top ? r.top - point.y : point.y > r.bottom ? point.y - r.bottom : 0;
     const dx = point.x < r.left ? r.left - point.x : point.x > r.right ? point.x - r.right : 0;
-    const distance = dy * 4 + dx;   // dikey uzaklık daha belirleyici
+    const distance = dy * 4 + dx;   // vertical distance is more decisive
     if (distance < bestDistance) {
       best = index;
       bestDistance = distance;
@@ -75,18 +75,18 @@ export function contains(rect: Rect, point: Point): boolean {
   return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
 }
 
-/** Bir ızgara kolonunun aralıklı adımı: (içerik genişliği + aralık) / 12. */
+/** Gap-inclusive pitch of one grid column: (content width + gap) / 12. */
 export function colPitch(gridWidth: number, gap: number): number {
   return (gridWidth + gap) / GRID_COLUMNS;
 }
 
-/** Sağ kenardan sürüklenen genişlik: başlangıç + yatay kayma / adım, 1–12. */
+/** Width dragged from the right edge: start + horizontal offset / pitch, 1–12. */
 export function spanFromDrag(startSpan: number, dx: number, pitch: number): number {
   if (pitch <= 0) return startSpan;
   return Math.min(GRID_COLUMNS, Math.max(1, Math.round(startSpan + dx / pitch)));
 }
 
-/** Liste başlığı: imlecin solunda kalan ilk başlığın önü, yoksa sona. */
+/** List header: before the first header to the right of the pointer, otherwise at the end. */
 export function headerDropIndex(headers: readonly Rect[], x: number): number {
   for (let i = 0; i < headers.length; i++) {
     if (x < (headers[i].left + headers[i].right) / 2) return i;
@@ -94,12 +94,12 @@ export function headerDropIndex(headers: readonly Rect[], x: number): number {
   return headers.length;
 }
 
-/** Liste kolonunun sürüklenen genişliği (px, sınırlar içinde). */
+/** Dragged width of a list column (px, within bounds). */
 export function widthFromDrag(startWidth: number, dx: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, Math.round(startWidth + dx)));
 }
 
-/** 4 px'ten kısa hareket tıklamadır, sürükleme değil. */
+/** A movement shorter than 4 px is a click, not a drag. */
 export function exceedsDragThreshold(dx: number, dy: number, threshold = 4): boolean {
   return dx * dx + dy * dy >= threshold * threshold;
 }

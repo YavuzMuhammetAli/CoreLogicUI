@@ -1,4 +1,4 @@
-// OTOMATİK ÜRETİLDİ — elle düzenleme. Kaynak: icons.manifest.json, komut: `npm run icons`.
+// AUTO-GENERATED — do not edit by hand. Source: icons.manifest.json, command: `npm run icons`.
 // Material Symbols Outlined (wght 500, opsz 48) · @material-symbols/svg-500@0.48.0 · Apache-2.0
 // viewBox "0 -960 960 960"
 
@@ -130,7 +130,7 @@ export const ICONS = {
 
 export type IconName = keyof typeof ICONS;
 
-/** Dolu (FILL=1) varyantı — yalnız manifest'te "filled" olarak işaretlenenler. */
+/** Filled (FILL=1) variant — only icons marked "filled" in the manifest. */
 export const ICONS_FILLED: Partial<Record<IconName, string>> = {
   account_tree: 'M602.57-113.3v-125H445.93v-415.27h-87.5v130h-288v-323.36h288v125h244.14v-125H889.8v323.36H602.57v-130h-88.5v347.14h88.5v-130H889.8v323.13H602.57Z',
   add_box: 'M447.37-278.57h65.26v-168.8h168.8v-65.26h-168.8v-168.8h-65.26v168.8h-168.8v65.26h168.8v168.8ZM182.15-114.02q-27.6 0-47.86-20.27-20.27-20.26-20.27-47.86v-595.7q0-27.7 20.27-48.03 20.26-20.34 47.86-20.34h595.7q27.7 0 48.03 20.34 20.34 20.33 20.34 48.03v595.7q0 27.6-20.34 47.86-20.33 20.27-48.03 20.27h-595.7Z',

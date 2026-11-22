@@ -23,32 +23,32 @@ import { FormLayout, ListLayout } from '../../../utils/screen-layout/screen-layo
 import { resolveListColumns } from '../../../utils/screen-layout/list-layout.resolve';
 import { IconComponent } from '../icon/icon.component';
 
-/** Alt model sekmesinin dialog içindeki görünüm durumu. */
+/** View state of a child model tab inside the dialog. */
 interface ChildTabView {
   typeName: string;
   meta: TypeMeta | null;
-  /** Sunucudaki kayıtlı alt satırlar bir kez çekildi mi (tembel yükleme bayrağı). */
+  /** Whether the saved child rows on the server have been fetched once (lazy loading flag). */
   loaded: boolean;
   loading: boolean;
   error: string | null;
-  /** Alt tipin yayınlanmış liste yerleşimi — varsa tablo kolonları ondan. */
+  /** The child type's published list layout — table columns come from it if present. */
   listLayout: ListLayout | null;
 }
 
 /**
- * RecordFormDialogComponent — bir dinamik kaydı büyük bir pop-up içinde düzenler
- * ve ALTINDA o modelin kendi alt modellerini sekme olarak gösterir.
+ * RecordFormDialogComponent — edits a dynamic record in a large pop-up
+ * and shows that model's own child models as tabs BELOW it.
  *
- * `forwardRef` ile ÖZYİNELEMELİDİR: bir alt model satırına tıklanınca aynı component
- * bir üst katmanda tekrar açılır (model-node ile aynı desen). Böylece kullanıcı
- * ana model → alt model → torun zincirini tek akışta kurabilir ve seçim/toplu silme
- * tasarımı her derinlikte aynı çalışır.
+ * It is RECURSIVE via `forwardRef`: clicking a child model row opens the same component
+ * again in a higher layer (same pattern as model-node). This lets the user build the
+ * main model → child model → grandchild chain in a single flow, and the selection/bulk delete
+ * design works the same at every depth.
  *
- * KAYDETME SEMANTİĞİ: yeni kayıtlar belleğe alınır (`StagedNode`) ve ağaç ancak üst
- * modelde "Kaydet"e basıldığında gönderilir — hiçbir seviye "önce üstünü kaydet"
- * zorunluluğu taşımaz. Buna karşılık SUNUCUDA ZATEN VAR OLAN satırlar için iki işlem
- * anında yapılır: kayıtlı alt satırların LİSTELENMESİ ve SİLİNMESİ. Onlar için
- * "kaydete kadar bekle" semantiği anlamsızdır.
+ * SAVE SEMANTICS: new records are staged in memory (`StagedNode`) and the tree is sent only when
+ * "Kaydet" (Save) is pressed on the top model — no level requires "save the parent first".
+ * In contrast, for rows that ALREADY EXIST ON THE SERVER two operations happen
+ * immediately: LISTING and DELETING saved child rows. For those,
+ * "wait until save" semantics make no sense.
  */
 @Component({
     selector: 'app-record-form-dialog',
@@ -66,7 +66,7 @@ interface ChildTabView {
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RecordFormDialogComponent implements OnInit, OnDestroy {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly metadata = inject(RecordMetadataService);
@@ -74,69 +74,69 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
   private readonly languageService = inject(LanguageService);
   private readonly fb = inject(FormBuilder);
 
-  /** Düzenlenen düğüm. Yeni kayıt için boş `values` ile oluşturulmuş olmalıdır. */
+  /** The node being edited. For a new record it must be created with empty `values`. */
   @Input({ required: true }) node!: StagedNode;
 
-  /** İç içe seviye (kök dialog = 1). z-index ve derinlik sınırı için. */
+  /** Nesting level (root dialog = 1). For z-index and the depth limit. */
   @Input() depth = 1;
 
-  /** Mevcut bir kaydın düzenlenmesi mi (başlık metni için). */
+  /** Whether an existing record is being edited (for the title text). */
   @Input() isEdit = false;
 
   /**
-   * Bu tipin ÜST kayda bağlandığı FK kolonunun adı (örn. `SiparisId`). Formda gizlenir
-   * ve kaydetme anında sunucu tarafından atanır. Verilmezse hiçbir kolon FK sayılmaz.
+   * Name of the FK column linking this type to its PARENT record (e.g. `SiparisId`). Hidden in the form
+   * and assigned by the server at save time. If not given, no column counts as an FK.
    */
   @Input() fkColumn: string | null = null;
 
-  /** Kaydedilmiş bir satırın salt-okunur FK bilgisi (başlıkta rozet olarak gösterilir). */
+  /** Read-only FK info of a saved row (shown as a badge in the header). */
   @Input() fkHint: string | null = null;
 
-  /** Kullanıcı "Kaydet" dedi — düğüm güncellenmiş hâliyle döner (HTTP yapılmadı). */
+  /** The user pressed "Kaydet" (Save) — the node is returned updated (no HTTP made). */
   @Output() saved = new EventEmitter<StagedNode>();
   @Output() cancelled = new EventEmitter<void>();
 
-  /** Alt model ağacının en fazla derinliği — şema tarafındaki MAX_DEPTH ile aynı. */
+  /** Maximum depth of the child model tree — same as MAX_DEPTH on the schema side. */
   readonly maxDepth = 4;
 
   meta: TypeMeta | null = null;
   loading = true;
   form: FormGroup | null = null;
-  /** Forma bağlı otomatik değer kuralları (kural yoksa null). */
+  /** Auto-value rules bound to the form (null if there are no rules). */
   autoValues: AutoValueFormBinding | null = null;
 
-  /** Bu tipin yayınlanmış form yerleşimi (ekran tasarımı); null → varsayılan görünüm. */
+  /** This type's published form layout (screen design); null → default view. */
   formLayout: FormLayout | null = null;
-  /** Formda çizilen kolonlar — FK ve ID hariç (bir kez hesaplanır). */
+  /** Columns drawn in the form — excluding FK and ID (computed once). */
   editable: PublishedColumn[] = [];
-  /** Pop-up'ta hiç çizilmeyen kolonlar: ID ve üst kayda bağlayan FK. */
+  /** Columns never drawn in the pop-up: ID and the FK linking to the parent record. */
   excludedColumns: ReadonlySet<string> = new Set();
-  /** Tasarımda gizli olsa da çizilmesi gereken zorunlu kolonlar. */
+  /** Required columns that must be drawn even if hidden in the design. */
   forcedColumns: ReadonlySet<string> = new Set();
 
-  /** Kaydet geçersiz formda durunca hatalı alanı (kapalı sekme/bölüm dahil) gösterir. */
+  /** When Save stops on an invalid form, reveals the invalid field (including a closed tab/section). */
   @ViewChild(RecordLayoutComponent) private recordLayout?: RecordLayoutComponent;
 
   childTabs: ChildTabView[] = [];
   activeChildTab = '';
 
-  /** Bu dialogun üstünde açık olan iç içe dialog (alt model kaydı). */
+  /** Nested dialog open on top of this one (child model record). */
   nestedOpen = false;
   nestedNode: StagedNode | null = null;
   nestedTypeName = '';
   nestedIsEdit = false;
 
-  /** altTipAdı → seçili satırların geçici localId'leri (toplu silme için). */
+  /** childTypeName → temporary localIds of the selected rows (for bulk delete). */
   selected: Record<string, Set<number>> = {};
-  /** altTipAdı → silinemeyen satırların hata özeti. */
+  /** childTypeName → error summary of rows that couldn't be deleted. */
   bulkErrors: Record<string, string[]> = {};
-  /** altTipAdı → son toplu silme denemesindeki kayıt sayısı. */
+  /** childTypeName → record count in the last bulk delete attempt. */
   bulkTotals: Record<string, number> = {};
-  /** Onay diyaloğunun hedef alt tipi; null ise kapalı. */
+  /** Target child type of the confirm dialog; null means closed. */
   bulkTypeName: string | null = null;
   bulkBusy = false;
 
-  // Util delegasyonları (şablondan çağrılır)
+  // Util delegations (called from the template)
   childrenOf = childrenOf;
 
   ngOnInit(): void {
@@ -156,13 +156,13 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
       this.childTabs = meta.childTypeNames.map(typeName => ({
         typeName, meta: null, loaded: false, loading: false, error: null, listLayout: null
       }));
-      // Alt tabloların kolonları alt tipin liste yerleşimini izler (okunamazsa varsayılan).
+      // Child table columns follow the child type's list layout (default if it can't be read).
       for (const tab of this.childTabs) {
         this.metadata.listLayout$(tab.typeName).pipe(markDirty(this.cdr)).subscribe(l => { tab.listLayout = l; });
       }
       this.activeChildTab = this.childTabs[0]?.typeName ?? '';
       this.loading = false;
-      // Kayıtlı bir kaydı düzenliyorsak ilk sekmenin mevcut alt satırlarını çek.
+      // If we're editing a saved record, fetch the existing child rows of the first tab.
       this.ensureChildRowsLoaded(this.activeChildTab);
     });
   }
@@ -170,16 +170,16 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
   // ─── Form ───────────────────────────────────────────────────────────────────
 
   /**
-   * Formu şema kurallarıyla birlikte kurar — regex/uzunluk/aralık burada bağlanır,
-   * böylece hatalar sunucuya gitmeden alanın altında görünür.
+   * Builds the form together with the schema rules — regex/length/range are bound here,
+   * so errors show under the field before going to the server.
    */
   private buildForm(meta: TypeMeta): FormGroup {
     const controls: Record<string, unknown> = {};
     for (const col of this.editableColumns(meta)) {
-      // Düğüm kaydedilmiş bir sunucu satırından gelmiş olabilir (camelCase anahtarlar);
-      // casing-bağımsız oku, aksi halde alanlar boş açılır.
-      // Ham ISO tarih değeri doğrudan bağlanırsa datetime-local kutusu onu sessizce
-      // atar ve alan BOŞ açılır; kullanıcı dokununca tarayıcı o anki zamanı yazar.
+      // The node may have come from a saved server row (camelCase keys);
+      // read case-insensitively, otherwise the fields open empty.
+      // If a raw ISO date value is bound directly, the datetime-local box silently
+      // drops it and the field opens EMPTY; when the user touches it the browser writes the current time.
       const value = toInputValue(col.dataType, fieldValue(this.node.values, col.columnName)) ?? '';
       controls[col.columnName] = [value, validatorsFor(col, meta.rules.get(col.columnName))];
     }
@@ -187,8 +187,8 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Otomatik değer kurallarını forma bağlar. Açılış kuralları yalnız henüz sunucuya
-   * yazılmamış (yeni) satırda çalışır; FK kolonu formda olmadığı için plana girmez.
+   * Binds the auto-value rules to the form. Open-time rules run only on a (new) row not yet
+   * written to the server; the FK column isn't in the form, so it isn't part of the plan.
    */
   private bindAutoValues(meta: TypeMeta, form: FormGroup): void {
     this.autoValues?.stop();
@@ -211,17 +211,17 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
     this.autoValues?.stop();
   }
 
-  /** FK kolonu formda gösterilmez — kaydetme anında otomatik atanır. */
+  /** The FK column isn't shown in the form — it is assigned automatically at save time. */
   editableColumns(meta: TypeMeta): PublishedColumn[] {
     return meta.columns.filter(c => !this.isFkColumn(c.columnName));
   }
 
   /**
-   * Yalnızca birincil anahtar ve GERÇEK FK kolonu gizlenir.
+   * Only the primary key and the REAL FK column are hidden.
    *
-   * Eskiden `Id` ile biten her kolon FK sanılıp gizleniyordu; `TcId` / `VergiNoId`
-   * gibi iş kolonları bu yüzden formda hiç görünmüyor ve hiç kaydedilmiyordu.
-   * FK adı tahmin edilmez — `fkColumn` Input'u ile kesin olarak verilir.
+   * Previously every column ending in `Id` was assumed to be an FK and hidden; business columns
+   * such as `TcId` / `VergiNoId` therefore never appeared in the form and were never saved.
+   * The FK name isn't guessed — it is given explicitly via the `fkColumn` Input.
    */
   private isFkColumn(columnName: string): boolean {
     if (columnName === 'ID' || columnName === 'Id') return true;
@@ -232,18 +232,18 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
     return col.label?.trim() || col.columnName;
   }
 
-  // Lookup seçenekleri artık burada yüklenmiyor: app-lookup-picker kendi verisini
-  // tembel çeker (50'şer) ve aramayı sunucuda yapar. Eskiden hedef tablonun TÜM
-  // satırları önden yükleniyordu.
+  // Lookup options are no longer loaded here: app-lookup-picker fetches its own data
+  // lazily (50 at a time) and searches on the server. Previously ALL rows of the target
+  // table were loaded up front.
 
-  // ─── Alt model sekmeleri ────────────────────────────────────────────────────
+  // ─── Child model tabs ────────────────────────────────────────────────────
 
   setChildTab(typeName: string): void {
     this.activeChildTab = typeName;
     this.ensureChildRowsLoaded(typeName);
   }
 
-  /** Bu dialogda alt model sekmeleri gösterilsin mi (derinlik sınırı). */
+  /** Whether to show child model tabs in this dialog (depth limit). */
   get canShowChildren(): boolean {
     return this.depth < this.maxDepth && this.childTabs.length > 0;
   }
@@ -253,17 +253,17 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Sunucudaki kayıtlı alt satırları BİR KEZ çeker ve ağaca `StagedNode` olarak yazar.
+   * Fetches the saved child rows from the server ONCE and writes them into the tree as `StagedNode`.
    *
-   * Böylece tablo, durum rozeti ve düzenleme akışı bellekteki satırlarla aynı kodu
-   * kullanır; `upsertChild` `localId` ile tekilleştirdiği için tekrar çağrı çift satır
-   * üretmez. Yalnızca aktif sekme için çalışır — derin ağaçlarda gereksiz istek olmaz.
+   * That way the table, status badge and edit flow use the same code as in-memory rows;
+   * since `upsertChild` de-duplicates by `localId`, a repeated call doesn't produce duplicate
+   * rows. Runs only for the active tab — no unnecessary requests in deep trees.
    *
-   * `toTreeDto` bu düğümleri `existingId` ile gönderir: sunucu onları yeniden EKLEMEZ,
-   * yalnızca altlarına eklenen yeni torunlara FK hedefi olurlar.
+   * `toTreeDto` sends these nodes with `existingId`: the server does NOT re-ADD them,
+   * they only serve as FK targets for new grandchildren added beneath them.
    */
   private ensureChildRowsLoaded(typeName: string): void {
-    if (!typeName || this.node.savedId === null) return;   // yeni kayıt: çekilecek satır yok
+    if (!typeName || this.node.savedId === null) return;   // new record: no rows to fetch
     const tab = this.tabView(typeName);
     if (!tab || tab.loaded || tab.loading) return;
 
@@ -302,7 +302,7 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
     return childrenOf(this.node, typeName);
   }
 
-  /** Alt model satırlarının tabloda gösterilecek kolonları (meta yüklenmemişse boş). */
+  /** Columns shown in the table for child model rows (empty if meta isn't loaded). */
   childColumns(typeName: string): PublishedColumn[] {
     const tab = this.childTabs.find(t => t.typeName === typeName);
     if (!tab) return [];
@@ -310,16 +310,16 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
       this.metadata.meta$(typeName).pipe(markDirty(this.cdr)).subscribe(m => { tab.meta = m; });
       return [];
     }
-    // Alt tipin FK'sı bu düğümün tipine işaret eder; iş kolonları ad kalıbıyla elenmez.
+    // The child type's FK points to this node's type; business columns aren't filtered by name pattern.
     const childFk = fkColumnFor(this.node.typeName);
     const columns = tab.meta.columns.filter(c => c.columnName !== 'ID' && c.columnName !== childFk);
-    // Liste yerleşimi varsa onun sırası (pop-up dar olduğu için en fazla 6 kolon); yoksa ilk 4.
+    // If there's a list layout, its order (at most 6 columns since the pop-up is narrow); otherwise the first 4.
     return tab.listLayout
       ? resolveListColumns(tab.listLayout, columns, null).slice(0, 6).map(r => r.column)
       : columns.slice(0, 4);
   }
 
-  /** Alt kolonun FK adı — özyinelemeli dialog'a geçirilir. */
+  /** The child's FK column name — passed to the recursive dialog. */
   childFkColumn(): string {
     return fkColumnFor(this.node.typeName);
   }
@@ -356,7 +356,7 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
     this.nestedTypeName = '';
   }
 
-  // ─── Alt satır seçimi ───────────────────────────────────────────────────────
+  // ─── Child row selection ───────────────────────────────────────────────────────
 
   private selectionOf(typeName: string): Set<number> {
     return (this.selected[typeName] ??= new Set<number>());
@@ -400,7 +400,7 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
     return this.bulkTotals[typeName] ?? 0;
   }
 
-  // ─── Alt satırların toplu silinmesi ─────────────────────────────────────────
+  // ─── Bulk deletion of child rows ─────────────────────────────────────────
 
   openBulkDelete(typeName: string): void {
     if (this.selectedCount(typeName) === 0) return;
@@ -419,18 +419,18 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Onay diyaloğu bu dialogun ÜSTÜNDE durmalı — kendi overlay'i 1000 + depth*10. */
+  /** The confirm dialog must sit ABOVE this dialog — whose own overlay is 1000 + depth*10. */
   get confirmZIndex(): number {
     return this.overlayZIndex + 5;
   }
 
   /**
-   * Seçili alt satırları siler. Karışık seçim tek akışta yürür:
-   * bellekteki satırlar yalnızca ağaçtan çıkarılır, KAYITLI olanlar sunucudan silinir
-   * (onlar zaten var; "üstteki Kaydet'e kadar bekle" semantiği anlamsız).
+   * Deletes the selected child rows. A mixed selection runs in a single flow:
+   * in-memory rows are only removed from the tree, SAVED ones are deleted on the server
+   * (they already exist; "wait for the parent's Save" semantics make no sense).
    *
-   * Kısmi hata kabul edilir: silinenler listeden düşer, silinemeyenler SEÇİLİ KALIR ve
-   * hataları tablonun üstünde özetlenir.
+   * Partial failure is accepted: deleted rows drop from the list, the ones that couldn't be deleted STAY SELECTED and
+   * their errors are summarised above the table.
    */
   confirmBulkDelete(): void {
     const typeName = this.bulkTypeName;
@@ -441,7 +441,7 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
     const staged = rows.filter(r => r.savedId === null);
     const savedRows = rows.filter(r => r.savedId !== null);
 
-    // Bellekteki satırlar için istek yok — doğrudan ağaçtan düşerler.
+    // No request for in-memory rows — they drop straight from the tree.
     for (const row of staged) removeChild(this.node, typeName, row.localId);
 
     if (savedRows.length === 0) {
@@ -475,7 +475,7 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
         if (r.ok) {
           removeChild(this.node, typeName, r.row.localId);
         } else {
-          sel.add(r.row.localId);            // sorunlu satır seçili kalsın
+          sel.add(r.row.localId);            // keep the failed row selected
           failed.push(`ID:${r.row.savedId} — ${r.message}`);
         }
       }
@@ -483,9 +483,9 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ─── Kaydet / kapat ─────────────────────────────────────────────────────────
+  // ─── Save / close ─────────────────────────────────────────────────────────
 
-  /** Formu doğrular ve düğümü belleğe yazar — kaydın kendisi için HTTP YAPILMAZ. */
+  /** Validates the form and writes the node to memory — NO HTTP is made for the record itself. */
   submit(): void {
     if (!this.form) return;
     if (this.form.invalid) {
@@ -494,11 +494,11 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
       return;
     }
     this.autoValues?.runSave();
-    // getRawValue: salt okunur (disabled) otomatik alanlar da düğüme yazılsın.
+    // getRawValue: so read-only (disabled) auto fields are written to the node too.
     this.node.values = { ...this.node.values, ...this.form.getRawValue() };
-    // Değerler düzeltildi; önceki kaydetme hatası artık geçersiz.
+    // Values were fixed; the previous save error no longer applies.
     this.node.error = null;
-    // Kayıtlı bir düğümse `addTree` onu güncelleyemez; ayrıca `update()` gerekiyor.
+    // For a saved node `addTree` can't update it; a separate `update()` is needed.
     this.node.dirty = true;
     this.saved.emit(this.node);
   }
@@ -512,18 +512,18 @@ export class RecordFormDialogComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * ESC yalnızca EN ÜSTTEKİ dialogu kapatır. Tüm katmanlar `document` üzerinde
-   * dinlediği için `stopPropagation` yetmez — aynı hedefteki diğer dinleyicileri
-   * yalnızca `stopImmediatePropagation` durdurur.
+   * ESC closes only the TOPMOST dialog. Since all layers listen on `document`,
+   * `stopPropagation` isn't enough — only `stopImmediatePropagation` stops the other
+   * listeners on the same target.
    */
   @HostListener('document:keydown.escape', ['$event'])
   onEscape(event: Event): void {
-    if (this.nestedOpen) return;        // üstteki katman kendisi ilgilenecek
+    if (this.nestedOpen) return;        // the layer above will handle it itself
     event.stopImmediatePropagation();
     this.cancel();
   }
 
-  /** İç içe katmanlar üst üste binmeli — her seviye bir öncekinin üstünde. */
+  /** Nested layers must stack — each level above the previous one. */
   get overlayZIndex(): number {
     return 1000 + this.depth * 10;
   }

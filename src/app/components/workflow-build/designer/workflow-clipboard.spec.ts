@@ -11,7 +11,7 @@ function approval(key: string, onApprove: string | null = null, onReject: string
   };
 }
 
-/** mudur → finans → son; finans reddederse mudur'e döner. */
+/** mudur → finans → son; if finans rejects, it returns to mudur. */
 function sampleDoc(): WorkflowDesignDoc {
   const doc = emptyDoc();
   return {
@@ -29,12 +29,12 @@ function sampleDoc(): WorkflowDesignDoc {
 }
 
 describe('workflow-clipboard', () => {
-  it('seçili adım yoksa pano boş kalır', () => {
+  it('the clipboard stays empty when no step is selected', () => {
     expect(copySteps(sampleDoc(), [])).toBeNull();
     expect(copySteps(sampleDoc(), ['yok'])).toBeNull();
   });
 
-  it('pano belgeden bağımsızdır (derin kopya)', () => {
+  it('the clipboard is independent of the document (deep copy)', () => {
     const doc = sampleDoc();
     const clip = copySteps(doc, ['mudur'])!;
 
@@ -43,7 +43,7 @@ describe('workflow-clipboard', () => {
     expect(clip.labels).toEqual({ mudur: 'Müdürde' });
   });
 
-  it('yapıştırılan adım çakışmayan anahtar alır ve kayar', () => {
+  it('a pasted step gets a non-colliding key and is shifted', () => {
     const doc = sampleDoc();
     const { doc: next, keys } = pasteSteps(doc, copySteps(doc, ['mudur'])!);
 
@@ -54,7 +54,7 @@ describe('workflow-clipboard', () => {
     expect(next.graph.startStep).toBe('mudur');
   });
 
-  it('ikinci yapıştırma bir sonraki boş anahtarı alır', () => {
+  it('a second paste takes the next free key', () => {
     const doc = sampleDoc();
     const clip = copySteps(doc, ['mudur'])!;
     const once = pasteSteps(doc, clip).doc;
@@ -62,34 +62,34 @@ describe('workflow-clipboard', () => {
     expect(pasteSteps(once, clip).keys).toEqual(['mudur_3']);
   });
 
-  it('numaralı kopyanın kopyası kökten numaralanır (mudur_2_2 değil)', () => {
+  it('a copy of a numbered copy is numbered from the root (not mudur_2_2)', () => {
     const doc = pasteSteps(sampleDoc(), copySteps(sampleDoc(), ['mudur'])!).doc;
 
     expect(pasteSteps(doc, copySteps(doc, ['mudur_2'])!).keys).toEqual(['mudur_3']);
   });
 
-  it('kopyalar arasındaki bağlantılar yeni anahtarlara taşınır, dışarı gidenler kopyalanmaz', () => {
+  it('connections between copies move to the new keys, outgoing ones are not copied', () => {
     const doc = sampleDoc();
     const { doc: next } = pasteSteps(doc, copySteps(doc, ['mudur', 'finans'])!);
 
-    const mudur = findStep(next, 'mudur_2')!;
-    const finans = findStep(next, 'finans_2')!;
-    expect(mudur.onApprove).toBe('finans_2');
-    expect(finans.onReject).toBe('mudur_2');
-    expect(finans.onApprove).toBeNull();
+    const managerCopy = findStep(next, 'mudur_2')!;
+    const financeCopy = findStep(next, 'finans_2')!;
+    expect(managerCopy.onApprove).toBe('finans_2');
+    expect(financeCopy.onReject).toBe('mudur_2');
+    expect(financeCopy.onApprove).toBeNull();
 
-    // Asıllar yerinde.
+    // The originals are unchanged.
     expect(findStep(next, 'finans')!.onApprove).toBe('son');
   });
 
-  it('konumsuz adım konumsuz kalır (otomatik yerleşime katılır)', () => {
+  it('a step without position stays without position (joins auto layout)', () => {
     const doc = sampleDoc();
     const { doc: next } = pasteSteps(doc, copySteps(doc, ['son'])!);
 
     expect(findStep(next, 'son_2')!.x).toBeNull();
   });
 
-  it('boş belgeye yapıştırılan ilk kopya başlangıç olur', () => {
+  it('the first copy pasted into an empty document becomes the start', () => {
     const clip = copySteps(sampleDoc(), ['finans'])!;
     const { doc } = pasteSteps(emptyDoc(), clip);
 

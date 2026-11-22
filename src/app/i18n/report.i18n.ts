@@ -1,10 +1,10 @@
 import { Translations } from './translations.model';
 
 /**
- * report-list / report-build / report-viewer ekranları ve chart component'i
- * (chart.component.html/.ts, chart-mapping.ts, chart-types.ts) statik metinleri.
- * Namespace: 'report.*' (rapor ekranları), 'chart.*' (grafik tipi etiketleri/ipuçları,
- * grafik durum metinleri).
+ * Static texts of the report-list / report-build / report-viewer screens and the chart component
+ * (chart.component.html/.ts, chart-mapping.ts, chart-types.ts).
+ * Namespace: 'report.*' (report screens), 'chart.*' (chart type labels/hints,
+ * chart status texts).
  */
 export const REPORT_I18N: Translations = {
   // ── report-list ──────────────────────────────────────────────────────────
@@ -39,7 +39,7 @@ export const REPORT_I18N: Translations = {
     en: 'This chart type works best with a single aggregate; you defined more than one, only the first will be used for drawing.'
   },
 
-  // ── report-build: canlı önizleme ────────────────────────────────────────
+  // ── report-build: live preview ──────────────────────────────────────────
   'report.build.livePreview': { tr: 'Canlı Önizleme', en: 'Live Preview' },
   'report.build.previewHelp': { tr: 'Aşağıdaki grafik örnek veriyle çizilmiştir; kaydettikten sonra gerçek veriler kullanılır.', en: 'The chart below is drawn with sample data; real data is used after saving.' },
   'report.build.previewStrikeHelp': { tr: 'Devre dışı göstermek için bir satıra tıklayın; tekrar tıklayınca normale döner.', en: 'Click a row to mark it disabled; click again to restore it.' },
@@ -47,7 +47,7 @@ export const REPORT_I18N: Translations = {
   'report.build.previewCategory': { tr: 'Kategori', en: 'Category' },
   'report.build.previewValue': { tr: 'Değer', en: 'Value' },
 
-  // ── report-build: SQL önizleme ───────────────────────────────────────────
+  // ── report-build: SQL preview ───────────────────────────────────────────
   'report.build.sqlPreview': { tr: 'SQL Önizleme', en: 'SQL Preview' },
   'report.build.sqlPreviewButton': { tr: 'SQL Önizle', en: 'Preview SQL' },
   'report.build.sqlPreviewHelp': { tr: "Backend'in bu rapor tanımı için üreteceği SQL sorgusunu gösterir; sorgu çalıştırılmaz.", en: 'Shows the SQL query the backend would generate for this report definition; the query is not executed.' },
@@ -55,7 +55,7 @@ export const REPORT_I18N: Translations = {
   'report.build.sqlPreviewSelectModelFirst': { tr: 'Önce bir model seçin.', en: 'Select a model first.' },
   'report.build.sqlPreviewFailed': { tr: 'SQL önizlemesi üretilemedi.', en: 'SQL preview could not be generated.' },
 
-  // ── report-build: kolonlar/filtreler/gruplama/aggregate/sıralama ───────
+  // ── report-build: columns/filters/grouping/aggregate/sorting ──────────
   'report.build.columns': { tr: 'Kolonlar', en: 'Columns' },
   'report.build.columnsHelp': { tr: 'Gruplama veya aggregate tanımlandığında kolon seçimi yok sayılır.', en: 'Column selection is ignored when grouping or aggregate is defined.' },
   'report.build.filters': { tr: 'Filtreler', en: 'Filters' },
@@ -75,14 +75,14 @@ export const REPORT_I18N: Translations = {
   'report.build.noSorts': { tr: 'Henüz sıralama eklenmedi.', en: 'No sorting added yet.' },
   'report.build.save': { tr: 'Kaydet', en: 'Save' },
 
-  // ── report-build: validasyon/hata mesajları (ts) ────────────────────────
+  // ── report-build: validation/error messages (ts) ────────────────────────
   'report.build.modelsLoadFailed': { tr: 'Modeller yüklenemedi.', en: 'Models could not be loaded.' },
   'report.build.serverError': { tr: 'Sunucu bağlantı hatası.', en: 'Server connection error.' },
   'report.build.notFoundOrNoAccess': { tr: 'Rapor bulunamadı veya erişim yetkiniz yok.', en: 'Report not found or you do not have access.' },
   'report.build.aggregateFieldRequired': { tr: 'COUNT dışındaki aggregate fonksiyonları için bir alan seçilmelidir.', en: 'A field must be selected for aggregate functions other than COUNT.' },
   'report.build.saveFailed': { tr: 'Rapor kaydedilemedi.', en: 'Report could not be saved.' },
 
-  // ── filtre operatörleri ─────────────────────────────────────────────────
+  // ── filter operators ────────────────────────────────────────────────────
   'report.operator.eq': { tr: '=', en: '=' },
   'report.operator.ne': { tr: '≠', en: '≠' },
   'report.operator.gt': { tr: '>', en: '>' },
@@ -92,23 +92,23 @@ export const REPORT_I18N: Translations = {
   'report.operator.contains': { tr: 'içerir', en: 'contains' },
   'report.operator.startswith': { tr: 'ile başlar', en: 'starts with' },
 
-  // ── aggregate fonksiyonları ──────────────────────────────────────────────
+  // ── aggregate functions ─────────────────────────────────────────────────
   'report.aggregate.sum': { tr: 'Toplam (SUM)', en: 'Sum (SUM)' },
   'report.aggregate.count': { tr: 'Sayı (COUNT)', en: 'Count (COUNT)' },
   'report.aggregate.avg': { tr: 'Ortalama (AVG)', en: 'Average (AVG)' },
   'report.aggregate.min': { tr: 'Minimum (MIN)', en: 'Minimum (MIN)' },
   'report.aggregate.max': { tr: 'Maksimum (MAX)', en: 'Maximum (MAX)' },
 
-  // ── sonuç kolonu başlıkları (COUNT_ID, SUM_NetAmount …) ─────────────────
-  // Gerçek sonuçlarda başlık sunucudan gelir (ReportColumnInfo.Label, Messages.ReportColumn*);
-  // bunlar yalnız oluşturucunun önizlemesi içindir ve backend metinleriyle AYNI kalmalıdır.
+  // ── result column headers (COUNT_ID, SUM_NetAmount …) ──────────────────
+  // In real results the header comes from the server (ReportColumnInfo.Label, Messages.ReportColumn*);
+  // these are only for the builder's preview and must stay THE SAME as the backend texts.
   'report.columnLabel.count': { tr: 'Kayıt sayısı', en: 'Record count' },
   'report.columnLabel.sum': { tr: 'Toplam {field}', en: 'Total {field}' },
   'report.columnLabel.avg': { tr: 'Ortalama {field}', en: 'Average {field}' },
   'report.columnLabel.min': { tr: 'En düşük {field}', en: 'Minimum {field}' },
   'report.columnLabel.max': { tr: 'En yüksek {field}', en: 'Maximum {field}' },
 
-  // ── sıralama yönleri ─────────────────────────────────────────────────────
+  // ── sort directions ─────────────────────────────────────────────────────
   'report.sort.asc': { tr: 'Artan (A→Z, 0→9)', en: 'Ascending (A→Z, 0→9)' },
   'report.sort.desc': { tr: 'Azalan (Z→A, 9→0)', en: 'Descending (Z→A, 9→0)' },
 
@@ -142,7 +142,7 @@ export const REPORT_I18N: Translations = {
   'report.viewer.nextPage': { tr: 'Sonraki sayfa', en: 'Next page' },
   'report.viewer.lastPage': { tr: 'Son sayfa', en: 'Last page' },
 
-  // ── chart: grafik tipi etiketleri/ipuçları (chart-types.ts) ────────────
+  // ── chart: chart type labels/hints (chart-types.ts) ────────────────────
   'chart.type.column.label': { tr: 'Sütun', en: 'Column' },
   'chart.type.column.hint': { tr: 'Kategoriler arasında karşılaştırma — dikey çubuklar.', en: 'Comparison across categories — vertical bars.' },
   'chart.type.bar.label': { tr: 'Çubuk', en: 'Bar' },
@@ -162,7 +162,7 @@ export const REPORT_I18N: Translations = {
   'chart.type.table.label': { tr: 'Tablo', en: 'Table' },
   'chart.type.table.hint': { tr: 'Ham veri — satır/kolon listesi.', en: 'Raw data — list of rows/columns.' },
 
-  // ── chart: çizim/durum metinleri (chart-mapping.ts, chart.component.ts) ─
+  // ── chart: drawing/status texts (chart-mapping.ts, chart.component.ts) ─
   'chart.noDataForChart': { tr: 'Grafik için yeterli veri yok.', en: 'Not enough data for the chart.' },
   'chart.total': { tr: 'Toplam', en: 'Total' },
   'chart.capNote': { tr: '{total} kayıttan ilk {cap} gösteriliyor — tüm veri için Tablo görünümünü veya gruplama/aggregate kullanın.', en: 'Showing the first {cap} of {total} records — use the Table view or grouping/aggregate to see all data.' },

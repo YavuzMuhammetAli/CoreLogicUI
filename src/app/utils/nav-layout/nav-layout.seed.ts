@@ -1,16 +1,16 @@
 import { NavLayout, NavNode } from './nav-layout.model';
 
 export interface NavSeedInput {
-  /** Yayınlanmış modeller, menüdeki sırayla. */
+  /** Published models, in menu order. */
   readonly models: readonly { readonly typeName: string }[];
-  /** Admin'in "menüde göster" dediği dashboard'lar. */
+  /** Dashboards the admin marked "show in menu". */
   readonly navDashboards: readonly { readonly id: number; readonly name: string }[];
 }
 
 /**
- * Yeni navigasyon tasarımının ilk taslağı — admin olmayan kullanıcının BUGÜNKÜ menüsü:
- * Görevlerim, modeller, Raporlar, Dashboard ve menüye yayınlanmış dashboard'lar. Admin bunu
- * klasörlere ayırarak başlar; hiçbir şey kaybolmaz.
+ * Initial draft of a new navigation design — the non-admin user's CURRENT menu:
+ * My Tasks, models, Reports, Dashboard and dashboards published to the menu. The admin starts by
+ * splitting it into folders; nothing is lost.
  */
 export function seedNavLayout(input: NavSeedInput): NavLayout {
   let n = 0;

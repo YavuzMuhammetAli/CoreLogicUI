@@ -1,6 +1,6 @@
-/* ── Adım pop-up'ı ────────────────────────────────────────────────────────────
-   Kabuk record-form-dialog ile aynı: host kutu üretmez, overlay fixed,
-   eylem çubuğu panelin altına yapışık. */
+/* ── Step pop-up ────────────────────────────────────────────────────────────
+   The shell is the same as record-form-dialog: the host produces no box, the overlay is fixed,
+   the action bar sticks to the bottom of the panel. */
 
 :host {
   display: contents;
@@ -23,7 +23,7 @@
   width: 100%;
   max-width: 820px;
   max-height: calc(100vh - 2 * var(--space-4));
-  /* dvh = görünen alan; vh mobilde tarayıcı çubuklarını da sayar ve alttaki düğmeler kesilir */
+  /* dvh = visible area; on mobile vh also counts the browser bars and the bottom buttons get cut off */
   max-height: calc(100dvh - 2 * var(--space-4));
   overscroll-behavior: contain;
   display: flex;
@@ -38,7 +38,7 @@
   gap: var(--space-3);
 }
 
-// Gövde kayar, başlık ve eylem çubuğu sabit kalır.
+// The body scrolls, the header and action bar stay fixed.
 .step-dialog-body {
   flex: 1 1 auto;
   overflow-y: auto;
@@ -60,7 +60,7 @@
   }
 }
 
-// ── Bölümler ───────────────────────────────────────────────────────────────
+// ── Sections ───────────────────────────────────────────────────────────────
 
 .step-section {
   display: grid;
@@ -82,8 +82,8 @@
 }
 
 /*
- * Alan ızgarası. align-items: start ŞART — yardım metni olan bir alan satırı
- * uzattığında komşuları gerilmesin, tüm input'lar aynı çizgide dursun.
+ * Field grid. align-items: start is REQUIRED — when a field with help text makes
+ * the row taller its neighbours should not stretch; all inputs stay on the same line.
  */
 .dialog-grid {
   display: grid;
@@ -100,7 +100,7 @@
   font-size: var(--text-sm);
 }
 
-// ── Dal kartları ───────────────────────────────────────────────────────────
+// ── Branch cards ───────────────────────────────────────────────────────────
 
 .branch-list {
   display: grid;
@@ -133,7 +133,7 @@
   font-weight: 600;
 }
 
-// ── Form alanı tablosu — sabit sütunlar, satırlar alt alta hizalı ─────────
+// ── Form field table — fixed columns, rows aligned under each other ─────────
 
 .field-table {
   display: grid;
@@ -147,7 +147,7 @@
   align-items: center;
 }
 
-// Kayıt alanı satırı: kolon seçici · zorunlu · sil.
+// Record field row: column picker · required · delete.
 .field-table-row--record {
   grid-template-columns: minmax(0, 1fr) auto 36px;
 }
@@ -159,18 +159,18 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 
-  // "Zorunlu" sütunu onay kutusuyla aynı eksende.
+  // The "Zorunlu" (Required) column on the same axis as the checkbox.
   > :nth-child(4) { text-align: center; }
 }
 
-// Kaydet denendiğinde boş kalan zorunlu alanlar görünür olsun — tablo
-// satırlarında alan altı hata metni için yer yok.
+// Required fields left empty when Save is attempted should be visible — table
+// rows have no room for an under-field error text.
 .input.ng-invalid.ng-touched {
   border-color: var(--danger);
 }
 
-// Görüntüleme modu: metin kutuları da seçim kutuları gibi kilitli görünsün;
-// yoksa beyaz input düzenlenebilir sanılıyor.
+// View mode: text boxes should look locked like the select boxes;
+// otherwise a white input is mistaken for editable.
 .input:disabled {
   background: var(--surface-warm);
   color: var(--fg-2);
@@ -185,12 +185,12 @@
   color: var(--danger);
 }
 
-// Enum değerleri satırın altında tam genişlikte.
+// Enum values full width below the row.
 .field-enum {
   grid-column: 1 / -1;
 }
 
-// .checkbox-label global değil — her bileşen kendi tanımlıyor (table-detail ile aynı).
+// .checkbox-label is not global — each component defines its own (same as table-detail).
 .checkbox-label {
   display: inline-flex;
   align-items: center;
@@ -205,7 +205,7 @@
   justify-content: center;
 }
 
-// Başlık satırı zaten "Zorunlu" diyor; geniş ekranda tekrar yazılmaz.
+// The header row already says "Zorunlu" (Required); not repeated on wide screens.
 .field-required-text {
   position: absolute;
   width: 1px;

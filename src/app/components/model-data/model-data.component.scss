@@ -18,7 +18,7 @@
   color: var(--border);
 }
 
-/* ---- Arama ve filtre ---- */
+/* ---- Search and filter ---- */
 
 .list-toolbar {
   display: flex;
@@ -60,7 +60,7 @@
   gap: var(--space-2);
 }
 
-/* Başlığın kendi yazı biçimini korur; yalnız tıklanabilir olur */
+/* Keeps the header's own typography; only becomes clickable */
 .sort-btn {
   display: inline-flex;
   align-items: center;
@@ -77,9 +77,9 @@
   &:hover { color: var(--accent); }
 }
 
-/* ---- Tablo ---- */
+/* ---- Table ---- */
 
-/* Uzun metin tek satırda kırpılır: aksi halde tablo sayfa genişliğini aşardı */
+/* Long text is clipped to a single line: otherwise the table would exceed the page width */
 .cell-clamp {
   max-width: 320px;
   overflow: hidden;
@@ -87,8 +87,8 @@
   white-space: nowrap;
 }
 
-/* Tıklanabilir satır — detay sayfasına navigasyon */
-/* ── Satır seçimi (toplu silme) ────────────────────────────────────────────── */
+/* Clickable row — navigation to the detail page */
+/* ── Row selection (bulk delete) ───────────────────────────────────────────── */
 
 .select-col,
 .select-cell {
@@ -100,7 +100,7 @@ tr.row-selected td {
   background: var(--surface-warm);
 }
 
-/* Kısmi silme hatası özeti — global .alert flex olduğu için içerik dikey akmalı */
+/* Partial delete error summary — since the global .alert is flex, the content must flow vertically */
 .bulk-error-list {
   display: flex;
   flex-direction: column;
@@ -125,9 +125,9 @@ tr.row-selected td {
   }
 }
 
-/* Sayfalama, .table-footer ve sayfa başına seçici: global (styles.scss) */
+/* Pagination, .table-footer and the per-page selector: global (styles.scss) */
 
-/* Tip ipucu */
+/* Type hint */
 .col-type-hint {
   display: inline-block;
   margin-left: var(--space-2);
@@ -138,8 +138,8 @@ tr.row-selected td {
 }
 
 
-/* Ekran tasarımındaki liste yerleşimi: genişlikler <colgroup>'tan, sabit tablo düzeni.
-   Global `td { max-width: 260px }` burada kolonun kendi genişliğini kısardı. */
+/* List layout from the screen design: widths come from <colgroup>, fixed table layout.
+   The global `td { max-width: 260px }` would shrink the column's own width here. */
 .data-table--sized {
   table-layout: fixed;
   min-width: 100%;

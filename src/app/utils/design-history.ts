@@ -1,19 +1,19 @@
 /**
- * Geri al / yinele geçmişi — SAF, değişmez anlık görüntü yığını.
+ * Undo / redo history — PURE, a stack of immutable snapshots.
  *
- * Belge değişmez olduğu için her adım yalnızca bir referanstır; 50 adımlık bir
- * akışın 100 anlık görüntüsü birkaç yüz KB eder.
+ * Since the document is immutable each step is just a reference; 100 snapshots of a
+ * 50-step workflow come to a few hundred KB.
  *
- * Birleştirme: aynı `reason` ile `windowMs` içinde gelen kayıtlar öncekinin
- * yerine geçer, üstüne eklenmez. Böylece bir alana yazılan her harf ayrı bir
- * geri al adımı olmaz ("Ctrl+Z bir kelimeyi geri alır, tek harfi değil").
- * Boş `reason` hiçbir zaman birleşmez.
+ * Coalescing: records arriving with the same `reason` within `windowMs` replace the
+ * previous one instead of stacking on top. So every letter typed into a field does not become
+ * a separate undo step ("Ctrl+Z undoes a word, not a single letter").
+ * An empty `reason` never coalesces.
  */
 export interface DesignHistory<T> {
   readonly past: readonly T[];
   readonly present: T;
   readonly future: readonly T[];
-  /** Son kaydın sebebi ve zamanı — birleştirme kararı için. */
+  /** Reason and time of the last record — for the coalescing decision. */
   readonly lastReason: string | null;
   readonly lastAt: number;
 }
@@ -26,8 +26,8 @@ export function createHistory<T>(present: T): DesignHistory<T> {
 }
 
 /**
- * Yeni durumu kaydeder. Durum değişmediyse (aynı referans) geçmiş aynen döner —
- * hiçbir şey yapmayan komut boş bir geri al adımı üretmesin.
+ * Records the new state. If the state did not change (same reference) the history is returned as is —
+ * so a command that does nothing does not produce an empty undo step.
  */
 export function record<T>(
   history: DesignHistory<T>,
@@ -59,8 +59,8 @@ export function undo<T>(history: DesignHistory<T>): DesignHistory<T> {
   const past = history.past.slice(0, -1);
   const present = history.past[history.past.length - 1];
 
-  // Geri alınan adımdan sonra gelen yazım birleştirilmemeli: aksi halde
-  // kullanıcının yeni yazdığı harf, geri aldığı durumun üzerine yazılırdı.
+  // Typing after an undone step must not coalesce: otherwise the letter
+  // the user just typed would overwrite the state they undid to.
   return { past, present, future: [history.present, ...history.future], lastReason: null, lastAt: 0 };
 }
 

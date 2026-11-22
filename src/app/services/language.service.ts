@@ -7,16 +7,16 @@ export type Lang = 'tr' | 'en';
 const LANG_KEY = 'lang';
 
 /**
- * Arayüz dili tercihini yönetir (TR/EN). ThemeService ile birebir aynı desen:
- * kullanıcı seçimi localStorage'da saklanır, seçim yoksa varsayılan 'tr' kullanılır.
+ * Manages the UI language preference (TR/EN). Exactly the same pattern as ThemeService:
+ * the user's choice is stored in localStorage; without a choice the default 'tr' is used.
  *
- * language.interceptor.ts bu tercihi (localStorage üzerinden) okuyup her HTTP isteğine
- * Accept-Language header'ı ekler; backend bunu Business.Constants.Messages üzerinden
- * lokalize mesaj seçimi için kullanır (bkz. Program.cs UseRequestLocalization).
+ * language.interceptor.ts reads this preference (via localStorage) and adds an
+ * Accept-Language header to every HTTP request; the backend uses it through
+ * Business.Constants.Messages to pick localized messages (see Program.cs UseRequestLocalization).
  *
- * Statik UI metinleri (şablonlar + TS mesajları) için `t()` metodu kullanılır —
- * src/app/i18n altındaki TRANSLATIONS sözlüğünden aktif dile göre metni döner.
- * Şablonlarda doğrudan çağırmak yerine TranslatePipe (`| t`) kullanılması önerilir.
+ * For static UI text (templates + TS messages) the `t()` method is used —
+ * it returns the text for the active language from the TRANSLATIONS dictionary under src/app/i18n.
+ * In templates, prefer TranslatePipe (`| t`) over calling it directly.
  */
 @Injectable({ providedIn: 'root' })
 export class LanguageService {
@@ -33,7 +33,7 @@ export class LanguageService {
     return isPlatformBrowser(this.platformId) ? localStorage : null;
   }
 
-  /** localStorage'daki kullanıcı seçimi, yoksa varsayılan 'tr' */
+  /** The user's choice from localStorage, otherwise the default 'tr' */
   private resolveInitial(): Lang {
     if (!isPlatformBrowser(this.platformId)) return 'tr';
 
@@ -54,8 +54,8 @@ export class LanguageService {
   }
 
   /**
-   * Çeviri anahtarını aktif dile çevirir; `{param}` yer tutucularını `params` ile doldurur.
-   * Anahtar sözlükte yoksa geliştirme kolaylığı için anahtarın kendisi döner.
+   * Translates a key into the active language; fills `{param}` placeholders from `params`.
+   * If the key is not in the dictionary, the key itself is returned as a development aid.
    */
   t(key: string, params?: Record<string, string | number>): string {
     const entry = TRANSLATIONS[key];

@@ -1,13 +1,13 @@
 /**
- * Tasarım token'larını (CSS custom property) ApexCharts'ın anlayacağı çözümlenmiş renk
- * string'lerine ("rgb(...)") köprüler. Hiçbir hex burada hard-code edilmez — her değer
- * çalışma anında `:root`/`:root[data-theme="dark"]`'tan okunur, böylece açık/koyu tema
- * değişince grafik paleti otomatik güncellenir.
+ * Bridges design tokens (CSS custom properties) to resolved colour strings ("rgb(...)") that
+ * ApexCharts understands. No hex is hard-coded here — every value is read at runtime
+ * from `:root`/`:root[data-theme="dark"]`, so the chart palette updates automatically when the
+ * light/dark theme changes.
  *
- * `color-mix(...)` gibi fonksiyon içeren token'lar (örn. --accent-hover) `getPropertyValue`
- * ile okunduğunda ham/çözümlenmemiş string döner; bunun önüne geçmek için görünmez bir
- * `<span>` üzerinde gerçek bir CSS özelliğine (`color`) atanıp tarayıcının hesapladığı
- * nihai `rgb(...)` değeri okunur.
+ * Tokens containing functions such as `color-mix(...)` (e.g. --accent-hover) return a raw/unresolved
+ * string when read with `getPropertyValue`; to avoid this they are assigned to a real CSS property
+ * (`color`) on an invisible `<span>` and the final `rgb(...)` value computed by the browser
+ * is read.
  */
 export interface ChartTokenColors {
   accent: string;
@@ -41,7 +41,7 @@ const TOKEN_VARS: Record<keyof ChartTokenColors, string> = {
   surface: '--surface'
 };
 
-/** Bir CSS custom property'sinin nihai çözümlenmiş rengini döndürür (yalnızca tarayıcıda çağrılmalı). */
+/** Returns the final resolved colour of a CSS custom property (call only in the browser). */
 function resolveCssVarColor(varName: string): string {
   const probe = document.createElement('span');
   probe.style.position = 'absolute';
@@ -54,15 +54,15 @@ function resolveCssVarColor(varName: string): string {
   return resolved;
 }
 
-/** Son çözümlenen palet ve ait olduğu tema — bkz. readChartTokenColors. */
+/** The last resolved palette and the theme it belongs to — see readChartTokenColors. */
 let cached: { theme: string; colors: ChartTokenColors } | null = null;
 
 /**
- * Aktif temadaki tüm grafik renk token'larını çözümler. Yalnızca tarayıcıda çağır.
+ * Resolves all chart colour tokens in the active theme. Call only in the browser.
  *
- * Her token bir `getComputedStyle` (zorunlu stil hesabı) demek; dashboard'da her widget bunu
- * 13 kez yapıyordu. Değerler yalnız tema değişince değiştiği için sonuç `data-theme`'e göre
- * saklanır — tema değişince ilk okuma yeniden çözümler.
+ * Each token means one `getComputedStyle` (a forced style computation); on a dashboard every widget did this
+ * 13 times. Since the values only change when the theme changes, the result is cached per `data-theme`
+ * — after a theme change the first read resolves again.
  */
 export function readChartTokenColors(): ChartTokenColors {
   const theme = document.documentElement.getAttribute('data-theme') ?? '';
@@ -77,9 +77,9 @@ export function readChartTokenColors(): ChartTokenColors {
 }
 
 /**
- * Kategorik seri paleti — tüm grafiklerde tutarlı, token'lardan türeyen sıra.
- * Not (a11y): renk burada tek ayırt edici sinyal değildir; her grafikte legend/dataLabels
- * her zaman açık tutulur (bkz. chart-mapping.ts).
+ * Categorical series palette — consistent across all charts, an order derived from tokens.
+ * Note (a11y): colour is not the only distinguishing signal here; legend/dataLabels are
+ * always kept on in every chart (see chart-mapping.ts).
  */
 export function buildSeriesPalette(tokens: ChartTokenColors): string[] {
   return [

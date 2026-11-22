@@ -5,18 +5,18 @@ import {
 import { collectIds, nextId } from '../../../utils/screen-layout/screen-layout.seed';
 
 /**
- * Form yerleşimi komutları — SAF.
+ * Form layout commands — PURE.
  *
- * Her komut yeni bir belge döndürür; HİÇBİR ŞEY DEĞİŞMEDİYSE AYNI REFERANSI döndürür
- * (geçmiş boş bir geri al adımı kaydetmesin — bkz. utils/design-history).
+ * Each command returns a new document; IF NOTHING CHANGED IT RETURNS THE SAME REFERENCE
+ * (so the history does not record an empty undo step — see utils/design-history).
  *
- * Kimlikler deterministiktir (`nextId`): t = sekme, s = bölüm, f = alan, x = boşluk,
- * d = ayırıcı, n = not.
+ * Ids are deterministic (`nextId`): t = tab, s = section, f = field, x = spacer,
+ * d = divider, n = note.
  */
 
 export type ElementKind = 'spacer' | 'divider' | 'note';
 
-/** Bırakma hedefi: bölüm + o bölümdeki sıra (öğe çıkarıldıktan SONRAKİ dizide). */
+/** Drop target: section + index within that section (in the array AFTER the item is removed). */
 export interface DropTarget {
   readonly sectionId: string;
   readonly index: number;
@@ -33,7 +33,7 @@ export interface ItemLocation {
 
 const ELEMENT_PREFIX: Record<ElementKind, string> = { spacer: 'x', divider: 'd', note: 'n' };
 
-// ─── Arama ──────────────────────────────────────────────────────────────────
+// ─── Lookup ─────────────────────────────────────────────────────────────────
 
 export function findItem(doc: FormLayout, itemId: string): ItemLocation | null {
   for (let t = 0; t < doc.tabs.length; t++) {
@@ -55,7 +55,7 @@ export function findSection(doc: FormLayout, sectionId: string): { tabIndex: num
   return null;
 }
 
-/** Alanın yerleştirildiği öğe (yoksa null). */
+/** The item the field is placed in (null if none). */
 export function findField(doc: FormLayout, column: string): ItemLocation | null {
   for (const tab of doc.tabs) {
     for (const section of tab.sections) {
@@ -66,7 +66,7 @@ export function findField(doc: FormLayout, column: string): ItemLocation | null 
   return null;
 }
 
-/** Belgede yerleştirilmiş kolonlar. */
+/** Columns placed in the document. */
 export function placedColumns(doc: FormLayout): Set<string> {
   const out = new Set<string>();
   for (const tab of doc.tabs) for (const section of tab.sections) {
@@ -79,7 +79,7 @@ export function itemCount(doc: FormLayout): number {
   return doc.tabs.reduce((n, t) => n + t.sections.reduce((m, s) => m + s.items.length, 0), 0);
 }
 
-// ─── Değişmez güncelleme yardımcıları ───────────────────────────────────────
+// ─── Immutable update helpers ───────────────────────────────────────────────
 
 function mapSections(doc: FormLayout, fn: (section: FormSection) => FormSection): FormLayout {
   let changed = false;
@@ -132,11 +132,11 @@ function withoutHidden(doc: FormLayout, column: string): FormLayout {
 
 const clampSpan = (span: number) => Math.min(GRID_COLUMNS, Math.max(1, Math.round(span)));
 
-// ─── Öğeler ─────────────────────────────────────────────────────────────────
+// ─── Items ──────────────────────────────────────────────────────────────────
 
 /**
- * Kolonu hedefe yerleştirir. Zaten yerleşikse oraya TAŞIR (aynı alan iki kez durmaz);
- * gizliyse gizli listesinden çıkar.
+ * Places the column at the target. If already placed it MOVES it there (the same field never appears twice);
+ * if hidden it is removed from the hidden list.
  */
 export function placeField(doc: FormLayout, column: string, target: DropTarget, span = DEFAULT_FIELD_SPAN): FormLayout {
   if (!findSection(doc, target.sectionId)) return doc;
@@ -158,8 +158,8 @@ export function insertElement(doc: FormLayout, kind: ElementKind, target: DropTa
 }
 
 /**
- * Öğeyi hedefe taşır. Hedef sırası, öğe çıkarıldıktan sonraki dizine göredir; aynı bölümde
- * kendi önüne/arkasına bırakmak hiçbir şey değiştirmez (aynı referans).
+ * Moves the item to the target. The target index refers to the array after the item is removed; in the same
+ * section, dropping right before/after itself changes nothing (same reference).
  */
 export function moveItem(doc: FormLayout, itemId: string, target: DropTarget): FormLayout {
   const from = findItem(doc, itemId);
@@ -171,8 +171,8 @@ export function moveItem(doc: FormLayout, itemId: string, target: DropTarget): F
 }
 
 /**
- * Klavyeyle bir adım taşıma (Alt+↑/↓). Bölümün başında/sonunda bir önceki/sonraki bölüme
- * (aynı sekmede) geçer.
+ * Keyboard move by one step (Alt+↑/↓). At the start/end of a section it moves into the previous/next
+ * section (within the same tab).
  */
 export function moveItemBy(doc: FormLayout, itemId: string, delta: -1 | 1): FormLayout {
   const from = findItem(doc, itemId);
@@ -199,7 +199,7 @@ export interface ItemPatch {
   readonly tone?: NoteTone;
 }
 
-/** Öğenin özelliklerini değiştirir; tipe uymayan alanlar yok sayılır. Varsayılanlar belgeye yazılmaz. */
+/** Changes the item's properties; fields not applicable to its type are ignored. Defaults are not written to the document. */
 export function patchItem(doc: FormLayout, itemId: string, patch: ItemPatch): FormLayout {
   return mapItem(doc, itemId, item => {
     if (item.kind === 'divider') return item;
@@ -234,24 +234,24 @@ function sameShallow(a: Record<string, unknown>, b: object): boolean {
   return aKeys.length === Object.keys(bRecord).length && aKeys.every(k => a[k] === bRecord[k]);
 }
 
-/** Öğeyi kaldırır — alan ise yerleştirilmemişe döner (gizlenmez). */
+/** Removes the item — a field goes back to unplaced (it is not hidden). */
 export function removeItem(doc: FormLayout, itemId: string): FormLayout {
   return findItem(doc, itemId) ? withoutItem(doc, itemId) : doc;
 }
 
-/** Kolonu formdan gizler: yerleşikse öğesi kalkar, gizli listesine girer. */
+/** Hides the column from the form: if placed, its item is removed and it enters the hidden list. */
 export function hideColumn(doc: FormLayout, column: string): FormLayout {
   const placed = findField(doc, column);
   const base = placed ? withoutItem(doc, placed.item.id) : doc;
   return base.hiddenColumns.includes(column) ? base : { ...base, hiddenColumns: [...base.hiddenColumns, column] };
 }
 
-/** Gizliliği kaldırır — kolon yerleştirilmemişe döner (paletten yerleştirilir). */
+/** Unhides — the column goes back to unplaced (it is placed from the palette). */
 export function unhideColumn(doc: FormLayout, column: string): FormLayout {
   return withoutHidden(doc, column);
 }
 
-/** Şemada olmayan (silinmiş) kolonun tüm izini kaldırır. */
+/** Removes every trace of a column not in the schema (deleted). */
 export function removeColumnEverywhere(doc: FormLayout, column: string): FormLayout {
   let next = doc;
   for (let placed = findField(next, column); placed; placed = findField(next, column)) {
@@ -260,7 +260,7 @@ export function removeColumnEverywhere(doc: FormLayout, column: string): FormLay
   return withoutHidden(next, column);
 }
 
-// ─── Bölümler ───────────────────────────────────────────────────────────────
+// ─── Sections ───────────────────────────────────────────────────────────────
 
 export function addSection(doc: FormLayout, tabId: string, title = ''): FormLayout {
   const tabIndex = doc.tabs.findIndex(t => t.id === tabId);
@@ -303,7 +303,7 @@ export function patchSection(doc: FormLayout, sectionId: string, patch: SectionP
   });
 }
 
-/** Bölümü kaldırır; içindeki alanlar yerleştirilmemişe döner. */
+/** Removes the section; its fields go back to unplaced. */
 export function removeSection(doc: FormLayout, sectionId: string): FormLayout {
   const where = findSection(doc, sectionId);
   if (!where) return doc;
@@ -324,9 +324,9 @@ export function moveSectionBy(doc: FormLayout, sectionId: string, delta: -1 | 1)
   return { ...doc, tabs };
 }
 
-// ─── Sekmeler ───────────────────────────────────────────────────────────────
+// ─── Tabs ───────────────────────────────────────────────────────────────────
 
-/** Yeni sekme (boş bir bölümle) sona eklenir. */
+/** A new tab (with one empty section) is appended at the end. */
 export function addTab(doc: FormLayout, title: string): FormLayout {
   const ids = collectIds(doc);
   const tabId = nextId(ids, 't');
@@ -343,7 +343,7 @@ export function renameTab(doc: FormLayout, tabId: string, title: string): FormLa
   return { ...doc, tabs };
 }
 
-/** Sekmeyi kaldırır (son sekme kaldırılamaz); alanları yerleştirilmemişe döner. */
+/** Removes the tab (the last tab cannot be removed); its fields go back to unplaced. */
 export function removeTab(doc: FormLayout, tabId: string): FormLayout {
   if (doc.tabs.length <= 1 || !doc.tabs.some(t => t.id === tabId)) return doc;
   return { ...doc, tabs: doc.tabs.filter(t => t.id !== tabId) };
@@ -358,7 +358,7 @@ export function moveTabBy(doc: FormLayout, tabId: string, delta: -1 | 1): FormLa
   return { ...doc, tabs };
 }
 
-/** Sekmenin son bölümünün sonu — sekme başlığına bırakılan / tıklayarak eklenen öğe buraya gider. */
+/** End of the tab's last section — items dropped on the tab header / added by clicking go here. */
 export function endOfTab(doc: FormLayout, tabId: string): DropTarget | null {
   const tab = doc.tabs.find(t => t.id === tabId);
   const section = tab?.sections[tab.sections.length - 1];

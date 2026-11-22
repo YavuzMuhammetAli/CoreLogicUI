@@ -1,4 +1,4 @@
-/* ── Kullanıcı Yetkisi Detay Sayfası ── */
+/* ── User permission detail page ── */
 
 .detail-breadcrumb {
   display: flex;
@@ -22,21 +22,21 @@
   color: var(--fg);
 }
 
-/* Sağ panel başlık alt metni */
+/* Right panel header subtext */
 .perm-subtitle {
   font-size: var(--text-sm);
   color: var(--muted);
   overflow-wrap: anywhere;
 }
 
-/* Bölüm ayırıcı */
+/* Section divider */
 .section-divider {
   border: none;
   border-top: 1px solid var(--border-soft);
   margin: var(--space-6) 0;
 }
 
-/* Bölüm başlıkları */
+/* Section headings */
 .section-block {
   margin-bottom: var(--space-4);
 }
@@ -53,7 +53,7 @@
   margin-bottom: var(--space-4);
 }
 
-/* Admin checkbox satırı */
+/* Admin checkbox row */
 .admin-toggle-row {
   display: flex;
   align-items: center;
@@ -61,7 +61,7 @@
   margin-bottom: var(--space-2);
 }
 
-/* Kaydet butonu alt çubuğu */
+/* Save button bottom bar */
 .perm-footer {
   display: flex;
   justify-content: flex-end;
@@ -69,7 +69,7 @@
   gap: var(--space-3);
 }
 
-/* ── Rozet (sekme rozetiyle aynı görünüm, sekme yok) ── */
+/* ── Badge (same look as the tab badge, without a tab) ── */
 
 .tab-badge {
   display: inline-flex;
@@ -85,7 +85,7 @@
   color: #fff;
 }
 
-/* ── İzin Verilen Modeller: arama kutusu ── */
+/* ── Permitted models: search box ── */
 
 .search-box {
   position: relative;
@@ -107,7 +107,7 @@
   padding-left: calc(var(--space-3) * 2 + 14px);
 }
 
-/* ── İzin Verilen Modeller: liste alt çubuğu (sayım + sayfalama) ── */
+/* ── Permitted models: list bottom bar (count + pagination) ── */
 
 .model-list-footer {
   display: flex;
@@ -119,7 +119,7 @@
   .pagination { margin-left: auto; }
 }
 
-/* ── İzin Verilen Modeller: model listesi (master) ── */
+/* ── Permitted models: model list (master) ── */
 
 .model-perm-list {
   list-style: none;
@@ -171,7 +171,7 @@
   color: var(--muted);
 }
 
-/* ── İzin Verilen Modeller: model izin detayı ── */
+/* ── Permitted models: model permission detail ── */
 
 .model-perm-detail {
   display: flex;

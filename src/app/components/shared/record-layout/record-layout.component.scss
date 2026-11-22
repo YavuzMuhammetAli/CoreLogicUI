@@ -3,12 +3,12 @@
   min-width: 0;
 }
 
-/* `hidden` niteliği tarayıcının `display: none`'ıdır; sınıfın `display: grid`'i onu ezerdi. */
+/* The `hidden` attribute is the browser's `display: none`; the class's `display: grid` would override it. */
 [hidden] {
   display: none !important;
 }
 
-/* ── Varsayılan görünüm (yayınlanmış tasarım yokken) ───────────────────────── */
+/* ── Default view (when there's no published design) ───────────────────────── */
 
 .legacy-grid {
   display: grid;
@@ -20,7 +20,7 @@
   }
 }
 
-/* ── Sekmeler ──────────────────────────────────────────────────────────────── */
+/* ── Tabs ──────────────────────────────────────────────────────────────── */
 
 .layout-stale {
   margin-bottom: var(--space-4);
@@ -33,7 +33,7 @@
   gap: 0;
   margin-bottom: var(--space-4);
   border-bottom: 2px solid var(--border-soft);
-  /* Çok sekme telefona sığmaz: sarılmaz, yatay kayar */
+  /* Many tabs don't fit on a phone: they don't wrap, they scroll horizontally */
   overflow-x: auto;
   scrollbar-width: none;
 
@@ -85,7 +85,7 @@
   color: #fff;
 }
 
-/* ── Bölümler ──────────────────────────────────────────────────────────────── */
+/* ── Sections ──────────────────────────────────────────────────────────────── */
 
 .layout-tab {
   display: grid;
@@ -128,7 +128,7 @@
   &--open { transform: rotate(90deg); }
 }
 
-/* ── 12 kolonluk ızgara ────────────────────────────────────────────────────── */
+/* ── 12-column grid ────────────────────────────────────────────────────── */
 
 .layout-grid {
   display: grid;

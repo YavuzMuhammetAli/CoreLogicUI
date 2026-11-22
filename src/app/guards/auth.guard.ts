@@ -7,9 +7,9 @@ import { AuthService } from '../services/auth.service';
 export const authGuard: CanActivateFn = () => {
   const platformId = inject(PLATFORM_ID);
 
-  // SSR / prerender ortamında localStorage yoktur; guard'ı burada çalıştırmak
-  // login sayfasının prerender edilmesine yol açar → yenilemede login flash'i.
-  // Tarayıcı olmayan ortamda true döndürüp gerçek kontrolü client hidrasyonuna bırak.
+  // There is no localStorage in an SSR / prerender environment; running the guard here
+  // would prerender the login page → a login flash on reload.
+  // In a non-browser environment return true and leave the real check to client hydration.
   if (!isPlatformBrowser(platformId)) {
     return true;
   }
@@ -17,7 +17,7 @@ export const authGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  // Oturum sunucudan okunur (çerez HttpOnly); sayfa yenilemesinde henüz boş olabilir.
+  // The session is read from the server (HttpOnly cookie); it may still be empty on a page reload.
   return auth.ensureSession().pipe(
     map(session => session ? true : router.createUrlTree(['/login']))
   );

@@ -13,13 +13,13 @@ import { ScreenViewType } from '../utils/screen-layout/screen-layout.model';
 import { SKIP_FORBIDDEN_REDIRECT } from '../interceptors/error.interceptor';
 
 /**
- * /ModelScreenLayout — ekran tasarımı (model formu ve liste yerleşimi).
+ * /ModelScreenLayout — screen design (model form and list layout).
  *
- * `getPublished` kayıt ekranlarının YARDIMCI isteğidir: başarısız olursa ekran varsayılan
- * görünümle çalışır, kullanıcı sayfadan koparılmamalı (SKIP_FORBIDDEN_REDIRECT). Sunucu,
- * model + görünümün tasarımlarından kullanıcının ROLÜNE düşeni seçer (rol kimlikleri istemcide yok).
- * Diğer uçlar admin'e özeldir (tasarımcı, Tasarım sayfası). İşlem DTO'larında `layoutId: null`
- * görünümün varsayılan tasarımıdır.
+ * `getPublished` is an AUXILIARY request of the record screens: if it fails, the screen runs with
+ * the default view and the user must not be pulled off the page (SKIP_FORBIDDEN_REDIRECT). The server
+ * picks, from the designs of model + view, the one matching the user's ROLE (role IDs are not on the client).
+ * The other endpoints are admin-only (designer, Tasarım (Design) page). In operation DTOs `layoutId: null`
+ * is the view's default design.
  */
 @Injectable({ providedIn: 'root' })
 export class ScreenLayoutService {
@@ -51,7 +51,7 @@ export class ScreenLayoutService {
     return this.http.post<DataResponseModel<ScreenLayoutSaveResultDto>>(`${this.baseUrl}/discardDraft`, dto);
   }
 
-  /** Varsayılanda tasarımı kaldırır; varyantta tasarımı siler. */
+  /** On the default, removes the design; on a variant, deletes the design. */
   reset(dto: ScreenLayoutActionDto): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/reset`, dto);
   }

@@ -15,11 +15,11 @@ interface DraftEntry {
   tableName: string;
   description: string;
   version: number;
-  /** D-FK: üst modelin id'si. null ise bu bir ana (kök) modeldir. */
+  /** D-FK: id of the parent model. If null, this is a root model. */
   parentTableId: number | null;
-  /** Model ağacındaki derinlik. Kök = 1. */
+  /** Depth in the model tree. Root = 1. */
   depth: number;
-  /** Bu düğümün alt modelleri (ağaç yapısı, form-build'deki gibi). */
+  /** Sub-models of this node (tree structure, as in form-build). */
   children: DraftEntry[];
   publishing: boolean;
   publishMessage: string | null;
@@ -28,16 +28,16 @@ interface DraftEntry {
   deleteMessage: string | null;
   deleteSuccess: boolean | null;
   /**
-   * true ise bu düğümün gerçek parent'ı taslak listesinde yok (zaten yayınlanmış) —
-   * yani yayınlama yarım kalmış: ana model yayınlandı ama bu alt model yayınlanamadı.
-   * Ağaçta kök gibi görünür (parent'ı bu listede bulunamadığı için) ama aslında bir alt modeldir.
+   * If true, this node's real parent is not in the draft list (already published) —
+   * i.e. publishing was left half-done: the root model was published but this sub-model wasn't.
+   * It looks like a root in the tree (since its parent isn't in this list) but is actually a sub-model.
    */
   isOrphanChild: boolean;
-  /** isOrphanChild ise ata zinciri, kökten gerçek parent'a: "AnaModel → AltModel1" */
+  /** If isOrphanChild, the ancestor chain from the root to the real parent: "AnaModel → AltModel1" */
   parentPath: string | null;
 }
 
-/** getAllTables() yanıtındaki tek tablo girdisi — parentPath için ata zinciri çözümlemesinde kullanılır. */
+/** A single table entry from the getAllTables() response — used to resolve the ancestor chain for parentPath. */
 interface TableRef {
   id: number;
   tableName: string;
@@ -52,12 +52,12 @@ interface TableRef {
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DraftModelsComponent implements OnInit {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
-  /** Düz liste — publish/delete sonrası ağacı yeniden kurmak için saklanır. */
+  /** Flat list — kept to rebuild the tree after publish/delete. */
   private drafts: DraftEntry[] = [];
-  /** Ana (kök) modeller; her birinin alt modelleri children dizisinde iç içe durur. */
+  /** Root models; each one's sub-models are nested in its children array. */
   tree: DraftEntry[] = [];
   loading = false;
   loadError: string | null = null;
@@ -79,7 +79,7 @@ export class DraftModelsComponent implements OnInit {
     this.drafts = [];
     this.tree = [];
 
-    // Kayıtlı tabloları ve yayınlanmış modelleri paralel çek
+    // Fetch saved tables and published models in parallel
     forkJoin({
       tables: this.publishedTable.getAllTables(),
       published: this.publishedModel.getModels()
@@ -92,17 +92,17 @@ export class DraftModelsComponent implements OnInit {
           return;
         }
 
-        // Yayınlanmış model adlarını set olarak tut
+        // Keep published model names as a set
         const publishedNames = new Set(
           (published.success ? (published.data ?? []) : []).map(m => m.typeName)
         );
 
-        // Tüm tablolar (yayınlanmış + taslak) — orphan alt modellerin ata zincirini
-        // (parent zaten yayınlanmış olsa da) çözebilmek için tam liste saklanır.
+        // All tables (published + draft) — the full list is kept so the ancestor chain
+        // of orphan sub-models can be resolved (even if the parent is already published).
         const allTables = tables.data ?? [];
         const allById = new Map<number, TableRef>(allTables.map(t => [t.id, t]));
 
-        // Yalnızca yayınlanmamış olanları göster
+        // Show only the unpublished ones
         this.drafts = allTables
           .filter(t => !publishedNames.has(t.tableName))
           .map(t => ({
@@ -123,8 +123,8 @@ export class DraftModelsComponent implements OnInit {
             parentPath: null
           }));
 
-        // Parent'ı taslak listesinde olmayan (= zaten yayınlanmış) düğümler için
-        // "yarım yayınlama" işaretini ve ata zincirini hesapla.
+        // For nodes whose parent is not in the draft list (= already published),
+        // compute the "half-finished publish" flag and the ancestor chain.
         const draftIds = new Set(this.drafts.map(d => d.id));
         for (const draft of this.drafts) {
           if (draft.parentTableId != null && !draftIds.has(draft.parentTableId)) {
@@ -143,9 +143,9 @@ export class DraftModelsComponent implements OnInit {
   }
 
   /**
-   * Düz taslak listesini, ana model → alt model ağacına dönüştürür (form-build'deki
-   * model-node yapısının aynısı). Parent'ı taslak listesinde olmayan (örn. parent zaten
-   * yayınlanmış) düğümler de kök gibi gösterilir.
+   * Turns the flat draft list into a root model → sub-model tree (same as the
+   * model-node structure in form-build). Nodes whose parent is not in the draft list
+   * (e.g. the parent is already published) are shown as roots too.
    */
   private buildTree(flat: DraftEntry[]): DraftEntry[] {
     const byId = new Map(flat.map(d => [d.id, d]));
@@ -177,10 +177,10 @@ export class DraftModelsComponent implements OnInit {
   }
 
   /**
-   * startId'den köke kadar ata zincirini (kök → ... → startId) isim listesi olarak döner.
-   * allById TÜM tabloları (yayınlanmış + taslak) içerir — orphan bir alt modelin parent'ı
-   * yayınlanmış olduğu için (ve dolayısıyla this.drafts'ta bulunmadığı için) zincir yalnızca
-   * bu tam liste üzerinden çözülebilir.
+   * Returns the ancestor chain from startId up to the root (root → ... → startId) as a list of names.
+   * allById contains ALL tables (published + draft) — since an orphan sub-model's parent
+   * is published (and therefore not in this.drafts), the chain can only be resolved
+   * through this full list.
    */
   private buildParentPath(startId: number, allById: Map<number, TableRef>): string {
     const names: string[] = [];
@@ -209,11 +209,11 @@ export class DraftModelsComponent implements OnInit {
           ? this.languageService.t('draft.publishedSuccess')
           : this.languageService.t('draft.publishFailed'));
 
-        // Başarılı yayınlama sonrası ağaçtan kaldır (ana model + tüm alt modelleri birlikte)
+        // After a successful publish remove it from the tree (root model + all its sub-models together)
         if (res.success) {
           setTimeout(() => {
             this.removeFromTree(draft.id);
-            this.cdr.markForCheck();   // OnPush: zamanlayici callback'i CD tetiklemez
+            this.cdr.markForCheck();   // OnPush: the timer callback doesn't trigger CD
           }, 1500);
         }
       },
@@ -225,10 +225,10 @@ export class DraftModelsComponent implements OnInit {
     });
   }
 
-  /** Onay diyaloğu açıkken pasif yapılacak taslak; null ise diyalog kapalı. */
+  /** Draft to deactivate while the confirm dialog is open; null means the dialog is closed. */
   pendingDelete: DraftEntry | null = null;
 
-  /** Onay diyaloğunun metni — alt modeli olan taslakta "ve alt modellerini" eki alır. */
+  /** Confirm dialog text — for a draft with sub-models it gets the "and its sub-models" suffix. */
   deleteConfirmMessage(): string {
     const draft = this.pendingDelete;
     if (!draft) return '';
@@ -248,9 +248,9 @@ export class DraftModelsComponent implements OnInit {
   }
 
   /**
-   * Taslağı pasif yapar (soft-delete). PublishedTable/PublishedTableMember kayıtları
-   * Active=false olur; SQL'e hiç dokunulmaz (taslak hiç yayınlanmadığı için zaten SQL
-   * tablosu yoktur). "Silinen Taslaklar" sayfasından geri yüklenebilir.
+   * Deactivates the draft (soft-delete). PublishedTable/PublishedTableMember records
+   * become Active=false; SQL is never touched (a draft was never published, so there is
+   * no SQL table anyway). Can be restored from the "Silinen Taslaklar" (Deleted drafts) page.
    */
   confirmDelete(): void {
     const draft = this.pendingDelete;
@@ -279,7 +279,7 @@ export class DraftModelsComponent implements OnInit {
     });
   }
 
-  /** Bir kök modeli (ve ona bağlı tüm alt model ağacını) düz listeden ve ağaçtan kaldırır. */
+  /** Removes a root model (and its whole sub-model tree) from the flat list and the tree. */
   private removeFromTree(rootId: number): void {
     this.drafts = this.drafts.filter(d => d.id !== rootId);
     this.tree = this.tree.filter(d => d.id !== rootId);

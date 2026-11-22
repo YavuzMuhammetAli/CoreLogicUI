@@ -2,11 +2,11 @@ import { Pipe, PipeTransform, inject } from '@angular/core';
 import { ModelLabelService } from '../services/model-label.service';
 
 /**
- * Model tablo adını etiketine çevirir; etiket yoksa adı aynen döner.
- * Impure: etiketler sinyalden okunur ve geç gelir (TranslatePipe ile aynı desen) —
- * pure olsaydı ilk çizimdeki tablo adı önbellekte takılı kalırdı.
+ * Turns a model table name into its label; returns the name as is if there is no label.
+ * Impure: labels are read from a signal and arrive late (same pattern as TranslatePipe) —
+ * if it were pure, the table name from the first render would stay stuck in the cache.
  *
- * Kullanım: {{ workflow.modelName | modelLabel }}
+ * Usage: {{ workflow.modelName | modelLabel }}
  */
 @Pipe({
   name: 'modelLabel',

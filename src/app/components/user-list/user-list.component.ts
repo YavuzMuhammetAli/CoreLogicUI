@@ -10,10 +10,10 @@ import { markDirty } from '../../utils/change-detection';
 import { IconComponent } from '../shared/icon/icon.component';
 
 /**
- * Şirket içi kullanıcı listesi (/users) — yalnızca admin (adminGuard).
+ * In-company user list (/users) — admin only (adminGuard).
  *
- * Kullanıcı eklemenin TEK yolu bu ekrandır; sisteme dışarıdan katılım yoktur.
- * Satır tıklanınca /users/:id detayına gidilir.
+ * This screen is the ONLY way to add users; there is no external sign-up into the system.
+ * Clicking a row goes to the /users/:id detail.
  */
 @Component({
     selector: 'app-user-list',
@@ -23,7 +23,7 @@ import { IconComponent } from '../shared/icon/icon.component';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserListComponent {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly userAdminService = inject(UserAdminService);
@@ -33,11 +33,11 @@ export class UserListComponent {
   readonly users = signal<AppUser[]>([]);
   readonly loading = signal(false);
   readonly loadError = signal('');
-  /** Üzerinde işlem yapılan kullanıcının ID'si — o satırın butonlarını kilitler. */
+  /** ID of the user being acted on — locks the buttons of that row. */
   readonly busyId = signal<number | null>(null);
   readonly actionError = signal('');
 
-  /** Oturumdaki kullanıcının ID'si — kendi satırında yıkıcı aksiyonlar kapatılır. */
+  /** ID of the signed-in user — destructive actions are disabled on their own row. */
   readonly currentUserId = signal<number | null>(null);
 
   readonly hasUsers = computed(() => this.users().length > 0);
@@ -64,7 +64,7 @@ export class UserListComponent {
     });
   }
 
-  /** Kendi hesabı mı — yıkıcı aksiyonlar engellenir (backend de reddeder). */
+  /** Is it one's own account — destructive actions are blocked (the backend rejects them too). */
   isSelf(user: AppUser): boolean {
     return user.id === this.currentUserId();
   }

@@ -4,7 +4,7 @@ import {
 
 describe('list-query', () => {
   describe('filterKindOf', () => {
-    it('kolon tipini filtre denetimine çevirir', () => {
+    it('maps the column type to a filter control', () => {
       expect(filterKindOf('string')).toBe('text');
       expect(filterKindOf('text')).toBe('text');
       expect(filterKindOf('enum')).toBe('enum');
@@ -15,14 +15,14 @@ describe('list-query', () => {
       expect(filterKindOf('boolean')).toBe('boolean');
     });
 
-    it('dosya, lookup ve guid filtrelenmez', () => {
+    it('file, lookup and guid are not filterable', () => {
       for (const type of ['image', 'file', 'lookup', 'guid']) {
         expect(filterKindOf(type)).toBe('none');
       }
     });
   });
 
-  it('isSortable: lookup numaraya göre sıralanacağı için kapalıdır', () => {
+  it('isSortable: lookup is disabled because it would sort by id', () => {
     expect(isSortable('string')).toBeTrue();
     expect(isSortable('timeonly')).toBeTrue();
     expect(isSortable('lookup')).toBeFalse();
@@ -40,12 +40,12 @@ describe('list-query', () => {
       { columnName: 'Onayli', dataType: 'boolean' }
     ];
 
-    it('boş seçim filtre üretmez', () => {
+    it('an empty selection produces no filter', () => {
       expect(toListFilters(columns, {})).toEqual([]);
       expect(toListFilters(columns, { Ad: { value: '' }, Adet: { from: '', to: '' } })).toEqual([]);
     });
 
-    it('metin içerir, enum ve mantıksal eşittir olur', () => {
+    it('text becomes contains, enum and boolean become equals', () => {
       expect(toListFilters(columns, { Ad: { value: 'ali' }, Durum: { value: 'Aktif' }, Onayli: { value: 'false' } }))
         .toEqual([
           { field: 'Ad', operator: 'contains', value: 'ali' },
@@ -54,36 +54,36 @@ describe('list-query', () => {
         ]);
     });
 
-    it('sayı ve tarih aralığı iki uçtan da açık bırakılabilir', () => {
+    it('number and date ranges can be open at either end', () => {
       expect(toListFilters(columns, { Adet: { from: '5' }, Tarih: { to: '2026-02-01' } })).toEqual([
         { field: 'Adet', operator: 'ge', value: '5' },
         { field: 'Tarih', operator: 'le', value: '2026-02-01' }
       ]);
     });
 
-    it('datetime bitiş günü sonuna kadar dahildir', () => {
+    it('datetime end day is inclusive until its end', () => {
       expect(toListFilters(columns, { Zaman: { from: '2026-02-01', to: '2026-02-28' } })).toEqual([
         { field: 'Zaman', operator: 'ge', value: '2026-02-01' },
         { field: 'Zaman', operator: 'lt', value: '2026-03-01' }
       ]);
     });
 
-    it('ay ve yıl sonunda taşar', () => {
+    it('rolls over at month and year end', () => {
       expect(toListFilters(columns, { Zaman: { to: '2026-12-31' } })[0].value).toBe('2027-01-01');
     });
 
-    it('filtre panelinde olmayan kolonun kalıntısı gönderilmez', () => {
+    it('leftovers for a column not in the filter panel are not sent', () => {
       expect(toListFilters(columns, { Silinen: { value: 'x' } })).toEqual([]);
     });
   });
 
-  it('activeFilterCount aralığı tek filtre sayar', () => {
+  it('activeFilterCount counts a range as one filter', () => {
     expect(activeFilterCount({ Adet: { from: '1', to: '5' }, Ad: { value: 'x' }, Bos: { value: '' } })).toBe(2);
     expect(hasFilterValue(undefined)).toBeFalse();
   });
 
   describe('nextSort', () => {
-    it('artan → azalan → yok döngüsü', () => {
+    it('ascending → descending → none cycle', () => {
       const asc = nextSort(null, 'Ad');
       expect(asc).toEqual({ column: 'Ad', direction: 'asc' });
       const desc = nextSort(asc, 'Ad');
@@ -91,7 +91,7 @@ describe('list-query', () => {
       expect(nextSort(desc, 'Ad')).toBeNull();
     });
 
-    it('başka kolona geçince artandan başlar', () => {
+    it('starts from ascending when switching to another column', () => {
       expect(nextSort({ column: 'Ad', direction: 'desc' }, 'Adet')).toEqual({ column: 'Adet', direction: 'asc' });
     });
   });

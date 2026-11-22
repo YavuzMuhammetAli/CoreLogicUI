@@ -1,6 +1,6 @@
-/* Host'un kendisi `.field` (global): bulunduğu ızgaranın doğrudan hücresi. */
+/* The host itself is `.field` (global): a direct cell of the grid it sits in. */
 
-// Sırası gelen kişinin dolduracağı alan — kilitli formda gözle bulunabilsin.
+// Field to be filled by the person whose turn it is — so it can be spotted in a locked form.
 :host(.field--step) {
   position: relative;
   padding: var(--space-2) var(--space-3);

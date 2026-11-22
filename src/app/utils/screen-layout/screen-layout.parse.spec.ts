@@ -2,8 +2,8 @@ import { FormLayout } from './screen-layout.model';
 import { parseFormLayout, parseListLayout, serializeLayout } from './screen-layout.parse';
 
 describe('screen-layout.parse', () => {
-  it('sunucunun normalize ettiği metinle aynı çıktı — anahtar sırası, varsayılanlar atlanır', () => {
-    // Backend ScreenLayoutNormalizeTests.Normalize_varsayilanlari_atlar… ile aynı girdi/çıktı.
+  it('output matches the server-normalized text — key order, defaults omitted', () => {
+    // Same input/output as backend ScreenLayoutNormalizeTests.Normalize_varsayilanlari_atlar…
     const parsed = parseFormLayout(JSON.stringify({
       schemaVersion: 1, extra: true,
       tabs: [{ title: 'Genel', id: 't1', sections: [{
@@ -22,7 +22,7 @@ describe('screen-layout.parse', () => {
       + '"hiddenColumns":[]}');
   });
 
-  it('katlanır bölümde kapalı bayrağı korunur, katlanmayanda atılır', () => {
+  it('keeps the collapsed flag on a collapsible section, drops it on a non-collapsible one', () => {
     const layout: FormLayout = {
       schemaVersion: 1,
       tabs: [{ id: 't1', title: '', sections: [
@@ -35,18 +35,18 @@ describe('screen-layout.parse', () => {
     expect(serializeLayout(layout)).toContain('{"id":"s2","items"');
   });
 
-  it('şema sürümü tanınmıyorsa null — ekran varsayılan görünüme düşer', () => {
+  it('null when the schema version is unrecognized — the screen falls back to the default view', () => {
     expect(parseFormLayout('{"schemaVersion":2,"tabs":[],"hiddenColumns":[]}')).toBeNull();
     expect(parseFormLayout('bozuk')).toBeNull();
     expect(parseFormLayout(null)).toBeNull();
   });
 
-  it('yapısal hatalı belge kullanılmaz', () => {
+  it('a document with structural errors is not used', () => {
     expect(parseFormLayout('{"schemaVersion":1,"tabs":[{"id":"t1","title":"","sections":[{"id":"s1","items":'
       + '[{"kind":"field","id":"f1","column":"A","span":0}]}]}]}')).toBeNull();
   });
 
-  it('liste: tekrar eden kolon bir kez, genişlik korunur', () => {
+  it('list: a repeated column appears once, width preserved', () => {
     const list = parseListLayout('{"schemaVersion":1,"columns":[{"column":"A","width":120},{"column":"B"}]}');
     expect(list).toEqual({ schemaVersion: 1, columns: [{ column: 'A', width: 120 }, { column: 'B' }] });
     expect(serializeLayout({ schemaVersion: 1, columns: [{ column: 'A' }, { column: 'A', width: 90 }] }))

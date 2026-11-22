@@ -25,7 +25,7 @@
   overflow-wrap: anywhere;
 }
 
-/* ── Üst kayıt paneli ──────────────────────────────────────────────────────── */
+/* ── Parent record panel ───────────────────────────────────────────────────── */
 
 .record-panel {
   margin-bottom: var(--space-6);
@@ -46,7 +46,7 @@
   overflow-wrap: anywhere;
 }
 
-/* ── Alan görüntüleme ızgarası (2 sütun) ──────────────────────────────────── */
+/* ── Field display grid (2 columns) ───────────────────────────────────────── */
 
 .field-display-grid {
   display: grid;
@@ -91,14 +91,14 @@
   object-fit: contain;
 }
 
-/* ── Düzenleme formu ──────────────────────────────────────────────────────── */
+/* ── Edit form ────────────────────────────────────────────────────────────── */
 
-/* Alanların ızgarası app-record-layout'ta (varsayılan görünüm + ekran tasarımı). */
+/* The field grid lives in app-record-layout (default view + screen design). */
 .record-fields {
   margin-bottom: var(--space-4);
 }
 
-/* ── Yükleniyor ────────────────────────────────────────────────────────────── */
+/* ── Loading ───────────────────────────────────────────────────────────────── */
 
 .detail-loading,
 .children-loading,
@@ -111,13 +111,13 @@
   font-size: var(--text-sm);
 }
 
-/* ── Alt modeller paneli ───────────────────────────────────────────────────── */
+/* ── Sub-models panel ──────────────────────────────────────────────────────── */
 
 .children-panel {
   overflow: visible;
 }
 
-/* ── Sekme çubuğu ──────────────────────────────────────────────────────────── */
+/* ── Tab bar ───────────────────────────────────────────────────────────────── */
 
 .tab-bar {
   display: flex;
@@ -171,13 +171,13 @@
   color: #fff;
 }
 
-/* ── Sekme içerik paneli ───────────────────────────────────────────────────── */
+/* ── Tab content panel ─────────────────────────────────────────────────────── */
 
 .tab-panel {
   padding: var(--space-4);
 }
 
-/* ── Araç çubuğu ───────────────────────────────────────────────────────────── */
+/* ── Toolbar ───────────────────────────────────────────────────────────────── */
 
 .tab-toolbar {
   display: flex;
@@ -215,10 +215,10 @@
   margin-left: auto;
 }
 
-/* ── Kaydedilmeyi bekleyen satırlar ────────────────────────────────────────────
-   Satır içi ekleme formunun yerini app-record-form-dialog aldı. Burada yalnızca
-   henüz kaydedilmemiş veya kaydedilirken hata almış satırlar listelenir —
-   hata durumunda bu blok EKRANDA KALIR, kullanıcı düzeltip tekrar kaydeder. */
+/* ── Rows waiting to be saved ──────────────────────────────────────────────────
+   app-record-form-dialog replaced the inline add form. Only rows that are not yet
+   saved or that failed while saving are listed here —
+   on error this block STAYS ON SCREEN, the user fixes it and saves again. */
 
 .staged-block {
   margin: 0 var(--space-4) var(--space-4);
@@ -242,14 +242,14 @@
   overflow-x: auto;
 }
 
-/* Durum + alt kayıt rozetleri yan yana yapışmasın. */
+/* Status + child record badges should not stick together. */
 .staged-state {
   display: inline-flex;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
 
-/* Kısmi kayıt hatası özeti — başlık, liste ve ipucu alt alta aksın. */
+/* Partial save error summary — title, list and hint flow one under another. */
 .partial-save-error {
   display: flex;
   flex-direction: column;
@@ -262,7 +262,7 @@
   }
 }
 
-/* Kaydedilemeyen satır — düzeltilebilsin diye vurgulanır ve kaybolmaz. */
+/* Row that could not be saved — highlighted and kept so it can be fixed. */
 .staged-block .row-invalid td {
   background: var(--danger-bg);
 }
@@ -272,7 +272,7 @@
   background: var(--danger-bg);
 }
 
-/* ── Veri tablosu ──────────────────────────────────────────────────────────── */
+/* ── Data table ────────────────────────────────────────────────────────────── */
 
 .tab-table-wrapper {
   overflow-x: auto;
@@ -302,7 +302,7 @@
   opacity: 0.3;
 }
 
-/* ── Satır seçimi ──────────────────────────────────────────────────────────── */
+/* ── Row selection ─────────────────────────────────────────────────────────── */
 
 .select-col,
 .select-cell {
@@ -310,7 +310,7 @@
   text-align: center;
 }
 
-/* Satırın tamamı düzenleme pop-up'ını açar (aksiyon butonları kaldırıldı). */
+/* The whole row opens the edit pop-up (action buttons were removed). */
 .clickable-row {
   cursor: pointer;
 
@@ -324,7 +324,7 @@ tr.row-selected td {
   background: var(--surface-warm);
 }
 
-/* Bekleyen satırlar başlığındaki toplu kaldırma butonu sağa yaslanır. */
+/* The bulk remove button in the pending rows header is right-aligned. */
 .staged-bulk-btn {
   margin-left: auto;
 }
@@ -345,8 +345,8 @@ tr.row-selected td {
     max-width: 100%;
   }
 
-  /* flex-start: sağa yaslı ve sarılmayan satır taşınca düğmeler ekranın SOLUNDAN,
-     kaydırılamayan tarafa düşüyordu (toplu sil / Kolonlar ulaşılamazdı). */
+  /* flex-start: with right alignment and no wrapping, an overflowing row pushed the buttons off the LEFT
+     edge of the screen, the side that cannot be scrolled (bulk delete / Columns were unreachable). */
   .tab-toolbar-actions {
     margin-left: 0;
     justify-content: flex-start;
@@ -361,14 +361,14 @@ tr.row-selected td {
   }
 }
 
-// ─── Form tabanlı iş akışı ──────────────────────────────────────────────────
+// ─── Form-based workflow ────────────────────────────────────────────────────
 
-// Başlıktaki aksiyonlar adım butonlarıyla çoğalabilir; dar ekranda alt satıra kaysın.
+// Header actions can multiply with step buttons; on narrow screens they wrap to the next line.
 .record-panel-head .panel-actions {
   flex-wrap: wrap;
 }
 
-// Formun üstündeki süreç şeridi: hangi akış, hangi adım, kayıt kilitli mi.
+// Process strip above the form: which workflow, which step, whether the record is locked.
 .workflow-strip {
   display: flex;
   align-items: center;
@@ -396,4 +396,4 @@ tr.row-selected td {
   color: var(--muted);
 }
 
-// Adım alanı vurgusu (.field--step) app-record-field'ın kendi stilinde.
+// Step field highlight (.field--step) is in app-record-field's own styles.

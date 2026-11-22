@@ -1,5 +1,5 @@
-/* Diyalog iskeleti onay diyaloğuyla aynı (shared/confirm-dialog) — geri yükleme ilerlemesi
-   kapatılamadığı için ayrı bileşen; arka plana tıklama kapatmaz. */
+/* The dialog skeleton is the same as the confirm dialog (shared/confirm-dialog) — a separate component
+   because restore progress cannot be closed; clicking the backdrop does not close it. */
 .dialog-overlay {
   position: fixed;
   inset: 0;
@@ -17,7 +17,7 @@
   width: 100%;
   max-width: 520px;
   max-height: calc(100vh - 2 * var(--space-4));
-  /* dvh = görünen alan; vh mobilde tarayıcı çubuklarını da sayar ve alttaki düğmeler kesilir */
+  /* dvh = visible area; on mobile vh also counts the browser bars and the bottom buttons get cut off */
   max-height: calc(100dvh - 2 * var(--space-4));
   overscroll-behavior: contain;
   overflow-y: auto;

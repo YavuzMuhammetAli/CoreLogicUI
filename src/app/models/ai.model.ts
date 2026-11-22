@@ -1,11 +1,11 @@
 /**
- * Yapay Zeka modülünün (G4) veri modelleri.
- * Backend `Entities.DTOs.AiDtos` ile bire bir eşleşir.
+ * Data models of the AI module (G4).
+ * Match the backend `Entities.DTOs.AiDtos` one to one.
  */
 
 // ── Sohbet ─────────────────────────────────────────────────────────────────
 
-/** GET /Ai/conversations satırı (sol panel). */
+/** A GET /Ai/conversations row (left panel). */
 export interface AiConversationListItem {
   id: number;
   title: string;
@@ -26,26 +26,26 @@ export interface AiMessage {
   /** user | assistant */
   role: 'user' | 'assistant';
   content: string;
-  /** Özetlenmiş düşünme çıktısı — yalnız gösterim. */
+  /** Summarized thinking output — display only. */
   thinkingSummary?: string | null;
   inputTokens: number;
   outputTokens: number;
   createdOn: string;
 }
 
-/** POST /Ai/chat gövdesi. conversationId yoksa yeni sohbet açılır. */
+/** Body of POST /Ai/chat. Without a conversationId a new conversation is started. */
 export interface AiChatRequest {
   conversationId?: number | null;
   message: string;
 }
 
-// ── Öneriler ───────────────────────────────────────────────────────────────
+// ── Proposals ──────────────────────────────────────────────────────────────
 
 export type AiProposalKind = 'model' | 'report' | 'dashboard' | 'model_change';
 
 /**
- * proposed → imported → published, ya da herhangi bir adımda failed.
- * `imported` yalnız model önerileri için geçerlidir (metadata yazıldı, taslak halde).
+ * proposed → imported → published, or failed at any step.
+ * `imported` applies only to model proposals (metadata written, in draft state).
  */
 export type AiProposalStatus = 'proposed' | 'imported' | 'published' | 'failed';
 
@@ -53,22 +53,22 @@ export interface AiProposal {
   id: number;
   kind: AiProposalKind;
   name: string;
-  /** Tool girdisinin ham JSON'u; `parseProposalPayload` ile çözülür. */
+  /** Raw JSON of the tool input; decoded with `parseProposalPayload`. */
   payloadJson: string;
   status: AiProposalStatus;
   errorMessage?: string | null;
   importedEntityId?: number | null;
 }
 
-/** POST /Ai/proposals/{id}/status gövdesi. */
+/** Body of POST /Ai/proposals/{id}/status. */
 export interface AiProposalStatusUpdate {
   status: AiProposalStatus;
   errorMessage?: string | null;
   importedEntityId?: number | null;
 }
 
-// ── Öneri yükleri (PayloadJson içeriği) ────────────────────────────────────
-// Şekiller backend'deki CoreLogicToolCatalog tool şemalarıyla eşleşir.
+// ── Proposal payloads (PayloadJson content) ────────────────────────────────
+// The shapes match the tool schemas in the backend CoreLogicToolCatalog.
 
 export interface AiProposedColumn {
   columnName: string;
@@ -105,9 +105,9 @@ export interface AiModelPayload {
 }
 
 /**
- * propose_model_change — KAYITLI bir modelde meta veri değişikliği ve/veya yeni kolonlar.
- * `alterColumns`'ta yalnız DEĞİŞEN alanlar gelir; verilmeyen alan kayıtlı değerinde kalır.
- * Ad ve tip değişmez (backend tool şeması bunları hiç taşımaz).
+ * propose_model_change — metadata change and/or new columns on a SAVED model.
+ * `alterColumns` carries only the CHANGED fields; an omitted field keeps its saved value.
+ * Name and type do not change (the backend tool schema does not carry them at all).
  */
 export interface AiColumnChange {
   columnName: string;
@@ -120,7 +120,7 @@ export interface AiColumnChange {
   max?: number;
   regex?: string;
   regexMessage?: string;
-  /** enum'da TÜM izinli değerler: 'A|B|C'. */
+  /** For enum, ALL allowed values: 'A|B|C'. */
   enumValues?: string;
   lookupDisplayColumn?: string;
 }
@@ -146,7 +146,7 @@ export interface AiReportPayload {
 export interface AiDashboardPayload {
   name: string;
   widgets: {
-    /** Rapor ADIYLA referanslanır; ID yayınlama sırasında çözülür. */
+    /** Referenced by report NAME; the ID is resolved during publishing. */
     reportName: string;
     chartType: string;
     x: number;
@@ -159,8 +159,8 @@ export interface AiDashboardPayload {
 // ── Kota ───────────────────────────────────────────────────────────────────
 
 /**
- * GET /Ai/usage. `entitled` false ise planda `ai_tokens_per_month` satırı yok
- * demektir (deny-by-default) — satırın yokluğu erişimin yokluğudur.
+ * GET /Ai/usage. If `entitled` is false the plan has no `ai_tokens_per_month` row
+ * (deny-by-default) — the absence of the row is the absence of access.
  */
 export interface AiUsage {
   entitled: boolean;
@@ -170,35 +170,35 @@ export interface AiUsage {
   periodStart: string;
   periodEnd: string;
   /**
-   * Yeni istek şu an başlatılabilir mi — sunucunun ön kontrolüyle AYNI kural (kalan pay,
-   * süren isteklerin tuttuğu düşülerek, `minimumToStart`'tan az değil). Arayüz kendi eşiğini
-   * hesaplamaz: önceden "kalan ≤ 0" diyordu, sunucu 20.000'in altında reddediyordu.
+   * Can a new request be started right now — the SAME rule as the server's pre-check (remaining
+   * share, minus what running requests hold, not below `minimumToStart`). The UI does not compute
+   * its own threshold: it used to say "remaining ≤ 0" while the server rejected below 20,000.
    */
   canStart: boolean;
   minimumToStart: number;
-  /** Bu şirketin süren isteklerinin tuttuğu pay (henüz tüketime yazılmadı). */
+  /** Share held by this company's running requests (not yet written to consumption). */
   inFlight: number;
 }
 
-// ── Akış olayları ──────────────────────────────────────────────────────────
+// ── Stream events ──────────────────────────────────────────────────────────
 
-/** POST /Ai/chat'in SSE olayları. */
+/** SSE events of POST /Ai/chat. */
 export type AiStreamEvent =
-  /** Akışın ilk olayı; yeni sohbetin kimliğini taşır. */
+  /** The first event of the stream; carries the new conversation's ID. */
   | { type: 'meta'; conversationId: number }
   | { type: 'text'; text: string }
   | { type: 'thinking'; text: string }
   /**
-   * Bir tool çalıştı (öneri kaydedildi ya da kolonlar okundu); sağ paneli tazelemek ve akışta
-   * adım satırı göstermek için. `subject` modelin/raporun adıdır (girdiden; yoksa boş).
+   * A tool ran (a proposal was saved or columns were read); to refresh the right panel and show a
+   * step line in the stream. `subject` is the model/report name (from the input; empty otherwise).
    */
   | { type: 'tool'; name: string; subject?: string }
-  /** Sağlayıcı yoğun: yeniden deneniyor / yedek modele geçiliyor (metin sunucuda, istek dilinde). */
+  /** Provider busy: retrying / switching to the fallback model (text on the server, in the request language). */
   | { type: 'status'; message: string }
   | { type: 'usage'; inputTokens: number; outputTokens: number }
-  /** Güvenlik denetimi isteği reddetti. */
+  /** The safety check rejected the request. */
   | { type: 'refusal' }
-  /** Kota yanıt sırasında bitti; yanıt yarıda kesildi (mesaj sunucuda, istek dilinde). */
+  /** Quota ran out during the response; the response was cut off (message on the server, in the request language). */
   | { type: 'quota'; message: string }
   | { type: 'error'; message: string }
   | { type: 'done' };

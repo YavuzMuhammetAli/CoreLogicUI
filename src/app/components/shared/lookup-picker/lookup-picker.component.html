@@ -30,9 +30,9 @@
   </div>
 
   @if (isOpen()) {
-    <!-- Konum JS'ten gelir: liste position:fixed olduğu için (kırpan .panel /
-         .dialog-panel atalarından kurtulmak zorunda) koordinatlar input'un
-         getBoundingClientRect()'inden hesaplanır. -->
+    <!-- The position comes from JS: since the list is position:fixed (it must escape the
+         clipping .panel / .dialog-panel ancestors) the coordinates are computed from the
+         input's getBoundingClientRect(). -->
     <ul class="lk-list" role="listbox" [id]="listboxId"
         [style.top]="listPos().top"
         [style.left]="listPos().left"
@@ -55,8 +55,8 @@
         }
       }
 
-      <!-- Sonsuz kaydırma tetikleyicisi: görünür alana girince sonraki 50 kayıt istenir.
-           Liste sonuna gelindiyse hiç render edilmez, böylece gözlemci de tetiklenmez. -->
+      <!-- Infinite scroll trigger: when it enters the visible area the next 50 records are requested.
+           Once the end of the list is reached it isn't rendered at all, so the observer doesn't fire. -->
       @if (hasMore()) {
         <li #sentinel class="lk-sentinel" aria-hidden="true"></li>
       }

@@ -16,7 +16,7 @@
   }
 }
 
-/* ── Palet (form tasarımcısıyla aynı görünüm) ──────────────────────────────── */
+/* ── Palette (same look as the form designer) ──────────────────────────────── */
 
 .palette {
   position: sticky;
@@ -68,7 +68,7 @@
   color: var(--muted);
 }
 
-/* ── Önizleme tablosu ──────────────────────────────────────────────────────── */
+/* ── Preview table ─────────────────────────────────────────────────────────── */
 
 .list-canvas {
   position: relative;
@@ -81,7 +81,7 @@
   border-radius: var(--radius-md);
 }
 
-/* model-data'daki sabit genişlikli tabloyla aynı kural (global td max-width'ü ezer) */
+/* Same rule as the fixed-width table in model-data (overrides the global td max-width) */
 .list-preview {
   table-layout: fixed;
   min-width: 100%;
@@ -137,8 +137,8 @@
   color: var(--muted);
 }
 
-/* Başlık hücresinin İÇİNDE durur: hücre `overflow: hidden` (etiket kırpma) olduğundan dışa
-   taşan yarısı kırpılır ve imleç tutamaç yerine başlığı yakalardı. */
+/* Sits INSIDE the header cell: since the cell is `overflow: hidden` (label clipping), the half
+   sticking out would be clipped and the pointer would grab the header instead of the handle. */
 .list-resize {
   position: absolute;
   top: 0;
@@ -189,7 +189,7 @@
   pointer-events: none;
 }
 
-/* ── İnceleyici ────────────────────────────────────────────────────────────── */
+/* ── Inspector ─────────────────────────────────────────────────────────────── */
 
 .list-inspector {
   position: sticky;
@@ -237,7 +237,7 @@
   color: var(--muted);
 }
 
-/* ── Telefon ───────────────────────────────────────────────────────────────── */
+/* ── Phone ─────────────────────────────────────────────────────────────────── */
 
 .structure-notice { margin-bottom: var(--space-4); }
 

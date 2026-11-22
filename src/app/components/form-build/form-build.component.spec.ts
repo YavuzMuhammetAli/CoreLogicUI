@@ -12,8 +12,8 @@ describe('FormBuildComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [FormBuildComponent],
-      // Bilesenler servisleri uzerinden HttpClient'a baglidir; app.config.ts'teki
-      // provideHttpClient TestBed'de otomatik gelmez.
+      // Components depend on HttpClient through their services; provideHttpClient from
+      // app.config.ts is not provided automatically in TestBed.
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])]
     })
     .compileComponents();

@@ -5,14 +5,14 @@ import { closeOnOutsidePointer } from '../../../utils/outside-pointer';
 import { IconComponent } from '../icon/icon.component';
 
 /**
- * Model adı seçmek için basit, bağımlılıksız autocomplete (combobox).
+ * Simple, dependency-free autocomplete (combobox) for picking a model name.
  *
- * Projede hazır bir autocomplete YOK; bu component o boşluğu doldurur.
- * Kullanım: ilişki popup'ında hedef model seçimi — yalnızca YAYINLANMIŞ
- * modeller `options` olarak geçilir.
+ * The project has NO ready-made autocomplete; this component fills that gap.
+ * Usage: picking the target model in the relationship popup — only PUBLISHED
+ * models are passed as `options`.
  *
- * A11y: role="combobox" + aria-expanded/aria-activedescendant, klavye ile
- * ↑/↓ gezinme, Enter ile seçme, Esc ile kapatma.
+ * A11y: role="combobox" + aria-expanded/aria-activedescendant, keyboard
+ * ↑/↓ navigation, Enter to select, Esc to close.
  */
 @Component({
     selector: 'app-model-autocomplete',
@@ -25,50 +25,50 @@ export class ModelAutocompleteComponent {
   private readonly host = inject(ElementRef<HTMLElement>);
 
   /**
-   * Örnek başına artan sayaç — DOM id'lerini benzersizleştirir.
+   * Per-instance incrementing counter — makes DOM ids unique.
    *
-   * Sabit id kullanılamaz: aynı sayfada iki autocomplete olduğunda id'ler
-   * çakışır ve aria-controls / aria-activedescendant yanlış elemana işaret
-   * eder (ekran okuyucu başka bir listeyi okur).
+   * A fixed id can't be used: with two autocompletes on the same page the ids
+   * collide and aria-controls / aria-activedescendant point to the wrong element
+   * (the screen reader reads a different list).
    */
   private static instanceCount = 0;
   private readonly uid = `model-ac-${++ModelAutocompleteComponent.instanceCount}`;
 
-  /** Açılır listenin DOM id'si (aria-controls tarafından kullanılır). */
+  /** DOM id of the dropdown list (used by aria-controls). */
   readonly listboxId = `${this.uid}-listbox`;
 
-  /** Seçilebilir model adları (yalnızca yayınlanmış modeller verilmelidir). */
+  /** Selectable model names (only published models should be passed). */
   options = input<string[]>([]);
 
-  /** Girdi devre dışı mı. */
+  /** Whether the input is disabled. */
   disabled = input(false);
 
-  /** Yer tutucu metin anahtarı çözülmüş hali. */
+  /** Placeholder text (already resolved from its key). */
   placeholder = input('');
 
-  /** Erişilebilirlik etiketi. */
+  /** Accessibility label. */
   ariaLabel = input('');
 
-  /** Geçersiz durumda kırmızı çerçeve (aria-invalid) gösterilsin mi. */
+  /** Whether to show the red border (aria-invalid) in the invalid state. */
   invalid = input(false);
 
-  /** Seçili model adı — iki yönlü bağlanır. */
+  /** Selected model name — two-way bound. */
   value = model<string>('');
 
-  /** Kullanıcının yazdığı filtre metni. */
+  /** Filter text typed by the user. */
   readonly query = signal('');
   readonly isOpen = signal(false);
   readonly activeIndex = signal(-1);
 
   constructor() {
-    // Dışarı dokununca listeyi kapat — dinleyici yalnız açıkken bağlı (bkz. utils/outside-pointer).
+    // Close the list on an outside tap — the listener is attached only while open (see utils/outside-pointer).
     closeOnOutsidePointer(this.isOpen, () => this.host.nativeElement, () => {
       this.isOpen.set(false);
       this.activeIndex.set(-1);
     });
   }
 
-  /** Yazılan metne göre filtrelenmiş seçenekler. */
+  /** Options filtered by the typed text. */
   readonly filtered = computed(() => {
     const term = this.query().trim().toLowerCase();
     const all = this.options();
@@ -76,7 +76,7 @@ export class ModelAutocompleteComponent {
     return all.filter(o => o.toLowerCase().includes(term));
   });
 
-  /** Girdi kutusunda gösterilecek metin: açıkken filtre, kapalıyken seçili değer. */
+  /** Text shown in the input box: the filter while open, the selected value while closed. */
   readonly displayText = computed(() => (this.isOpen() ? this.query() : this.value()));
 
   onFocus(): void {
@@ -136,11 +136,11 @@ export class ModelAutocompleteComponent {
       case 'Escape':
         if (this.isOpen()) {
           event.preventDefault();
-          // Olay document'e ÇIKMAMALI: bu component ilişki popup'ının içinde
-          // kullanılıyor ve popup'ın @HostListener('document:keydown.escape')
-          // dinleyicisi tetiklenirse kullanıcı yalnız listeyi kapatmak isterken
-          // doldurduğu tüm formu kaybeder. (Aynı tuzağın document seviyesindeki
-          // karşılığı datatype-help'te stopImmediatePropagation ile çözülmüştü.)
+          // The event MUST NOT reach document: this component is used inside the
+          // relationship popup, and if the popup's @HostListener('document:keydown.escape')
+          // listener fires, the user loses the whole form they filled in while only
+          // wanting to close the list. (The document-level counterpart of the same
+          // trap was solved in datatype-help with stopImmediatePropagation.)
           event.stopPropagation();
           this.isOpen.set(false);
           this.activeIndex.set(-1);

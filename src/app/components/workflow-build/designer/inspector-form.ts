@@ -5,16 +5,16 @@ import { ExitKind, ExitPort, exitsOf, sameKey } from '../../../utils/workflow/wo
 import { KEY_PATTERN } from '../workflow-step.form';
 
 /**
- * Özellik panelinin adım dönüşümleri — SAF. Her biri adımın yeni halini döner;
- * değer değişmiyorsa AYNI nesneyi döner (belge değişmesin, geri al adımı oluşmasın).
- * Panelde karşılığı olmayan alanlar (form alanları, dallar, SLA politikası) korunur.
+ * Step transformations of the inspector panel — PURE. Each returns the new step;
+ * if the value does not change it returns the SAME object (no document change, no undo step).
+ * Fields without a counterpart in the panel (form fields, branches, SLA policy) are preserved.
  */
 
 export function setName(step: WorkflowStep, name: string): WorkflowStep {
   return step.name === name ? step : { ...step, name };
 }
 
-/** Atama türü değişince seçili kişi/rol sıfırlanır (rol id'si kullanıcı id'si olamaz). */
+/** When the assignment type changes the selected user/role is reset (a role id cannot be a user id). */
 export function setAssignmentMode(step: WorkflowStep, mode: WorkflowAssignmentMode): WorkflowStep {
   if (step.assignment?.mode === mode) return step;
 
@@ -25,7 +25,7 @@ export function setAssignmentMode(step: WorkflowStep, mode: WorkflowAssignmentMo
   }
 }
 
-/** Rol/kullanıcı seçimi; boş seçim (0/NaN) eksik atama olarak kalır. */
+/** Role/user selection; an empty selection (0/NaN) remains a missing assignment. */
 export function setAssignee(step: WorkflowStep, id: number | null): WorkflowStep {
   const value = id && id > 0 ? id : null;
   const assignment = step.assignment;
@@ -38,8 +38,8 @@ export function setAssignee(step: WorkflowStep, id: number | null): WorkflowStep
 }
 
 /**
- * Süre sınırı (saat). Boş/sıfır süre sınırını kaldırır; yükseltme süresi yoksa
- * SLA bloğu tamamen düşer (boş SLA nesnesi doğrulamada anlamsız alan bırakırdı).
+ * Time limit (hours). An empty/zero duration removes the limit; if there is no escalation
+ * duration the SLA block is dropped entirely (an empty SLA object would leave a meaningless field in validation).
  */
 export function setDueHours(step: WorkflowStep, hours: number | null): WorkflowStep {
   const value = hours != null && Number.isFinite(hours) && hours > 0 ? hours : null;
@@ -56,8 +56,8 @@ export function setDueHours(step: WorkflowStep, hours: number | null): WorkflowS
 }
 
 /**
- * Reddetme izni — Onay ↔ Görev. Kapatınca red hedefi de temizlenir: reddi
- * kapalı adımda red hedefi doğrulamada hata (ölü kenar).
+ * Reject permission — Approval ↔ Task. Turning it off also clears the reject target: a reject
+ * target on a step with rejection disabled is a validation error (dead edge).
  */
 export function setAllowReject(step: WorkflowStep, allow: boolean): WorkflowStep {
   const current = step.form?.allowReject !== false;
@@ -73,7 +73,7 @@ export function setJoinMode(step: WorkflowStep, mode: WorkflowJoinMode): Workflo
 
 export type KeyProblem = 'empty' | 'invalid' | 'duplicate';
 
-/** Yeni anahtar kabul edilebilir mi? Kendi eski anahtarı "yinelenen" sayılmaz. */
+/** Is the new key acceptable? Its own old key does not count as a "duplicate". */
 export function keyProblem(key: string, existing: ReadonlyArray<string>, own: string): KeyProblem | null {
   if (!key.trim()) return 'empty';
   if (!KEY_PATTERN.test(key)) return 'invalid';
@@ -81,14 +81,14 @@ export function keyProblem(key: string, existing: ReadonlyArray<string>, own: st
   return null;
 }
 
-/** Paneldeki çıkış satırı: etiket türü, port ve şu anki hedef. */
+/** Exit row in the panel: label type, port and current target. */
 export interface ExitRow {
   port: ExitPort;
   kind: ExitKind;
   target: string;
 }
 
-/** Bağlanabilir çıkışlar (kapalı çıkış listelenmez — görevin red çıkışı gibi). */
+/** Connectable exits (a closed exit is not listed — like a task's reject exit). */
 export function exitRows(step: WorkflowStep): ExitRow[] {
   return exitsOf(step)
     .filter(exit => exit.enabled)

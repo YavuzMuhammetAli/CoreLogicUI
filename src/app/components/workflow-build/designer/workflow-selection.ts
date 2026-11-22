@@ -1,15 +1,15 @@
 import { ExitPort, sameKey } from '../../../utils/workflow/workflow-exits';
 import { WorkflowDesignDoc } from './workflow-design.doc';
 
-/** Seçili kenar: kaynak adım + çıkış portu (kenar kimliği). */
+/** Selected edge: source step + exit port (edge identity). */
 export interface EdgeRef {
   from: string;
   port: ExitPort;
 }
 
 /**
- * Tasarımcı seçimi. Ya düğümler ya tek bir kenar seçilidir — ikisi birden
- * değil: Delete'in neyi sileceği tartışmasız olmalı.
+ * Designer selection. Either nodes or a single edge are selected — never both:
+ * what Delete deletes must be unambiguous.
  */
 export interface DesignSelection {
   nodes: string[];
@@ -31,10 +31,10 @@ export function isNodeSelected(selection: DesignSelection, key: string): boolean
 }
 
 /**
- * Düğüme tıklamanın seçime etkisi.
- * - Ek tuşla (Shift/Ctrl): düğüm seçime eklenir ya da çıkarılır.
- * - Ek tuşsuz: düğüm zaten seçiliyse seçim KORUNUR (birden çok düğümü birlikte
- *   sürüklemek için), değilse yalnız o seçilir.
+ * Effect of a node click on the selection.
+ * - With a modifier (Shift/Ctrl): the node is added to or removed from the selection.
+ * - Without a modifier: if the node is already selected the selection is KEPT (to drag
+ *   several nodes together), otherwise only that node is selected.
  */
 export function clickNode(selection: DesignSelection, key: string, additive: boolean): DesignSelection {
   if (additive) {
@@ -47,8 +47,8 @@ export function clickNode(selection: DesignSelection, key: string, additive: boo
 }
 
 /**
- * Belgede artık olmayan anahtarları seçimden atar (silme, geri alma sonrası).
- * Değişiklik yoksa AYNI nesne döner.
+ * Drops keys no longer in the document from the selection (after delete, undo).
+ * Returns the SAME object when nothing changes.
  */
 export function pruneSelection(selection: DesignSelection, doc: WorkflowDesignDoc): DesignSelection {
   const exists = (key: string) => doc.graph.steps.some(step => sameKey(step.key, key));

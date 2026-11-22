@@ -2,24 +2,24 @@ import { ChangeDetectorRef } from '@angular/core';
 import { MonoTypeOperatorFunction, tap } from 'rxjs';
 
 /**
- * OnPush component'lerde asenkron veri geldiğinde görünümü "kirli" işaretler.
+ * Marks the view "dirty" in OnPush components when asynchronous data arrives.
  *
- * NEDEN GEREKLİ: OnPush stratejisinde bir component yalnızca (a) @Input referansı
- * değiştiğinde, (b) şablonuna bağlı bir olay tetiklendiğinde, (c) okuduğu bir signal
- * değiştiğinde ya da (d) markForCheck() çağrıldığında kontrol edilir. HTTP yanıtının
- * callback'inde `this.rows = ...` demek bunların HİÇBİRİ değildir — veri gelir ama
- * ekran güncellenmez.
+ * WHY IT IS NEEDED: under OnPush a component is checked only when (a) an @Input reference
+ * changes, (b) an event bound in its template fires, (c) a signal it reads
+ * changes, or (d) markForCheck() is called. Writing `this.rows = ...` in an HTTP response
+ * callback is NONE of these — the data arrives but
+ * the screen does not update.
  *
- * Signal tabanlı component'lerde gerekmez (signal okuması zaten (c) şıkkıdır); bu
- * operatör, alan tabanlı mevcut component'leri 550 atamayı tek tek signal'e çevirmeden
- * OnPush'a taşımak için kullanılır.
+ * Not needed in signal-based components (reading a signal is already case (c)); this
+ * operator moves existing field-based components to OnPush without converting
+ * 550 assignments to signals one by one.
  *
- * Kullanım:
+ * Usage:
  *   this.service.getAll().pipe(markDirty(this.cdr)).subscribe({ next: res => ... });
  *
- * tap, abonenin next handler'ından ÖNCE çalışır; markForCheck yalnızca bir bayrak
- * kaldırdığı ve gerçek kontrol o an ki görev bittikten sonra yapıldığı için atama
- * sırası sorun oluşturmaz.
+ * tap runs BEFORE the subscriber's next handler; since markForCheck only raises a flag
+ * and the actual check happens after the current task finishes, the assignment
+ * order is not a problem.
  */
 export function markDirty<T>(cdr: ChangeDetectorRef): MonoTypeOperatorFunction<T> {
   return tap<T>({

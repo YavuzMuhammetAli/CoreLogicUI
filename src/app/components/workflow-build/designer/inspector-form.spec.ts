@@ -13,7 +13,7 @@ function approval(extra: Partial<WorkflowStep> = {}): WorkflowStep {
 }
 
 describe('inspector-form', () => {
-  it('değişmeyen değer aynı adım nesnesini döner', () => {
+  it('an unchanged value returns the same step object', () => {
     const step = approval();
     expect(setName(step, 'Müdür')).toBe(step);
     expect(setAssignmentMode(step, 'role')).toBe(step);
@@ -22,12 +22,12 @@ describe('inspector-form', () => {
     expect(setAllowReject(step, true)).toBe(step);
   });
 
-  it('atama türü değişince seçim sıfırlanır', () => {
+  it('changing the assignment type resets the selection', () => {
     expect(setAssignmentMode(approval(), 'user').assignment).toEqual({ mode: 'user', userId: null });
     expect(setAssignmentMode(approval(), 'creator').assignment).toEqual({ mode: 'creator' });
   });
 
-  it('rol/kullanıcı seçimi; boş seçim eksik atama bırakır', () => {
+  it('role/user selection; an empty selection leaves a missing assignment', () => {
     expect(setAssignee(approval(), 5).assignment).toEqual({ mode: 'role', roleId: 5 });
     expect(setAssignee(approval(), 0).assignment).toEqual({ mode: 'role', roleId: null });
     const user = setAssignmentMode(approval(), 'user');
@@ -36,24 +36,24 @@ describe('inspector-form', () => {
     expect(setAssignee(creator, 9)).toBe(creator);
   });
 
-  describe('süre sınırı', () => {
-    it('ilk kez verilince yükseltme politikasıyla SLA açılır', () => {
+  describe('time limit', () => {
+    it('when given for the first time, SLA opens with an escalation policy', () => {
       expect(setDueHours(approval(), 48).sla).toEqual({ onTimeout: 'escalate', dueHours: 48 });
     });
 
-    it('mevcut SLA ayarları korunur', () => {
+    it('existing SLA settings are kept', () => {
       const step = approval({ sla: { dueHours: 24, escalateAfterHours: 48, onTimeout: 'autoReject' } });
       expect(setDueHours(step, 12).sla).toEqual({ dueHours: 12, escalateAfterHours: 48, onTimeout: 'autoReject' });
     });
 
-    it('silinince yalnız süre kalkar; başka ayar yoksa SLA düşer', () => {
+    it('when removed only the duration goes; with no other setting the SLA is dropped', () => {
       const withEscalation = approval({ sla: { dueHours: 24, escalateAfterHours: 48, onTimeout: 'escalate' } });
       expect(setDueHours(withEscalation, null).sla).toEqual({ escalateAfterHours: 48, onTimeout: 'escalate' });
       expect(setDueHours(approval({ sla: { dueHours: 24, onTimeout: 'escalate' } }), 0).sla).toBeNull();
     });
   });
 
-  it('reddi kapatmak red hedefini temizler (görev olur); açmak geri getirmez', () => {
+  it('disabling rejection clears the reject target (becomes a task); enabling does not restore it', () => {
     const task = setAllowReject(approval(), false);
     expect(task.form?.allowReject).toBeFalse();
     expect(task.onReject).toBeNull();
@@ -64,13 +64,13 @@ describe('inspector-form', () => {
     expect(exitRows(back).map(r => r.port)).toEqual(['approve', 'reject']);
   });
 
-  it('paralel ilerleme kuralı', () => {
+  it('parallel progress rule', () => {
     const step: WorkflowStep = { key: 'p', type: 'parallel', name: 'P', branches: [] };
     expect(setJoinMode(step, 'all')).toBe(step);
     expect(setJoinMode(step, 'any').mode).toBe('any');
   });
 
-  it('anahtar denetimi', () => {
+  it('key check', () => {
     const keys = ['mudur', 'finans'];
     expect(keyProblem('', keys, 'mudur')).toBe('empty');
     expect(keyProblem('1abc', keys, 'mudur')).toBe('invalid');
@@ -80,7 +80,7 @@ describe('inspector-form', () => {
     expect(keyProblem('yonetici', keys, 'mudur')).toBeNull();
   });
 
-  it('çıkış satırları hedefleri taşır', () => {
+  it('exit rows carry the targets', () => {
     expect(exitRows(approval())).toEqual([
       { port: 'approve', kind: 'approve', target: 'finans' },
       { port: 'reject', kind: 'reject', target: 'geri' }
@@ -88,7 +88,7 @@ describe('inspector-form', () => {
   });
 });
 
-describe('panel komutları', () => {
+describe('panel commands', () => {
   function doc(): WorkflowDesignDoc {
     const base = emptyDoc();
     return {
@@ -101,18 +101,18 @@ describe('panel komutları', () => {
     };
   }
 
-  it('patchStep değişmeyen dönüşümde belgeyi aynen döner', () => {
+  it('patchStep returns the document unchanged for a no-op transformation', () => {
     const d = doc();
     expect(patchStep(d, 'mudur', step => step)).toBe(d);
     expect(findStep(patchStep(d, 'MUDUR', step => setName(step, 'Yönetici')), 'mudur')!.name).toBe('Yönetici');
   });
 
-  it('labelStep etiketi yazar ve siler', () => {
+  it('labelStep writes and deletes the label', () => {
     expect(labelStep(doc(), 'finans', 'Finansta').graph.entityStatusMap['finans']).toBe('Finansta');
     expect(labelStep(doc(), 'mudur', '').graph.entityStatusMap['mudur']).toBeUndefined();
   });
 
-  it('renameStep referansları, başlangıcı ve etiketi taşır', () => {
+  it('renameStep moves references, the start and the label', () => {
     const renamed = renameStep(doc(), 'mudur', 'yonetici');
 
     expect(renamed.graph.startStep).toBe('yonetici');

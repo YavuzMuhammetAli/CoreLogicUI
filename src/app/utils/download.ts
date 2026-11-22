@@ -1,5 +1,5 @@
 /**
- * Tarayıcıda dosya indirme — rapor dışa aktarımı ve akış paketi ortak kullanır.
+ * Browser file download — shared by report export and the workflow package.
  */
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = window.URL.createObjectURL(blob);
@@ -7,11 +7,11 @@ export function downloadBlob(blob: Blob, filename: string): void {
   link.href = url;
   link.download = filename;
   link.click();
-  // Hemen iptal edilirse Android Chrome indirmeyi başlatamadan URL'yi kaybedebilir.
+  // If revoked immediately, Android Chrome may lose the URL before starting the download.
   setTimeout(() => window.URL.revokeObjectURL(url), 1000);
 }
 
-/** Metni (JSON vb.) dosya olarak indirir. */
+/** Downloads text (JSON etc.) as a file. */
 export function downloadText(text: string, filename: string, type = 'application/json'): void {
   downloadBlob(new Blob([text], { type: `${type};charset=utf-8` }), filename);
 }

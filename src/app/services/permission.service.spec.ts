@@ -5,10 +5,10 @@ import { environment } from '../../environments/environment';
 import { ModelPermission, MyPermissionsResponse, PermissionService } from './permission.service';
 
 /**
- * İzin servisinin senkron karar fonksiyonları ve yükleme paylaşımı.
+ * The permission service's synchronous decision functions and load sharing.
  *
- * Korunan hata: başarısız ilk yüklemenin null sonucu uçuş referansında kalıyordu; guard'lar
- * çıkış yapılana dek yeniden denemiyor, kullanıcı tüm model ekranlarından geri çevriliyordu.
+ * Bug under guard: the null result of a failed first load stayed in the in-flight reference; guards
+ * did not retry until logout, and the user was turned away from every model screen.
  */
 describe('PermissionService', () => {
   const url = `${environment.apiBaseUrl}/Permission/my`;
@@ -43,14 +43,14 @@ describe('PermissionService', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('yüklenmeden önce her şeyi reddeder ve varsayılan açılış sayfasını döner', () => {
+  it('rejects everything before loading and returns the default landing page', () => {
     expect(service.isAdmin()).toBeFalse();
     expect(service.can('Siparis', 'read')).toBeFalse();
     expect(service.canNavigate('Siparis')).toBeFalse();
     expect(service.getLandingPage()).toBe('/models');
   });
 
-  it('aynı anda çağrılan ensureLoaded tek istek atar', () => {
+  it('concurrent ensureLoaded calls send a single request', () => {
     const results: unknown[] = [];
     service.ensureLoaded().subscribe(r => results.push(r));
     service.ensureLoaded().subscribe(r => results.push(r));
@@ -61,7 +61,7 @@ describe('PermissionService', () => {
     expect(results[0]).not.toBeNull();
   });
 
-  it('yüklü veri varken yeniden istek atmaz', () => {
+  it('sends no new request while data is loaded', () => {
     service.ensureLoaded().subscribe();
     respond({ isAdmin: true, permissions: [], landingPage: null });
 
@@ -71,7 +71,7 @@ describe('PermissionService', () => {
     expect(value).toEqual(jasmine.objectContaining({ isAdmin: true }));
   });
 
-  it('başarısız yüklemeden sonra bir sonraki çağrı yeniden dener', () => {
+  it('the next call retries after a failed load', () => {
     let first: unknown = 'bekleniyor';
     service.ensureLoaded().subscribe(r => (first = r));
     httpMock.expectOne(url).flush({ success: false }, { status: 500, statusText: 'err' });
@@ -84,7 +84,7 @@ describe('PermissionService', () => {
     expect(service.can('Siparis', 'read')).toBeTrue();
   });
 
-  it('can: model adı büyük/küçük harfe duyarsız eşleşir, işlem bitlerine bakar', () => {
+  it('can: model name matches case-insensitively and checks the action bits', () => {
     service.ensureLoaded().subscribe();
     respond({
       isAdmin: false,
@@ -99,7 +99,7 @@ describe('PermissionService', () => {
     expect(service.can('Musteri', 'read')).toBeFalse();
   });
 
-  it('admin her işlemi ve her modeli geçer', () => {
+  it('admin passes every action and every model', () => {
     service.ensureLoaded().subscribe();
     respond({ isAdmin: true, permissions: [], landingPage: null });
 
@@ -108,7 +108,7 @@ describe('PermissionService', () => {
     expect(service.canNavigate('HerhangiBir')).toBeTrue();
   });
 
-  it('canNavigate Read\'den bağımsız canShowInNav bayrağını okur', () => {
+  it('canNavigate reads the canShowInNav flag independently of Read', () => {
     service.ensureLoaded().subscribe();
     respond({
       isAdmin: false,
@@ -121,7 +121,7 @@ describe('PermissionService', () => {
     expect(service.getLandingPage()).toBe('/dashboard/3');
   });
 
-  it('clear sonrası veri düşer ve ensureLoaded yeniden ister', () => {
+  it('after clear the data is dropped and ensureLoaded requests again', () => {
     service.ensureLoaded().subscribe();
     respond({ isAdmin: true, permissions: [], landingPage: null });
 

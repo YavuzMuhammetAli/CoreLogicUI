@@ -14,20 +14,20 @@ import {
 } from '../../../utils/design-history';
 
 /**
- * Akış tasarım ekranının durumu — tasarım belgesi, geri al/yinele geçmişi,
- * kaydedilmemiş değişiklik bayrağı ve seçim.
+ * State of the flow design screen — design document, undo/redo history,
+ * unsaved-changes flag and selection.
  *
- * Bileşen kapsamlıdır (`providers: [WorkflowDesignerStore]`): her tasarım
- * ekranı kendi örneğini alır, ekrandan çıkınca durum da gider.
+ * Component-scoped (`providers: [WorkflowDesignerStore]`): every design
+ * screen gets its own instance, and the state goes away when leaving the screen.
  *
- * Belgeyi değiştirmenin TEK yolu `dispatch`'tir; kurallar saf komutlarda
- * (workflow-design.commands.ts), store yalnız kayıt tutar.
+ * `dispatch` is the ONLY way to change the document; the rules live in pure commands
+ * (workflow-design.commands.ts), the store only keeps records.
  */
 @Injectable()
 export class WorkflowDesignerStore {
   private readonly history = signal<DesignHistory<WorkflowDesignDoc>>(createHistory(emptyDoc()));
 
-  /** Son kaydedilen (ya da yüklenen) belgenin serileştirilmiş hali. */
+  /** Serialised form of the last saved (or loaded) document. */
   private readonly savedSnapshot = signal(serializeDoc(emptyDoc()));
 
   readonly doc = computed(() => this.history().present);
@@ -37,26 +37,26 @@ export class WorkflowDesignerStore {
   readonly canRedo = computed(() => canRedo(this.history()));
 
   /**
-   * Kaydedilmemiş değişiklik var mı. Referans değil içerik karşılaştırılır:
-   * geri alıp kayıtlı hale dönen ya da bir değeri eski haline yazan kullanıcı
-   * "kaydedilmemiş" uyarısı görmemeli.
+   * Are there unsaved changes. Content is compared, not references:
+   * a user who undoes back to the saved state or writes a value back to its old value
+   * should not see an "unsaved" warning.
    */
   readonly dirty = computed(() => serializeDoc(this.doc()) !== this.savedSnapshot());
 
-  /** Yayınlanmış/arşiv sürüm salt-okunur açılır. */
+  /** A published/archived version opens read-only. */
   readonly readonly = signal(false);
 
-  /** Seçim — canvas ve adım listesi aynı seçimi gösterir. */
+  /** Selection — the canvas and the step list show the same selection. */
   readonly selection = signal<DesignSelection>(EMPTY_SELECTION);
 
   /**
-   * Tuvalin kamerası. Tuval sekme değişiminde DOM'dan kalkar (gizli sekmede
-   * sıfır boyutlu olur, sığdırma bozulur); dönüşte kaldığı yerden açılsın diye
-   * kamera burada saklanır. null → tuval ilk açılışta şemayı sığdırır.
+   * The canvas camera. The canvas is removed from the DOM on tab change (in a hidden tab
+   * it is zero-sized and fitting breaks); the camera is kept here so it reopens
+   * where it left off on return. null → the canvas fits the diagram on first open.
    */
   readonly camera = signal<Camera | null>(null);
 
-  /** Belgeyi yükler; geçmiş, seçim ve "kaydedilmemiş" bayrağı sıfırlanır. */
+  /** Loads the document; history, selection and the "unsaved" flag are reset. */
   load(doc: WorkflowDesignDoc): void {
     this.history.set(createHistory(doc));
     this.savedSnapshot.set(serializeDoc(doc));
@@ -64,9 +64,9 @@ export class WorkflowDesignerStore {
   }
 
   /**
-   * Komutu uygular ve geçmişe kaydeder. Aynı `reason` ile kısa aralıkla gelen
-   * değişiklikler tek geri al adımında birleşir (yazarken her harf ayrı adım
-   * olmasın). Komut belgeyi değiştirmediyse hiçbir şey kaydedilmez.
+   * Applies the command and records it in history. Changes arriving shortly after each other
+   * with the same `reason` merge into a single undo step (so each typed letter is not
+   * a separate step). If the command did not change the document nothing is recorded.
    */
   dispatch(reason: string, command: (doc: WorkflowDesignDoc) => WorkflowDesignDoc, now = Date.now()): void {
     if (this.readonly()) return;
@@ -87,15 +87,15 @@ export class WorkflowDesignerStore {
     this.pruneSelection();
   }
 
-  /** Belgede artık olmayan adımlar seçimden düşer (silme, geri alma). */
+  /** Steps no longer in the document drop out of the selection (delete, undo). */
   private pruneSelection(): void {
     this.selection.update(selection => pruneSelection(selection, this.doc()));
   }
 
   /**
-   * Başarılı kayıttan sonra: GÖNDERİLEN belge "kaydedilmiş" sayılır. İstek
-   * sürerken yapılan düzenlemeler kaydedilmiş görünmesin diye anlık görüntü
-   * gönderim anında alınıp buraya verilir.
+   * After a successful save: the SENT document counts as "saved". The snapshot is
+   * taken at send time and passed here so edits made while the request is
+   * in flight do not appear saved.
    */
   markSaved(doc: WorkflowDesignDoc = this.doc()): void {
     this.savedSnapshot.set(serializeDoc(doc));

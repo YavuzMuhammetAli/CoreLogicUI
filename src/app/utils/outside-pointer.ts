@@ -1,16 +1,16 @@
 import { DestroyRef, Signal, effect, inject } from '@angular/core';
 
 /**
- * Açılır bir öğenin "dışarıya dokunuldu" dinleyicisi — yalnız öğe AÇIKKEN bağlıdır.
+ * "Pointer outside" listener for a dropdown element — bound only while the element is OPEN.
  *
- * `@HostListener('document:pointerdown')` her örnek için sayfadaki HER dokunuşta çalışır ve
- * (OnPush'ta bile) bileşeni ve tüm atalarını kirli işaretler. Kayıt formunda her lookup alanı
- * bir seçici taşıdığından tek tıklama, kapalı onlarca seçicinin işleyicisini koşturup formun
- * tamamını yeniden kontrol ettiriyordu. Burada dinleyici açılınca eklenir, kapanınca (ve bileşen
- * yok edilince) kaldırılır.
+ * `@HostListener('document:pointerdown')` runs for every instance on EVERY tap on the page and
+ * (even under OnPush) marks the component and all its ancestors dirty. Since every lookup field in the
+ * record form carries a picker, a single click ran the handlers of dozens of closed pickers and
+ * re-checked the whole form. Here the listener is added on open and removed on close (and when the
+ * component is destroyed).
  *
- * Injection context içinde çağrılır (alan ilklendiricisi ya da constructor).
- * pointerdown: iOS Safari boş alana dokunmada click üretmeyebilir, liste açık kalırdı.
+ * Call within an injection context (field initializer or constructor).
+ * pointerdown: iOS Safari may not emit click when tapping empty space, so the list would stay open.
  */
 export function closeOnOutsidePointer(
   isOpen: Signal<boolean>,

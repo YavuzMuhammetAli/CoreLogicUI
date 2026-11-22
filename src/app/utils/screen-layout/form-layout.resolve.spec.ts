@@ -27,7 +27,7 @@ function layout(partial: Partial<FormLayout> = {}): FormLayout {
 }
 
 describe('form-layout.resolve', () => {
-  it('yerleşimi kolonlarla eşler; gizli kolonlar çizilmez', () => {
+  it('matches the layout to columns; hidden columns are not drawn', () => {
     const plan = resolveFormLayout(layout(), columns);
     expect(planColumns(plan)).toEqual(['Plaka', 'Marka', 'Aciklama']);
     expect(plan.appended).toEqual([]);
@@ -37,7 +37,7 @@ describe('form-layout.resolve', () => {
     expect(f3.kind === 'field' ? [f3.widget, f3.rows] : null).toEqual(['multiline', 5]);
   });
 
-  it('tasarımdan sonra eklenen kolon ilk sekmenin sonuna eklenir', () => {
+  it('a column added after the design is appended to the end of the first tab', () => {
     const plan = resolveFormLayout(layout({ hiddenColumns: ['SiparisId'] }), columns);
     expect(plan.appended).toEqual(['Yil']);
     expect(plan.unplaced).toEqual(['Yil']);
@@ -47,14 +47,14 @@ describe('form-layout.resolve', () => {
     expect(plan.location.get('Yil')).toEqual({ tabId: 't1', sectionId: APPENDED_SECTION_ID });
   });
 
-  it('gizli ama görünmesi gereken kolon (zorunlu / iş akışı adımı) sona eklenir', () => {
+  it('a hidden column that must be visible (required / workflow step) is appended at the end', () => {
     const plan = resolveFormLayout(layout(), columns, { forcedVisible: new Set(['Yil']) });
     expect(plan.appended).toEqual(['Yil']);
-    // Bilinçli gizlenmiş kolon "tasarım güncel değil" sayılmaz.
+    // A deliberately hidden column does not count as "design out of date".
     expect(plan.unplaced).toEqual([]);
   });
 
-  it('pop-up FK kolonunu hiç çizmez — yerleşimde olsa da', () => {
+  it('the pop-up never draws the FK column — even if it is in the layout', () => {
     const withFk = layout({ hiddenColumns: ['Yil'] });
     const plan = resolveFormLayout({
       ...withFk,
@@ -64,7 +64,7 @@ describe('form-layout.resolve', () => {
     expect(plan.appended).not.toContain('SiparisId');
   });
 
-  it('bilinmeyen (silinmiş) kolon çalışma anında atlanır, tasarımda işaretli çizilir', () => {
+  it('an unknown (deleted) column is skipped at runtime, drawn flagged in design', () => {
     const withUnknown = layout();
     const doc: FormLayout = {
       ...withUnknown,
@@ -73,8 +73,8 @@ describe('form-layout.resolve', () => {
     };
     const runtime = resolveFormLayout(doc, columns);
     expect(runtime.unknown).toEqual(['Silindi']);
-    // s1'in tek öğesi düştü → bölüm (ve sekmenin kendi bölümü kalmadığı için) çizilmez;
-    // sona eklenen kolonlar ilk ÇİZİLEN sekmeye gider.
+    // s1's only item dropped → the section (and, having no sections left, the tab) is not drawn;
+    // appended columns go to the first DRAWN tab.
     expect(runtime.tabs.map(t => t.id)).toEqual(['t2']);
 
     const design = resolveFormLayout(doc, columns, { design: true });
@@ -83,22 +83,22 @@ describe('form-layout.resolve', () => {
     expect(design.appended).toEqual([]);
   });
 
-  it('tasarım modunda boş bölüm ve sekme korunur', () => {
+  it('empty sections and tabs are kept in design mode', () => {
     const doc = layout({ tabs: [{ id: 't1', title: '', sections: [{ id: 's1', items: [] }] }] });
     expect(resolveFormLayout(doc, columns, { design: true }).tabs[0].sections.length).toBe(1);
-    // Çalışma anında boş bölüm ve içi boşalan sekme atlanır; sona eklenen kolonlar kendi sekmesinde.
+    // At runtime an empty section and an emptied tab are skipped; appended columns get their own tab.
     const runtime = resolveFormLayout(doc, columns);
     expect(runtime.tabs.map(t => t.id)).toEqual([APPENDED_TAB_ID]);
     expect(runtime.tabs[0].sections.map(s => s.id)).toEqual([APPENDED_SECTION_ID]);
   });
 
-  it('hiç sekme kalmazsa sona eklenenler kendi sekmesinde', () => {
+  it('when no tabs remain, appended columns get their own tab', () => {
     const plan = resolveFormLayout(layout({ tabs: [], hiddenColumns: [] }), columns);
     expect(plan.tabs.map(t => t.id)).toEqual([APPENDED_TAB_ID]);
     expect(plan.appended.length).toBe(columns.length);
   });
 
-  it('katlanmayan bölümün kapalı bayrağı yok sayılır', () => {
+  it('ignores the collapsed flag of a non-collapsible section', () => {
     const plan = resolveFormLayout(layout({
       tabs: [{ id: 't1', title: '', sections: [
         { id: 's1', collapsed: true, items: [{ kind: 'divider', id: 'd' }] },

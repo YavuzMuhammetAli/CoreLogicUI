@@ -1,10 +1,10 @@
 import { Translations } from './translations.model';
 
 /**
- * Rol (RBAC) ve kullanıcı bazlı izin yönetimi ekranlarına özel statik metinler.
- * `role-list`, `role-detail`, `user-permission-list`, `user-permission-detail`
- * component'lerinde kullanılır. `common.i18n.ts`'de zaten tanımlı genel anahtarlar
- * (kaydet, vazgeç, sil, düzenle vb.) burada tekrar tanımlanmaz.
+ * Static texts specific to the role (RBAC) and per-user permission management screens.
+ * Used in the `role-list`, `role-detail`, `user-permission-list`, `user-permission-detail`
+ * components. General keys already defined in `common.i18n.ts`
+ * (save, cancel, delete, edit etc.) are not redefined here.
  */
 export const PERMISSION_I18N: Translations = {
   // ── role-list.component ──
@@ -96,7 +96,7 @@ export const PERMISSION_I18N: Translations = {
   'role.detail.savingAriaLabel': { tr: 'Kaydediliyor', en: 'Saving' },
   'role.detail.saveModelPermissions': { tr: 'Bu Model İzinlerini Kaydet', en: 'Save This Model’s Permissions' },
 
-  // role-detail.component.ts — kısa izin rozet etiketleri (permSummary)
+  // role-detail.component.ts — short permission badge labels (permSummary)
   'role.detail.summaryRead': { tr: 'Oku', en: 'Read' },
   'role.detail.summaryCreate': { tr: 'Ekle', en: 'Create' },
   'role.detail.summaryUpdate': { tr: 'Güncelle', en: 'Update' },
@@ -105,7 +105,7 @@ export const PERMISSION_I18N: Translations = {
   'role.detail.summaryOwn': { tr: 'Kendi', en: 'Own' },
   'role.detail.summaryWorkflow': { tr: 'Akış', en: 'Workflow' },
 
-  // role-detail.component.ts — bildirim/validasyon mesajları
+  // role-detail.component.ts — notification/validation messages
   'role.detail.nameEmpty': { tr: 'Rol adı boş olamaz.', en: 'Role name cannot be empty.' },
   'role.detail.createError': { tr: 'Rol oluşturulamadı.', en: 'Failed to create role.' },
   'role.detail.notFound': { tr: 'Rol bulunamadı.', en: 'Role not found.' },
@@ -182,7 +182,7 @@ export const PERMISSION_I18N: Translations = {
   'permission.detail.savingEllipsis': { tr: 'Kaydediliyor…', en: 'Saving…' },
   'permission.detail.saveModelPermissions': { tr: 'Bu Model İzinlerini Kaydet', en: 'Save This Model’s Permissions' },
 
-  // user-permission-detail.component.ts — kısa izin rozet etiketleri (permSummary)
+  // user-permission-detail.component.ts — short permission badge labels (permSummary)
   'permission.detail.summaryRead': { tr: 'Oku', en: 'Read' },
   'permission.detail.summaryCreate': { tr: 'Ekle', en: 'Create' },
   'permission.detail.summaryUpdate': { tr: 'Güncelle', en: 'Update' },
@@ -191,14 +191,14 @@ export const PERMISSION_I18N: Translations = {
   'permission.detail.summaryOwn': { tr: 'Kendi', en: 'Own' },
   'permission.detail.summaryWorkflow': { tr: 'Akış', en: 'Workflow' },
 
-  // user-permission-detail.component.ts — bildirim/validasyon mesajları
+  // user-permission-detail.component.ts — notification/validation messages
   'permission.detail.notFound': { tr: 'Kullanıcı bulunamadı.', en: 'User not found.' },
   'permission.detail.loadError': { tr: 'Kullanıcı yüklenemedi.', en: 'Failed to load user.' },
   'permission.detail.adminUpdateError': { tr: 'Admin rolü güncellenemedi.', en: 'Failed to update admin role.' },
   'permission.detail.permissionsLoadError': { tr: 'İzin bilgileri yüklenemedi.', en: 'Failed to load permission information.' },
   'permission.detail.permissionsSaved': { tr: 'Model izinleri kaydedildi.', en: 'Model permissions saved.' },
   'permission.detail.permissionsSaveError': { tr: '{modelName} izinleri kaydedilemedi.', en: 'Failed to save permissions for {modelName}.' },
-  // Model izin guard'ı (guards/model-permission.guard.ts) — erişim reddedilince uyarı.
+  // Model permission guard (guards/model-permission.guard.ts) — warning when access is denied.
   'permission.guard.denied': { tr: "'{model}' modeli için {action} yetkiniz yok.", en: "You do not have {action} permission for the '{model}' model." },
   'permission.guard.deniedGeneric': { tr: 'Bu modele erişim yetkiniz yok.', en: 'You do not have access to this model.' },
   'permission.guard.action.read': { tr: 'okuma', en: 'read' },

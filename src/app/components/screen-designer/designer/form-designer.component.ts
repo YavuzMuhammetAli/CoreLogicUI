@@ -24,7 +24,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { dataTypeIcon } from '../../shared/icon/data-type-icon';
 import type { IconName } from '../../shared/icon/icons.generated';
 
-/** Paletten sürüklenen ya da tıklanan şey. */
+/** What is dragged or clicked from the palette. */
 type InsertPayload = { readonly column: string } | { readonly element: ElementKind };
 
 type Session =
@@ -32,7 +32,7 @@ type Session =
   | { kind: 'insert'; payload: InsertPayload; label: string; startX: number; startY: number; active: boolean }
   | { kind: 'resize'; itemId: string; startX: number; startSpan: number; pitch: number };
 
-/** Bırakma hedefi + çizginin tuvale göre konumu. */
+/** Drop target + position of the indicator line relative to the canvas. */
 interface DropPreview {
   readonly target: DropTarget;
   readonly tabId: string | null;
@@ -43,16 +43,16 @@ const EDGE_SCROLL_PX = 60;
 const EDGE_SCROLL_STEP = 14;
 
 /**
- * FormDesignerComponent — ekran tasarımcısının form görünümü: palet · tuval · inceleyici.
+ * FormDesignerComponent — the screen designer's form view: palette · canvas · inspector.
  *
- * Tuval 12 kolonluk CSS ızgarasıdır; alanlar gerçek alan bileşeniyle (app-record-field)
- * çizilir ama `inert`'tir — tıklama alanı değil öğeyi seçer. Sürükle-bırak Pointer Events
- * ile (proje bilinçli olarak sürükle-bırak kütüphanesi kullanmıyor): sürükleme sırasında
- * belge değişmez, yalnız bırakma çizgisi çizilir; bırakınca TEK komut gönderilir (tek geri
- * al adımı). Genişlik, öğenin sağ kenarındaki tutamaçla kolon adımına oturtularak ayarlanır.
+ * The canvas is a 12-column CSS grid; fields are drawn with the real field component (app-record-field)
+ * but are `inert` — a click selects the item, not the field. Drag and drop uses Pointer Events
+ * (the project deliberately uses no drag-and-drop library): during a drag the
+ * document does not change, only the drop line is drawn; on drop a SINGLE command is sent (one undo
+ * step). Width is set with the handle on the item's right edge, snapping to the column pitch.
  *
- * Telefonda (`narrow`) sürükle-bırak yerine yapı listesi editörü gösterilir; önizlemede
- * belge çalışma anı bileşeniyle (app-record-layout) aynen çizilir.
+ * On phones (`narrow`) a structure-list editor is shown instead of drag and drop; in preview the
+ * document is drawn exactly as the runtime component (app-record-layout) draws it.
  */
 @Component({
     selector: 'app-form-designer',
@@ -71,11 +71,11 @@ export class FormDesignerComponent {
   readonly facts = input.required<readonly LayoutColumnFact[]>();
   readonly issues = input<readonly LayoutIssue[]>([]);
   readonly typeName = input.required<string>();
-  /** Önizleme: belge çalışma anı bileşeniyle, seçilen genişlikte çizilir. */
+  /** Preview: the document is drawn with the runtime component, at the selected width. */
   readonly preview = input(false);
-  /** Önizleme çerçevesinin genişliği (px); null → tam genişlik. */
+  /** Width of the preview frame (px); null → full width. */
   readonly previewWidth = input<number | null>(null);
-  /** Telefon: sürükle-bırak yerine yapı listesi. */
+  /** Phone: a structure list instead of drag and drop. */
   readonly narrow = input(false);
 
   @ViewChild('canvasBody') private canvasBody?: ElementRef<HTMLElement>;
@@ -87,7 +87,7 @@ export class FormDesignerComponent {
   readonly gridColumns = Array.from({ length: GRID_COLUMNS }, (_, i) => i);
   readonly spanOptions = Array.from({ length: GRID_COLUMNS }, (_, i) => i + 1);
 
-  // ─── Palet ─────────────────────────────────────────────────────────────────
+  // ─── Palette ───────────────────────────────────────────────────────────────
 
   readonly search = signal('');
 
@@ -97,7 +97,7 @@ export class FormDesignerComponent {
     return column.toLocaleLowerCase().includes(term) || this.labelOf(column).toLocaleLowerCase().includes(term);
   }
 
-  /** Ne yerleştirilmiş ne gizlenmiş kolonlar — formun sonuna otomatik eklenecekler. */
+  /** Columns neither placed nor hidden — they will be appended to the end of the form automatically. */
   readonly unplaced = computed(() => {
     const placed = placedColumns(this.doc());
     const hidden = new Set(this.doc().hiddenColumns);
@@ -107,14 +107,14 @@ export class FormDesignerComponent {
   readonly hidden = computed(() =>
     this.doc().hiddenColumns.filter(n => this.columnByName().has(n) && this.matches(n)));
 
-  /** Belgede olup şemada olmayan (silinmiş) kolonlar. */
+  /** Columns present in the document but not in the schema (deleted). */
   readonly unknown = computed(() => {
     const known = this.columnByName();
     const names = new Set<string>([...placedColumns(this.doc()), ...this.doc().hiddenColumns]);
     return [...names].filter(n => !known.has(n));
   });
 
-  // ─── Tuval ─────────────────────────────────────────────────────────────────
+  // ─── Canvas ────────────────────────────────────────────────────────────────
 
   private readonly activeTabId = signal<string | null>(null);
   readonly currentTab = computed<FormTab | null>(() => {
@@ -122,7 +122,7 @@ export class FormDesignerComponent {
     return tabs.find(t => t.id === this.activeTabId()) ?? tabs[0] ?? null;
   });
 
-  /** Tuvalde ve önizlemede alanları çizmek için boş, doğrulayıcısız örnek form. */
+  /** Empty sample form without validators, used to draw fields on the canvas and in preview. */
   readonly sampleForm = computed(() => {
     const group = new FormGroup<Record<string, FormControl>>({});
     for (const column of this.columns()) {
@@ -148,7 +148,7 @@ export class FormDesignerComponent {
     inject(DestroyRef).onDestroy(() => this.detach());
   }
 
-  // ─── Görünüm yardımcıları ──────────────────────────────────────────────────
+  // ─── View helpers ──────────────────────────────────────────────────────────
 
   labelOf(column: string): string {
     return this.columnByName().get(column)?.label?.trim() || column;
@@ -190,13 +190,13 @@ export class FormDesignerComponent {
     return this.doc().tabs[index]?.title ?? '';
   }
 
-  /** Öğenin kendi sorunu var mı (silinmiş kolon, tipe uymayan gösterim …) — kırmızı çerçeve. */
+  /** Whether the item has its own issue (deleted column, display type unsuitable for the type …) — red frame. */
   hasIssue(item: FormItem): boolean {
     return this.issues().some(i => i.severity === 'error'
       && (i.targetId === item.id || (item.kind === 'field' && i.column === item.column && i.code !== 'requiredHidden')));
   }
 
-  // ─── Seçim ve tıklayarak ekleme ────────────────────────────────────────────
+  // ─── Selection and click-to-add ────────────────────────────────────────────
 
   select(id: string | null): void {
     this.store().selection.set(id);
@@ -207,7 +207,7 @@ export class FormDesignerComponent {
     this.select(tabId);
   }
 
-  /** Tıklanan palet öğesinin gideceği yer: seçili öğenin arkası, seçili bölümün sonu ya da sekmenin sonu. */
+  /** Where a clicked palette item goes: after the selected item, at the end of the selected section, or at the end of the tab. */
   private insertionPoint(): DropTarget | null {
     const doc = this.doc();
     const selected = this.selection();
@@ -251,7 +251,7 @@ export class FormDesignerComponent {
     if (tab) this.selectTab(tab.id);
   }
 
-  /** Yeni sekmenin varsayılan adı — "Sekme 3". Admin inceleyicide değiştirir. */
+  /** Default name of a new tab — "Sekme 3" (Tab 3). The admin changes it in the inspector. */
   private languageTitle(): string {
     return this.languageService.t('screen.form.untitledTab', { n: this.doc().tabs.length + 1 });
   }
@@ -275,7 +275,7 @@ export class FormDesignerComponent {
     this.store().dispatch(reason, command);
   }
 
-  // ─── Telefon yapı editörü ──────────────────────────────────────────────────
+  // ─── Phone structure editor ────────────────────────────────────────────────
 
   moveBy(itemId: string, delta: -1 | 1): void {
     this.apply(d => moveItemBy(d, itemId, delta));
@@ -302,7 +302,7 @@ export class FormDesignerComponent {
     }
   }
 
-  // ─── Sürükle-bırak ─────────────────────────────────────────────────────────
+  // ─── Drag and drop ─────────────────────────────────────────────────────────
 
   onItemPointerDown(event: PointerEvent, item: FormItem): void {
     if (!event.isPrimary || event.button !== 0) return;
@@ -343,8 +343,8 @@ export class FormDesignerComponent {
     this.detach();
     this.session = session;
     this.pointer = { x: event.clientX, y: event.clientY };
-    // Hareket dinleyicisi bölge dışında: her pointermove'da değişiklik algılaması koşmasın;
-    // durum kare başına bir kez bölgeye girilerek güncellenir.
+    // Move listener outside the zone: change detection should not run on every pointermove;
+    // state is updated by entering the zone once per frame.
     this.zone.runOutsideAngular(() => {
       document.addEventListener('pointermove', this.onMove);
       document.addEventListener('pointerup', this.onUp);
@@ -355,7 +355,7 @@ export class FormDesignerComponent {
   private pointerMove(event: PointerEvent): void {
     this.pointer = { x: event.clientX, y: event.clientY };
     if (this.frame) return;
-    // Kare başına bir hesap: ölçüm (getBoundingClientRect) her olayda yapılsa sürükleme takılır.
+    // One computation per frame: measuring (getBoundingClientRect) on every event would make dragging stutter.
     this.frame = requestAnimationFrame(() => {
       this.frame = 0;
       this.zone.run(() => this.update());
@@ -395,7 +395,7 @@ export class FormDesignerComponent {
         const drop = this.computeDrop(event.clientX, event.clientY, session.kind === 'move' ? session.itemId : null);
         if (drop) this.commitDrop(session, drop.target);
       } else if (session.kind === 'insert') {
-        // Sürüklenmeden bırakıldı: tıklama — seçimin yanına eklenir.
+        // Released without dragging: a click — inserted next to the selection.
         if ('column' in session.payload) this.addColumn(session.payload.column);
         else this.addElement(session.payload.element);
       }
@@ -441,8 +441,8 @@ export class FormDesignerComponent {
   }
 
   /**
-   * İmlecin altındaki bırakma hedefi. Sekme başlığı → o sekmenin sonu. Bölüm → içindeki
-   * sıra (taşınan öğenin kendisi hesaba katılmaz: sıra, öğe çıkarıldıktan sonraki diziye göredir).
+   * Drop target under the pointer. Tab header → end of that tab. Section → the index within it
+   * (the moved item itself is not counted: the index refers to the array after the item is removed).
    */
   private computeDrop(x: number, y: number, excludeId: string | null): DropPreview | null {
     const host = this.canvasBody?.nativeElement;
@@ -482,7 +482,7 @@ export class FormDesignerComponent {
     return { target: { sectionId: grid.dataset['sectionGrid']!, index: at }, tabId: null, line };
   }
 
-  /** İmleç pencere kenarına yaklaşınca sayfa kayar (uzun formda aşağıdaki bölüme bırakabilmek için). */
+  /** The page scrolls when the pointer nears the window edge (so you can drop into a lower section of a long form). */
   private edgeScroll(y: number): void {
     const scroller = this.canvasBody?.nativeElement.closest<HTMLElement>('.designer--fullscreen') ?? null;
     const top = scroller ? scroller.getBoundingClientRect().top : 0;

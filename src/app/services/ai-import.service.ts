@@ -28,28 +28,28 @@ import {
   validateModelPayload
 } from '../utils/ai-import.mapper';
 
-/** Bir öneri kartının aktarım/yayınlama ilerlemesi. */
+/** Import/publish progress of one proposal card. */
 export interface AiImportProgress {
   proposalId: number;
   name: string;
   state: 'running' | 'done' | 'failed';
-  /** state === 'failed' ise sebep. */
+  /** Reason when state === 'failed'. */
   error?: string;
 }
 
 /**
- * Yapay Zeka önerilerini (G4) sisteme aktarır.
+ * Imports AI proposals (G4) into the system.
  *
- * Burada YENİ bir yazma yolu yoktur: her adım kullanıcının elle yapabileceği
- * mevcut, izin denetimli servisleri çağırır (`table-detail` ekranının yaptığının
- * aynısı). Böylece AI'a ayrıcalıklı bir kanal açılmaz — aktarım, kullanıcının
- * kendi yetkisiyle yaptığı sıradan bir işlemdir.
+ * There is NO new write path here: every step calls existing, permission-checked
+ * services that the user could also call by hand (the same thing the `table-detail`
+ * screen does). So no privileged channel is opened for the AI — the import is an
+ * ordinary operation the user performs with their own permissions.
  *
- * Akış iki aşamalıdır ve sıra ZORUNLUDUR:
- *   1. importModels  → modeller taslak olarak yazılır
- *   2. publishAll    → modeller derlenir, SONRA raporlar, SONRA dashboard'lar
- * Rapor tanımı backend'de model adına ve kolonlarına karşı doğrulandığı için
- * model yayınlanmadan rapor tanımlanamaz.
+ * The flow has two stages and the order is MANDATORY:
+ *   1. importModels  → models are written as drafts
+ *   2. publishAll    → models are compiled, THEN reports, THEN dashboards
+ * Because the backend validates a report definition against the model name and its
+ * columns, a report cannot be defined before the model is published.
  */
 @Injectable({ providedIn: 'root' })
 export class AiImportService {
@@ -60,11 +60,11 @@ export class AiImportService {
   private readonly ai = inject(AiService);
   private readonly recordMetadata = inject(RecordMetadataService);
 
-  // ── Aşama 1: modelleri taslak olarak yaz ─────────────────────────────────
+  // ── Stage 1: write models as drafts ──────────────────────────────────────
 
   /**
-   * Yalnız `proposed` durumundaki model ve model değişikliği önerilerini sırayla aktarır.
-   * Yeni modeller önce gelir: bir değişiklik önerisi aynı turda aktarılan modele bakabilir.
+   * Imports only the model and model-change proposals in the `proposed` state, in order.
+   * New models go first: a change proposal may refer to a model imported in the same run.
    */
   importModels(proposals: AiProposal[]): Observable<AiImportProgress> {
     const pending = proposals.filter(p => p.status === 'proposed');
@@ -75,10 +75,10 @@ export class AiImportService {
   }
 
   /**
-   * Kayıtlı bir modelde değişiklik: yeni kolonlar `addMember`, meta veri `updateMemberMetadata`
-   * (ikisi de şema ekranının kullandığı uçlar). Meta veri değişikliği şemayı değiştirmez —
-   * hemen geçerlidir, kart `published` olur. Yeni kolon varsa SQL kolonu yayınla oluşacağı
-   * için kart `imported` kalır ve "Hepsini Yayınla" modeli yeniden yayınlar.
+   * Change to a saved model: new columns via `addMember`, metadata via `updateMemberMetadata`
+   * (both are the endpoints the schema screen uses). A metadata change does not alter the schema —
+   * it takes effect immediately and the card becomes `published`. If there is a new column, the SQL
+   * column is created on publish, so the card stays `imported` and "Hepsini Yayınla" (Publish all) republishes the model.
    */
   private importModelChange(proposal: AiProposal): Observable<AiImportProgress> {
     const payload = parseProposalPayload<AiModelChangePayload>(proposal.payloadJson);
@@ -102,7 +102,7 @@ export class AiImportService {
           )
         ).pipe(toArray());
       }),
-      // Açık oturumdaki kayıt formları yeni kuralları hemen kullansın.
+      // Let record forms in the open session use the new rules right away.
       tap(() => this.recordMetadata.invalidate(payload.entityName)),
       switchMap(() => this.markStatus(proposal.id, added.length > 0 ? 'imported' : 'published')),
       map(() => this.done(proposal)),
@@ -132,9 +132,9 @@ export class AiImportService {
   }
 
   /**
-   * Aynı adda model varsa aktarımı durdurur.
-   * `getSchema` bulunamadığında 400/404 döndürür — bu bir hata değil, aradığımız
-   * durumdur (`table-detail.component.ts` `saveNode$` ile aynı yorum).
+   * Stops the import if a model with the same name exists.
+   * `getSchema` returns 400/404 when not found — that is not an error but exactly
+   * the state we are looking for (same note as `saveNode$` in `table-detail.component.ts`).
    */
   private assertNotExists(entityName: string): Observable<void> {
     return this.publishedTable.getSchema(entityName).pipe(
@@ -145,7 +145,7 @@ export class AiImportService {
       ),
       switchMap(existing =>
         existing.success
-          ? throwError(() => new Error(`zaten-var:${entityName}`))
+          ? throwError(() => new Error(`already-exists:${entityName}`))
           : of(void 0)
       )
     );
@@ -165,7 +165,7 @@ export class AiImportService {
       );
   }
 
-  /** Önerilen kolonları sırayla ekler (yeni model ya da kayıtlı modele ek kolon). */
+  /** Adds the proposed columns in order (new model, or extra columns on a saved model). */
   private addColumns(typeName: string, columns: AiProposedColumn[]): Observable<unknown> {
     if (columns.length === 0) return of([]);
     return from(columns).pipe(
@@ -175,7 +175,7 @@ export class AiImportService {
             typeName,
             memberName: column.columnName,
             memberType: column.dataType,
-            // DİKKAT: form/öneri tarafı isNullable, API isRequired bekler.
+            // CAUTION: the form/proposal side uses isNullable, the API expects isRequired.
             isRequired: !column.isNullable,
             maxLength: column.maxLength ?? null,
             enumValues: column.enumValues ?? null,
@@ -190,9 +190,9 @@ export class AiImportService {
   }
 
   /**
-   * İlişkileri kaydeder. `RelationshipService` tablo ADINI değil ID'sini ister,
-   * bu yüzden model yazıldıktan SONRA `getAllTables()` ile çözülür
-   * (`relationships-tab.component.ts` `flush()` ile aynı desen).
+   * Saves the relationships. `RelationshipService` wants the table ID, not its NAME,
+   * so it is resolved with `getAllTables()` AFTER the model has been written
+   * (same pattern as `flush()` in `relationships-tab.component.ts`).
    */
   private saveRelationships(payload: AiModelPayload): Observable<unknown> {
     const list = payload.relationships ?? [];
@@ -203,7 +203,7 @@ export class AiImportService {
         const match = (res.data ?? []).find(
           t => t.tableName.toLowerCase() === payload.entityName.toLowerCase()
         );
-        if (!match) return throwError(() => new Error('tablo-bulunamadi'));
+        if (!match) return throwError(() => new Error('table-not-found'));
 
         return from(list).pipe(
           concatMap((relationship, index) =>
@@ -217,14 +217,14 @@ export class AiImportService {
     );
   }
 
-  // ── Aşama 2: yayınla, sonra rapor ve dashboard tanımla ───────────────────
+  // ── Stage 2: publish, then define reports and dashboards ─────────────────
 
   /**
-   * Aktarılmış modelleri yayınlar, ardından raporları ve dashboard'ları tanımlar.
-   * Sıra bağlayıcıdır; her aşama bir öncekinin ürettiği kayıtlara dayanır.
+   * Publishes the imported models, then defines the reports and dashboards.
+   * The order is binding; each stage depends on the records produced by the previous one.
    */
   publishAll(proposals: AiProposal[]): Observable<AiImportProgress> {
-    // Rapor adı → ID. Mevcut raporlarla başlar; bu turda tanımlananlar eklenir.
+    // Report name → ID. Starts with the existing reports; ones defined in this run are added.
     const reportIds = new Map<string, number>();
 
     const seed = defer(() =>
@@ -235,13 +235,13 @@ export class AiImportService {
           }
           return null;
         }),
-        // Rapor listesi alınamazsa yayınlama durmaz; yalnızca ada göre
-        // eşleşme bu turda tanımlananlarla sınırlı kalır.
+        // If the report list cannot be fetched, publishing does not stop; only name
+        // matching is limited to the reports defined in this run.
         catchError(() => of(null))
       )
     ).pipe(concatMap(() => from([] as AiImportProgress[])));
 
-    // Yeni kolonlu değişiklik önerileri de modeli yeniden yayınlar (SQL kolonu yayında açılır).
+    // Change proposals with new columns also republish the model (the SQL column is created on publish).
     const models = from(proposals.filter(p =>
       (p.kind === 'model' || p.kind === 'model_change') && p.status === 'imported'))
       .pipe(concatMap(proposal => this.publishModel(proposal)));
@@ -259,7 +259,7 @@ export class AiImportService {
     const payload = parseProposalPayload<AiModelPayload>(proposal.payloadJson);
     if (!payload) return this.reportFailure(proposal, 'payload');
 
-    // Kök modeli yayınlamak alt ağacın tamamını birlikte yayınlar.
+    // Publishing the root model publishes the whole subtree with it.
     return this.publishedTable.publish(payload.entityName).pipe(
       this.ensureSuccess(),
       switchMap(() => this.markStatus(proposal.id, 'published')),
@@ -279,8 +279,8 @@ export class AiImportService {
     return this.reports.define(toReportDefinition(payload)).pipe(
       switchMap(res => {
         if (!res.success) return throwError(() => new Error(res.message));
-        // Dashboard'lar raporlara ADIYLA referans verdiği için eşleme burada
-        // kurulur — tanımın hemen ardından, ID hâlâ elimizdeyken.
+        // Dashboards refer to reports by NAME, so the mapping is built
+        // here — right after the definition, while we still have the ID.
         reportIds.set(payload.name.toLowerCase(), res.data);
         return this.markStatus(proposal.id, 'published', res.data);
       }),
@@ -299,7 +299,7 @@ export class AiImportService {
 
     const { widgets, unresolved } = toDashboardWidgets(payload, reportIds);
     if (widgets.length === 0) {
-      return this.reportFailure(proposal, `rapor-yok:${unresolved.join(', ')}`);
+      return this.reportFailure(proposal, `report-not-found:${unresolved.join(', ')}`);
     }
 
     return this.dashboards.define({ name: payload.name, widgets }).pipe(
@@ -314,9 +314,9 @@ export class AiImportService {
     );
   }
 
-  // ── yardımcılar ──────────────────────────────────────────────────────────
+  // ── helpers ──────────────────────────────────────────────────────────────
 
-  /** HTTP 200 + success:false durumunu da hata sayar. */
+  /** Also treats HTTP 200 + success:false as an error. */
   private ensureSuccess<T extends ResponseModel>() {
     return (source: Observable<T>): Observable<T> =>
       source.pipe(
@@ -328,8 +328,8 @@ export class AiImportService {
   }
 
   /**
-   * Kart durumunu backend'e yazar. Bu bir defter kaydıdır — başarısız olması
-   * aktarımın kendisini geçersiz kılmaz, o yüzden hata yutulur.
+   * Writes the card state to the backend. This is a ledger entry — its failure
+   * does not invalidate the import itself, so the error is swallowed.
    */
   private markStatus(
     proposalId: number,
@@ -349,7 +349,7 @@ export class AiImportService {
     return { proposalId: proposal.id, name: proposal.name, state: 'done' };
   }
 
-  /** Hatayı hem kullanıcıya bildirir hem de karta kalıcı olarak yazar. */
+  /** Both notifies the user of the error and writes it to the card permanently. */
   private reportFailure(proposal: AiProposal, error: string): Observable<AiImportProgress> {
     const progress: AiImportProgress = {
       proposalId: proposal.id,
@@ -369,6 +369,6 @@ export class AiImportService {
   private describe(error: unknown): string {
     if (error instanceof Error) return error.message;
     const http = error as { error?: { message?: string }; status?: number };
-    return http?.error?.message ?? (http?.status ? `HTTP ${http.status}` : 'bilinmeyen-hata');
+    return http?.error?.message ?? (http?.status ? `HTTP ${http.status}` : 'unknown-error');
   }
 }

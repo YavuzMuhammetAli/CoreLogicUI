@@ -13,11 +13,11 @@ export interface TipPlacement {
 }
 
 /**
- * Düğüm ipucunun ekrandaki yeri — SAF (help-hint ile aynı kural).
+ * On-screen position of the node tooltip — PURE (same rule as help-hint).
  *
- * Önce düğümün altı denenir, sığmazsa üstü; ikisine de sığmıyorsa (uzun rol üye
- * listesi, alçak telefon ekranı) daha geniş taraf seçilip ekrana kenetlenir.
- * Yatayda düğüme ortalanır, sonra kenar payı kadar içeride tutulur.
+ * Below the node is tried first, then above if it doesn't fit; if it fits neither (long role member
+ * list, short phone screen) the larger side is chosen and it is clamped to the screen.
+ * Horizontally it is centred on the node, then kept inside by the edge margin.
  */
 export function placeTooltip(
   anchor: AnchorBox,

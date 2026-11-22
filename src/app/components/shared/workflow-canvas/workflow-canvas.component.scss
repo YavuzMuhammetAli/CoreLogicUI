@@ -23,29 +23,29 @@
   font-variant-numeric: tabular-nums;
 }
 
-// ── Kamera ───────────────────────────────────────────────────────────────────
+// ── Camera ───────────────────────────────────────────────────────────────────
 
 .canvas-viewport {
   position: relative;
-  // Kaydırma transform ile yapılıyor; overflow: auto ikinci bir haritalama
-  // kaynağı olurdu (bkz. workflow-canvas.camera.ts).
+  // Panning is done with transform; overflow: auto would be a second mapping
+  // source (see workflow-canvas.camera.ts).
   overflow: hidden;
   height: 560px;
 
-  /* Telefonda 560px'lik ve dokunma jestlerini yutan (touch-action: none) tuval ekranı
-     kaplıyor, sayfa kaydırılamıyordu: tuvalin üstü/altında kaydırılacak yer kalsın. */
+  /* On a phone the 560px canvas that swallows touch gestures (touch-action: none) covered the
+     screen and the page couldn't be scrolled: leave room above/below the canvas to scroll. */
   @media (max-width: 768px) {
     height: min(60dvh, 560px);
     min-height: 300px;
   }
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 10px);
-  // Noktalı ızgara pencerenin TAMAMINDA. Aralık ve kayma şablondan kamerayla
-  // senkron bağlanıyor (bkz. gridStyle); nokta ekran uzayında 1px kalır.
+  // The dotted grid covers the WHOLE window. Spacing and offset are bound from the template in sync
+  // with the camera (see gridStyle); a dot stays 1px in screen space.
   background-color: var(--bg);
   background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
   cursor: grab;
-  // Dokunmatikte tarayıcının kendi kaydırma/yakınlaştırma jesti devreye girmemeli.
+  // On touch the browser's own pan/zoom gesture must not kick in.
   touch-action: none;
 }
 
@@ -53,8 +53,8 @@
   cursor: grabbing;
 }
 
-// Tam ekran (fillHeight): host hücresini doldurur, viewport araç çubuğundan kalan
-// yüksekliği alır. Özgüllük yukarıdaki sabit/mobil yüksekliği ezer.
+// Full screen (fillHeight): fills the host cell, the viewport takes the height left over from the
+// toolbar. The specificity overrides the fixed/mobile height above.
 :host(.canvas--fill) {
   display: flex;
   flex-direction: column;
@@ -72,25 +72,25 @@
   top: 0;
   left: 0;
   transform-origin: 0 0;
-  // Izgara burada DEĞİL viewport'ta: bu eleman yalnızca içerik kadar büyük,
-  // ızgara da onunla sınırlı kalıyordu.
-  // will-change: transform VERİLMEZ — tarayıcı katmanı sabit çözünürlükte
-  // rasterize eder ve yazılar yakınlaşmada bulanıklaşır.
+  // The grid is NOT here but on the viewport: this element is only as large as its content,
+  // and the grid stayed confined to it.
+  // will-change: transform is NOT set — the browser would rasterise the layer at a fixed resolution
+  // and text would blur when zooming in.
 }
 
-// Kenarlar altta, düğümler üstte.
+// Edges below, nodes on top.
 .canvas-edges {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  // Sağdan dolaşan geri dönüşler ve başlangıç hapının çizgisi SVG kutusunun
-  // dışına taşabilir; kırpılmasın (görünürlük sınırını viewport belirler).
+  // Loop-backs routed around the right and the start pill's line can overflow the SVG
+  // box; don't clip them (the viewport determines the visibility bounds).
   overflow: visible;
 }
 
 .canvas-edge {
   path { fill: none; stroke: var(--border); stroke-width: 1.5; }
-  // Zemin renginde hale: etiket çizginin üstüne düştüğünde de okunur kalır.
+  // Background-coloured halo: the label stays readable even when it falls on a line.
   text {
     fill: var(--muted);
     font-size: 10px;
@@ -116,13 +116,13 @@
 .arrow-head { fill: var(--border); }
 .arrow-head--reject { fill: var(--danger); }
 
-// Koşul yolları: biri ötekinden "iyi" değil — vurgu rengi, düz çizgi.
+// Condition paths: none is "better" than another — accent colour, solid line.
 .canvas-edge--neutral {
   path { stroke: color-mix(in oklab, var(--accent) 55%, var(--border)); }
   text { fill: var(--accent); font-weight: 600; }
 }
 
-// ── Yol katmanı (simülasyon / çalışan süreç) ────────────────────────────────
+// ── Path overlay (simulation / running process) ────────────────────────────────
 
 .canvas-viewport--overlay {
   .canvas-edge:not(.canvas-edge--taken) { opacity: 0.25; }
@@ -130,7 +130,7 @@
   .canvas-node:not([data-overlay]) { opacity: 0.45; }
 }
 
-// Sürecin bittiği uç: izlenen kenarla aynı ağırlıkta.
+// The end where the process finished: same weight as a traversed edge.
 .canvas-stub.canvas-stub--taken line { stroke-width: 3; opacity: 1; }
 
 .canvas-edge--taken {
@@ -142,11 +142,11 @@
 .canvas-node[data-overlay='current'] { border-color: var(--warn); border-width: 2.5px; background: var(--warn-bg); }
 .canvas-node[data-overlay='failed'] { border-color: var(--danger); border-width: 2.5px; background: var(--danger-bg); }
 .canvas-node[data-overlay='end'] { border-color: var(--success); border-width: 2.5px; background: var(--success-bg); }
-// Sürüm farkı: eklenen / değişen adım.
+// Version diff: added / changed step.
 .canvas-node[data-overlay='added'] { border-color: var(--success); border-width: 2.5px; border-style: dashed; background: var(--success-bg); }
 .canvas-node[data-overlay='changed'] { border-color: var(--warn); border-width: 2.5px; border-style: dashed; background: var(--warn-bg); }
 
-// ── Başlangıç ve bitiş ──────────────────────────────────────────────────────
+// ── Start and end ──────────────────────────────────────────────────────
 
 .canvas-start-link {
   fill: none;
@@ -154,7 +154,7 @@
   stroke-width: 1.5;
 }
 
-// Başlangıç hapı: tıklanmaz (kaydırma zemine düşer); akışın giriş noktasını gösterir.
+// Start pill: not clickable (panning falls through to the background); shows the flow's entry point.
 .canvas-start {
   position: absolute;
   box-sizing: border-box;
@@ -171,7 +171,7 @@
   user-select: none;
 }
 
-// Hedefsiz çıkış: süreç burada biter. Yeşil = tamamlanır, kırmızı = reddedilir.
+// Exit without a target: the process ends here. Green = completed, red = rejected.
 .canvas-stub {
   line { stroke: var(--success); stroke-width: 1.5; opacity: 0.7; }
   circle { fill: var(--success-bg); stroke: var(--success); stroke-width: 2.5; }
@@ -182,21 +182,21 @@
   circle { fill: var(--danger-bg); stroke: var(--danger); }
 }
 
-// Hedefsiz koşul yolu — bitiş DEĞİL, eksik bağlantı (doğrulama hatası).
+// Condition path without a target — NOT an end, a missing connection (validation error).
 .canvas-stub--neutral {
   line { stroke: var(--warn); stroke-dasharray: 2 3; }
   circle { fill: var(--warn-bg); stroke: var(--warn); }
 }
 
-// ── Düğüm ────────────────────────────────────────────────────────────────────
+// ── Node ────────────────────────────────────────────────────────────────────
 
-// Yükseklik şablondan SABİT verilir (NODE_HEIGHT + dal × BRANCH_LINE_HEIGHT).
-// Aşağıdaki satır yükseklikleri o hesaba sığacak şekilde sabitlendi:
-// 8 + 20 (başlık) + 16 (anahtar) + 8 + kenarlık ≤ 60. Değiştirirsen
-// workflow-edge.geometry.ts'teki sabitleri de güncelle, yoksa kutular yine biner.
+// The height is set as a FIXED value from the template (NODE_HEIGHT + branches × BRANCH_LINE_HEIGHT).
+// The row heights below are fixed so they fit that computation:
+// 8 + 20 (title) + 16 (key) + 8 + border ≤ 60. If you change them, also update
+// the constants in workflow-edge.geometry.ts, otherwise the boxes will overlap again.
 .canvas-node {
-  // Tip rengi (data-tone): sol kenarda şerit. Seçim halkası da box-shadow
-  // olduğu için ikisi tek değişkenle birleştirilir.
+  // Type colour (data-tone): a stripe on the left edge. Since the selection ring is also a
+  // box-shadow, the two are combined via a single variable.
   --node-tone: var(--border);
   --node-stripe: inset 4px 0 0 var(--node-tone);
 
@@ -208,7 +208,7 @@
   background: var(--surface);
   box-shadow: var(--node-stripe);
   cursor: move;
-  // Sürüklerken metin seçimi ve dokunmatik kaydırma devreye girmemeli.
+  // Text selection and touch scrolling must not kick in while dragging.
   user-select: none;
   touch-action: none;
 }
@@ -252,7 +252,7 @@
   color: var(--fg);
 }
 
-// Tip + atama özeti satırı — yükseklik anahtar satırıyla aynı (16px).
+// Type + assignment summary row — same height as the key row (16px).
 .canvas-node-meta {
   display: flex;
   align-items: center;
@@ -271,7 +271,7 @@
   text-overflow: ellipsis;
 }
 
-// Sorun rozeti: kartın sağ üst köşesinde, hata kırmızı / yalnız uyarı sarı.
+// Issue badge: in the card's top-right corner, red for errors / yellow for warnings only.
 .canvas-node-issues {
   position: absolute;
   top: -8px;
@@ -317,8 +317,8 @@
   }
 }
 
-// Bağlantısız çıkışın ucu (düzenlenebilirken): akış burada biter; tıklayınca
-// bağlı yeni adım eklenir. Renk uç işaretiyle aynı anlamı taşır.
+// Tip of an unconnected exit (when editable): the flow ends here; clicking it
+// adds a new connected step. The colour carries the same meaning as the end marker.
 .canvas-stub-add {
   position: absolute;
   width: 16px;
@@ -359,7 +359,7 @@
   }
 }
 
-// Boş tuval: bırakma hedefi görünür kalsın, yazı tıklamaları engellemesin.
+// Empty canvas: the drop target stays visible, the text doesn't block clicks.
 .canvas-empty {
   position: absolute;
   inset: 0;
@@ -373,10 +373,10 @@
   pointer-events: none;
 }
 
-// ── Portlar ──────────────────────────────────────────────────────────────────
+// ── Ports ──────────────────────────────────────────────────────────────────
 
-// Yatay konum portPositions() ile şablondan bağlanıyor; burada yalnızca
-// görünüm ve dikey hizalama var.
+// The horizontal position is bound from the template via portPositions(); only the
+// look and vertical alignment are here.
 .canvas-port {
   position: absolute;
   bottom: -7px;
@@ -403,9 +403,9 @@
   background: var(--accent);
 }
 
-// ── Seçim ────────────────────────────────────────────────────────────────────
+// ── Selection ────────────────────────────────────────────────────────────────────
 
-// Klavye odağı görünür olsun ama tuvalin tamamını kalın bir çerçeveyle boğmasın.
+// Keyboard focus should be visible without smothering the whole canvas in a thick frame.
 .canvas-viewport:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -427,7 +427,7 @@
   pointer-events: none;
 }
 
-// ── Sağ tık menüsü ───────────────────────────────────────────────────────────
+// ── Context menu ───────────────────────────────────────────────────────────
 
 .canvas-menu {
   position: fixed;
@@ -454,7 +454,7 @@
   font-size: var(--text-sm);
   color: var(--fg);
   cursor: pointer;
-  // Dokunma alanı ≥ 32px (mobil kural).
+  // Touch area ≥ 32px (mobile rule).
   min-height: 32px;
 
   @media (hover: hover) {

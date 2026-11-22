@@ -15,20 +15,20 @@ import { markDirty } from '../../utils/change-detection';
 import { pageWindow } from '../../utils/pagination';
 import { IconComponent } from '../shared/icon/icon.component';
 
-/** Düzenleme için kullanılan geçici izin satırı (role-detail ile aynı yapı) */
+/** Temporary permission row used for editing (same structure as role-detail) */
 export interface PermissionRow {
   modelName:    string;
   canRead:      boolean;
   canCreate:    boolean;
   canUpdate:    boolean;
   canDelete:    boolean;
-  /** Modelin kullanıcı sidebar navigasyonunda görünsün mü? */
+  /** Should the model appear in the user's sidebar navigation? */
   canShowInNav: boolean;
-  /** Kullanıcı yalnızca kendi oluşturduğu kayıtları görebilir/değiştirebilir. */
+  /** The user can see/modify only the records they created. */
   canOwnOnly:   boolean;
-  /** Kayıttaki iş akışını (ilerlenen yol + kim onayladı/bekliyor) görebilir mi? */
+  /** Can they see the record's workflow (path taken + who approved / is pending)? */
   canViewWorkflow: boolean;
-  /** Değiştirildi mi? Yalnızca değişen satırlar backend'e gönderilir */
+  /** Was it changed? Only changed rows are sent to the backend */
   dirty: boolean;
 }
 
@@ -40,7 +40,7 @@ export interface PermissionRow {
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserPermissionDetailComponent implements OnInit {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly route        = inject(ActivatedRoute);
@@ -50,7 +50,7 @@ export class UserPermissionDetailComponent implements OnInit {
 
   userId = 0;
 
-  /* ── Kullanıcı ── */
+  /* ── User ── */
   user        = signal<AppUser | null>(null);
   userLoading = signal(true);
   userError   = signal('');
@@ -60,46 +60,46 @@ export class UserPermissionDetailComponent implements OnInit {
   adminMsg     = signal('');
   adminMsgType = signal<'success'|'danger'>('success');
 
-  /* ── İzin matrisi ── */
+  /* ── Permission matrix ── */
   permRows    = signal<PermissionRow[]>([]);
   permLoading = signal(false);
   permError   = signal('');
   permMsg     = signal('');
   permMsgType = signal<'success'|'danger'>('success');
 
-  /** İzin matrisinde detayı açılmış model satırı (liste → detay) */
+  /** Model row whose detail is open in the permission matrix (list → detail) */
   selectedPermRow = signal<PermissionRow | null>(null);
   permRowSaving   = signal(false);
 
-  /* ── Model listesi: arama + sayfalama ── */
+  /* ── Model list: search + pagination ── */
   modelSearchTerm  = signal('');
   modelPageIndex   = signal(1);
   readonly modelPageSize = 10;
 
-  /** En az bir izni olan model sayısı */
+  /** Number of models with at least one permission */
   permittedModelCount = computed(() =>
     this.permRows().filter(r => this.permSummary(r).length > 0).length
   );
 
-  /** Arama terimine göre filtrelenmiş model satırları */
+  /** Model rows filtered by the search term */
   filteredPermRows = computed(() => {
     const term = this.modelSearchTerm().trim().toLowerCase();
     const rows = this.permRows();
     return term ? rows.filter(r => r.modelName.toLowerCase().includes(term)) : rows;
   });
 
-  /** Toplam sayfa sayısı (en az 1) */
+  /** Total page count (at least 1) */
   modelTotalPages = computed(() =>
     Math.max(1, Math.ceil(this.filteredPermRows().length / this.modelPageSize))
   );
 
-  /** Geçerli sayfadaki model satırları */
+  /** Model rows on the current page */
   pagedPermRows = computed(() => {
     const start = (this.modelPageIndex() - 1) * this.modelPageSize;
     return this.filteredPermRows().slice(start, start + this.modelPageSize);
   });
 
-  /** Sayfa numarası butonları — en fazla 5'lik kayan pencere (ilk/son sayfa şablonda ayrıca) */
+  /** Page number buttons — sliding window of at most 5 (first/last page handled separately in the template) */
   modelPages = computed(() => pageWindow(this.modelPageIndex(), this.modelTotalPages()));
 
   modelRangeStart = computed(() =>
@@ -115,7 +115,7 @@ export class UserPermissionDetailComponent implements OnInit {
     this.loadUser();
   }
 
-  /* ──────────────── Kullanıcı yükleme ──────────────── */
+  /* ──────────────── User loading ──────────────── */
 
   private loadUser(): void {
     this.userLoading.set(true);
@@ -172,7 +172,7 @@ export class UserPermissionDetailComponent implements OnInit {
     });
   }
 
-  /* ──────────────── İzin matrisi ──────────────── */
+  /* ──────────────── Permission matrix ──────────────── */
 
   private loadUserPermissions(userId: number): void {
     this.permLoading.set(true);
@@ -213,35 +213,35 @@ export class UserPermissionDetailComponent implements OnInit {
     });
   }
 
-  /** Checkbox değişince satırı dirty olarak işaretle */
+  /** Mark the row dirty when a checkbox changes */
   markDirty(row: PermissionRow): void {
     row.dirty = true;
   }
 
-  /** Model arama kutusu değişince filtreyi uygular ve ilk sayfaya döner */
+  /** Applies the filter and returns to the first page when the model search box changes */
   onModelSearchChange(term: string): void {
     this.modelSearchTerm.set(term);
     this.modelPageIndex.set(1);
   }
 
-  /** Model listesi sayfasını değiştirir */
+  /** Changes the model list page */
   goToModelPage(page: number): void {
     if (page < 1 || page > this.modelTotalPages()) return;
     this.modelPageIndex.set(page);
   }
 
-  /** Model satırına tıklayınca izin detay panelini açar */
+  /** Opens the permission detail panel when a model row is clicked */
   selectModelPerm(row: PermissionRow): void {
     this.permMsg.set('');
     this.selectedPermRow.set(row);
   }
 
-  /** İzin detay panelini kapatır, model listesine döner */
+  /** Closes the permission detail panel, returns to the model list */
   clearModelPerm(): void {
     this.selectedPermRow.set(null);
   }
 
-  /** Seçili modelin etkin izinlerini etiket listesi olarak döndürür (rozetler için) */
+  /** Returns the selected model's active permissions as a list of labels (for badges) */
   permSummary(row: PermissionRow): string[] {
     const labels: string[] = [];
     if (row.canRead)      labels.push(this.languageService.t('permission.detail.summaryRead'));
@@ -254,7 +254,7 @@ export class UserPermissionDetailComponent implements OnInit {
     return labels;
   }
 
-  /** İzin detay panelinden tek bir modelin izinlerini kaydeder */
+  /** Saves a single model's permissions from the permission detail panel */
   saveModelPerm(row: PermissionRow): void {
     const user = this.user();
     if (!user) return;
@@ -282,7 +282,7 @@ export class UserPermissionDetailComponent implements OnInit {
     });
   }
 
-  /** Kullanıcının tam adı */
+  /** The user's full name */
   fullName(user: AppUser): string {
     return `${user.firstName} ${user.lastName}`.trim() || user.email;
   }

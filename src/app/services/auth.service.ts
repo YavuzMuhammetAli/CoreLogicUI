@@ -14,11 +14,11 @@ export interface LoginDto {
   password: string;
 }
 
-/** GET /Auth/session yanıtı. Token HttpOnly çerezdedir, JavaScript onu göremez. */
+/** GET /Auth/session response. The token is in an HttpOnly cookie; JavaScript cannot see it. */
 export interface SessionInfo {
   authenticated: boolean;
   expiration: string | null;
-  /** Tenant-local kullanıcı kimliği; master kimliği DEĞİL. */
+  /** Tenant-local user ID; NOT the master ID. */
   userId: number | null;
   name: string | null;
   email: string | null;
@@ -31,13 +31,13 @@ export class AuthService {
   private readonly baseUrl = `${environment.apiBaseUrl}/Auth`;
   private readonly platformId = inject(PLATFORM_ID);
 
-  /** Açık oturum; null ise anonim. Sunucuya sorulana dek `loaded` false kalır. */
+  /** Open session; null means anonymous. `loaded` stays false until the server is asked. */
   private readonly session = signal<SessionInfo | null>(null);
   private loaded = false;
   private loading$: Observable<SessionInfo | null> | null = null;
 
   constructor(private http: HttpClient) {
-    // Çerez öncesi sürümün token'ı: artık okunmuyor, tarayıcıda kalmasın.
+    // Token from the pre-cookie version: no longer read, don't leave it in the browser.
     if (isPlatformBrowser(this.platformId)) localStorage.removeItem('access_token');
   }
 
@@ -46,39 +46,39 @@ export class AuthService {
       .pipe(switchMap(res => this.afterSessionStarted(res)));
   }
 
-  // NOT: `register()` kaldırıldı. Şirkete kullanıcı ekleme /users ekranından
-  // UserAdminService üzerinden yapılır (bkz. CLAUDE.md "Şirket İçi Kullanıcı
-  // Yönetimi"); dışarıdan mevcut bir şirkete kayıt akışı YOKTUR.
+  // NOTE: `register()` was removed. Users are added to a company from the /users screen
+  // via UserAdminService (see CLAUDE.md "Şirket İçi Kullanıcı
+  // Yönetimi" (In-company user management)); there is NO flow for signing up to an existing company from outside.
 
   /**
-   * Yeni şirket başvurusu. Kurulum e-postadaki bağlantı açılınca başlar (bkz. verifyCompany);
-   * e-posta kayıtlı olsa da yanıt aynıdır, ekran hangisi olduğunu bilemez.
+   * New company application. Provisioning starts when the link in the email is opened (see verifyCompany);
+   * the response is the same even if the email is already registered, so the screen cannot tell which.
    */
   registerCompany(dto: CompanyRegisterDto): Observable<DataResponseModel<CompanyRegistrationResult>> {
     return this.http.post<DataResponseModel<CompanyRegistrationResult>>(`${this.baseUrl}/register-company`, dto);
   }
 
-  /** E-postadaki bağlantının token'ıyla kurulumu başlatır; data alanı provisionId döner. */
+  /** Starts provisioning with the token from the email link; the data field returns the provisionId. */
   verifyCompany(token: string): Observable<DataResponseModel<string>> {
     return this.http.post<DataResponseModel<string>>(`${this.baseUrl}/verify-company`, { token });
   }
 
-  /** Kurulum durumu — adım listesi + süreler; tamamlandıysa otomatik girişin açık olduğunu bildirir. */
+  /** Provisioning status — step list + durations; when complete, reports that auto-login is available. */
   getProvisionStatus(provisionId: string): Observable<DataResponseModel<ProvisionStatus>> {
     return this.http.get<DataResponseModel<ProvisionStatus>>(
       `${this.baseUrl}/provision-status/${provisionId}`
     );
   }
 
-  /** Yeni kurulan şirketin yöneticisine oturum açar (wizard'daki otomatik giriş). */
+  /** Logs in the administrator of the newly provisioned company (auto-login in the wizard). */
   startProvisionSession(provisionId: string): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/provision-session/${provisionId}`, {})
       .pipe(switchMap(res => this.afterSessionStarted(res)));
   }
 
   /**
-   * Oturumun sunucudan okunmuş olmasını garantiler. Guard'lar ve açılış aynı isteği paylaşır:
-   * router'ın ilk gezinmesi APP_INITIALIZER ile paralel başlar.
+   * Guarantees the session has been read from the server. Guards and startup share the same request:
+   * the router's first navigation starts in parallel with APP_INITIALIZER.
    */
   ensureSession(): Observable<SessionInfo | null> {
     if (this.loaded) return of(this.session());
@@ -90,7 +90,7 @@ export class AuthService {
     return this.loading$;
   }
 
-  /** Çerez HttpOnly olduğundan yalnız sunucu silebilir. Hata yerel çıkışı engellemez. */
+  /** The cookie is HttpOnly, so only the server can delete it. An error does not block local logout. */
   logout(): Observable<void> {
     this.clearSession();
     return this.http.post(`${this.baseUrl}/logout`, {}).pipe(
@@ -99,7 +99,7 @@ export class AuthService {
     );
   }
 
-  /** Yerel oturumu bitirir (401 sonrası errorInterceptor). Oturum açık mıydı? */
+  /** Ends the local session (errorInterceptor after a 401). Was a session open? */
   clearSession(): boolean {
     const hadSession = this.session() !== null;
     this.session.set(null);
@@ -111,29 +111,29 @@ export class AuthService {
     return this.session() !== null;
   }
 
-  /** Kullanıcıya bağlı önbelleklerin sahibi: başka kullanıcıyla girilince değişir. */
+  /** Owner of the user-bound caches: changes when another user logs in. */
   sessionKey(): string | null {
     const session = this.session();
     return session ? `${session.tenantId}|${session.userId}|${session.expiration}` : null;
   }
 
   /**
-   * Oturumdaki kullanıcının TENANT-LOCAL ID'si.
+   * TENANT-LOCAL ID of the session user.
    *
-   * Roller, izinler ve FK'ler bu ID'ye bağlıdır — master kullanıcı ID'si DEĞİLDİR.
-   * Kullanıcı yönetimi ekranı "bu benim hesabım mı" kontrolü için kullanır.
+   * Roles, permissions and FKs are bound to this ID — it is NOT the master user ID.
+   * The user management screen uses it for the "is this my account" check.
    */
   getCurrentUserId(): number | null {
     return this.session()?.userId ?? null;
   }
 
-  /** Oturumdaki kullanıcının görünen bilgileri. */
+  /** Display info of the session user. */
   getSessionUser(): { name: string; email: string; initials: string; tenantId: string | null; companyId: string | null } | null {
     const session = this.session();
     if (!session) return null;
     const name = (session.name ?? '').trim();
     const email = (session.email ?? '').trim();
-    // Ad yoksa e-postanın @ öncesi kısmını görünen ad olarak kullan
+    // Without a name, use the part of the email before @ as the display name
     const display = name || email.split('@')[0] || '';
     return {
       name: display,
@@ -149,7 +149,7 @@ export class AuthService {
   }
 
   private loadSession(): Observable<SessionInfo | null> {
-    // Askıya alınmış şirkette 403 döner: giriş ekranına düşülür, /models'e yönlendirilmez.
+    // A suspended company returns 403: fall back to the login screen, don't redirect to /models.
     const context = new HttpContext().set(SKIP_FORBIDDEN_REDIRECT, true);
     return this.http.get<DataResponseModel<SessionInfo>>(`${this.baseUrl}/session`, { context }).pipe(
       map(res => (res.data?.authenticated ? res.data : null)),

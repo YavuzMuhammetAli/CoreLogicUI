@@ -1,9 +1,9 @@
 import { Translations } from './translations.model';
 
 /**
- * dashboard-list / dashboard-build / dashboard (viewer) component'lerine özel statik metinler.
- * `common.i18n.ts`'de zaten tanımlı genel anahtarlar (kaydet, vazgeç vb.) burada tekrar
- * tanımlanmaz, doğrudan kullanılır.
+ * Static texts specific to the dashboard-list / dashboard-build / dashboard (viewer) components.
+ * General keys already defined in `common.i18n.ts` (save, cancel etc.) are not redefined
+ * here; they are used directly.
  */
 export const DASHBOARD_I18N: Translations = {
   // dashboard-list.component.html

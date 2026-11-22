@@ -9,12 +9,12 @@ import { addSet, duplicateColumns, removeSet, setColumn, setMode, updateSet, wri
 import { IconComponent } from '../../shared/icon/icon.component';
 
 /**
- * Alan güncelle düğümünün düzenleyicisi: hangi alana ne yazılacağı (sabit
- * değer, formül ya da temizle) ve sonraki adım.
+ * Editor of the field update node: which field gets what (fixed
+ * value, formula or clear) and the next step.
  *
- * Adımın KOPYASIYLA çalışır; her değişiklikte yeni hali yayar (bkz.
- * condition-editor). Sabit değer kolon tipine uygun girdiyle alınır — sunucu
- * ISO tarih ve nokta ondalık bekler. Formül otomatik değer dilindedir.
+ * Works on a COPY of the step; emits the new state on every change (see
+ * condition-editor). A fixed value is taken with an input matching the column type — the server
+ * expects ISO dates and dot decimals. Formulas use the auto-value language.
  */
 @Component({
     selector: 'app-action-editor',
@@ -46,7 +46,7 @@ export class ActionEditorComponent implements OnInit {
 
   private readonly columnNames = computed(() => this.columns().map(c => c.columnName));
 
-  /** Satır başına formül denetimi (formül modundakiler). */
+  /** Per-row formula check (rows in formula mode). */
   readonly checks = computed<Array<ExpressionCheck | null>>(() =>
     this.sets().map(set => set.mode === 'formula'
       ? checkExpression(set.value ?? '', this.columnNames(), this.stepKeys())
@@ -103,7 +103,7 @@ export class ActionEditorComponent implements OnInit {
     this.apply(step => updateSet(step, index, { value }));
   }
 
-  // ── Görünüm yardımcıları ──────────────────────────────────────────────────
+  // ── View helpers ──────────────────────────────────────────────────
 
   private column(name: string): PublishedColumn | undefined {
     return this.columns().find(c => c.columnName.toLowerCase() === name.toLowerCase());

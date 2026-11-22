@@ -10,7 +10,7 @@ import { formatDate } from '../../utils/locale-format';
 import { pageWindow } from '../../utils/pagination';
 import { IconComponent } from '../shared/icon/icon.component';
 
-/** Akış filtresi seçeneği: kod + ad (sürümler aynı kodu paylaşır). */
+/** Workflow filter option: code + name (versions share the same code). */
 interface CodeOption {
   code: string;
   name: string;
@@ -19,9 +19,9 @@ interface CodeOption {
 const STATUSES: ReadonlyArray<WorkflowInstanceStatus> = ['Running', 'Completed', 'Rejected', 'Cancelled', 'Failed'];
 
 /**
- * Süreç listesi (admin) — tenant'taki tüm süreçler; durum, "yalnız hata
- * bekleyenler" (olay), akış ve model filtresiyle, en yeni önce, sayfalı.
- * Satır sürecin şemalı ekranına götürür.
+ * Process list (admin) — all processes in the tenant; filtered by status, "only those
+ * waiting on an error" (incident), workflow and model, newest first, paged.
+ * A row leads to the process's diagram screen.
  */
 @Component({
     selector: 'app-workflow-instances',
@@ -99,7 +99,7 @@ export class WorkflowInstancesComponent implements OnInit {
     });
   }
 
-  /** Filtre değişince ilk sayfaya dönülür. */
+  /** Returns to the first page when a filter changes. */
   private refilter(): void {
     this.pageIndex.set(1);
     this.load();

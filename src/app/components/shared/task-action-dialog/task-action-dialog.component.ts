@@ -8,22 +8,22 @@ import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { inputTypeFor, parseEnumValues, stepFor } from '../../model-data/model-data.util';
 import { buildTaskForm, parseTaskSchema, readTaskForm } from '../task-decision-form/task-form.util';
 
-/** Diyalogun topladığı karar verisi — kayıt alanları buraya girmez (formun kendisinde). */
+/** Decision data collected by the dialog — record fields don't go here (they're in the form itself). */
 export interface TaskActionResult {
   comment: string | null;
   formDataJson: string | null;
 }
 
 /**
- * Kayıt ekranındaki adım butonunun diyaloğu: adımın EK karar alanları + açıklama.
+ * Dialog for the step button on the record screen: the step's EXTRA decision fields + comment.
  *
- * Kayıt alanları burada DEĞİL, kaydın kendi formunda doldurulur; bu diyalog
- * yalnızca kayda yazılmayan karar verisini toplar. Gönderimi çağıran yapar
- * (kayıt değerlerini de aynı isteğe koyabilmesi için) — diyalog `busy`/`error`
- * ile yalnızca durumu gösterir.
+ * Record fields are NOT filled here but in the record's own form; this dialog
+ * only collects decision data that isn't written to the record. The caller does the submit
+ * (so it can put the record values into the same request) — the dialog only shows
+ * the state via `busy`/`error`.
  *
- * Onayda ek alan yoksa diyalog hiç açılmaz (ara onay adımı yok ilkesi);
- * reddetmede açıklama yazılabilsin diye her zaman açılır.
+ * On approve, if there are no extra fields the dialog never opens (no intermediate confirmation principle);
+ * on reject it always opens so a comment can be written.
  */
 @Component({
     selector: 'app-task-action-dialog',
@@ -35,12 +35,12 @@ export interface TaskActionResult {
 export class TaskActionDialogComponent implements OnChanges {
   readonly open = input(false);
   readonly decision = input<'approve' | 'reject'>('approve');
-  /** Buton metni ve başlık — adım etiketinden gelir. */
+  /** Button text and title — come from the step label. */
   readonly actionLabel = input('');
   readonly schemaJson = input<string | null | undefined>(null);
   readonly busy = input(false);
   readonly error = input<string | null>(null);
-  /** Formda kaydedilmemiş değişiklik var ve bu eylem onları yazmayacak. */
+  /** The form has unsaved changes and this action won't write them. */
   readonly discardsChanges = input(false);
 
   readonly confirmed = output<TaskActionResult>();
@@ -56,7 +56,7 @@ export class TaskActionDialogComponent implements OnChanges {
   fields: WorkflowFormField[] = [];
   form: FormGroup = this.fb.group({ comment: [''] });
 
-  /** Form ilk render'dan ÖNCE kurulmalı — effect değil ngOnChanges. */
+  /** The form must be built BEFORE the first render — ngOnChanges, not effect. */
   ngOnChanges(changes: SimpleChanges): void {
     const opened = changes['open'] && this.open();
     if (opened || changes['schemaJson']) {
@@ -72,8 +72,8 @@ export class TaskActionDialogComponent implements OnChanges {
   submit(): void {
     if (this.busy()) return;
 
-    // Onayda ek alanlar doğrulanır; REDDE değil — reddetmek için onay formunu
-    // doldurmak zorunda bırakmak anlamsız (sunucu da redde aramıyor).
+    // Extra fields are validated on approve; NOT on reject — forcing the user to fill the
+    // approval form in order to reject makes no sense (the server doesn't require it on reject either).
     if (!this.isReject && this.form.invalid) {
       this.form.markAllAsTouched();
       return;

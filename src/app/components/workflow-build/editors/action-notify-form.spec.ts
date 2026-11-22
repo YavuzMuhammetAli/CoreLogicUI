@@ -18,13 +18,13 @@ const notify: WorkflowStep = {
 const column = (columnName: string, dataType: string): PublishedColumn => ({ columnName, dataType, isNullable: true });
 
 describe('action-form', () => {
-  it('görsel/dosya kolonları yazılabilir değil', () => {
+  it('image/file columns are not writable', () => {
     const names = writableColumns([column('Baslik', 'string'), column('Foto', 'image'), column('Ek', 'file')])
       .map(c => c.columnName);
     expect(names).toEqual(['Baslik']);
   });
 
-  it('satır ekle/sil/güncelle kopya döner', () => {
+  it('add/delete/update row returns a copy', () => {
     const added = addSet(action, 'Tutar');
     expect(added.sets!.length).toBe(2);
     expect(action.sets!.length).toBe(1);
@@ -32,26 +32,26 @@ describe('action-form', () => {
     expect(removeSet(added, 0).sets!.map(s => s.column)).toEqual(['Tutar']);
   });
 
-  it('kaynak değişince değer sıfırlanır; temizlemede değer yok', () => {
+  it('changing the source resets the value; clear has no value', () => {
     expect(setMode(action, 0, 'formula').sets![0]).toEqual({ column: 'Durum', mode: 'formula', value: '' });
     expect(setMode(action, 0, 'clear').sets![0].value).toBeNull();
     expect(setMode(action, 0, 'value')).toBe(action);
   });
 
-  it('kolon değişince sabit sıfırlanır, formül korunur', () => {
+  it('changing the column resets a fixed value, keeps the formula', () => {
     expect(setColumn(action, 0, 'Not').sets![0].value).toBe('');
     const formula = updateSet(action, 0, { mode: 'formula', value: 'TODAY()' });
     expect(setColumn(formula, 0, 'Tarih').sets![0].value).toBe('TODAY()');
   });
 
-  it('aynı kolon iki kez yazılıyorsa bildirilir', () => {
+  it('reports when the same column is written twice', () => {
     expect([...duplicateColumns(addSet(action, 'durum'))]).toEqual(['durum']);
     expect(duplicateColumns(action).size).toBe(0);
   });
 });
 
 describe('notify-form', () => {
-  it('aynı alıcı ikinci kez eklenmez', () => {
+  it('the same recipient is not added twice', () => {
     const withRole = addRecipient(notify, { kind: 'role', id: 3 });
     expect(withRole.notify!.recipients.length).toBe(2);
     expect(addRecipient(withRole, { kind: 'role', id: 3 })).toBe(withRole);
@@ -59,7 +59,7 @@ describe('notify-form', () => {
     expect(removeRecipient(withRole, 0).notify!.recipients).toEqual([{ kind: 'role', id: 3 }]);
   });
 
-  it('kanal: boş liste hepsi, son kanal kapatılamaz', () => {
+  it('channel: empty list means all, the last channel cannot be turned off', () => {
     expect(channelChecked(notify, 'email')).toBeTrue();
     const inappOnly = toggleChannel(notify, 'email', false);
     expect(inappOnly.notify!.channels).toEqual(['inapp']);
@@ -67,14 +67,14 @@ describe('notify-form', () => {
     expect(toggleChannel(inappOnly, 'email', true).notify!.channels).toEqual([]);
   });
 
-  it('bilinmeyen yer tutucular — kayıt alanları kolon listesine göre', () => {
+  it('unknown placeholders — record fields checked against the column list', () => {
     const text = '{{record.Baslik}} {{ record.yok }} {{link}} {{kayit}} {{record.Baslik}}';
     expect(unknownPlaceholders(text, ['Baslik'])).toEqual(['record.yok', 'kayit']);
     expect(unknownPlaceholders(text, [])).toEqual(['kayit']);
     expect(placeholderNames(['Baslik'])).toEqual(['record.Baslik', 'workflow.name', 'step.name', 'instance.id', 'link']);
   });
 
-  it('yer tutucu imlece eklenir, imleç sonuna geçer', () => {
+  it('the placeholder is inserted at the caret, the caret moves to its end', () => {
     expect(insertPlaceholder('Merhaba ', 'record.Ad', null)).toEqual({ text: 'Merhaba {{record.Ad}}', caret: 21 });
     expect(insertPlaceholder('ab', 'link', 1)).toEqual({ text: 'a{{link}}b', caret: 9 });
   });

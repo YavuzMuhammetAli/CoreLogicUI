@@ -1,26 +1,26 @@
 import { WorkflowSimulation } from '../../models/workflow.model';
 
 /**
- * Şema üstü yol katmanı — tuval aynı katmanı üç kaynaktan çizer: simülasyon
- * (8b), çalışan süreç (Faz 9) ve sürüm farkı (Faz 11). SAF.
+ * Path overlay on the diagram — the canvas draws the same overlay from three sources: simulation
+ * (8b), running instance (Phase 9) and version diff (Phase 11). PURE.
  */
 export type OverlayNodeState = 'visited' | 'current' | 'failed' | 'end' | 'added' | 'changed';
 
 export interface WorkflowOverlay {
-  /** Adım anahtarı (küçük harf) → durum. */
+  /** Step key (lowercase) → state. */
   nodes: Record<string, OverlayNodeState>;
-  /** Geçilen kenarlar: `edgeId(kaynak, port)`. */
+  /** Traversed edges: `edgeId(source, port)`. */
   edges: string[];
 }
 
-/** Kenar kimliği: kaynak adım + çıkış portu (approve, reject, case:x, default…). */
+/** Edge id: source step + exit port (approve, reject, case:x, default…). */
 export function edgeId(from: string, port: string): string {
   return `${from.toLowerCase()}|${port}`;
 }
 
 /**
- * Simülasyon sonucundan katman: geçilen adımlar ve çıkılan portlar; son adım
- * sonuca göre (bekliyor → current, olay/hata → failed, bitiş → end).
+ * Overlay from a simulation result: visited steps and exited ports; the last step
+ * by outcome (waiting → current, incident/error → failed, end → end).
  */
 export function simulationOverlay(result: WorkflowSimulation): WorkflowOverlay {
   const nodes: Record<string, OverlayNodeState> = {};

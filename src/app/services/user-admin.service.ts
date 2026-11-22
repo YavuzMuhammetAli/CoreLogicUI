@@ -7,19 +7,19 @@ import { ListResponseModel } from '../models/responseModelList';
 import { DataResponseModel } from '../models/dataResponseModel';
 import { AppUser } from '../models/appUser';
 
-/** POST /User/create gövdesi. */
+/** Body of POST /User/create. */
 export interface UserCreateRequest {
   firstName: string;
   lastName: string;
   email: string;
   password: string;
-  /** true ise kullanıcıya 'admin' rolü verilir. */
+  /** If true, the user is given the 'admin' role. */
   isAdmin: boolean;
   /** Opsiyonel isimli rol (OperationClaim.ID). */
   roleId?: number | null;
 }
 
-/** PUT /User/update gövdesi. */
+/** Body of PUT /User/update. */
 export interface UserUpdateRequest {
   firstName: string;
   lastName: string;
@@ -27,57 +27,57 @@ export interface UserUpdateRequest {
 }
 
 /**
- * Şirket içi kullanıcı yönetimi — yalnızca admin.
+ * In-company user management — admin only.
  *
- * Tenant istemciden GÖNDERİLMEZ: backend her işlemi çağıran admin'in JWT'sindeki
- * ambient tenant'ta yapar. Dışarıdan başka bir şirkete kullanıcı eklenemez.
+ * The tenant is NOT sent by the client: the backend performs every operation in the ambient tenant
+ * of the calling admin's JWT. Users cannot be added to another company from outside.
  *
- * Not: admin yetkisi ve pasifleme değişiklikleri kullanıcının YENİ oturumunda
- * (yeni JWT) etkinleşir.
+ * Note: admin permission and deactivation changes take effect in the user's NEW session
+ * (new JWT).
  */
 @Injectable({ providedIn: 'root' })
 export class UserAdminService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/User`;
 
-  /** Şirketteki tüm kullanıcılar (hassas alanlar içermez). */
+  /** All users in the company (no sensitive fields). */
   getUsers(): Observable<ListResponseModel<AppUser>> {
     return this.http.get<ListResponseModel<AppUser>>(`${this.baseUrl}/getall`);
   }
 
-  /** Yeni kullanıcı oluşturur; data alanında yeni kullanıcının ID'si döner. */
+  /** Creates a new user; the data field returns the new user's ID. */
   create(body: UserCreateRequest): Observable<DataResponseModel<number>> {
     return this.http.post<DataResponseModel<number>>(`${this.baseUrl}/create`, body);
   }
 
-  /** Ad/soyad/e-posta günceller. E-posta değişirse backend master kaydını da günceller. */
+  /** Updates first name/last name/email. If the email changes, the backend also updates the master record. */
   update(userId: number, body: UserUpdateRequest): Observable<ResponseModel> {
     const params = new HttpParams().set('userId', userId);
     return this.http.put<ResponseModel>(`${this.baseUrl}/update`, body, { params });
   }
 
-  /** Kullanıcının giriş yetkisini açar/kapatır. */
+  /** Enables/disables the user's login. */
   setActive(userId: number, active: boolean): Observable<ResponseModel> {
     const params = new HttpParams().set('userId', userId).set('active', active);
     return this.http.post<ResponseModel>(`${this.baseUrl}/setActive`, null, { params });
   }
 
-  /** Admin, kullanıcı için yeni parola belirler. */
+  /** The admin sets a new password for the user. */
   resetPassword(userId: number, newPassword: string): Observable<ResponseModel> {
     const params = new HttpParams().set('userId', userId);
     return this.http.post<ResponseModel>(
       `${this.baseUrl}/resetPassword`, { newPassword }, { params });
   }
 
-  /** 'admin' rolünü verir/kaldırır (kilitlenme korumaları backend'de). */
+  /** Grants/removes the 'admin' role (lockout protections are on the backend). */
   setAdmin(userId: number, isAdmin: boolean): Observable<ResponseModel> {
     const params = new HttpParams().set('userId', userId).set('isAdmin', isAdmin);
     return this.http.post<ResponseModel>(`${this.baseUrl}/setAdmin`, null, { params });
   }
 
   /**
-   * Kullanıcıyı KALICI siler. Kullanıcı sistemde kayıt oluşturmuşsa backend
-   * reddeder ve pasifleme önerir — veri bütünlüğü korunur.
+   * PERMANENTLY deletes the user. If the user has created records in the system, the backend
+   * rejects it and suggests deactivation — data integrity is preserved.
    */
   delete(userId: number): Observable<ResponseModel> {
     const params = new HttpParams().set('userId', userId);

@@ -10,17 +10,17 @@ import { MASKED_PASSWORD, MailSetting, NotificationLanguage } from '../../../mod
 import { IconComponent } from '../../shared/icon/icon.component';
 
 /**
- * Yalnız http(s) mutlak adres — backend de aynı kuralı uygular. Bu adresler
- * e-postaya link/görsel olarak basılır; göreli yol mail istemcisinde çalışmaz.
+ * Absolute http(s) address only — the backend applies the same rule. These addresses
+ * are printed into the email as links/images; a relative path does not work in a mail client.
  */
 const HTTP_URL = /^https?:\/\/\S+$/i;
 
 /**
- * E-posta sekmesi — sistemin mail gönderirken kullanacağı adres ve SMTP ayarları.
+ * Email tab — the address and SMTP settings the system uses when sending mail.
  *
- * Parola özel muamele görür: backend kayıtlı parolayı asla düz metin döndürmez,
- * yerine maske gönderir. Form bu maskeyi olduğu gibi taşır; kullanıcı dokunmazsa
- * maske geri gider ve backend mevcut parolayı korur.
+ * The password gets special treatment: the backend never returns the saved password as plain text,
+ * it sends a mask instead. The form carries this mask as is; if the user does not touch it
+ * the mask goes back and the backend keeps the existing password.
  */
 @Component({
     selector: 'app-mail-settings-tab',
@@ -43,7 +43,7 @@ export class MailSettingsTabComponent implements OnInit {
   readonly testError = signal('');
   readonly testSuccess = signal('');
 
-  /** Etkin olup olmadığı — zorunlu alan kurallarını buna göre uygularız. */
+  /** Whether it is enabled — the required-field rules are applied accordingly. */
   readonly enabled = signal(false);
 
   readonly form: FormGroup = this.fb.group({
@@ -55,7 +55,7 @@ export class MailSettingsTabComponent implements OnInit {
     from: ['', Validators.email],
     fromName: [''],
     useSsl: [false],
-    // Bildirim e-postası — bağlantı kökü, logo ve varsayılan dil
+    // Notification email — link root, logo and default language
     appUrl: ['', Validators.pattern(HTTP_URL)],
     logoUrl: ['', Validators.pattern(HTTP_URL)],
     defaultLanguage: ['tr' as NotificationLanguage]
@@ -68,7 +68,7 @@ export class MailSettingsTabComponent implements OnInit {
   get f() { return this.form.controls; }
   get tf() { return this.testForm.controls; }
 
-  /** Kapalıyken sunucu/gönderen boş bırakılabilir; yalnız açıkken zorunlu. */
+  /** When disabled, server/sender may be left empty; required only when enabled. */
   readonly hostMissing = computed(() =>
     this.enabled() && !String(this.form.value.host ?? '').trim());
 
@@ -95,7 +95,7 @@ export class MailSettingsTabComponent implements OnInit {
             host: setting.host ?? '',
             port: setting.port ?? 587,
             user: setting.user ?? '',
-            // Maske olduğu gibi tutulur; değişmeden geri giderse parola korunur.
+            // The mask is kept as is; if it goes back unchanged the password is preserved.
             password: setting.password ?? '',
             from: setting.from ?? '',
             fromName: setting.fromName ?? '',
@@ -115,7 +115,7 @@ export class MailSettingsTabComponent implements OnInit {
     });
   }
 
-  /** Kullanıcı parola alanına ilk dokunduğunda maskeyi temizle. */
+  /** Clear the mask the first time the user touches the password field. */
   onPasswordFocus(): void {
     if (this.form.value.password === MASKED_PASSWORD) {
       this.form.patchValue({ password: '' });
@@ -145,7 +145,7 @@ export class MailSettingsTabComponent implements OnInit {
       host: String(value.host ?? '').trim(),
       port: Number(value.port) || 587,
       user: String(value.user ?? '').trim() || null,
-      // Kullanıcı alanı boşalttıysa parolayı gerçekten sil; maske geldiyse koru.
+      // If the user emptied the field, really delete the password; if the mask came back, keep it.
       password: value.password === '' ? null : value.password,
       from: String(value.from ?? '').trim(),
       fromName: String(value.fromName ?? '').trim() || null,
@@ -160,7 +160,7 @@ export class MailSettingsTabComponent implements OnInit {
       next: res => {
         if (res.success) {
           this.formSuccess.set(res.message);
-          // Parola kaydedildiyse formu tekrar maskeye çevir — düz metin ekranda kalmasın.
+          // If the password was saved, turn the form back into the mask — plain text must not stay on screen.
           if (body.password) this.form.patchValue({ password: MASKED_PASSWORD });
         } else {
           this.formError.set(res.message);
@@ -186,8 +186,8 @@ export class MailSettingsTabComponent implements OnInit {
     this.testing.set(true);
     this.parameterService.sendTestMail(String(this.testForm.value.to).trim()).subscribe({
       next: res => {
-        // SMTP hatasının kendisi mesajda gelir (yanlış port, kimlik reddi vb.) —
-        // teşhis için en yararlı bilgi odur, genel mesajla değiştirilmez.
+        // The SMTP error itself comes in the message (wrong port, auth rejected, etc.) —
+        // that is the most useful diagnostic information, it is not replaced with a generic message.
         if (res.success) this.testSuccess.set(res.message);
         else this.testError.set(res.message);
         this.testing.set(false);

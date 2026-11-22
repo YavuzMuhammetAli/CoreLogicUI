@@ -75,7 +75,7 @@
       </div>
     </div>
 
-    <!-- Olay bandı: süreç bir otomatik adımda hata verip bekliyor (Running + hata). -->
+    <!-- Incident band: the process failed at an automatic step and is waiting (Running + error). -->
     @if (inst.hasIncident) {
       <div class="alert alert-danger incident-band" role="alert">
         <div class="incident-text">
@@ -126,8 +126,8 @@
     }
 
     <!--
-      Rollback yönetici müdahalesi. Terminal durumdaki süreçlerde de gösterilir —
-      "yanlışlıkla reddedildi" en yaygın kullanım sebebi.
+      Rollback is an admin intervention. Also shown for processes in a terminal state —
+      "rejected by mistake" is the most common reason to use it.
     -->
     @if (isAdmin && steps.length > 0) {
       <div class="panel">

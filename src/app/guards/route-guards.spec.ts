@@ -11,8 +11,8 @@ import { NotificationService } from '../services/notification.service';
 import { LanguageService } from '../services/language.service';
 
 /**
- * Rota guard'ları. admin/model guard'ları kararı ensureLoaded() SONRASINDA verir —
- * sayfa yenilemesinde izin sinyali henüz boşken yanlış yönlendirme yapılmasın.
+ * Route guards. The admin/model guards decide AFTER ensureLoaded() —
+ * so no wrong redirect happens on a page reload while the permission signal is still empty.
  */
 describe('route guards', () => {
   const state = {} as RouterStateSnapshot;
@@ -46,7 +46,7 @@ describe('route guards', () => {
     return { paramMap: convertToParamMap(typeName ? { typeName } : {}) } as ActivatedRouteSnapshot;
   }
 
-  /** Guard'ı enjeksiyon bağlamında koşturur, Observable dönüyorsa çözer. */
+  /** Runs the guard in an injection context and resolves it if it returns an Observable. */
   async function run(guard: (r: ActivatedRouteSnapshot, s: RouterStateSnapshot) => unknown, r = route()): Promise<unknown> {
     const result = TestBed.runInInjectionContext(() => guard(r, state));
     return isObservable(result) ? firstValueFrom(result as Observable<unknown>) : result;
@@ -58,7 +58,7 @@ describe('route guards', () => {
   }
 
   describe('authGuard', () => {
-    it('oturum varsa geçirir, yoksa /login', async () => {
+    it('lets through with a session, otherwise /login', async () => {
       auth.ensureSession.and.returnValue(of({ authenticated: true } as SessionInfo));
       expect(await run(authGuard)).toBeTrue();
 
@@ -66,7 +66,7 @@ describe('route guards', () => {
       expect(serialized(await run(authGuard))).toBe('/login');
     });
 
-    it('tarayıcı dışı ortamda kararı istemciye bırakır', async () => {
+    it('leaves the decision to the client outside the browser', async () => {
       platformId = 'server';
       expect(await run(authGuard)).toBeTrue();
       expect(auth.ensureSession).not.toHaveBeenCalled();
@@ -74,33 +74,33 @@ describe('route guards', () => {
   });
 
   describe('adminGuard', () => {
-    it('izinler yüklendikten sonra karar verir', async () => {
+    it('decides after the permissions are loaded', async () => {
       permissions.isAdmin.and.returnValue(true);
       expect(await run(adminGuard)).toBeTrue();
       expect(permissions.ensureLoaded).toHaveBeenCalled();
     });
 
-    it('admin değilse /login', async () => {
+    it('/login if not admin', async () => {
       permissions.isAdmin.and.returnValue(false);
       expect(serialized(await run(adminGuard))).toBe('/login');
     });
   });
 
   describe('modelPermissionGuard', () => {
-    it('istenen eylemde izin varsa geçirir', async () => {
+    it('lets through when the requested action is permitted', async () => {
       permissions.can.and.returnValue(true);
       expect(await run(modelPermissionGuard('create'), route('Siparis'))).toBeTrue();
       expect(permissions.can).toHaveBeenCalledWith('Siparis', 'create');
       expect(notify.warn).not.toHaveBeenCalled();
     });
 
-    it('izin yoksa uyarır ve /models\'e döner', async () => {
+    it('warns and returns to /models without permission', async () => {
       permissions.can.and.returnValue(false);
       expect(serialized(await run(modelPermissionGuard('delete'), route('Siparis')))).toBe('/models');
       expect(notify.warn).toHaveBeenCalledWith("'Siparis' modeli için silme yetkiniz yok.");
     });
 
-    it('uyarı aktif dilde', async () => {
+    it('the warning is in the active language', async () => {
       localStorage.setItem('lang', 'en');
       TestBed.inject(LanguageService).lang.set('en');
       permissions.can.and.returnValue(false);
@@ -108,7 +108,7 @@ describe('route guards', () => {
       expect(notify.warn).toHaveBeenCalledWith("You do not have read permission for the 'Siparis' model.");
     });
 
-    it('model adı yoksa genel uyarı verir, izne bakmaz', async () => {
+    it('gives a generic warning without a model name, does not check permission', async () => {
       expect(serialized(await run(modelPermissionGuard('read')))).toBe('/models');
       expect(permissions.can).not.toHaveBeenCalled();
       expect(notify.warn).toHaveBeenCalledWith('Bu modele erişim yetkiniz yok.');

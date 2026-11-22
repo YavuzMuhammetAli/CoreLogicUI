@@ -1,11 +1,11 @@
 /* =====================================================
    CoreLogic — Global Design Tokens & Base Styles
-   open-design enterprise design system uyarlaması
+   adaptation of the open-design enterprise design system
    ===================================================== */
 
-/* ---- Enterprise Token Sistemi ---- */
+/* ---- Enterprise Token System ---- */
 :root {
-  /* Renkler */
+  /* Colors */
   --bg: #f8fafc;
   --surface: #ffffff;
   --surface-warm: #eef2f7;
@@ -34,7 +34,7 @@
   --alert-warn-border: #fde68a;
   --alert-info-border: #bfdbfe;
 
-  /* Tipografi */
+  /* Typography */
   --font-display: 'Inter', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
@@ -50,7 +50,7 @@
   --leading-tight: 1.08;
   --tracking-display: -0.018em;
 
-  /* Boşluk */
+  /* Spacing */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -61,32 +61,32 @@
   --space-10: 40px;
   --space-12: 48px;
 
-  /* Köşe yuvarlaklığı */
+  /* Corner radius */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
   --radius-pill: 9999px;
 
-  /* Gölge / Yükseklik */
+  /* Shadow / Elevation */
   --elev-flat: none;
   --elev-ring: 0 0 0 1px var(--border);
   --elev-raised: 0 1px 3px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.08);
   --elev-high: 0 8px 32px rgba(15, 23, 42, 0.12);
   --focus-ring: 0 0 0 3px rgba(29, 78, 216, 0.22);
 
-  /* Hareket */
+  /* Motion */
   --motion-fast: 150ms;
   --motion-base: 230ms;
   --ease-standard:      cubic-bezier(0.2, 0, 0, 1);
   --ease-out-strong:    cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
 
-  /* Düzen */
+  /* Layout */
   --sidebar-w: 240px;
   --topbar-h: 60px;
   --container-max: 1240px;
 
-  /* Sidebar — açık temada açık renk */
+  /* Sidebar — light color in the light theme */
   --sidebar-bg: #ffffff;
   --sidebar-border: rgba(15, 23, 42, 0.08);
   --sidebar-fg: #0f172a;
@@ -96,7 +96,7 @@
   --sidebar-hover-bg: rgba(15, 23, 42, 0.05);
 }
 
-/* ---- Karanlık tema override'ları ---- */
+/* ---- Dark theme overrides ---- */
 :root[data-theme="dark"] {
   --bg: #0b1220;
   --surface: #131c2e;
@@ -127,13 +127,13 @@
   --alert-warn-border: #4a3105;
   --alert-info-border: #1e3a5f;
 
-  /* Gölge/odak — açık temadaki rgba değerleri karanlıkta görünmez kalır */
+  /* Shadow/focus — the light theme's rgba values stay invisible in the dark */
   --elev-ring: 0 0 0 1px var(--border);
   --elev-raised: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.45);
   --elev-high: 0 8px 32px rgba(0, 0, 0, 0.55);
   --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.4);
 
-  /* Sidebar — koyu temada koyu renk */
+  /* Sidebar — dark color in the dark theme */
   --sidebar-bg: #0f172a;
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-fg: #f1f5f9;
@@ -143,7 +143,7 @@
   --sidebar-hover-bg: rgba(255, 255, 255, 0.06);
 }
 
-/* ---- Sıfırlama ---- */
+/* ---- Reset ---- */
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -173,7 +173,7 @@ h1, h2, h3, h4, h5, h6 {
 
 p { margin: 0; }
 
-/* ---- Butonlar ---- */
+/* ---- Buttons ---- */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -204,14 +204,14 @@ p { margin: 0; }
     transform: none !important;
   }
 
-  /* Basış geri bildirimi — her buton varyantı için geçerli */
+  /* Press feedback — applies to every button variant */
   &:active:not(:disabled) {
     transform: scale(0.97);
   }
 }
 
-/* Hover efektleri yalnız gerçek hover'ı olan cihazlarda: dokunmatikte :hover dokunuştan
-   sonra "yapışık" kalır (düğme kalkık ve renkli durur). */
+/* Hover effects only on devices with real hover: on touch, :hover stays "stuck" after
+   a tap (the button stays raised and colored). */
 .btn-primary {
   background: var(--accent);
   color: var(--accent-on);
@@ -276,7 +276,7 @@ p { margin: 0; }
   font-size: var(--text-xs);
 }
 
-/* ---- Panel / Kart ---- */
+/* ---- Panel / Card ---- */
 .panel {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -299,8 +299,8 @@ p { margin: 0; }
     color: var(--fg);
   }
 
-  /* Sarılır: dar ekranda düğmeler sığmazsa alt satıra iner. Sarılmasaydı .panel'in
-     overflow:hidden'ı sondaki düğmeleri (ör. model-data'da "Ekle") keserdi. */
+  /* Wraps: on a narrow screen buttons drop to the next line if they don't fit. Without wrapping, .panel's
+     overflow:hidden would cut off the trailing buttons (e.g. "Ekle" (Add) in model-data). */
   .panel-actions {
     display: flex;
     flex-wrap: wrap;
@@ -312,7 +312,7 @@ p { margin: 0; }
   padding: var(--space-6);
 }
 
-/* Dar ekranda kart iç boşluğu küçülür; başlık aksiyonları sığmazsa alt satıra iner */
+/* On a narrow screen the card padding shrinks; header actions drop to the next line if they don't fit */
 @media (max-width: 768px) {
   .panel-head {
     flex-wrap: wrap;
@@ -324,13 +324,13 @@ p { margin: 0; }
   }
 }
 
-/* ---- Form alanları ---- */
+/* ---- Form fields ---- */
 .field {
   display: grid;
   gap: var(--space-2);
-  /* Grid hücresinde komşu alan (ör. altında yardım metni olan) satırı
-     uzattığında .field'ın iç satırları gerilmesin: gerilirse label ile input
-     arası açılır ve aynı satırdaki input'lar farklı hizada durur. */
+  /* When a neighbouring field in a grid cell (e.g. one with help text below) makes the row
+     taller, .field's inner rows must not stretch: if they did, the gap between label and input
+     would open up and inputs on the same row would sit at different heights. */
   align-content: start;
 
   label {
@@ -345,13 +345,13 @@ p { margin: 0; }
   }
 }
 
-/* Etiket satırının sabit yüksekliği — .btn-sm ile aynı. Sağında düğme olan ve
-   olmayan alanlar yan yana durduğunda input'lar bu sayede aynı hizada kalır. */
+/* Fixed height of the label row — same as .btn-sm. Thanks to this, when fields with and
+   without a button on the right sit side by side, the inputs stay aligned. */
 $field-head-height: 32px;
 
-/* Etiket + sağda düğme ("↺ Etiketten üret", "Kılavuz") satırı. Yüksekliği sabit;
-   etiket kırılmaz — kırılsaydı satır uzar, input aşağı kayardı.
-   NOT: overflow: hidden VERİLMEZ — ⓘ (app-help-hint) balonu etiketin içindedir, kırpılır. */
+/* Label + button on the right ("↺ Etiketten üret" (Generate from label), "Kılavuz" (Guide)) row. Fixed height;
+   the label does not wrap — if it did, the row would grow and the input would shift down.
+   NOTE: NO overflow: hidden — the ⓘ (app-help-hint) bubble is inside the label and would be clipped. */
 .field-head {
   display: flex;
   align-items: center;
@@ -368,8 +368,8 @@ $field-head-height: 32px;
     flex-shrink: 0;
   }
 
-  /* Dar ekranda uzun etiket + düğme sığmaz: düğme alt satıra iner. Tek sütunda
-     komşu hizası gerekmediği için sabit yükseklik kuralı burada gevşer. */
+  /* On a narrow screen a long label + button don't fit: the button drops to the next line. In a single column
+     no neighbour alignment is needed, so the fixed-height rule is relaxed here. */
   @media (max-width: 640px) {
     flex-wrap: wrap;
 
@@ -380,10 +380,10 @@ $field-head-height: 32px;
   }
 }
 
-/* Yan yana alanlar: iki eşit sütun, dar ekranda tek sütun. Tek başına geniş alan: .field--full.
-   Hizalama kendiliğinden: içerideki alanların doğrudan <label>'ı .field-head ile aynı
-   sabit yükseklikte tek satırdır; düğmeli etiket .field-head'e sarılır. Böylece input'lar
-   satır boyunca hizalıdır, altlarındaki yardım/hata metni (align-items: start) komşuyu kaydırmaz. */
+/* Side-by-side fields: two equal columns, one column on a narrow screen. A wide field on its own: .field--full.
+   Alignment is automatic: the direct <label> of the fields inside is a single line with the same fixed
+   height as .field-head; a label with a button is wrapped in .field-head. So the inputs are
+   aligned along the row, and the help/error text below them (align-items: start) does not shift the neighbour. */
 .field-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -401,9 +401,9 @@ $field-head-height: 32px;
     grid-column: 1 / -1;
   }
 
-  /* Tek sütunda hizalanacak komşu yok: uzun etiket alt satıra kırılır. minmax(0, …)
-     şart — 1fr (= minmax(auto, 1fr)) kırılmayan etiketin genişliğine uzar ve input'u
-     panelin dışına iter. */
+  /* In a single column there is no neighbour to align with: a long label wraps to the next line. minmax(0, …)
+     is required — 1fr (= minmax(auto, 1fr)) stretches to the width of the unwrapped label and pushes the input
+     out of the panel. */
   @media (max-width: 768px) {
     grid-template-columns: minmax(0, 1fr);
 
@@ -440,7 +440,7 @@ textarea {
     box-shadow: var(--focus-ring);
   }
 
-  /* Form validation: blur sonrası kırmızı (premature ateşlemeyi önle) */
+  /* Form validation: red after blur (prevent premature firing) */
   &:user-invalid {
     border-color: var(--danger);
     box-shadow: 0 0 0 3px var(--invalid-ring);
@@ -460,8 +460,8 @@ textarea {
   resize: vertical;
 }
 
-/* iOS Safari (iPhone'daki Chrome dahil) 16px'ten küçük yazılı alana odaklanınca sayfayı
-   yakınlaştırır ve geri uzaklaştırmaz. Mobilde form alanları 16px. */
+/* iOS Safari (including Chrome on iPhone) zooms the page when a text field smaller than 16px gets focus
+   and does not zoom back out. Form fields are 16px on mobile. */
 @media (max-width: 768px) {
   .input,
   input[type="text"],
@@ -485,7 +485,7 @@ input[type="checkbox"] {
   cursor: pointer;
 }
 
-/* Etiketli checkbox. Bileşenler ayrıca margin/ağırlık ekleyebilir; temel davranış burada. */
+/* Labeled checkbox. Components may add margin/weight; the base behaviour is here. */
 .checkbox-label {
   display: flex;
   align-items: center;
@@ -495,7 +495,7 @@ input[type="checkbox"] {
   cursor: pointer;
 }
 
-/* Parmakla kullanımda 16px'lik kutu ıskalanır: kutu büyür, etiket satırı dokunma alanı olur. */
+/* With a finger the 16px box is easy to miss: the box grows and the label row becomes the touch target. */
 @media (pointer: coarse) {
   input[type="checkbox"] {
     width: 20px;
@@ -517,13 +517,13 @@ input[type="checkbox"] {
   color: var(--muted);
 }
 
-/* ---- Tablo ----
-   Her .data-table bir .table-wrapper içinde durur: .panel overflow:hidden olduğundan
-   sarmalayıcısız geniş tablo dar ekranda kırpılır, kaydırılamaz. */
+/* ---- Table ----
+   Every .data-table sits inside a .table-wrapper: since .panel has overflow:hidden,
+   a wide table without a wrapper is clipped on a narrow screen and cannot be scrolled. */
 .table-wrapper {
   overflow-x: auto;
-  /* Hücredeki .sr-only (position: absolute) kaydırma kabının içinde kalsın; konumlanmış ata
-     olmazsa kırpılmaz ve dar ekranda sayfayı yatay taşırır. */
+  /* Keep a .sr-only (position: absolute) in a cell inside the scroll container; without a positioned
+     ancestor it is not clipped and makes the page overflow horizontally on a narrow screen. */
   position: relative;
 }
 
@@ -562,7 +562,7 @@ input[type="checkbox"] {
     background: var(--surface-warm);
   }
 
-  /* Aksiyon düğmeleri satırın en sağında. <div class="td-actions"> flex kutusudur. */
+  /* Action buttons at the far right of the row. <div class="td-actions"> is a flex box. */
   .td-actions {
     display: flex;
     justify-content: flex-end;
@@ -570,18 +570,18 @@ input[type="checkbox"] {
     white-space: nowrap;
   }
 
-  /* Aksiyon hücresi yukarıdaki 260px + overflow:hidden kuralından muaf: metin için
-     konan kırpma düğmeleri yutuyordu. flex-end yüzünden taşma SOLDAN kesildiği için
-     ilk düğme (ör. "Görüntüle") hiç görünmüyordu. Tablo genişler, .table-wrapper kaydırır. */
+  /* The action cell is exempt from the 260px + overflow:hidden rule above: the clipping meant for
+     text was swallowing the buttons. Because of flex-end the overflow was cut from the LEFT, so
+     the first button (e.g. "Görüntüle" (View)) never showed. The table widens, .table-wrapper scrolls. */
   td.td-actions,
   td:has(> .td-actions) {
     max-width: none;
     overflow: visible;
   }
 
-  /* <td class="td-actions"> ise TABLO HÜCRESİ olarak kalmalı: flex bir <td> hücre
-     olmaktan çıkar ve tarayıcı onu komşu hücre-dışı kutularla tek bir anonim
-     hücreye birleştirir — düğmeler satırın altına düşer. */
+  /* <td class="td-actions">, however, must stay a TABLE CELL: a flex <td> stops being a
+     cell and the browser merges it with neighbouring non-cell boxes into a single anonymous
+     cell — the buttons drop below the row. */
   td.td-actions {
     display: table-cell;
     width: 1%;
@@ -593,14 +593,14 @@ input[type="checkbox"] {
     }
   }
 
-  /* İkincil (soluk) hücre metni. <td>'ye display değiştiren sınıf (muted-hint,
-     cluster, stack…) VERİLMEZ; bunun yerine bu sınıf kullanılır. */
+  /* Secondary (muted) cell text. Do NOT give a <td> a display-changing class (muted-hint,
+     cluster, stack…); use this class instead. */
   .td-muted {
     color: var(--muted);
   }
 
-  /* Hücredeki ad bağlantısı — satırın asıl hedefi (ör. rapor/dashboard adı). Telefonda
-     tablo yatay kayarken sondaki aksiyon düğmesine gitmeden açılabilsin diye. */
+  /* Name link in a cell — the row's main target (e.g. report/dashboard name). So that on a phone
+     it can be opened while the table scrolls horizontally, without going to the trailing action button. */
   .row-link {
     color: var(--fg);
     font-weight: 600;
@@ -609,8 +609,8 @@ input[type="checkbox"] {
     &:hover { color: var(--accent); text-decoration: underline; }
   }
 
-  /* Satır seçim kutusunu saran etiket: hücrenin tamamı dokunma alanı olur. Hücre
-     tıklamayı durdurduğu (satır detaya gitmesin diye) için kutu ıskalanınca hiçbir şey olmuyordu. */
+  /* Label wrapping the row selection box: the whole cell becomes the touch target. Since the cell
+     stops the click (so the row does not navigate to detail), missing the box did nothing. */
   .select-hit {
     display: flex;
     align-items: center;
@@ -621,11 +621,11 @@ input[type="checkbox"] {
   }
 }
 
-/* ---- Sayfalama ----
-   Pencere hesabı: utils/pagination.ts (pageWindow). Eskiden dört bileşende kopyaydı ve
-   hiçbiri sarılmıyordu — telefonda son sayfa ve "›" düğmesi ekrandan taşıyordu. */
+/* ---- Pagination ----
+   Window calculation: utils/pagination.ts (pageWindow). It used to be copied in four components and
+   none of them wrapped — on a phone the last page and the "›" button overflowed the screen. */
 
-/* Tablonun altındaki sayım + sayfalama + sayfa başına seçici çubuğu */
+/* Bar under the table with the count + pagination + page size selector */
 .table-footer {
   display: flex;
   align-items: center;
@@ -715,7 +715,7 @@ input[type="checkbox"] {
   }
 }
 
-/* ---- Eyebrow (üst etiket) ---- */
+/* ---- Eyebrow (top label) ---- */
 .eyebrow {
   color: var(--meta);
   font-family: var(--font-mono);
@@ -725,7 +725,7 @@ input[type="checkbox"] {
   text-transform: uppercase;
 }
 
-/* ---- Durum badge'leri ---- */
+/* ---- Status badges ---- */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -749,12 +749,12 @@ input[type="checkbox"] {
   &.badge-meta    { color: var(--meta);    background: var(--meta-bg); }
 }
 
-/* ---- Durum mesajı kutusu ---- */
+/* ---- Status message box ---- */
 .alert {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  /* Sunucu hataları uzun, boşluksuz parçalar (URL, kısıt adı) taşıyabilir */
+  /* Server errors may carry long, unbroken chunks (URL, constraint name) */
   overflow-wrap: anywhere;
   padding: var(--space-4);
   border-radius: var(--radius-md);
@@ -781,7 +781,7 @@ input[type="checkbox"] {
   to { transform: rotate(360deg); }
 }
 
-/* ---- Giriş animasyonu (stagger + panel) ---- */
+/* ---- Entrance animation (stagger + panel) ---- */
 @keyframes fade-rise {
   from {
     opacity: 0;
@@ -808,7 +808,7 @@ input[type="checkbox"] {
     padding: var(--space-8) var(--space-4);
   }
 
-  /* <app-icon class="empty-icon" size="40"> — renk kaptan (--muted) */
+  /* <app-icon class="empty-icon" size="40"> — color from the container (--muted) */
   .empty-icon {
     opacity: 0.6;
   }
@@ -824,16 +824,16 @@ input[type="checkbox"] {
   }
 }
 
-/* ---- İkon (<app-icon>, Material Symbols) ----
-   Metin içinde satır ortasında dursun; flex/grid kaplarda (.btn, .nav-item…) etkisizdir.
-   Boyut bileşenin size girdisiyle verilir — burada boyut kuralı YOK. */
+/* ---- Icon (<app-icon>, Material Symbols) ----
+   Sits at the middle of the line within text; has no effect in flex/grid containers (.btn, .nav-item…).
+   The size is given by the component's size input — there is NO size rule here. */
 app-icon {
   vertical-align: middle;
 }
 
-/* ---- Sayfa başlığı (global — component SCSS'lerinden tekrar etme) ----
-   Başlık satırı tek bir .eyebrow etiketi (sayfanın/modelin adı) + sağda aksiyonlardan
-   oluşur; büyük h1 ve açıklama paragrafı kaldırıldı. Bu yüzden dikey ortalı. */
+/* ---- Page header (global — don't repeat it in component SCSS) ----
+   The header row consists of a single .eyebrow label (the page/model name) + actions on the right;
+   the big h1 and description paragraph were removed. That's why it is vertically centered. */
 .page-header {
   display: flex;
   align-items: center;
@@ -847,12 +847,12 @@ app-icon {
   }
 }
 
-/* Sayfa kabuğu — beş component SCSS'inde birebir kopyalanmıştı, buraya alındı.
-   .page-header'dan farkı: solda ayrıca .back-link taşıyan sarmalayıcı bulunabilir. */
+/* Page shell — it was copied verbatim in five component SCSS files, moved here.
+   Difference from .page-header: there may also be a wrapper carrying a .back-link on the left. */
 .page-wrap {
   padding: var(--space-6);
 
-  /* Dar ekranda boşluğu .page-content zaten veriyor — çift boşluk olmasın */
+  /* On a narrow screen .page-content already provides the spacing — avoid double spacing */
   @media (max-width: 768px) {
     padding: 0;
   }
@@ -891,16 +891,16 @@ app-icon {
   margin-top: var(--space-1);
 }
 
-/* ---- Yardımcı ---- */
+/* ---- Utilities ---- */
 .stack > * + * { margin-block-start: var(--space-4); }
 
-/* .flow — ardışık PANEL dizilerinin standart sarmalayıcısı.
-   .panel'in kendi margin'i YOKTUR (bkz. yukarıdaki "Panel / Kart" bloğu); boşluk
-   konteynerin işidir. Bir sayfa/sekme birden çok panel render ediyorsa konteynerine
-   .flow ekle, yoksa kartlar birbirine yapışır — bu hata üç kez tekrarlandı
+/* .flow — the standard wrapper for consecutive PANEL sequences.
+   .panel has NO margin of its own (see the "Panel / Card" block above); spacing is the
+   container's job. If a page/tab renders several panels, add .flow to its container,
+   otherwise the cards stick together — this bug recurred three times
    (audit-log, report-viewer, parameters).
-   İSTİSNA: panelleri display:grid/flex + gap ile dizen konteynerlerde (.widget-grid,
-   .kpi-strip, .model-grid, .plan-grid, .profile-side) KULLANMA — çift boşluk oluşur. */
+   EXCEPTION: DON'T USE it in containers that lay out panels with display:grid/flex + gap (.widget-grid,
+   .kpi-strip, .model-grid, .plan-grid, .profile-side) — it creates double spacing. */
 .flow > * + * { margin-block-start: var(--space-6); }
 .cluster {
   display: flex;
@@ -920,7 +920,7 @@ app-icon {
   border: 0;
 }
 
-/* ---- Erişilebilirlik: hareketi azalt ---- */
+/* ---- Accessibility: reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -1,8 +1,8 @@
-// Panellerin arası .flow yerine bu ekranın kendi ritmi (filtre paneli + tablo).
+// Spacing between panels uses this screen's own rhythm instead of .flow (filter panel + table).
 .instances-table-panel { margin-top: var(--space-4); }
 
 .instances-incident {
-  // Onay kutusu satırın diğer alanlarıyla aynı alt çizgide dursun.
+  // Keep the checkbox on the same baseline as the row's other fields.
   align-self: end;
   padding-bottom: var(--space-2);
 }

@@ -13,19 +13,19 @@ import { tap } from 'rxjs';
 import { startVisiblePoll, VisiblePoll } from '../../../utils/visible-poll';
 import { IconComponent } from '../icon/icon.component';
 
-/** Açılır listede gösterilen bildirim sayısı. */
+/** Number of notifications shown in the dropdown list. */
 const LIST_SIZE = 20;
 
 /**
- * Topbar bildirim zili — okunmamış rozeti + açılır bildirim listesi.
+ * Topbar notification bell — unread badge + notification dropdown list.
  *
- * Projede SignalR/WebSocket olmadığı için anlık itme yok: rozet belirli
- * aralıklarla `unreadCount` ile tazelenir (layout'taki görev rozetiyle aynı
- * desen), liste yalnızca zil açıldığında çekilir.
+ * The project has no SignalR/WebSocket, so there's no real-time push: the badge is
+ * refreshed periodically via `unreadCount` (same pattern as the task badge in the
+ * layout), and the list is fetched only when the bell is opened.
  *
- * Hatalar sessiz yutulur: bildirim modülü (migrasyon 018) kurulmamış bir
- * tenant'ta uç hata döner ve her 30 saniyede kullanıcıya uyarı göstermek
- * anlamsız olurdu. Zil bu durumda rozetsiz kalır.
+ * Errors are silently swallowed: on a tenant where the notification module (migration 018)
+ * isn't installed the endpoint returns an error, and showing the user a warning every
+ * 30 seconds would be pointless. In that case the bell stays without a badge.
  */
 @Component({
     selector: 'app-notification-bell',
@@ -35,7 +35,7 @@ const LIST_SIZE = 20;
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NotificationBellComponent implements OnInit, OnDestroy {
-  /** Rozet yenileme aralığı (ms) — görev rozetiyle aynı. */
+  /** Badge refresh interval (ms) — same as the task badge. */
   private static readonly PollIntervalMs = 60_000;
 
   private readonly host = inject(ElementRef<HTMLElement>);
@@ -50,7 +50,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
   readonly loading = signal(false);
   readonly loadError = signal(false);
 
-  /** Rozette 9'dan büyük sayılar "9+" olarak gösterilir — ikon küçük. */
+  /** Numbers above 9 are shown as "9+" on the badge — the icon is small. */
   readonly badgeText = computed(() => {
     const count = this.unreadCount();
     return count > 9 ? '9+' : String(count);
@@ -59,10 +59,10 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
   private poll?: VisiblePoll;
 
   ngOnInit(): void {
-    // Sunucu tarafında zamanlayıcı kurmak anlamsız ve sızıntı olurdu.
+    // Setting up a timer on the server side would be pointless and a leak.
     if (!isPlatformBrowser(this.platformId)) return;
 
-    // Sekme gizliyken sorulmaz, görünür olunca hemen tazelenir (bkz. utils/visible-poll).
+    // Not polled while the tab is hidden; refreshed immediately once visible (see utils/visible-poll).
     this.poll = startVisiblePoll(() => this.countRequest(), NotificationBellComponent.PollIntervalMs);
   }
 
@@ -80,7 +80,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
     this.open.set(false);
   }
 
-  /** Dışarı tıklanınca kapanır — kontrol yalnızca zilin kendi host'una karşı. */
+  /** Closes on an outside click — checked only against the bell's own host. */
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     if (this.open() && !this.host.nativeElement.contains(event.target as Node)) {
@@ -102,7 +102,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
   markAllRead(): void {
     if (this.unreadCount() === 0) return;
 
-    // İyimser güncelleme: sunucu reddederse bir sonraki tur rozeti düzeltir.
+    // Optimistic update: if the server rejects it, the next round corrects the badge.
     const now = new Date().toISOString();
     this.items.update(list => list.map(n => n.readAt ? n : { ...n, readAt: now }));
     this.unreadCount.set(0);
@@ -115,7 +115,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
   message(item: UserNotification): string {
     const key = `notification.kind.${item.kind}`;
     const resolved = this.languageService.t(key, { name: item.title });
-    // Bilinmeyen tür: t() anahtarın kendisini döner — ham anahtar yerine başlığı göster.
+    // Unknown kind: t() returns the key itself — show the title instead of the raw key.
     return resolved === key
       ? this.languageService.t('notification.kind.default', { name: item.title })
       : resolved;
@@ -125,7 +125,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
     return formatDate(new Date(item.createdAt), this.languageService.lang());
   }
 
-  /** Tür ikonu/renk sınıfı. */
+  /** Kind icon/colour class. */
   tone(item: UserNotification): 'info' | 'warn' | 'danger' | 'success' {
     switch (item.kind) {
       case 'TaskEscalated':     return 'warn';
@@ -147,7 +147,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
   }
 
   private refreshCount(): void {
-    this.countRequest().subscribe({ error: () => { /* sessiz — sınıf notuna bak */ } });
+    this.countRequest().subscribe({ error: () => { /* silent — see the class note */ } });
   }
 
   private countRequest() {
@@ -165,7 +165,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
         this.loading.set(false);
         if (res.success) {
           this.items.set(res.data ?? []);
-          // Liste zaten elde — rozeti bir sonraki turu beklemeden eşitle.
+          // The list is already at hand — sync the badge without waiting for the next round.
           this.refreshCount();
         } else {
           this.loadError.set(true);

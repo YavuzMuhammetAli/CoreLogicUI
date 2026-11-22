@@ -1,4 +1,4 @@
-/* Kullanıcı detay/oluşturma — user-permission-detail ile aynı token tabanlı desen. */
+/* User detail/create — same token-based pattern as user-permission-detail. */
 
 .detail-breadcrumb {
   display: flex;
@@ -33,7 +33,7 @@
   border-top: 1px solid var(--border-soft);
 }
 
-/* Ad/Soyad ve parola çiftleri yan yana; dar ekranda alt alta */
+/* First/last name and password pairs side by side; stacked on narrow screens */
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

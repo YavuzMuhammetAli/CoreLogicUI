@@ -4,15 +4,15 @@ import {
 } from './screen-layout.model';
 
 /**
- * Yerleşim belgesi doğrulaması — SAF.
+ * Layout document validation — PURE.
  *
- * Sunucudaki `Business/Concrete/ScreenLayout/ScreenLayoutValidator.cs` ile BİREBİR aynı
- * kurallar: tasarımcı "yayınlanabilir" deyip sunucu reddetmesin (ya da tersi). Ortak
- * vektörler `screen-layout.vectors.json` iki repoda birebir kopyadır; kural değiştiren her
- * düzenleme iki dosyaya birlikte yapılır ve vektör eklenir.
+ * Rules IDENTICAL to the server-side `Business/Concrete/ScreenLayout/ScreenLayoutValidator.cs`:
+ * so the designer never says "publishable" only for the server to reject it (or vice versa). The shared
+ * vectors `screen-layout.vectors.json` are byte-for-byte copies in both repos; every edit that changes a
+ * rule is made to both files together and a vector is added.
  *
- * Elle eşitlenen ayrıntılar: tam sayı kararı `Number.isInteger` ↔ `d == Math.Floor(d)`
- * (12.0 tam sayıdır), metin uzunluğu UTF-16 birimi (iki tarafta da `.length`), boyut UTF-8 bayt.
+ * Details kept in sync by hand: the integer check `Number.isInteger` ↔ `d == Math.Floor(d)`
+ * (12.0 is an integer), text length in UTF-16 units (`.length` on both sides), size in UTF-8 bytes.
  */
 
 const STRUCTURAL = new Set<LayoutIssueCode>([
@@ -36,12 +36,12 @@ export function severityOf(code: LayoutIssueCode, mode: LayoutValidationMode): L
   return 'warning';
 }
 
-/** Hata (engelleyen) sorun var mı. */
+/** Whether there is an error (blocking) issue. */
 export function hasErrors(issues: readonly LayoutIssue[]): boolean {
   return issues.some(i => i.severity === 'error');
 }
 
-/** Ham JSON metnini doğrular — boyut ve ayrıştırma dahil (sunucunun gördüğü yol). */
+/** Validates raw JSON text — including size and parsing (the path the server sees). */
 export function validateLayoutText(
   text: string,
   viewType: ScreenViewType,
@@ -60,7 +60,7 @@ export function validateLayoutText(
   return validateLayout(parsed, viewType, facts, mode);
 }
 
-/** Ayrıştırılmış belgeyi doğrular. `facts` null ise kolon kuralları atlanır. */
+/** Validates a parsed document. If `facts` is null, column rules are skipped. */
 export function validateLayout(
   input: unknown,
   viewType: ScreenViewType,
@@ -83,9 +83,9 @@ export function utf8Length(text: string): number {
   return new TextEncoder().encode(text).length;
 }
 
-// ─── İç ayrıntılar ──────────────────────────────────────────────────────────
+// ─── Internal details ───────────────────────────────────────────────────────
 
-/** Belgenin okunamaz olduğu an — tek sorun "unreadable" döner. */
+/** The moment the document is found unreadable — the single issue "unreadable" is returned. */
 const UNREADABLE = Symbol('unreadable');
 
 type JsonObject = Record<string, unknown>;
@@ -137,7 +137,7 @@ function isIntegerIn(value: unknown, min: number, max: number): value is number 
   return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
 }
 
-/** "Çok satırlı" yalnız metin, "seçenek düğmeleri" yalnız enum kolonunda anlamlı. */
+/** "Multi-line" is meaningful only for text, "radio buttons" only for an enum column. */
 function widgetFits(widget: string, dataType: string): boolean {
   return widget === 'multiline' ? dataType === 'string' || dataType === 'text' : dataType === 'enum';
 }
@@ -198,7 +198,7 @@ class Walker {
       this.add('limit');
     }
 
-    // ── Kolon kuralları ──
+    // ── Column rules ──
     for (const column of placedOrder) {
       if (this.facts && !this.facts.has(column)) this.add('unknownColumn', undefined, column);
       if ((placedCount.get(column) ?? 0) > 1) this.add('duplicateColumn', undefined, column);
@@ -320,7 +320,7 @@ class Walker {
   }
 
   private add(code: LayoutIssueCode, targetId?: string, column?: string): void {
-    // Aynı sorun aynı hedefte bir kez yazılır (ör. üç kez yerleştirilen kolon).
+    // The same issue is reported once per target (e.g. a column placed three times).
     const key = `${code}|${targetId ?? ''}|${column ?? ''}`;
     if (this.issueKeys.has(key)) return;
     this.issueKeys.add(key);

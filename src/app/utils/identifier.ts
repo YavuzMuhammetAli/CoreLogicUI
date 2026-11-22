@@ -2,36 +2,36 @@ import { AbstractControl, FormArray, FormGroup, ValidationErrors, ValidatorFn } 
 import { Subscription } from 'rxjs';
 
 /**
- * Model (tablo) ve alan (kolon) adları için tek kaynak.
+ * Single source for model (table) and field (column) names.
  *
- * Kullanıcı serbest bir ETİKET yazar ("satış pazarlama formu"); tanımlayıcı
- * ("SatisPazarlamaFormu") buradan türetilir. Ad elle de yazılabilir ama
- * backend'e gidecek her ad buradaki doğrulayıcılardan geçmek zorundadır —
- * kural backend'le aynıdır, yalnızca hata kayda gitmeden yakalanır.
+ * The user writes a free-form LABEL ("satış pazarlama formu"); the identifier
+ * ("SatisPazarlamaFormu") is derived from it here. The name can also be typed by hand, but
+ * every name sent to the backend must pass the validators here —
+ * the rules match the backend, the error is just caught before saving.
  *
- * Saf fonksiyonlar; Angular'a yalnızca ValidatorFn tipi ve form ağacı üzerinden bağlıdır.
+ * Pure functions; tied to Angular only through the ValidatorFn type and the form tree.
  */
 
 export type IdentifierKind = 'model' | 'column';
 
-/** Model adı: büyük harfle başlayan PascalCase (üretilen C# sınıf adı). */
+/** Model name: PascalCase starting with an uppercase letter (the generated C# class name). */
 export const MODEL_NAME_PATTERN = /^[A-Z][A-Za-z0-9]*$/;
 
-/** Kolon adı: backend `SqlIdentifier.Pattern` ile aynı. */
+/** Column name: same as backend `SqlIdentifier.Pattern`. */
 export const COLUMN_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
 
 /**
- * Tanımlayıcı üst sınırı. SQL Server 128'e izin verir ama ad, türetilmiş
- * constraint adlarına da gömülür (`FK_{tablo}_{kolon}_Rel`) — ikisi yan yana sığmalı.
+ * Identifier upper limit. SQL Server allows 128, but the name is also embedded in derived
+ * constraint names (`FK_{table}_{column}_Rel`) — both must fit side by side.
  */
 export const IDENTIFIER_MAX_LENGTH = 50;
 
-/** Etiket üst sınırı — backend `PublishedTable.Label` / `PublishedTableMember.Label` NVARCHAR(255). */
+/** Label upper limit — backend `PublishedTable.Label` / `PublishedTableMember.Label` NVARCHAR(255). */
 export const LABEL_MAX_LENGTH = 255;
 
 /**
- * Her dinamik tabloya sistemin zaten yazdığı kolonlar. Backend
- * `Core/Constants/DbBaseObjectColumns.All` aynasıdır — oraya kolon eklenirse burası da güncellenmeli.
+ * Columns the system already writes to every dynamic table. Mirror of backend
+ * `Core/Constants/DbBaseObjectColumns.All` — if a column is added there, update this too.
  */
 export const RESERVED_COLUMN_NAMES: readonly string[] = [
   'ID', 'Active', 'RecordStatus',
@@ -40,8 +40,8 @@ export const RESERVED_COLUMN_NAMES: readonly string[] = [
 ];
 
 /**
- * Tenant veritabanındaki sistem tabloları (backend `CoreLogicContext` DbSet'leri + migrasyon
- * tabloları). Aynı adla dinamik model açmak mevcut sistem tablosuna CREATE/ALTER denemek demektir.
+ * System tables in the tenant database (backend `CoreLogicContext` DbSets + migration
+ * tables). Creating a dynamic model with the same name would mean attempting CREATE/ALTER on an existing system table.
  */
 export const RESERVED_MODEL_NAMES: readonly string[] = [
   'User', 'OperationClaim', 'UserOperationClaim', 'Role', 'UserRole', 'RolePermission', 'Permission',
@@ -51,11 +51,11 @@ export const RESERVED_MODEL_NAMES: readonly string[] = [
   'AppSetting', 'AiConversation', 'AiMessage', 'AiProposal',
   'WorkflowDefinition', 'WorkflowInstance', 'WorkflowTask', 'WorkflowEvent', 'WorkflowOutbox',
   'UserNotification', 'UserPreference', 'SchemaVersion',
-  // Üretilen C# kodunda ad çakışması yaratır
+  // Would cause name collisions in the generated C# code
   'System', 'Object', 'String', 'Microsoft'
 ];
 
-/** C# anahtar kelimeleri — kolon property'si olarak Roslyn derlemesini bozar (büyük/küçük harf duyarlı). */
+/** C# keywords — break Roslyn compilation as column properties (case-sensitive). */
 const CSHARP_KEYWORDS = new Set([
   'abstract', 'as', 'base', 'bool', 'break', 'byte', 'case', 'catch', 'char', 'checked', 'class',
   'const', 'continue', 'decimal', 'default', 'delegate', 'do', 'double', 'else', 'enum', 'event',
@@ -71,8 +71,8 @@ const RESERVED_COLUMNS_CI = new Set(RESERVED_COLUMN_NAMES.map(n => n.toLowerCase
 const RESERVED_MODELS_CI = new Set(RESERVED_MODEL_NAMES.map(n => n.toLowerCase()));
 
 /**
- * NFD ayrıştırmasıyla ASCII'ye inmeyen harfler. Türkçe harfler de burada: `ı` NFD'de
- * ayrışmaz, `İ` ise `I + nokta` olur ve küçültülünce `i̇` (iki karakter) üretir.
+ * Letters that NFD decomposition does not reduce to ASCII. Turkish letters are here too: `ı` does not
+ * decompose under NFD, and `İ` becomes `I + dot`, producing `i̇` (two characters) when lowercased.
  */
 const CHAR_MAP: Record<string, string> = {
   'ç': 'c', 'Ç': 'C', 'ğ': 'g', 'Ğ': 'G', 'ı': 'i', 'İ': 'I',
@@ -81,7 +81,7 @@ const CHAR_MAP: Record<string, string> = {
   'đ': 'd', 'Đ': 'D', 'ł': 'l', 'Ł': 'L'
 };
 
-/** Türkçe ve aksanlı harfleri ASCII karşılığına çevirir; diğer karakterlere dokunmaz. */
+/** Converts Turkish and accented letters to their ASCII equivalents; leaves other characters alone. */
 export function transliterate(text: string): string {
   let out = '';
   for (const ch of text) out += CHAR_MAP[ch] ?? ch;
@@ -89,16 +89,16 @@ export function transliterate(text: string): string {
 }
 
 /**
- * Serbest bir etiketten tanımlayıcı üretir.
+ * Builds an identifier from a free-form label.
  *   "satış pazarlama formu" → "SatisPazarlamaFormu"
- *   "İŞ EMRİ"               → "IsEmri"   (tamamı büyük harfse önce küçültülür)
- *   "KDV tutarı"            → "KDVTutari" (karışık yazımda kısaltma korunur)
+ *   "İŞ EMRİ"               → "IsEmri"   (lowercased first if entirely uppercase)
+ *   "KDV tutarı"            → "KDVTutari" (acronyms kept in mixed case)
  *   "2024 satışlar"         → "Model2024Satislar" / "Alan2024Satislar"
- * Üretilebilecek bir şey yoksa (yalnız noktalama) boş döner.
+ * Returns empty if nothing can be produced (punctuation only).
  */
 export function toIdentifier(label: string | null | undefined, kind: IdentifierKind): string {
   let text = transliterate((label ?? '').trim());
-  // "SATIŞ FORMU" → "SatisFormu"; "SATISFORMU" gibi okunmaz bir ad üretilmesin.
+  // "SATIŞ FORMU" → "SatisFormu"; so an unreadable name like "SATISFORMU" is not produced.
   if (!/[a-z]/.test(text)) text = text.toLowerCase();
 
   const words = text.split(/[^A-Za-z0-9]+/).filter(Boolean);
@@ -110,9 +110,9 @@ export function toIdentifier(label: string | null | undefined, kind: IdentifierK
 }
 
 /**
- * Kullanıcı adı ELLE yazarken her tuşta uygulanır: Türkçe harfleri çevirir, izin
- * verilmeyen karakterleri (boşluk, noktalama) atar. PascalCase dayatmaz — kullanıcının
- * yazdığına saygı duyar; yalnızca model adının ilk harfini büyütür (desen gereği).
+ * Applied on every keystroke while the user types the name BY HAND: converts Turkish letters, drops
+ * disallowed characters (spaces, punctuation). Does not force PascalCase — respects what the user
+ * typed; only capitalizes the first letter of a model name (required by the pattern).
  */
 export function sanitizeIdentifierInput(raw: string, kind: IdentifierKind): string {
   const allowed = kind === 'model' ? /[^A-Za-z0-9]/g : /[^A-Za-z0-9_]/g;
@@ -122,8 +122,8 @@ export function sanitizeIdentifierInput(raw: string, kind: IdentifierKind): stri
 }
 
 /**
- * Ad input'unun `(input)` olayında çağrılır: yazılan değeri anında temizler ve imleci
- * kullanıcının yazdığı yerde tutar (yalnızca sona yazılmış gibi zıplamasın).
+ * Called on the name input's `(input)` event: cleans the typed value immediately and keeps the caret
+ * where the user was typing (so it does not jump as if typed at the end).
  */
 export function sanitizeIdentifierInputEvent(event: Event, control: AbstractControl, kind: IdentifierKind): void {
   const el = event.target as HTMLInputElement;
@@ -137,19 +137,19 @@ export function sanitizeIdentifierInputEvent(event: Event, control: AbstractCont
   el.setSelectionRange(caret, caret);
 }
 
-// ─── Doğrulama ────────────────────────────────────────────────────────────────
+// ─── Validation ───────────────────────────────────────────────────────────────
 
-/** Bir adın çakışmaması gereken çevre. Hepsi opsiyonel; verilmeyen kontrol atlanır. */
+/** The surroundings a name must not collide with. All optional; an omitted check is skipped. */
 export interface IdentifierContext {
-  /** Aynı kapsamdaki diğer adlar (kardeş kolonlar ya da mevcut modeller). */
+  /** Other names in the same scope (sibling columns or existing models). */
   taken?: Iterable<string | null | undefined>;
-  /** Kolonun ait olduğu modelin adı — C#'ta üye adı sınıf adıyla aynı olamaz (CS0542). */
+  /** Name of the column's model — in C# a member name cannot equal the class name (CS0542). */
   modelName?: string | null;
-  /** Alt modelse üst modelin adı — `{Parent}Id` FK kolonu sistem tarafından üretilir. */
+  /** For a sub-model, the parent model's name — the `{Parent}Id` FK column is generated by the system. */
   parentName?: string | null;
 }
 
-/** Hata anahtarları — `identifierErrorMessage` bunları i18n anahtarına çevirir. */
+/** Error keys — `identifierErrorMessage` maps them to i18n keys. */
 export type IdentifierErrorKey =
   | 'identifierMaxLength' | 'identifierPattern' | 'identifierKeyword' | 'identifierReserved'
   | 'identifierSameAsModel' | 'identifierParentFk' | 'identifierDuplicate';
@@ -157,7 +157,7 @@ export type IdentifierErrorKey =
 const eqCi = (a: string | null | undefined, b: string | null | undefined): boolean =>
   !!a && !!b && a.toLowerCase() === b.toLowerCase();
 
-/** Saf kontrol: ad geçerliyse null, değilse tek bir hata nesnesi döner. Boş ad `required`'ın işidir. */
+/** Pure check: null if the name is valid, otherwise a single error object. An empty name is `required`'s job. */
 export function identifierErrors(
   value: string | null | undefined,
   kind: IdentifierKind,
@@ -189,9 +189,9 @@ export function identifierErrors(
 }
 
 /**
- * Üretilen ad bir kurala takılırsa (çakışma, rezerve ad…) sonuna sayı ekleyerek
- * geçerli ilk adı bulur: "MusteriAdi" → "MusteriAdi2" → "MusteriAdi3".
- * Otomatik üretimin kendisi hiçbir zaman hatalı ad önermez.
+ * If the generated name breaks a rule (collision, reserved name…) finds the first valid name by
+ * appending a number: "MusteriAdi" → "MusteriAdi2" → "MusteriAdi3".
+ * Automatic generation itself never suggests an invalid name.
  */
 export function uniqueIdentifier(base: string, kind: IdentifierKind, ctx: IdentifierContext = {}): string {
   if (!base) return '';
@@ -207,16 +207,16 @@ export function uniqueIdentifier(base: string, kind: IdentifierKind, ctx: Identi
   return base;
 }
 
-// ─── Form ağacından bağlam çıkarımı ───────────────────────────────────────────
+// ─── Deriving context from the form tree ─────────────────────────────────────
 //
-// Model formu: { label, entityName, columns: FormArray<{ columnName, label, … }>, subModels: FormArray<model> }
-// Doğrulayıcı kendi konumundan kardeşlerini, modelini ve üst modelini bulur; böylece
-// iç içe alt model taslaklarında dışarıdan bağlam geçirmek gerekmez.
+// Model form: { label, entityName, columns: FormArray<{ columnName, label, … }>, subModels: FormArray<model> }
+// The validator finds its siblings, model and parent model from its own position; so
+// nested sub-model drafts need no context passed in from outside.
 
 const isModelGroup = (c: AbstractControl | null | undefined): c is FormGroup =>
   c instanceof FormGroup && !!c.get('entityName') && !!c.get('columns');
 
-/** Ağaçtaki tüm model adları (`except` hariç). */
+/** All model names in the tree (excluding `except`). */
 function collectModelNames(root: AbstractControl, except: AbstractControl): string[] {
   const names: string[] = [];
   const walk = (node: AbstractControl): void => {
@@ -231,7 +231,7 @@ function collectModelNames(root: AbstractControl, except: AbstractControl): stri
   return names;
 }
 
-/** Kontrolün form ağacındaki konumundan çıkarılan bağlam. Ağaca bağlı değilse boş döner. */
+/** Context derived from the control's position in the form tree. Empty if not attached to a tree. */
 export function structuralContext(control: AbstractControl, kind: IdentifierKind): IdentifierContext {
   if (kind === 'model') {
     let root: AbstractControl = control;
@@ -252,7 +252,7 @@ export function structuralContext(control: AbstractControl, kind: IdentifierKind
   };
 }
 
-/** İki bağlamı birleştirir: `taken` listeleri birleşir, tekil alanlarda `extra` kazanır. */
+/** Merges two contexts: `taken` lists are concatenated, `extra` wins for single-valued fields. */
 function mergeContext(base: IdentifierContext, extra: IdentifierContext): IdentifierContext {
   return {
     taken: [...(base.taken ?? []), ...(extra.taken ?? [])],
@@ -262,9 +262,9 @@ function mergeContext(base: IdentifierContext, extra: IdentifierContext): Identi
 }
 
 /**
- * Ad doğrulayıcısı. Bağlam önce form ağacından çıkarılır; `extra` verilirse ağaçta
- * olmayan bilgiler (mevcut tablolar, popup'taki taslağın kardeşleri) onunla eklenir.
- * `extra` bir fonksiyondur — her doğrulamada güncel değeri okunur.
+ * Name validator. Context is first derived from the form tree; if `extra` is given, information not in
+ * the tree (existing tables, siblings of the draft in the popup) is added from it.
+ * `extra` is a function — its current value is read on every validation.
  */
 export function identifierValidator(kind: IdentifierKind, extra?: () => IdentifierContext): ValidatorFn {
   return control => identifierErrors(
@@ -275,9 +275,9 @@ export function identifierValidator(kind: IdentifierKind, extra?: () => Identifi
 }
 
 /**
- * Kardeşler arası kurallar (çakışma) bir ad değişince diğerlerinin geçerliliğini de
- * etkiler; Angular bunu kendiliğinden yeniden hesaplamaz. Kaydetmeden önce tüm
- * ağaçtaki adlar yeniden doğrulanır.
+ * Cross-sibling rules (collisions) mean changing one name also affects the validity of the others;
+ * Angular does not recompute this by itself. Before saving, all names in the
+ * tree are re-validated.
  */
 export function revalidateIdentifiers(root: AbstractControl): void {
   if (isModelGroup(root)) {
@@ -287,11 +287,11 @@ export function revalidateIdentifiers(root: AbstractControl): void {
     const subs = root.get('subModels');
     if (subs instanceof FormArray) subs.controls.forEach(revalidateIdentifiers);
   }
-  // Grup geçerliliği alt kontrollerden sonra tazelenmeli.
+  // Group validity must be refreshed after the child controls.
   root.updateValueAndValidity({ emitEvent: false });
 }
 
-/** Şablonda gösterilecek hata: i18n anahtarı + yer tutucular. Hata yoksa null. */
+/** The error to show in the template: i18n key + placeholders. Null if there is no error. */
 export function identifierErrorMessage(
   control: AbstractControl | null | undefined
 ): { key: string; params: Record<string, string | number> } | null {
@@ -317,13 +317,13 @@ export function identifierErrorMessage(
   return null;
 }
 
-// ─── Etiket → ad senkronu ─────────────────────────────────────────────────────
+// ─── Label → name sync ────────────────────────────────────────────────────────
 
 /**
- * Etiket değiştikçe adı üretir. Ad, son üretilen değerde (ya da boş) durduğu sürece
- * etiketi takip eder; kullanıcı adı elle değiştirirse takip durur, adı silerse ya da
- * `regenerate()` çağrılırsa yeniden başlar. Ad kontrolü kilitliyse (kayıtlı kolon /
- * kayıtlı model) hiçbir şey yazılmaz.
+ * Generates the name as the label changes. The name follows the label as long as it stays at the
+ * last generated value (or empty); following stops if the user edits the name by hand, and resumes if
+ * they clear it or `regenerate()` is called. If the name control is locked (saved column /
+ * saved model) nothing is written.
  */
 export class LabelNameSync {
   private lastAuto: string;
@@ -339,12 +339,12 @@ export class LabelNameSync {
     this.sub = labelCtrl.valueChanges.subscribe(() => {
       if (this.nameCtrl.disabled) return;
       const current = this.nameCtrl.value ?? '';
-      if (current !== '' && current !== this.lastAuto) return; // elle değiştirilmiş
+      if (current !== '' && current !== this.lastAuto) return; // edited by hand
       this.apply();
     });
   }
 
-  /** Adı etiketten yeniden üretir ve takibi yeniden başlatır ("↺" düğmesi). */
+  /** Regenerates the name from the label and restarts following (the "↺" button). */
   regenerate(): void {
     if (this.nameCtrl.disabled) return;
     this.apply();

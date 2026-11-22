@@ -23,13 +23,13 @@
   color: var(--fg);
 }
 
-/* ── Üst kayıt paneli ──────────────────────────────────────────────────────── */
+/* ── Parent record panel ───────────────────────────────────────────────────── */
 
 .record-panel {
   margin-bottom: var(--space-6);
 }
 
-/* Başlık satırı: solda tek .eyebrow etiketi (tablo adı), sağda aksiyonlar */
+/* Header row: a single .eyebrow label (table name) on the left, actions on the right */
 .record-panel-head {
   display: flex;
   align-items: center;
@@ -38,7 +38,7 @@
   flex-wrap: wrap;
 }
 
-/* ── Alt panel: Sütunlar (alt model gibi) ─────────────────────────────────── */
+/* ── Bottom panel: Columns (like a sub-model) ─────────────────────────────── */
 
 .children-panel {
   overflow: visible;
@@ -50,8 +50,8 @@
   border-bottom: 2px solid var(--border-soft);
   background: var(--surface-warm);
   padding: 0 var(--space-4);
-  /* Rozetli üç sekme telefona sığmıyor: sarılamayan sekmeler yatay kayar
-     (eskiden .children-panel kırpmadığı için bütün sayfa yana kayıyordu) */
+  /* Three badged tabs do not fit on a phone: tabs that cannot wrap scroll horizontally
+     (previously the whole page scrolled sideways because .children-panel did not clip) */
   overflow-x: auto;
   scrollbar-width: none;
 
@@ -72,7 +72,7 @@
   border: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
-  /* G1: sekmeler artık gerçekten geçiş yapıyor (Sütunlar / İlişkiler) */
+  /* G1: the tabs now really switch (Columns / Relationships) */
   cursor: pointer;
   white-space: nowrap;
   transition: color var(--motion-fast) var(--ease-standard),
@@ -106,15 +106,15 @@
   background: var(--accent);
   color: #fff;
 
-  /* Doğrulama hatası varsa ilişki sekmesindeki rozet kırmızıya döner. */
+  /* If there is a validation error, the badge on the relationships tab turns red. */
   &--danger {
     background: var(--danger);
   }
 }
 
-/* ── G1: İlişkiler sekmesi ────────────────────────────────────────────────── */
+/* ── G1: Relationships tab ─────────────────────────────────────────────────── */
 
-/* Doğrulama hatası olan ilişki satırı */
+/* Relationship row with a validation error */
 .row-invalid {
   background: var(--danger-bg);
 }
@@ -136,15 +136,15 @@
   opacity: 0.85;
 }
 
-/* Tablo hücresinde property/FK adları monospace gösterilir. */
+/* Property/FK names are shown in monospace in table cells. */
 .mono-cell {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
 }
 
-/* ── G1: Önizleme diyaloğu ────────────────────────────────────────────────── */
+/* ── G1: Preview dialog ────────────────────────────────────────────────────── */
 
-/* Graph + kod bloğu için standart diyalogdan geniş varyant. */
+/* A variant wider than the standard dialog for the graph + code block. */
 .dialog-panel--wide {
   max-width: 960px;
   width: 96vw;
@@ -175,7 +175,7 @@
   color: var(--fg);
 }
 
-/* Uzun kod/SQL satırları kendi kutusunda kayar — sayfa yatayda kaymaz. */
+/* Long code/SQL lines scroll inside their own box — the page does not scroll horizontally. */
 .preview-code {
   margin: 0 0 var(--space-3);
   padding: var(--space-3);
@@ -208,7 +208,7 @@
   gap: var(--space-2);
 }
 
-/* Araç çubuğunda solda duran açıklama metni (Alt Modeller sekmesi) */
+/* Description text on the left of the toolbar (Sub-models tab) */
 .tab-toolbar-hint {
   margin: 0 auto 0 0;
   max-width: 68ch;
@@ -220,13 +220,13 @@
   border: 1px solid var(--border-soft);
 }
 
-/* Sütun satırları tıklanabilir — satıra tıklayınca düzenleme popup'ı açılır */
+/* Column rows are clickable — clicking a row opens the edit popup */
 .row-clickable {
   cursor: pointer;
 }
 
-/* Yan yana alanlar (etiket|ad, kural alanları) global .field-row + .field-head ile
-   dizilir — bkz. corelogic-design skill'i "Yan yana alanlar". Burada yerel hizalama YOK. */
+/* Side-by-side fields (label|name, rule fields) are laid out with the global .field-row + .field-head
+   — see the corelogic-design skill's "Yan yana alanlar" (side-by-side fields). NO local alignment here. */
 
 .checkbox-label {
   display: flex;
@@ -239,12 +239,12 @@
   margin: 0;
 }
 
-/* Üretilen tanımlayıcılar (tablo/alan adı) kod gibi okunur. */
+/* Generated identifiers (table/field name) read like code. */
 .mono-input {
   font-family: var(--font-mono);
 }
 
-/* Etiket satırındaki düğmeler (.field-head içinde): "↺ Etiketten üret", tip kılavuzu. */
+/* Buttons in the label row (inside .field-head): "↺ Etiketten üret" (Generate from label), type guide. */
 .help-btn {
   flex-shrink: 0;
   gap: var(--space-1);
@@ -255,7 +255,7 @@
   }
 }
 
-/* ── Sütun popup'ı (modal) ─────────────────────────────────────────────────── */
+/* ── Column popup (modal) ──────────────────────────────────────────────────── */
 
 .dialog-overlay {
   position: fixed;
@@ -274,14 +274,14 @@
   width: 100%;
   max-width: 560px;
   max-height: calc(100vh - 2 * var(--space-4));
-  /* dvh = görünen alan; vh mobilde tarayıcı çubuklarını da sayar ve alttaki düğmeler kesilir */
+  /* dvh = visible area; on mobile vh also counts the browser bars and the bottom buttons get cut off */
   max-height: calc(100dvh - 2 * var(--space-4));
   overscroll-behavior: contain;
   overflow-y: auto;
   box-shadow: var(--elev-high);
 }
 
-/* Kaydedilmemiş alt model taslakları — mevcut alt model tablosundan ayrılır */
+/* Unsaved sub-model drafts — set apart from the existing sub-model table */
 .sub-model-drafts {
   margin-top: var(--space-5);
   padding-top: var(--space-5);
@@ -297,9 +297,9 @@
   color: var(--fg-2);
 }
 
-/* Global `.panel-actions` yalnızca `.panel-head` içinde tanımlı; burada `.panel-body`'nin
-   kardeşi olduğu için padding'i component vermeli — aksi halde butonlar panel kenarına
-   yapışır. Yatay değer `.panel-head`/`.panel-body` ile hizalı. */
+/* Global `.panel-actions` is only defined inside `.panel-head`; here it is a sibling of
+   `.panel-body`, so the component must give the padding — otherwise the buttons stick to the
+   panel edge. The horizontal value is aligned with `.panel-head`/`.panel-body`. */
 .dialog-panel .panel-actions {
   display: flex;
   justify-content: flex-end;
@@ -307,7 +307,7 @@
   padding: var(--space-4) var(--space-6) var(--space-5);
   border-top: 1px solid var(--border-soft);
   flex-wrap: wrap;
-  /* Uzun formda Kaydet/İptal görünür kalsın (record-form-dialog ile aynı) */
+  /* Keep Save/Cancel visible on a long form (same as record-form-dialog) */
   position: sticky;
   bottom: 0;
   background: var(--surface);
@@ -317,13 +317,13 @@
   }
 }
 
-/* ── Sütun popup'ı: dosya kolonunun izinli türleri ─────────────────────────── */
+/* ── Column popup: allowed types of the file column ──────────────────────────── */
 
 .file-groups {
   margin: 0;
   padding: 0;
   border: 0;
-  min-width: 0;                   // fieldset varsayılan min-content genişliği taşmasın
+  min-width: 0;                   // so the fieldset's default min-content width does not overflow
 
   legend {
     padding: 0;
@@ -334,18 +334,18 @@
   }
 }
 
-/* ── Sütun popup'ı: otomatik değer bölümü ──────────────────────────────────── */
+/* ── Column popup: auto value section ──────────────────────────────────────── */
 
 .auto-value {
   margin: 0;
   padding: var(--space-4) 0 0;
   border: 0;
   border-top: 1px solid var(--border-soft);
-  min-width: 0;                   // fieldset varsayılan min-content genişliği taşmasın
+  min-width: 0;                   // so the fieldset's default min-content width does not overflow
 }
 
 .auto-value__legend {
-  float: left;                    // legend'ı kenarlık çizgisinden kurtarıp akışa sokar
+  float: left;                    // takes the legend off the border line and puts it into the flow
   width: 100%;
   padding: 0;
   display: flex;
@@ -398,7 +398,7 @@
   font-family: var(--font-mono);
 }
 
-/* ── Yükleniyor ────────────────────────────────────────────────────────────── */
+/* ── Loading ───────────────────────────────────────────────────────────────── */
 
 .muted-hint {
   display: flex;

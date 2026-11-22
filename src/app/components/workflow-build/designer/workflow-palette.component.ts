@@ -5,12 +5,12 @@ import { WORKFLOW_NODE_MIME } from '../../shared/workflow-canvas/workflow-canvas
 import { IconComponent } from '../../shared/icon/icon.component';
 
 /**
- * Tasarımcı paleti — eklenebilecek düğüm türleri.
+ * Designer palette — node types that can be added.
  *
- * İki yol: tuvale sürükleyip bırakmak (bırakılan yere konur) ya da tıklamak
- * (seçili adımın boş çıkışına bağlanır; seçim yoksa görünür alana konur).
- * Sürükleme native HTML5 sürükle-bırak ile yapılır — tuval yalnız masaüstünde
- * kullanıldığı için dokunmatik desteği gerekmiyor; tıklama yolu her yerde çalışır.
+ * Two ways: drag onto the canvas (placed where dropped) or click
+ * (connected to the selected step's empty exit; with no selection, placed in the visible area).
+ * Dragging uses native HTML5 drag-and-drop — the canvas is only used on desktop,
+ * so touch support is not needed; the click path works everywhere.
  */
 @Component({
     selector: 'app-workflow-palette',
@@ -21,12 +21,12 @@ import { IconComponent } from '../../shared/icon/icon.component';
 })
 export class WorkflowPaletteComponent {
   readonly disabled = input(false);
-  /** Bu şirkette kullanılamayan türler (ör. Bekleme — migrasyon 022 yok). */
+  /** Types not available in this company (e.g. Wait — migration 022 missing). */
   readonly unavailable = input<ReadonlySet<NodeKind>>(new Set());
 
   readonly add = output<NodeKind>();
 
-  /** Gruplar: insan adımları, akışı yönlendiren adımlar. */
+  /** Groups: human steps, steps that route the flow. */
   readonly groups = [
     { titleKey: 'workflow.palette.human', kinds: NODE_KINDS.filter(k => k.category === 'human') },
     { titleKey: 'workflow.palette.automation', kinds: NODE_KINDS.filter(k => k.category === 'automation') },

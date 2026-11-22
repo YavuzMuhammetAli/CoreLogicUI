@@ -2,7 +2,7 @@
   display: block;
 }
 
-/* Liste satırları sırayla (stagger) belirir */
+/* List rows appear one after another (stagger) */
 .data-table tbody tr {
   animation: fade-rise 220ms var(--ease-out-strong, ease-out) both;
 

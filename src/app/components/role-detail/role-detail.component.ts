@@ -20,27 +20,27 @@ import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.
 import { HelpHintComponent } from '../shared/help-hint/help-hint.component';
 import { IconComponent } from '../shared/icon/icon.component';
 
-/** Açılış sayfası dropdown'unda gösterilen sabit hedefler key'i — etiketler LanguageService.t() ile çözülür */
+/** Keys of the fixed targets shown in the landing page dropdown — labels are resolved with LanguageService.t() */
 const FIXED_LANDING_PAGE_KEYS: { value: string; labelKey: string }[] = [
   { value: '/models', labelKey: 'role.detail.landingModels' },
   { value: '/reports', labelKey: 'role.detail.landingReports' },
   { value: '/dashboard', labelKey: 'role.detail.landingDashboardList' }
 ];
 
-/** Düzenleme için kullanılan geçici izin satırı (user-permission-detail ile aynı yapı) */
+/** Temporary permission row used for editing (same structure as user-permission-detail) */
 export interface RolePermissionRow {
   modelName:    string;
   canRead:      boolean;
   canCreate:    boolean;
   canUpdate:    boolean;
   canDelete:    boolean;
-  /** Modelin kullanıcı sidebar navigasyonunda görünsün mü? */
+  /** Should the model appear in the user's sidebar navigation? */
   canShowInNav: boolean;
-  /** Rol üyesi yalnızca kendi oluşturduğu kayıtları görebilir/değiştirebilir. */
+  /** A role member can see/modify only the records they created. */
   canOwnOnly:   boolean;
-  /** Rol üyesi kayıttaki iş akışını (ilerlenen yol + kim onayladı/bekliyor) görebilir mi? */
+  /** Can a role member see the record's workflow (path taken + who approved / is pending)? */
   canViewWorkflow: boolean;
-  /** Değiştirildi mi? Yalnızca değişen satırlar backend'e gönderilir */
+  /** Was it changed? Only changed rows are sent to the backend */
   dirty: boolean;
 }
 
@@ -52,7 +52,7 @@ export interface RolePermissionRow {
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoleDetailComponent implements OnInit {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly route        = inject(ActivatedRoute);
@@ -63,104 +63,104 @@ export class RoleDetailComponent implements OnInit {
   private readonly dashboardService = inject(DashboardService);
   private readonly languageService  = inject(LanguageService);
 
-  /** Açılış sayfası dropdown'unda gösterilen sabit hedefler — aktif dile göre çözülmüş etiketler */
+  /** Fixed targets shown in the landing page dropdown — labels resolved for the active language */
   private get fixedLandingPagesResolved(): { value: string; label: string }[] {
     return FIXED_LANDING_PAGE_KEYS.map(p => ({ value: p.value, label: this.languageService.t(p.labelKey) }));
   }
 
-  /** /roles/new sayfasında mı, yoksa mevcut bir rolün düzenleme sayfasında mıyız? */
+  /** Are we on the /roles/new page, or on the edit page of an existing role? */
   isNew = false;
   roleId = 0;
 
-  /* ── Rol ── */
+  /* ── Role ── */
   role        = signal<Role | null>(null);
   roleLoading = signal(true);
   roleError   = signal('');
 
-  /* ── Yeni rol oluşturma (isNew modu) ── */
+  /* ── Create new role (isNew mode) ── */
   newRoleName       = '';
   creatingRole      = signal(false);
   createRoleMsg     = signal('');
   createRoleMsgType = signal<'success'|'danger'>('success');
 
-  /* ── Detay sekmeleri ── */
+  /* ── Detail tabs ── */
   activeTab = signal<'users' | 'models'>('users');
 
-  /** İzin matrisinde detayı açılmış model satırı (Models sekmesi master→detay) */
+  /** Model row whose detail is open in the permission matrix (Models tab master→detail) */
   selectedPermRow = signal<RolePermissionRow | null>(null);
   permRowSaving   = signal(false);
 
-  /* ── Model listesi: arama + sayfalama ── */
+  /* ── Model list: search + pagination ── */
   modelSearchTerm  = signal('');
   modelPageIndex   = signal(1);
   readonly modelPageSize = 10;
 
-  /* ── Rol adı düzenleme ── */
+  /* ── Role name editing ── */
   roleNameEdit  = '';
   renameSaving  = signal(false);
   renameMsg     = signal('');
   renameMsgType = signal<'success'|'danger'>('success');
 
-  /* ── Açılış sayfası düzenleme ── */
+  /* ── Landing page editing ── */
   landingPageOptions   = signal<{ value: string; label: string }[]>(this.fixedLandingPagesResolved);
   landingPageEdit       = '';
   landingPageSaving     = signal(false);
   landingPageMsg        = signal('');
   landingPageMsgType    = signal<'success'|'danger'>('success');
 
-  /* ── Rol silme ── */
+  /* ── Role deletion ── */
   deleteSaving = signal(false);
   deleteMsg    = signal('');
 
-  /* ── İzin matrisi ── */
+  /* ── Permission matrix ── */
   permRows    = signal<RolePermissionRow[]>([]);
   permLoading = signal(false);
   permError   = signal('');
   permMsg     = signal('');
   permMsgType = signal<'success'|'danger'>('success');
 
-  /* ── Üyeler ── */
+  /* ── Members ── */
   members        = signal<AppUser[]>([]);
   membersLoading  = signal(false);
   membersError    = signal('');
   removingUserId  = signal<number | null>(null);
 
-  /* ── Üye ekleme ── */
+  /* ── Adding members ── */
   allUsers        = signal<AppUser[]>([]);
   userIdToAdd: number | null = null;
   addMemberSaving = signal(false);
   addMemberMsg    = signal('');
 
-  /** Henüz role üye olmayan kullanıcılar — "Kullanıcı Ekle" seçicisinde gösterilir */
+  /** Users not yet members of the role — shown in the "Kullanıcı Ekle" (Add user) picker */
   candidateUsers = computed(() => {
     const memberIds = new Set(this.members().map(m => m.id));
     return this.allUsers().filter(u => !memberIds.has(u.id));
   });
 
-  /** En az bir izni olan model sayısı — "İzin Verilen Modeller" sekme rozeti */
+  /** Number of models with at least one permission — badge of the "İzin Verilen Modeller" (Permitted models) tab */
   permittedModelCount = computed(() =>
     this.permRows().filter(r => this.permSummary(r).length > 0).length
   );
 
-  /** Arama terimine göre filtrelenmiş model satırları */
+  /** Model rows filtered by the search term */
   filteredPermRows = computed(() => {
     const term = this.modelSearchTerm().trim().toLowerCase();
     const rows = this.permRows();
     return term ? rows.filter(r => r.modelName.toLowerCase().includes(term)) : rows;
   });
 
-  /** Toplam sayfa sayısı (en az 1) */
+  /** Total page count (at least 1) */
   modelTotalPages = computed(() =>
     Math.max(1, Math.ceil(this.filteredPermRows().length / this.modelPageSize))
   );
 
-  /** Geçerli sayfadaki model satırları */
+  /** Model rows on the current page */
   pagedPermRows = computed(() => {
     const start = (this.modelPageIndex() - 1) * this.modelPageSize;
     return this.filteredPermRows().slice(start, start + this.modelPageSize);
   });
 
-  /** Sayfa numarası butonları — en fazla 5'lik kayan pencere (ilk/son sayfa şablonda ayrıca) */
+  /** Page number buttons — sliding window of at most 5 (first/last page handled separately in the template) */
   modelPages = computed(() => pageWindow(this.modelPageIndex(), this.modelTotalPages()));
 
   modelRangeStart = computed(() =>
@@ -185,7 +185,7 @@ export class RoleDetailComponent implements OnInit {
     this.loadLandingPageOptions();
   }
 
-  /** Açılış sayfası dropdown'unu sabit sayfalar + mevcut dashboard'larla doldurur. */
+  /** Fills the landing page dropdown with the fixed pages + existing dashboards. */
   private loadLandingPageOptions(): void {
     this.dashboardService.list().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
@@ -193,11 +193,11 @@ export class RoleDetailComponent implements OnInit {
         const dashboardOptions = dashboards.map(d => ({ value: `/dashboard/${d.id}`, label: this.languageService.t('role.detail.landingDashboardOption', { name: d.name }) }));
         this.landingPageOptions.set([...this.fixedLandingPagesResolved, ...dashboardOptions]);
       },
-      error: () => { /* sessizce atla — yalnızca sabit sayfalar gösterilir */ }
+      error: () => { /* skip silently — only the fixed pages are shown */ }
     });
   }
 
-  /* ──────────────── Yeni rol oluşturma ──────────────── */
+  /* ──────────────── Create new role ──────────────── */
 
   createRole(): void {
     const name = this.newRoleName.trim();
@@ -218,7 +218,7 @@ export class RoleDetailComponent implements OnInit {
           this.createRoleMsgType.set('danger');
           return;
         }
-        // Backend yeni rolün id'sini döndürmüyor — listeyi çekip ada göre bul
+        // The backend doesn't return the new role's id — fetch the list and find it by name
         this.roleService.getRoles().pipe(markDirty(this.cdr)).subscribe({
           next: rolesRes => {
             const found = (rolesRes.data ?? []).find(r => r.name === name);
@@ -239,7 +239,7 @@ export class RoleDetailComponent implements OnInit {
     });
   }
 
-  /* ──────────────── Rol yükleme (edit modu) ──────────────── */
+  /* ──────────────── Role loading (edit mode) ──────────────── */
 
   private loadRole(): void {
     this.roleLoading.set(true);
@@ -279,12 +279,12 @@ export class RoleDetailComponent implements OnInit {
     });
   }
 
-  /** Detay panelindeki sekmeyi değiştirir (Kullanıcılar / İzin Verilen Modeller) */
+  /** Switches the tab in the detail panel (Users / Permitted models) */
   setTab(tab: 'users' | 'models'): void {
     this.activeTab.set(tab);
   }
 
-  /* ──────────────── Rol adı düzenleme ──────────────── */
+  /* ──────────────── Role name editing ──────────────── */
 
   renameRole(): void {
     const role = this.role();
@@ -316,7 +316,7 @@ export class RoleDetailComponent implements OnInit {
     });
   }
 
-  /* ──────────────── Açılış sayfası ──────────────── */
+  /* ──────────────── Landing page ──────────────── */
 
   saveLandingPage(): void {
     const role = this.role();
@@ -342,9 +342,9 @@ export class RoleDetailComponent implements OnInit {
     });
   }
 
-  /* ──────────────── Rol silme ──────────────── */
+  /* ──────────────── Role deletion ──────────────── */
 
-  /** Onay diyaloğu açık mı — silme geri alınamaz, doğrudan DELETE atılmaz. */
+  /** Is the confirm dialog open — deletion can't be undone, DELETE is not sent directly. */
   readonly deleteConfirmOpen = signal(false);
 
   askDeleteRole(): void {
@@ -379,7 +379,7 @@ export class RoleDetailComponent implements OnInit {
     });
   }
 
-  /* ──────────────── İzin matrisi ──────────────── */
+  /* ──────────────── Permission matrix ──────────────── */
 
   private loadRolePermissions(roleId: number): void {
     this.permLoading.set(true);
@@ -420,35 +420,35 @@ export class RoleDetailComponent implements OnInit {
     });
   }
 
-  /** Checkbox değişince satırı dirty olarak işaretle */
+  /** Mark the row dirty when a checkbox changes */
   markDirty(row: RolePermissionRow): void {
     row.dirty = true;
   }
 
-  /** Model arama kutusu değişince filtreyi uygular ve ilk sayfaya döner */
+  /** Applies the filter and returns to the first page when the model search box changes */
   onModelSearchChange(term: string): void {
     this.modelSearchTerm.set(term);
     this.modelPageIndex.set(1);
   }
 
-  /** Model listesi sayfasını değiştirir */
+  /** Changes the model list page */
   goToModelPage(page: number): void {
     if (page < 1 || page > this.modelTotalPages()) return;
     this.modelPageIndex.set(page);
   }
 
-  /** Model satırına tıklayınca izin detay panelini açar */
+  /** Opens the permission detail panel when a model row is clicked */
   selectModelPerm(row: RolePermissionRow): void {
     this.permMsg.set('');
     this.selectedPermRow.set(row);
   }
 
-  /** İzin detay panelini kapatır, model listesine döner */
+  /** Closes the permission detail panel, returns to the model list */
   clearModelPerm(): void {
     this.selectedPermRow.set(null);
   }
 
-  /** Seçili modelin etkin izinlerini etiket listesi olarak döndürür (rozetler için) */
+  /** Returns the selected model's active permissions as a list of labels (for badges) */
   permSummary(row: RolePermissionRow): string[] {
     const labels: string[] = [];
     if (row.canRead)      labels.push(this.languageService.t('role.detail.summaryRead'));
@@ -461,7 +461,7 @@ export class RoleDetailComponent implements OnInit {
     return labels;
   }
 
-  /** İzin detay panelinden tek bir modelin izinlerini kaydeder */
+  /** Saves a single model's permissions from the permission detail panel */
   saveModelPerm(row: RolePermissionRow): void {
     const role = this.role();
     if (!role) return;
@@ -489,7 +489,7 @@ export class RoleDetailComponent implements OnInit {
     });
   }
 
-  /* ──────────────── Üyeler ──────────────── */
+  /* ──────────────── Members ──────────────── */
 
   private loadRoleMembers(roleId: number): void {
     this.membersLoading.set(true);
@@ -555,7 +555,7 @@ export class RoleDetailComponent implements OnInit {
     });
   }
 
-  /** Kullanıcının tam adı */
+  /** The user's full name */
   fullName(user: AppUser): string {
     return `${user.firstName} ${user.lastName}`.trim() || user.email;
   }

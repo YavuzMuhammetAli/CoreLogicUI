@@ -7,7 +7,7 @@
   <div class="sim-body">
     <p class="field-help sim-intro">{{ 'workflow.simulate.intro' | t }}</p>
 
-    <!-- Kayıt değerleri -->
+    <!-- Record values -->
     <div class="sim-section">
       <span class="sim-section-title">{{ 'workflow.simulate.record' | t }}</span>
       <div class="sim-source" role="radiogroup" [attr.aria-label]="'workflow.simulate.record' | t">
@@ -59,7 +59,7 @@
       }
     </div>
 
-    <!-- İnsan adımlarının kararları -->
+    <!-- Decisions of human steps -->
     @if (decisionRows().length > 0) {
       <div class="sim-section">
         <span class="sim-section-title">{{ 'workflow.simulate.decisions' | t }}</span>
@@ -81,7 +81,7 @@
       <div class="alert alert-danger" role="alert">{{ message }}</div>
     }
 
-    <!-- Sonuç -->
+    <!-- Result -->
     @if (result(); as r) {
       <div class="sim-section" role="status">
         <span class="sim-section-title">{{ 'workflow.simulate.result' | t }}</span>

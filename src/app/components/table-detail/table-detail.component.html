@@ -5,7 +5,7 @@
   <span class="bc-current">@if (isNew) { {{ 'table.detail.breadcrumbNew' | t }} } @else { {{ displayModelName }} }</span>
 </div>
 
-<!-- ─── Yükleniyor / Hata ──────────────────────────────────────────────────── -->
+<!-- ─── Loading / Error ────────────────────────────────────────────────────── -->
 @if (isLoadingSchema) {
   <div class="panel">
     <div class="panel-body">
@@ -16,11 +16,11 @@
   <div class="alert alert-danger" role="alert">{{ loadError }}</div>
 } @else {
 
-  <!-- ══ ÜST PANEL: Model Tanımı ═══════════════════════════════════════════ -->
+  <!-- ══ TOP PANEL: Model definition ═══════════════════════════════════════ -->
   <div class="panel record-panel">
     <div class="panel-head record-panel-head">
       <div class="cluster">
-        <!-- Model ikonu — liste ve menüde görünür; kayıtlı modelde seçildiği anda yazılır -->
+        <!-- Model icon — visible in the list and menu; on a saved model it is written as soon as it is picked -->
         <button type="button" class="btn btn-ghost btn-sm" (click)="openIconPicker()"
                 [disabled]="isSaving || isPublishing || iconSaving"
                 [attr.aria-label]="'model.icon.change' | t" [title]="'model.icon.change' | t">
@@ -31,7 +31,7 @@
         </span>
       </div>
 
-      <!-- Sağ üst aksiyonlar: Listeye Dön + Kaydet + Yayınla -->
+      <!-- Top-right actions: Back to list + Save + Publish -->
       <div class="panel-actions">
         <a [routerLink]="['/build']" class="btn btn-ghost btn-sm">
           <app-icon name="arrow_back" size="14" />
@@ -43,7 +43,7 @@
              [attr.aria-label]="'screen.designScreenAria' | t"><app-icon name="dashboard_customize" size="14" />{{ 'screen.designScreen' | t }}</a>
         }
 
-        <!-- Kaydet -->
+        <!-- Save -->
         <button
           type="button"
           class="btn btn-secondary btn-sm"
@@ -58,7 +58,7 @@
           }
         </button>
 
-        <!-- Yayınla — yalnızca başarılı kayıttan sonra aktif -->
+        <!-- Publish — active only after a successful save -->
         <button
           type="button"
           class="btn btn-primary btn-sm"
@@ -77,7 +77,7 @@
 
     <div class="panel-body stack" [formGroup]="rootGroup">
       <div class="field-row">
-        <!-- Etiket — kullanıcı bunu yazar ("Satış Pazarlama Formu") -->
+        <!-- Label — the user types this ("Satış Pazarlama Formu") -->
         <div class="field">
           <label for="modelLabel">{{ 'table.detail.modelLabelLabel' | t }} <span class="req">*</span></label>
           <input
@@ -98,7 +98,7 @@
           }
         </div>
 
-        <!-- Tablo adı — etiketten üretilir ("SatisPazarlamaFormu"), elle değiştirilebilir -->
+        <!-- Table name — generated from the label ("SatisPazarlamaFormu"), can be changed manually -->
         <div class="field">
           <div class="field-head">
             <label for="entityName">{{ 'table.detail.tableNameLabel' | t }} <span class="req">*</span></label>
@@ -140,10 +140,10 @@
     </div>
   </div>
 
-  <!-- ══ ALT PANEL: Sütunlar (modelin alt modeli gibi gösterilir) ══════════ -->
+  <!-- ══ BOTTOM PANEL: Columns (shown like a sub-model of the model) ═══════ -->
   <div class="children-panel panel">
 
-    <!-- Sekme çubuğu — Sütunlar + İlişkiler (role-detail ile aynı görsel dil) -->
+    <!-- Tab bar — Columns + Relationships (same visual language as role-detail) -->
     <div class="tab-bar" role="tablist" [attr.aria-label]="'relationship.tablistAria' | t">
       <button
         type="button"
@@ -190,7 +190,7 @@
     @if (activeTab() === 'columns') {
     <div class="tab-panel" role="tabpanel" [attr.aria-label]="'table.detail.columnsPanelAria' | t">
 
-      <!-- Araç çubuğu -->
+      <!-- Toolbar -->
       <div class="tab-toolbar">
         <div class="tab-toolbar-actions">
           <button type="button" class="btn btn-primary btn-sm" (click)="openAddColumnModal()">
@@ -253,7 +253,7 @@
     </div>
     }
 
-    <!-- ══ ALT MODELLER SEKMESİ ═══════════════════════════════════════════ -->
+    <!-- ══ SUB-MODELS TAB ═════════════════════════════════════════════════ -->
     @if (activeTab() === 'subModels') {
       <div class="tab-panel" role="tabpanel" [attr.aria-label]="'table.detail.subModelsPanelAria' | t">
 
@@ -294,7 +294,7 @@
           </div>
         }
 
-        <!-- Kayıtlı alt modeller — her biri kendi ekranından düzenlenir -->
+        <!-- Saved sub-models — each one is edited from its own screen -->
         @if (subModelRows.length > 0) {
           <div class="tab-table-wrapper">
             <table class="data-table">
@@ -334,7 +334,7 @@
           </div>
         }
 
-        <!-- Bu oturumda eklenen, henüz kaydedilmemiş alt modeller -->
+        <!-- Sub-models added in this session, not yet saved -->
         @if (subModels.length > 0) {
           <div class="sub-model-drafts">
             <h3 class="sub-model-drafts-title">{{ 'table.detail.unsavedSubModels' | t }}</h3>
@@ -351,9 +351,9 @@
       </div>
     }
 
-    <!-- ══ İLİŞKİLER SEKMESİ ══════════════════════════════════════════════
-         Tüm ilişki yaşam döngüsü (liste, popup, önizleme, staging, silme)
-         kendi component'inde; bu ekran yalnızca bağlamı geçirir. -->
+    <!-- ══ RELATIONSHIPS TAB ═══════════════════════════════════════════════
+         The whole relationship lifecycle (list, popup, preview, staging, delete)
+         lives in its own component; this screen only passes the context. -->
     <app-relationships-tab
       [active]="activeTab() === 'relationships'"
       [tableId]="relationshipTableId"
@@ -367,7 +367,7 @@
   </div>
 }
 
-<!-- ══ SÜTUN POPUP'I ══════════════════════════════════════════════════════ -->
+<!-- ══ COLUMN POPUP ═══════════════════════════════════════════════════════ -->
 @if (columnModalOpen) {
   <div class="dialog-overlay" (click)="onColumnModalBackdropClick()">
     <div
@@ -383,9 +383,9 @@
 
       <div class="panel-body stack" [formGroup]="columnDraft">
 
-        <!-- Etiket | Alan adı — yan yana (.field-row: etiket satırları sabit yükseklikte) -->
+        <!-- Label | Field name — side by side (.field-row: label rows have a fixed height) -->
         <div class="field-row">
-          <!-- Etiket — kullanıcı bunu yazar, alan adı bundan üretilir -->
+          <!-- Label — the user types this, the field name is generated from it -->
           <div class="field">
             <label for="col-label">
               {{ 'table.detail.labelLabel' | t }} <span class="req">*</span>
@@ -408,7 +408,7 @@
             }
           </div>
   
-          <!-- Alan adı — etiketten üretilir; kayıtlı sütunda kilitli -->
+          <!-- Field name — generated from the label; locked on a saved column -->
           <div class="field">
             <div class="field-head">
               <label for="col-name">
@@ -441,7 +441,7 @@
           </div>
         </div>
 
-        <!-- Açıklama | Veri tipi -->
+        <!-- Description | Data type -->
         <div class="field-row">
           <div class="field">
             <label for="col-description">
@@ -500,7 +500,7 @@
           <div class="alert alert-warn" role="status">{{ 'table.detail.requiredExistingRowsWarning' | t }}</div>
         }
 
-        <!-- Metne özel: MinLength, MaxLength, Regex -->
+        <!-- Text only: MinLength, MaxLength, Regex -->
         @if (isTextColumn(columnDraft.get('dataType')!.value)) {
           <div class="field-row">
             <div class="field">
@@ -534,7 +534,7 @@
           </div>
         }
 
-        <!-- Sayısal tiplere özel: Min, Max -->
+        <!-- Numeric types only: Min, Max -->
         @if (isNumericType(columnDraft.get('dataType')!.value)) {
           <div class="field-row">
             <div class="field">
@@ -554,7 +554,7 @@
           </div>
         }
 
-        <!-- Image/File'a özel: dosya boyutu sınırı (MB; KB olarak saklanır) -->
+        <!-- Image/File only: file size limit (MB; stored as KB) -->
         @if (isFileType(columnDraft.get('dataType')!.value)) {
           <div class="field-row">
             <div class="field">
@@ -584,7 +584,7 @@
           </div>
         }
 
-        <!-- File'a özel: izinli tür grupları (içerik sunucuda baytlardan denetlenir) -->
+        <!-- File only: allowed type groups (the content is checked from the bytes on the server) -->
         @if (columnDraft.get('dataType')!.value === 'file') {
           <fieldset class="field file-groups">
             <legend>{{ 'table.detail.fileTypes' | t }}</legend>
@@ -600,7 +600,7 @@
           </fieldset>
         }
 
-        <!-- Enum'a özel: izinli değerler -->
+        <!-- Enum only: allowed values -->
         @if (columnDraft.get('dataType')!.value === 'enum') {
           <div class="field-row">
             <div class="field field--full">
@@ -622,7 +622,7 @@
           </div>
         }
 
-        <!-- Lookup'a özel: hedef model + gösterilecek kolon -->
+        <!-- Lookup only: target model + column to display -->
         @if (columnDraft.get('dataType')!.value === 'lookup') {
           <div class="field-row">
             <div class="field">
@@ -656,8 +656,8 @@
           </div>
         }
 
-        <!-- Otomatik değer: formül; form açılışında / bağlı alan değişince / kaydederken çalışır.
-             Sunucu kaydederken aynı formülü yeniden hesaplar (bkz. utils/auto-value). -->
+        <!-- Auto value: formula; runs when the form opens / when a bound field changes / on save.
+             The server recomputes the same formula on save (see utils/auto-value). -->
         @if (!isFileType(columnDraft.get('dataType')!.value)) {
           <fieldset class="auto-value stack">
             <legend class="auto-value__legend">
@@ -747,15 +747,15 @@
   </div>
 }
 
-<!-- ══ VERİ TİPİ / KURAL KILAVUZU ═════════════════════════════════════════════
-     Diğer popup'ların üstünde açılır; kendi ESC ve backdrop yönetimi vardır. -->
+<!-- ══ DATA TYPE / RULE GUIDE ═════════════════════════════════════════════════
+     Opens on top of the other popups; it has its own ESC and backdrop handling. -->
 <app-datatype-help
   [open]="helpOpen()"
   [topic]="helpTopic()"
   (closed)="closeHelp()"
   (patternPicked)="onHelpPattern($event)" />
 
-<!-- Model ikonu seçici: Yayınla'da (publish) ve başlıktaki ikon düğmesinde (select) -->
+<!-- Model icon picker: on Publish (publish) and via the icon button in the header (select) -->
 <app-model-icon-picker
   [open]="iconPickerMode !== null"
   [mode]="iconPickerMode ?? 'select'"

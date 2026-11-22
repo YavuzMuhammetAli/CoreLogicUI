@@ -1,11 +1,11 @@
 import { Translations } from './translations.model';
 
 /**
- * Ekran tasarımı — kayıt formunun/listenin yayındaki yerleşimi ve tasarımcı ekranı.
- * (`layout.*` app shell'e ait olduğu için önek `screen.*`.)
+ * Screen design — the published layout of the record form/list and the designer screen.
+ * (The prefix is `screen.*` because `layout.*` belongs to the app shell.)
  */
 export const SCREEN_I18N: Translations = {
-  // ─── shared/record-layout — çalışma anı ─────────────────────────────────────
+  // ─── shared/record-layout — runtime ────────────────────────────────────────
   'screen.form.tabsAria': { tr: 'Form sekmeleri', en: 'Form tabs' },
   'screen.form.untitledTab': { tr: 'Sekme {n}', en: 'Tab {n}' },
   'screen.form.untitledSection': { tr: 'Bölüm', en: 'Section' },
@@ -16,14 +16,14 @@ export const SCREEN_I18N: Translations = {
   },
   'screen.form.design': { tr: 'Tasarla', en: 'Design' },
 
-  // ─── Kayıt ekranlarındaki giriş düğmesi (admin) ────────────────────────────
+  // ─── Entry button on record screens (admin) ───────────────────────────────
   'screen.designScreen': { tr: 'Ekranı tasarla', en: 'Design screen' },
   'screen.designScreenAria': {
     tr: 'Bu modelin form ve liste yerleşimini tasarla',
     en: 'Design the form and list layout of this model'
   },
 
-  // ─── Tasarımcı sayfası ─────────────────────────────────────────────────────
+  // ─── Designer page ─────────────────────────────────────────────────────────
   'screen.designer.title': { tr: 'Ekran Tasarımı', en: 'Screen Design' },
   'screen.designer.loading': { tr: 'Tasarım yükleniyor', en: 'Loading design' },
   'screen.designer.loadFailed': { tr: 'Tasarım yüklenemedi.', en: 'The design could not be loaded.' },
@@ -103,7 +103,7 @@ export const SCREEN_I18N: Translations = {
   'screen.designer.fix.requiredHidden': { tr: 'Forma yerleştir', en: 'Place on form' },
   'screen.designer.fix.unplacedColumn': { tr: 'Forma yerleştir', en: 'Place on form' },
 
-  // ─── Form tasarımcısı: palet ve tuval ──────────────────────────────────────
+  // ─── Form designer: palette and canvas ────────────────────────────────────
   'screen.designer.paletteAria': { tr: 'Alanlar ve yerleşim öğeleri', en: 'Fields and layout elements' },
   'screen.designer.searchPlaceholder': { tr: 'Alan ara…', en: 'Search fields…' },
   'screen.designer.unplaced': { tr: 'Yerleştirilmemiş', en: 'Not placed' },
@@ -142,7 +142,7 @@ export const SCREEN_I18N: Translations = {
     en: 'On a phone, order and width are edited here. Use a wider screen for drag and drop.'
   },
 
-  // ─── İnceleyici ─────────────────────────────────────────────────────────────
+  // ─── Inspector ─────────────────────────────────────────────────────────────
   'screen.inspector.title': { tr: 'Özellikler', en: 'Properties' },
   'screen.inspector.required': { tr: 'Zorunlu', en: 'Required' },
   'screen.inspector.unknown': { tr: 'Modelde yok', en: 'Not in model' },
@@ -209,7 +209,7 @@ export const SCREEN_I18N: Translations = {
     en: 'Keyboard: Alt+↑/↓ moves, Alt+←/→ narrows/widens, Delete removes, Ctrl+Z undoes.'
   },
 
-  // ─── Liste tasarımcısı ─────────────────────────────────────────────────────
+  // ─── List designer ─────────────────────────────────────────────────────────
   'screen.list.paletteAria': { tr: 'Listede olmayan kolonlar', en: 'Columns not in the list' },
   'screen.list.hiddenColumns': { tr: 'Listede olmayanlar', en: 'Not in list' },
   'screen.list.showAria': { tr: '{name} kolonunu listeye ekle', en: 'Add the {name} column to the list' },
@@ -238,7 +238,7 @@ export const SCREEN_I18N: Translations = {
     en: 'Select a column header to change its width or position.'
   },
 
-  // ─── Doğrulama sorunları (kodlar backend ScreenLayoutIssueCodes ile ortak) ──
+  // ─── Validation issues (codes shared with backend ScreenLayoutIssueCodes) ──
   'screen.issue.unreadable': { tr: 'Tasarım belgesi okunamadı.', en: 'The layout document could not be read.' },
   'screen.issue.tooLarge': { tr: 'Tasarım çok büyük (en fazla 64 KB).', en: 'The layout is too large (at most 64 KB).' },
   'screen.issue.limit': {
@@ -284,7 +284,7 @@ export const SCREEN_I18N: Translations = {
   },
   'screen.issue.emptySection': { tr: 'Boş bölüm var.', en: 'There is an empty section.' },
 
-  // ─── Rollere özel tasarımlar (varyantlar, 026) ──────────────────────────────
+  // ─── Role-specific designs (variants, 026) ────────────────────────────────
   'screen.variant.select': { tr: 'Tasarım', en: 'Layout' },
   'screen.variant.default': { tr: 'Varsayılan (herkes)', en: 'Default (everyone)' },
   'screen.variant.moveUp': { tr: 'Önceliği artır', en: 'Raise priority' },

@@ -13,14 +13,14 @@
       <app-icon name="download" size="14" />
       {{ 'workflow.package.export' | t }}
     </button>
-    <!-- Simülasyon geniş ekranda (tuvalin yanında); telefonda tuval yok. -->
+    <!-- Simulation on wide screens (beside the canvas); no canvas on phones. -->
     <button type="button" class="btn btn-ghost btn-sm simulate-btn" [class.simulate-btn--active]="simulating()"
             (click)="simulating() ? closeSimulation() : openSimulation()">
       <app-icon name="play_arrow" size="14" />
       {{ 'workflow.simulate.open' | t }}
     </button>
     @if (readonlyMode()) {
-      <!-- Açık taslak varsa sunucu yenisini açmaz, onu döner — etiket bunu söylesin. -->
+      <!-- If an open draft exists the server does not open a new one, it returns that one — the label should say so. -->
       <button type="button" class="btn btn-primary" [disabled]="saving" (click)="startNewVersion()">
         {{ (hasOpenDraft ? 'workflow.build.openDraft' : 'workflow.build.newVersion') | t }}
       </button>
@@ -38,7 +38,7 @@
               [attr.aria-label]="'workflow.build.redo' | t" [title]="'workflow.build.redo' | t">
         <app-icon name="redo" size="14" />
       </button>
-      <!-- Canlı doğrulamanın özeti; tıklayınca sorun listesine gider. -->
+      <!-- Summary of the live validation; clicking it goes to the issue list. -->
       <button type="button" class="btn btn-ghost btn-sm issue-chip"
               [class.issue-chip--error]="issueCounts().errors > 0"
               [class.issue-chip--warn]="issueCounts().errors === 0 && issueCounts().warnings > 0"
@@ -225,10 +225,10 @@
 
     @if (activeTab() === 'canvas') {
       <div class="tab-panel stack" role="tabpanel">
-        <!-- Yalnız dar ekranda görünür (bkz. .canvas-mobile-notice) -->
+        <!-- Only visible on narrow screens (see .canvas-mobile-notice) -->
         <div class="alert alert-info canvas-mobile-notice" role="note">{{ 'workflow.build.canvasMobileNotice' | t }}</div>
         <div class="designer" [class.designer--readonly]="readonlyMode()" [class.designer--fullscreen]="fullscreen()">
-          <!-- Tam ekranda layout'un bildirim banner'ı katmanın altında kalıyor; aynısı burada. -->
+          <!-- In full screen the layout's notification banner stays beneath the layer; same one here. -->
           @if (fullscreen() && notification.current(); as message) {
             <div class="alert alert-{{ message.type }} fullscreen-toast" role="status">{{ message.message }}</div>
           }
@@ -253,10 +253,10 @@
             (edgeCreated)="onEdgeCreated($event)"
             (menuAction)="onMenuAction($event)"
             (nodeOpened)="openStep($event)">
-            <!-- Tuval araç çubuğunda, Ekrana sığdır'ın yanında. -->
+            <!-- In the canvas toolbar, next to Fit to screen. -->
             <div canvasTools class="cluster">
               @if (fullscreen()) {
-                <!-- Başlıktaki Simüle et'in aynısı; tam ekranda başlık örtülü. -->
+                <!-- Same as Simulate in the header; the header is covered in full screen. -->
                 <button type="button" class="btn btn-ghost btn-sm" [class.simulate-btn--active]="simulating()"
                         (click)="simulating() ? closeSimulation() : openSimulation()">
                   <app-icon name="play_arrow" size="14" />
@@ -367,7 +367,7 @@
   }
 </form>
 
-<!-- Kaydedilmemiş değişiklikle ayrılırken (rota guard'ı bu cevabı bekler). -->
+<!-- When leaving with unsaved changes (the route guard waits for this answer). -->
 <app-confirm-dialog
   [open]="leaveConfirm()"
   [title]="'workflow.build.leaveTitle' | t"

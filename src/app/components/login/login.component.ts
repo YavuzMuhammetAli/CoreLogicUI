@@ -17,12 +17,12 @@ import { IconComponent } from '../shared/icon/icon.component';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LoginComponent {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   form: FormGroup;
   sessionExpired = false;
-  /** Şirket verisi yedekten geri yüklendi — eski oturumlar geçersiz, yeniden giriş gerekiyor. */
+  /** Company data was restored from a backup — old sessions are invalid, a new login is required. */
   tenantRestored = false;
   isLoading = false;
   errorMessage: string | null = null;
@@ -58,8 +58,8 @@ export class LoginComponent {
     }).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (res.success) {
-          // Önceki oturumdan kalan yetki sinyalini temizle, ardından yeni kullanıcının
-          // yetkilerini (ve rolünden çözülen açılış sayfasını) yükleyip o sayfaya yönlen.
+          // Clear the permission signal left over from the previous session, then load the new user's
+          // permissions (and the landing page resolved from their role) and navigate to that page.
           this.permissionService.clear();
           this.permissionService.loadMyPermissions().pipe(markDirty(this.cdr)).subscribe({
             next: () => {

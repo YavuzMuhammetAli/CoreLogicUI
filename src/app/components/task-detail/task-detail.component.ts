@@ -17,11 +17,11 @@ import { formatDate } from '../../utils/locale-format';
 import { IconComponent } from '../shared/icon/icon.component';
 
 /**
- * Görev detayı — onay/red ekranı.
+ * Task detail — approve/reject screen.
  *
- * Karar formu (adım alanları + açıklama + Onayla/Reddet) `shared/task-decision-form`
- * bileşeninde durur; aynı form kayıt detayında da kullanılır. Bu ekran görev
- * künyesini, yönetici işlemlerini ve süreç geçmişini ekler.
+ * The decision form (step fields + comment + Onayla/Reddet — Approve/Reject) lives in the
+ * `shared/task-decision-form` component; the same form is used on the record detail too. This screen adds the task
+ * summary, admin actions and the process history.
  */
 @Component({
     selector: 'app-task-detail',
@@ -41,7 +41,7 @@ export class TaskDetailComponent implements OnInit {
   private readonly permissionService = inject(PermissionService);
   private readonly roleService = inject(RoleAdminService);
 
-  /** Yönetici "Atla" işlemi gerekçeyi karar formunun açıklama alanından okur. */
+  /** The admin "Atla" (Skip) action reads the reason from the decision form's comment field. */
   @ViewChild(TaskDecisionFormComponent) private decisionForm?: TaskDecisionFormComponent;
 
   task: WorkflowTask | null = null;
@@ -49,11 +49,11 @@ export class TaskDetailComponent implements OnInit {
 
   loading = false;
   loadError: string | null = null;
-  /** Yönetici işlemlerinin hatası (karar hatası formun kendisinde gösterilir). */
+  /** Error of the admin actions (decision errors are shown in the form itself). */
   adminError: string | null = null;
 
-  // ── Yönetici işlemleri (Faz 4) ────────────────────────────────────────────
-  /** Atlama, onaydan AYRI tutulur: audit'te ayırt edilebilmeli. */
+  // ── Admin actions (Phase 4) ───────────────────────────────────────────────
+  /** Skip is kept SEPARATE from approval: the audit must be able to tell them apart. */
   pendingSkip = false;
   skipping = false;
   roles: Role[] = [];
@@ -101,18 +101,18 @@ export class TaskDetailComponent implements OnInit {
     });
   }
 
-  /** Süreç geçmişi ayrı çekilir; görev ekranı süreç bağlamını da göstermeli. */
+  /** Process history is fetched separately; the task screen should show the process context too. */
   private loadTimeline(instanceId: number): void {
     this.instanceService.get(instanceId).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         if (res.success && res.data) this.timeline = res.data.timeline ?? [];
       },
-      // Zaman çizelgesi ikincil bilgi — alınamazsa ekran çalışmaya devam etsin.
+      // The timeline is secondary info — if it can't be fetched the screen keeps working.
       error: () => { this.timeline = []; }
     });
   }
 
-  /** Karar sunucuda kabul edildi — ortak form bildirir, ekran listeye döner. */
+  /** The decision was accepted on the server — the shared form notifies, the screen returns to the list. */
   onCompleted(message: string): void {
     this.notification.success(message);
     this.router.navigate(['/tasks']);
@@ -126,14 +126,14 @@ export class TaskDetailComponent implements OnInit {
     return formatDate(new Date(event.createdAt), this.languageService.lang());
   }
 
-  /** Vade tarihi; yoksa "süresiz". */
+  /** Due date; otherwise "no deadline". */
   get dueLabel(): string {
     return this.task?.dueAt
       ? formatDate(new Date(this.task.dueAt), this.languageService.lang())
       : this.languageService.t('task.list.noDue');
   }
 
-  // ── Yönetici işlemleri ────────────────────────────────────────────────────
+  // ── Admin actions ─────────────────────────────────────────────────────────
 
   private loadRoles(): void {
     this.roleService.getRoles().pipe(markDirty(this.cdr)).subscribe({

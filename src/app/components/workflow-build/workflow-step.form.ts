@@ -8,19 +8,19 @@ import {
 } from '../../models/workflow.model';
 
 /**
- * Akış adımı form kurucuları — adım pop-up'ı kullanır.
+ * Form builders for flow steps — used by the step pop-up.
  *
- * Saf fonksiyonlar: FormBuilder parametre olarak alınır, bileşen durumu
- * tutulmaz. Pop-up açılırken adım nesnesinden (WorkflowStep) bir grup kurulur;
- * kaydedince grup değeri `stepFromFormValue` ile yeniden adıma çevrilir
- * (bkz. designer/workflow-step.mapper.ts). Tasarım belgesindeki adıma pop-up
- * kaydedilene kadar dokunulmaz — "İptal" hiçbir şeyi geri almak zorunda değil.
+ * Pure functions: FormBuilder is taken as a parameter, no component state is
+ * kept. When the pop-up opens a group is built from the step object (WorkflowStep);
+ * on save the group value is converted back to a step with `stepFromFormValue`
+ * (see designer/workflow-step.mapper.ts). The step in the design document is not touched
+ * until the pop-up is saved — "İptal" (Cancel) does not have to undo anything.
  */
 
-/** Adım/dal/form alanı anahtar kalıbı — backend SqlIdentifier ile aynı. */
+/** Step/branch/form field key pattern — same as backend SqlIdentifier. */
 export const KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
 
-/** Form alanı değerlerinin şekli (step.form.fields öğesi). */
+/** Shape of form field values (step.form.fields item). */
 export interface StepFieldValue {
   name: string;
   dataType: string;
@@ -31,8 +31,8 @@ export interface StepFieldValue {
 }
 
 /**
- * Atama nesnesini form değerlerinden kurar. Adım ve dal aynı alan adlarını
- * kullandığı için ikisi de aynı fonksiyondan geçer.
+ * Builds the assignment object from form values. Since step and branch use the same
+ * field names, both go through the same function.
  */
 export function buildAssignment(source: Record<string, unknown>): WorkflowAssignment {
   const mode = source['assignMode'] as 'role' | 'user' | 'creator';
@@ -44,8 +44,8 @@ export function buildAssignment(source: Record<string, unknown>): WorkflowAssign
 }
 
 /**
- * SLA yalnızca gerçekten girildiyse üretilir; boş bir nesne doğrulayıcıda
- * "sıfırdan büyük olmalı" hatasına düşerdi.
+ * SLA is only produced if actually entered; an empty object would fail the validator
+ * with "must be greater than zero".
  */
 export function buildSla(source: Record<string, unknown>): WorkflowSla | null {
   const dueHours = source['dueHours'] as number | null;
@@ -66,16 +66,16 @@ export function newFieldGroup(fb: FormBuilder, field?: StepFieldValue): FormGrou
     dataType: [field?.dataType ?? 'string'],
     label: [field?.label ?? ''],
     isRequired: [field?.isRequired ?? false],
-    // Metin alanının en fazla uzunluğu. Eskiden formda kontrolü yoktu ve her
-    // kayıtta sessizce siliniyordu.
+    // Maximum length of the text field. Previously the form had no control for it and it
+    // was silently deleted on every save.
     maxLength: [field?.maxLength ?? null],
     enumValues: [field?.enumValues ?? '']
   });
 }
 
 /**
- * Adımın kayıt alanı: görevlinin bu adımda dolduracağı model kolonu. Akış
- * sürerken kayıt kilitlenir; yalnız bu kolonlar görevliye açılır.
+ * The step's record field: the model column the assignee fills in at this step. While the
+ * flow runs the record is locked; only these columns are opened to the assignee.
  */
 export function newRecordFieldGroup(fb: FormBuilder, field?: RecordField): FormGroup {
   return fb.group({
@@ -91,19 +91,19 @@ export function newBranchGroup(fb: FormBuilder, branch?: Partial<WorkflowBranch>
     assignMode: [branch?.assignment?.mode ?? 'role'],
     roleId: [branch?.assignment?.roleId ?? null],
     userId: [branch?.assignment?.userId ?? null],
-    // SLA dal başına: "finans 24 saat, hukuk 72 saat" gerçek bir ihtiyaç.
+    // SLA per branch: "finance 24 hours, legal 72 hours" is a real need.
     dueHours: [branch?.sla?.dueHours ?? null],
     escalateAfterHours: [branch?.sla?.escalateAfterHours ?? null],
     onTimeout: [branch?.sla?.onTimeout ?? 'escalate'],
-    // Dalın görev formu pop-up'ta düzenlenmiyor (API/AI ile tanımlanabiliyor).
-    // Gizli kontrolde olduğu gibi taşınır; eskiden her kayıtta siliniyordu.
+    // The branch's task form is not edited in the pop-up (it can be defined via API/AI).
+    // It is carried as is in a hidden control; it used to be deleted on every save.
     form: fb.control(branch?.form ?? null)
   });
 }
 
 /**
- * Tanım grafiğindeki bir adımdan (WorkflowStep) form grubu kurar.
- * `statusLabel` grafikte ayrı haritada durduğu için ayrıca verilir.
+ * Builds a form group from a step (WorkflowStep) in the definition graph.
+ * `statusLabel` is passed separately because it lives in a separate map in the graph.
  */
 export function newStepGroup(
   fb: FormBuilder, key: string, step?: WorkflowStep, statusLabel = ''
@@ -112,7 +112,7 @@ export function newStepGroup(
     key: [step?.key ?? key, [Validators.required, Validators.pattern(KEY_PATTERN)]],
     name: [step?.name ?? '', Validators.required],
     type: [step?.type ?? 'approval'],
-    // Paralel adımda ilerleme kuralı; tekil adımda göz ardı edilir.
+    // Progress rule in a parallel step; ignored in a single step.
     mode: [step?.mode ?? 'all'],
     assignMode: [step?.assignment?.mode ?? 'role'],
     roleId: [step?.assignment?.roleId ?? null],
@@ -120,12 +120,12 @@ export function newStepGroup(
     dueHours: [step?.sla?.dueHours ?? null],
     escalateAfterHours: [step?.sla?.escalateAfterHours ?? null],
     onTimeout: [step?.sla?.onTimeout ?? 'escalate'],
-    // Tekil adımda onApprove/onReject, paralel adımda onComplete/onAnyReject
-    // olarak yazılır; formda tek çift kontrol tutulup eşleyicide ayrılıyor.
+    // Written as onApprove/onReject in a single step, onComplete/onAnyReject in a parallel
+    // step; the form keeps a single control pair and the mapper splits them.
     onApprove: [step?.onApprove ?? step?.onComplete ?? ''],
     onReject: [step?.onReject ?? step?.onAnyReject ?? ''],
     statusLabel: [statusLabel],
-    // Kayıt ekranındaki butonlar. Boş etiket = adım adı / "Reddet".
+    // Buttons on the record screen. Empty label = step name / "Reddet" (Reject).
     approveLabel: [step?.form?.approveLabel ?? ''],
     rejectLabel: [step?.form?.rejectLabel ?? ''],
     allowReject: [step?.form?.allowReject ?? true],

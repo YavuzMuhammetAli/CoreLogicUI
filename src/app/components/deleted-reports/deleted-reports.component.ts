@@ -5,12 +5,12 @@ import { DeletedListComponent } from '../shared/deleted-list/deleted-list.compon
 import { DeletedItem, DeletedListSource } from '../shared/deleted-list/deleted-list.model';
 
 /**
- * Pasiflenmiş (silinmiş) rapor tanımlarını listeler. Bir rapor doğrudan silindiğinde veya
- * bağlı olduğu model /models sayfasından silinince (cascade) burada görünür ve
- * Geri Yükle ile tekrar aktif hale getirilebilir.
+ * Lists deactivated (deleted) report definitions. When a report is deleted directly or
+ * the model it depends on is deleted from the /models page (cascade), it appears here and
+ * can be reactivated with Geri Yükle (Restore).
  *
- * Listeleme/hata/geri yükleme akışı DeletedListComponent'tedir; burada yalnızca
- * bu ekrana özel veri kaynağı tanımlanır.
+ * The list/error/restore flow lives in DeletedListComponent; only the data source
+ * specific to this screen is defined here.
  */
 @Component({
     selector: 'app-deleted-reports',

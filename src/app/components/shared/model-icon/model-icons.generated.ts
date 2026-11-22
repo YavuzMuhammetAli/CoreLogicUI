@@ -1,6 +1,6 @@
-// OTOMATİK ÜRETİLDİ — elle düzenleme. Kaynak: model-icons.manifest.json, komut: `npm run icons`.
+// AUTO-GENERATED — do not edit by hand. Source: model-icons.manifest.json, command: `npm run icons`.
 // Material Symbols Outlined (wght 500, opsz 48) · @material-symbols/svg-500@0.48.0 · Apache-2.0
-// Katalog dizini (ad, anahtar kelime, kategori) — path YOK; path'ler kategori başına lazy parçada.
+// Catalog index (name, keywords, category) — NO paths; paths live in lazy per-category chunks.
 
 export interface ModelIconEntry { readonly name: string; readonly keywords: string; }
 export interface ModelIconCategory { readonly key: string; readonly icons: readonly ModelIconEntry[]; }
@@ -288,7 +288,7 @@ export const MODEL_ICON_CATEGORIES: readonly ModelIconCategory[] = [
   ] },
 ];
 
-/** İkon adı → kategori anahtarı. */
+/** Icon name → category key. */
 export const MODEL_ICON_CATEGORY_OF: Readonly<Record<string, string>> = {
   'apps': 'general',
   'bookmark': 'general',
@@ -544,7 +544,7 @@ export const MODEL_ICON_CATEGORY_OF: Readonly<Record<string, string>> = {
   'wifi': 'it',
 };
 
-/** Kategori anahtarı → o kategorinin path'lerini yükleyen dinamik import. */
+/** Category key → dynamic import that loads that category's paths. */
 export const MODEL_ICON_PATH_LOADERS: Readonly<Record<string, () => Promise<Readonly<Record<string, string>>>>> = {
   'general': () => import('./paths/general.generated').then(m => m.PATHS),
   'commerce': () => import('./paths/commerce.generated').then(m => m.PATHS),

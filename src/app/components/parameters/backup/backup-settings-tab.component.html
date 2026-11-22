@@ -10,7 +10,7 @@
     </div>
   } @else {
 
-    <!-- ── Zamanlama kurucusu ──────────────────────────────────────────── -->
+    <!-- ── Schedule builder ────────────────────────────────────────────── -->
     <div class="panel">
       <div class="panel-head">
         <h2>{{ 'parameter.backup.scheduleTitle' | t }}</h2>
@@ -93,7 +93,7 @@
             </div>
           }
 
-          <!-- Saatte bir / N saatte bir: yalnız dakika seçilir, saat serbesttir. -->
+          <!-- Hourly / every N hours: only the minute is chosen, the hour is free. -->
           @if (fields().minute && !fields().time) {
             <div class="field">
               <label for="minute">{{ 'parameter.backup.minute' | t }}</label>
@@ -177,7 +177,7 @@
           </div>
         }
 
-        <!-- Kullanıcı kaydetmeden ne yaptığını görsün. -->
+        <!-- Let the user see what they are doing before saving. -->
         <div class="schedule-preview" style="margin-top: var(--space-4)">
           <span class="status-label">{{ 'parameter.backup.summary' | t }}</span>
           <div class="schedule-cron">{{ cronExpression() }}</div>
@@ -218,7 +218,7 @@
       </div>
     </div>
 
-    <!-- ── Durum ───────────────────────────────────────────────────────── -->
+    <!-- ── Status ──────────────────────────────────────────────────────── -->
     @if (status(); as s) {
       <div class="panel">
         <div class="panel-head">
@@ -247,7 +247,7 @@
       </div>
     }
 
-    <!-- ── Yedek geçmişi ───────────────────────────────────────────────── -->
+    <!-- ── Backup history ──────────────────────────────────────────────── -->
     <div class="panel">
       <div class="panel-head">
         <h2>{{ 'parameter.backup.historyTitle' | t }}</h2>
@@ -318,7 +318,7 @@
                     }
                   </td>
                 </tr>
-                <!-- Hata nedeni eskiden yalnız satırın title'ındaydı — dokunmatikte okunamıyordu -->
+                <!-- The failure reason used to be only in the row's title — unreadable on touch devices -->
                 @if (item.error) {
                   <tr class="backup-error-row">
                     <td colspan="8"><span class="field-error">{{ item.error }}</span></td>

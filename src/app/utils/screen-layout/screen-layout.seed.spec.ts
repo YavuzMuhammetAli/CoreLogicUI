@@ -14,29 +14,29 @@ const rules = new Map<string, PublishedColumnSchema>([
 ]);
 
 describe('screen-layout.seed', () => {
-  it('ilk taslak bugünkü görünümden: görünenler yerleşir, gizlenenler gizli listede', () => {
+  it('initial draft from the current view: visible ones are placed, hidden ones go to the hidden list', () => {
     const seeded = seedFormLayout(columns, rules, ['Yil']);
     const items = seeded.tabs[0].sections[0].items;
-    // Plaka zorunlu: "Kolonlar" ayarında gizli olsa da yerleşir.
+    // Plaka is required: placed even though it is hidden in the "Kolonlar" (Columns) setting.
     expect(items.map(i => i.kind === 'field' ? i.column : null)).toEqual(['Plaka', 'Yil']);
     expect(seeded.hiddenColumns).toEqual(['Marka']);
   });
 
-  it('ayar yoksa tüm kolonlar yerleşir ve belge yayınlanabilir', () => {
+  it('without a setting all columns are placed and the document is publishable', () => {
     const seeded = seedFormLayout(columns, rules, null);
     expect(seeded.hiddenColumns).toEqual([]);
     expect(validateLayout(seeded, 'form', layoutFacts(columns, rules), 'publish')).toEqual([]);
   });
 
-  it('liste taslağı görünen kolonlar, şema sırasıyla', () => {
+  it('list draft is the visible columns, in schema order', () => {
     expect(seedListLayout(columns, ['Yil', 'Plaka']).columns.map(c => c.column)).toEqual(['Plaka', 'Yil']);
   });
 
-  it('kolon bilgisi zorunluluğu şema kuralından okur', () => {
+  it('column facts read required-ness from the schema rule', () => {
     expect(layoutFacts(columns, rules).map(f => f.mustStayVisible)).toEqual([true, false, false]);
   });
 
-  it('yeni kimlik deterministik ve çakışmasız', () => {
+  it('new id is deterministic and collision-free', () => {
     const ids = collectIds(seedFormLayout(columns, rules, null));
     expect([...ids]).toEqual(['t1', 's1', 'f1', 'f2', 'f3']);
     expect(nextId(ids, 'f')).toBe('f4');

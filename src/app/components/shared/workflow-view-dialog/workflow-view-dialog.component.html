@@ -53,7 +53,7 @@
     </div>
   </div>
 
-  <!-- Adım ipucu: fixed — diyaloğun overflow'una takılmaz; ölçülene dek görünmez. -->
+  <!-- Step tooltip: fixed — not caught by the dialog's overflow; invisible until measured. -->
   @if (tip(); as view) {
     <div class="step-tip" #tip role="tooltip"
          [class.step-tip--ready]="tipPos() !== null"

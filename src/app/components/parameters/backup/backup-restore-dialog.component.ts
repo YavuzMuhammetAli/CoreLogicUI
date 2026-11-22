@@ -12,23 +12,23 @@ import { BackupHistoryItem, TenantRestore, isRestoreFinished } from '../../../mo
 import { formatDate } from '../../../utils/locale-format';
 import { IconComponent } from '../../shared/icon/icon.component';
 
-/** Diyaloğun adımı: onay formu → sunucuya gönderiliyor → ilerleme → sonuç. */
+/** Dialog step: confirm form → sending to server → progress → result. */
 type Step = 'confirm' | 'submitting' | 'progress' | 'done' | 'failed';
 
-/** Kullanıcıya gösterilen fazlar (sunucudaki RestorePhase sırasıyla). */
+/** Phases shown to the user (in the order of the server's RestorePhase). */
 const PHASES = ['SideRestore', 'SafetyBackup', 'Swap', 'Upgrade', 'Reconcile', 'Cleanup'] as const;
 
-/** Geri yükleme sürerken durumun yoklanma aralığı. */
+/** Status polling interval while a restore is running. */
 const POLL_MS = 2000;
 
 /**
- * Yedekten geri yükleme diyaloğu — yıkıcı ve geri alınamaz bir işlem olduğu için çift onaylıdır:
- * şirket kodu aynen yeniden yazılır ve parola istenir (açık bırakılmış bir oturumdan geri
- * yükleme yapılamasın). Sunucu işi kuyruğa alır; diyalog fazları yoklayarak gösterir.
+ * Restore-from-backup dialog — double-confirmed because it is a destructive, irreversible operation:
+ * the company code is retyped exactly and the password is asked for (so no restore can be done from a
+ * session left open). The server queues the job; the dialog shows the phases by polling.
  *
- * Bittiğinde herkesin oturumu geçersizdir (geri yüklenen veritabanında kullanıcı kimlikleri
- * değişebilir) — diyalog uzlaştırma özetini gösterip kullanıcıyı yeniden girişe yollar.
- * Durum ucu bakım sırasında ve oturum geçersizken de yanıt verir (sunucuda muaf).
+ * When it finishes everyone's session is invalid (user ids may change in the restored
+ * database) — the dialog shows the reconciliation summary and sends the user to re-login.
+ * The status endpoint also responds during maintenance and while the session is invalid (exempt on the server).
  */
 @Component({
     selector: 'app-backup-restore-dialog',
@@ -44,11 +44,11 @@ export class BackupRestoreDialogComponent {
   private readonly permissions = inject(PermissionService);
   private readonly router = inject(Router);
 
-  /** Geri yüklenecek yedek — onay adımıyla açar. */
+  /** Backup to restore — opens with the confirm step. */
   readonly backup = input<BackupHistoryItem | null>(null);
-  /** Sayfa açıldığında süren bir geri yükleme varsa doğrudan ilerleme adımıyla açar. */
+  /** If a restore is already running when the page opens, opens directly with the progress step. */
   readonly activeRestore = input<TenantRestore | null>(null);
-  /** Diyalog kapandı (yalnız onay ya da başarısız adımda kapatılabilir). */
+  /** Dialog closed (can only be closed on the confirm or failed step). */
   readonly closed = output<void>();
 
   readonly phases = PHASES;
@@ -59,7 +59,7 @@ export class BackupRestoreDialogComponent {
   readonly codeInput = signal('');
   readonly passwordInput = signal('');
 
-  /** Onay için aynen yazılacak şirket kodu (JWT'deki tenant). */
+  /** Company code to retype exactly for confirmation (the tenant in the JWT). */
   readonly companyCode = this.auth.getSessionUser()?.tenantId ?? '';
 
   readonly open = computed(() => !!this.backup() || !!this.activeRestore() || this.step() !== 'confirm');
@@ -73,7 +73,7 @@ export class BackupRestoreDialogComponent {
   readonly currentPhaseIndex = computed(() => PHASES.indexOf((this.restore()?.phase ?? '') as typeof PHASES[number]));
 
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
-  /** Kapanışta süren bir istek yanıt verince yeni yoklama zinciri başlamasın. */
+  /** After closing, a pending request's response must not start a new polling chain. */
   private destroyed = false;
 
   constructor() {
@@ -82,7 +82,7 @@ export class BackupRestoreDialogComponent {
       this.stopPolling();
     });
 
-    // Sayfa yenilendiğinde süren geri yükleme: onay adımı atlanır, ilerleme gösterilir.
+    // Restore already running when the page is reloaded: the confirm step is skipped, progress is shown.
     effect(() => {
       const active = this.activeRestore();
       if (!active) return;
@@ -130,7 +130,7 @@ export class BackupRestoreDialogComponent {
     });
   }
 
-  /** Bittikten sonra herkesin oturumu geçersiz — yeniden giriş zorunlu. */
+  /** After it finishes everyone's session is invalid — re-login is mandatory. */
   signInAgain(): void {
     this.auth.logout().subscribe(() => {
       this.permissions.clear();
@@ -169,7 +169,7 @@ export class BackupRestoreDialogComponent {
         }
         this.schedule(restoreId);
       },
-      // Takas sırasında kısa kesintiler olabilir — yoklama sürer.
+      // Short outages can happen during the swap — polling continues.
       error: () => this.schedule(restoreId)
     });
   }

@@ -1,4 +1,4 @@
-import '../../i18n/lazy/datatype-help'; // help.* sözlüğü bu parçayla iner
+import '../../i18n/lazy/datatype-help'; // the help.* dictionary loads with this chunk
 import {
   ChangeDetectionStrategy, ChangeDetectorRef, Component, forwardRef, Input, inject,
   OnChanges, OnDestroy, SimpleChanges, signal
@@ -29,23 +29,23 @@ import { MIN_FILE_LIMIT_MB, fileLimitMbValidator, isFileType, maxFileMbFor } fro
 import { isTextColumn } from '../../utils/column-rules';
 import { IconComponent } from '../shared/icon/icon.component';
 
-/** Maksimum model ağacı derinliği (kök = 1). */
+/** Maximum model tree depth (root = 1). */
 export const MAX_DEPTH = 4;
 
 /**
- * ModelNodeComponent — tek bir model düğümünü temsil eder.
- * Kendi içinde alt modeller (subModels FormArray) tutabilir;
- * `<app-model-node>` kendini özyinelemeli olarak render eder (max 4 derinlik).
+ * ModelNodeComponent — represents a single model node.
+ * It can hold sub-models (subModels FormArray) inside it;
+ * `<app-model-node>` renders itself recursively (max depth 4).
  *
- * FormGroup yapısı:
- *   label        : string  (kullanıcı dostu ad — entityName bundan üretilir)
+ * FormGroup structure:
+ *   label        : string  (user-friendly name — entityName is generated from it)
  *   entityName   : string
  *   columns      : FormArray  (columnName, dataType, isNullable, ...)
- *   subModels    : FormArray  (her eleman yine bu FormGroup yapısında)
+ *   subModels    : FormArray  (each element has this same FormGroup structure)
  */
 @Component({
     selector: 'app-model-node',
-    // forwardRef ile kendi kendine import — Angular recursive component çözümü
+    // Self-import via forwardRef — Angular's solution for recursive components
     imports: [
     ReactiveFormsModule,
     TranslatePipe,
@@ -59,35 +59,35 @@ export const MAX_DEPTH = 4;
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ModelNodeComponent implements OnChanges, OnDestroy {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly languageService = inject(LanguageService);
 
-  /** Dışarıdan gelen FormGroup: label + entityName + columns + subModels. */
+  /** FormGroup from the outside: label + entityName + columns + subModels. */
   @Input({ required: true }) group!: FormGroup;
 
-  /** Kök = 1, max = 4. 4'te "Alt Model Oluştur" butonu gizlenir. */
+  /** Root = 1, max = 4. At 4 the "Create Sub-model" button is hidden. */
   @Input() depth: number = 1;
 
-  /** Kök değilse (depth > 1) "Alt Modeli Kaldır" butonu gösterilir. */
+  /** If not the root (depth > 1) the "Remove Sub-model" button is shown. */
   @Input() canRemove: boolean = false;
 
-  /** Alt model kaldırma olayını parent'a ilet */
+  /** Forward the sub-model removal event to the parent */
   @Input() onRemoveSelf?: () => void;
 
-  /** Lookup kolon tipi için hedef model seçenekleri (form-build tarafından sağlanır). */
+  /** Target model options for the lookup column type (provided by form-build). */
   @Input() availableTables: string[] = [];
 
   readonly MAX_DEPTH = MAX_DEPTH;
   readonly IDENTIFIER_MAX_LENGTH = IDENTIFIER_MAX_LENGTH;
   readonly LABEL_MAX_LENGTH = LABEL_MAX_LENGTH;
 
-  // ─── Etiket → ad senkronu ───────────────────────────────────────────────────
+  // ─── Label → name sync ──────────────────────────────────────────────────────
 
-  /** Ad kontrolü → senkron. Model adı ve her kolon adı için bir tane. */
+  /** Name control → sync. One for the model name and one for each column name. */
   private readonly syncs = new Map<AbstractControl, LabelNameSync>();
-  /** Kolon değerleri değişince kardeş adların çakışma durumu yeniden hesaplanır. */
+  /** When column values change, sibling name collisions are recomputed. */
   private columnsSub?: Subscription;
 
   readonly identifierErrorMessage = identifierErrorMessage;
@@ -96,7 +96,7 @@ export class ModelNodeComponent implements OnChanges, OnDestroy {
   readonly maxFileMbFor = maxFileMbFor;
   readonly MIN_FILE_LIMIT_MB = MIN_FILE_LIMIT_MB;
 
-  /** Dropdown seçenekleri — value backend'e gönderilen anahtar, label kullanıcıya gösterilen ad. */
+  /** Dropdown options — value is the key sent to the backend, label is the name shown to the user. */
   primitiveTypes: { value: string; label: string }[] = [
     { value: 'string',   label: 'String' },
     { value: 'text',     label: 'Text' },
@@ -121,32 +121,32 @@ export class ModelNodeComponent implements OnChanges, OnDestroy {
     { value: 'file',   label: 'File' }
   ];
 
-  /** Sayısal kural alanlarının (Min/Max) gösterileceği tipler. */
+  /** Types for which numeric rule fields (Min/Max) are shown. */
   private readonly numericTypes = new Set(['int', 'long', 'short', 'byte', 'decimal', 'double', 'float']);
 
-  /** lookupTargetTable → hedef tablonun kolon adları (display kolonu seçimi için, lazy yüklenir). */
+  /** lookupTargetTable → column names of the target table (for choosing the display column, lazy-loaded). */
   lookupColumnsByTable: Partial<Record<string, string[]>> = {};
-  /** lookupTargetTable → yükleniyor mu (aynı hedef için tekrar istek atmamak için). */
+  /** lookupTargetTable → whether loading (to avoid repeat requests for the same target). */
   private lookupColumnsLoading = new Set<string>();
 
-  // ─── Veri tipi kılavuzu ─────────────────────────────────────────────────────
+  // ─── Data type guide ────────────────────────────────────────────────────────
 
   /**
-   * Kılavuz diyaloğu. Bu component özyinelemeli olduğu için her düğüm kendi
-   * diyalog örneğini render eder; diyalog yalnızca tıklamayla açıldığından
-   * aynı anda birden fazlası açık olamaz.
+   * Guide dialog. Since this component is recursive, each node renders its own
+   * dialog instance; since the dialog only opens on click,
+   * more than one cannot be open at the same time.
    */
   helpOpen = signal(false);
   helpTopic = signal<HelpTopicId>('string');
 
-  /** Kılavuzu açan kolonun index'i — "Kullan" ile seçilen desen doğru satıra yazılsın. */
+  /** Index of the column that opened the guide — so the pattern picked with "Kullan" (Use) is written to the right row. */
   private helpColumnIndex = -1;
 
   constructor(private fb: FormBuilder, private publishedTableService: PublishedTableService) {}
 
   /**
-   * Alt model listesi `track $index` ile render edildiği için bir düğüm silinince
-   * aynı component örneğine başka bir group gelebilir — senkronlar group'a göre yeniden kurulur.
+   * Since the sub-model list is rendered with `track $index`, when a node is deleted
+   * the same component instance may receive another group — the syncs are rebuilt per group.
    */
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['group']) this.bindSyncs();
@@ -159,7 +159,7 @@ export class ModelNodeComponent implements OnChanges, OnDestroy {
   private bindSyncs(): void {
     this.unbindSyncs();
 
-    // Model adı, ağaçtaki diğer modellerin yanında kayıtlı tablolarla da çakışmamalı.
+    // The model name must not collide with registered tables either, besides the other models in the tree.
     this.entityNameCtrl.setValidators([
       Validators.required,
       identifierValidator('model', () => ({ taken: this.availableTables }))
@@ -185,24 +185,24 @@ export class ModelNodeComponent implements OnChanges, OnDestroy {
     this.columnsSub?.unsubscribe();
   }
 
-  /** Ad alanına yazılırken Türkçe karakter/boşluk anında temizlenir. */
+  /** While typing in the name field, Turkish characters/spaces are cleaned immediately. */
   onNameInput(event: Event, control: AbstractControl, kind: IdentifierKind): void {
     sanitizeIdentifierInputEvent(event, control, kind);
   }
 
-  /** "↺ Etiketten üret" — elle değiştirilmiş adı etiketten yeniden üretir. */
+  /** "↺ Etiketten üret" (Generate from label) — regenerates a manually changed name from the label. */
   regenerateName(control: AbstractControl): void {
     this.syncs.get(control)?.regenerate();
   }
 
-  /** Bir kolonun sayısal Min/Max kural alanlarının gösterilip gösterilmeyeceği. */
+  /** Whether a column's numeric Min/Max rule fields are shown. */
   isNumericType(dataType: string): boolean {
     return this.numericTypes.has(dataType);
   }
 
   /**
-   * Kullanıcı bir kolon için lookup hedef tablosunu seçtiğinde, "display kolonu" dropdown'unu
-   * doldurmak için hedef tablonun şemasını okur (her hedef için bir kez, cache'lenir).
+   * When the user picks a lookup target table for a column, reads the target table's schema to fill
+   * the "display column" dropdown (once per target, cached).
    */
   onLookupTargetChange(targetTable: string): void {
     if (!targetTable || this.lookupColumnsByTable[targetTable] || this.lookupColumnsLoading.has(targetTable)) {
@@ -220,16 +220,16 @@ export class ModelNodeComponent implements OnChanges, OnDestroy {
     });
   }
 
-  // ─── Kılavuz diyaloğu ───────────────────────────────────────────────────────
+  // ─── Guide dialog ───────────────────────────────────────────────────────────
 
-  /** Bir kolonun "Veri Tipi" yanındaki "i" — seçili tipin kılavuzunu açar. */
+  /** The "i" next to a column's "Veri Tipi" (Data Type) — opens the guide for the selected type. */
   openTypeHelp(index: number): void {
     this.helpColumnIndex = index;
     this.helpTopic.set(this.getColumnGroup(index).get('dataType')!.value || 'string');
     this.helpOpen.set(true);
   }
 
-  /** Alt model kavramı kılavuzu (düğüm başlığındaki "i"). */
+  /** Guide for the sub-model concept (the "i" in the node header). */
   openSubModelHelp(): void {
     this.helpColumnIndex = -1;
     this.helpTopic.set('subModels');
@@ -241,8 +241,8 @@ export class ModelNodeComponent implements OnChanges, OnDestroy {
   }
 
   /**
-   * Kılavuzdaki hazır regex deseninde "Kullan"a basıldığında deseni kılavuzu
-   * açan kolona yazar. Hata mesajı yalnızca boşsa doldurulur.
+   * When "Kullan" (Use) is pressed on a ready-made regex pattern in the guide, writes the pattern
+   * to the column that opened the guide. The error message is filled only if empty.
    */
   onHelpPattern(preset: RegexPreset): void {
     if (this.helpColumnIndex < 0 || this.helpColumnIndex >= this.columns.length) {
@@ -258,7 +258,7 @@ export class ModelNodeComponent implements OnChanges, OnDestroy {
     this.closeHelp();
   }
 
-  // ─── Accessor'lar ────────────────────────────────────────────────────────────
+  // ─── Accessors ───────────────────────────────────────────────────────────────
 
   get entityNameCtrl() {
     return this.group.get('entityName')!;
@@ -272,7 +272,7 @@ export class ModelNodeComponent implements OnChanges, OnDestroy {
     return this.group.get('subModels') as FormArray;
   }
 
-  // ─── Sütun yönetimi ─────────────────────────────────────────────────────────
+  // ─── Column management ──────────────────────────────────────────────────────
 
   addColumn(): void {
     const col = this.buildColumnGroup();
@@ -292,18 +292,18 @@ export class ModelNodeComponent implements OnChanges, OnDestroy {
   }
 
   /**
-   * Boş bir kolon FormGroup'u oluşturur.
+   * Creates an empty column FormGroup.
    *
-   * Ad doğrulayıcısı bağlamını (kardeş kolonlar, model adı, üst model) form ağacından
-   * kendisi bulur. Ağaca bağlı olmayan bir taslak için (ör. sütun popup'ı) `extra`
-   * ile bağlam dışarıdan verilir.
+   * The name validator finds its context (sibling columns, model name, parent model) from the form tree
+   * itself. For a draft not attached to the tree (e.g. the column popup) the context is given
+   * from outside via `extra`.
    */
   static buildColumnGroupStatic(fb: FormBuilder, extra?: () => IdentifierContext): FormGroup {
     return fb.group({
       columnName:          ['', [Validators.required, identifierValidator('column', extra)]],
       dataType:            ['string'],
       isNullable:          [true],
-      // UI metadata: kullanıcı dostu gösterim — ad bundan üretilir, zorunlu
+      // UI metadata: user-friendly display — the name is generated from it, required
       label:               ['', [Validators.required, Validators.maxLength(LABEL_MAX_LENGTH)]],
       description:         [''],
       minLength:           [null],
@@ -312,14 +312,14 @@ export class ModelNodeComponent implements OnChanges, OnDestroy {
       max:                 [null],
       regex:               [''],
       regexMessage:        [''],
-      // Enum: izinli değerler ('A|B|C' biçiminde). Lookup: hedef model + gösterilecek kolon.
+      // Enum: allowed values (in 'A|B|C' form). Lookup: target model + column to display.
       enumValues:          [''],
       lookupTargetTable:   [''],
       lookupDisplayColumn: [''],
-      // image/file: boyut sınırı (MB) — yalnız formda; kaydederken maxLength'e (KB) çevrilir
+      // image/file: size limit (MB) — form only; converted to maxLength (KB) on save
       // (utils/column-rules.ts#normalizeColumnRules).
       maxFileSizeMb:       [null, fileLimitMbValidator],
-      // Otomatik değer kuralı (utils/auto-value): '' = kural yok
+      // Auto-value rule (utils/auto-value): '' = no rule
       autoValueTrigger:    [''],
       autoValueExpression: [''],
       isReadOnly:          [false],
@@ -330,15 +330,15 @@ export class ModelNodeComponent implements OnChanges, OnDestroy {
     return ModelNodeComponent.buildColumnGroupStatic(this.fb);
   }
 
-  // ─── Alt model yönetimi ─────────────────────────────────────────────────────
+  // ─── Sub-model management ───────────────────────────────────────────────────
 
-  /** Yeni bir alt model düğümü oluşturup subModels dizisine ekle. */
+  /** Create a new sub-model node and add it to the subModels array. */
   addSubModel(): void {
     if (this.depth >= MAX_DEPTH) return;
     this.subModels.push(this.buildModelGroup());
   }
 
-  /** Belirtilen indexteki alt modeli kaldır. */
+  /** Remove the sub-model at the given index. */
   removeSubModel(index: number): void {
     this.subModels.removeAt(index);
   }
@@ -348,8 +348,8 @@ export class ModelNodeComponent implements OnChanges, OnDestroy {
   }
 
   /**
-   * Boş bir model düğümü FormGroup'u oluşturur (label + entityName + columns + subModels).
-   * Ad boş başlar; kullanıcı etiketi yazdıkça üretilir.
+   * Creates an empty model node FormGroup (label + entityName + columns + subModels).
+   * The name starts empty; it is generated as the user types the label.
    */
   static buildModelGroupStatic(fb: FormBuilder): FormGroup {
     const group = fb.group({
@@ -358,7 +358,7 @@ export class ModelNodeComponent implements OnChanges, OnDestroy {
       columns:   fb.array([]),
       subModels: fb.array([]),
     });
-    // Başlangıçta bir boş kolon ekle
+    // Add one empty column initially
     (group.get('columns') as FormArray).push(
       ModelNodeComponent.buildColumnGroupStatic(fb)
     );
@@ -369,17 +369,17 @@ export class ModelNodeComponent implements OnChanges, OnDestroy {
     return ModelNodeComponent.buildModelGroupStatic(this.fb);
   }
 
-  // ─── Yardımcılar ────────────────────────────────────────────────────────────
+  // ─── Helpers ────────────────────────────────────────────────────────────────
 
-  derinlikEtiketi(depth: number): string {
+  depthLabel(depth: number): string {
     const keys = ['', 'model.node.depthRoot', 'model.node.depthChild', 'model.node.depthGrandchild', 'model.node.depthGreatGrandchild'];
     const key = keys[depth];
     return key ? this.languageService.t(key) : this.languageService.t('model.node.depthLevel', { depth });
   }
 
   /**
-   * Belirtilen index'teki alt modeli kaldırmak için bağlı fonksiyon döner.
-   * Template'te [onRemoveSelf]="removeSubModelFn($index)" ile kullanılır.
+   * Returns a bound function to remove the sub-model at the given index.
+   * Used in the template as [onRemoveSelf]="removeSubModelFn($index)".
    */
   removeSubModelFn(index: number): () => void {
     return () => this.removeSubModel(index);

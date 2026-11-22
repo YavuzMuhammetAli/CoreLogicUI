@@ -1,7 +1,7 @@
 /**
  * model-data.util.ts
- * Model veri ekranı için ortak yardımcı saf fonksiyonlar.
- * ModelDataComponent, model-detail ve ortak form/diyalog bileşenleri tarafından yeniden kullanılır.
+ * Shared pure helper functions for the model data screen.
+ * Reused by ModelDataComponent, model-detail and the shared form/dialog components.
  */
 
 import { PublishedColumn } from '../../services/published-model.service';
@@ -9,7 +9,7 @@ import { isFileRef } from '../../utils/record-file';
 
 type DataRow = Record<string, unknown>;
 
-/** Veri tipine göre HTML input tipi */
+/** HTML input type by data type */
 export function inputTypeFor(dataType: string): string {
   switch (dataType) {
     case 'int':
@@ -24,8 +24,8 @@ export function inputTypeFor(dataType: string): string {
     case 'timeonly': return 'time';
     case 'boolean':  return 'checkbox';
     case 'guid':     return 'text';
-    // enum/lookup özel <select> render'ı ile ele alınır (bkz. ilgili component'ler);
-    // bu fonksiyon yalnızca düz <input> tipi üreten kolonlar için kullanılır.
+    // enum/lookup are handled by a custom <select> render (see the relevant components);
+    // this function is used only for columns that produce a plain <input> type.
     case 'image':
     case 'file':     return 'file';
     default: return 'text';
@@ -33,29 +33,29 @@ export function inputTypeFor(dataType: string): string {
 }
 
 /**
- * Tarih/saat input'ları için `step` niteliği. `datetime-local` ve `time` kutuları
- * varsayılan olarak 60 sn adımla çalışır ve saniye alanını hiç göstermez; saniyeli
- * bir değer bu durumda kullanıcıya eksik görünür. `step="1"` saniye alanını açar,
- * böylece `toInputValue`'nun ürettiği değer olduğu gibi gösterilip geri alınabilir.
- * Diğer tiplerde niteliğin hiç basılmaması için null döner.
+ * `step` attribute for date/time inputs. `datetime-local` and `time` boxes
+ * work with a 60 s step by default and do not show the seconds field at all; a value with
+ * seconds then looks incomplete to the user. `step="1"` enables the seconds field,
+ * so the value produced by `toInputValue` can be shown and read back as is.
+ * Returns null for other types so the attribute is not rendered at all.
  */
 export function stepFor(dataType: string): string | null {
   return dataType === 'datetime' || dataType === 'timeonly' ? '1' : null;
 }
 
 /**
- * Sunucudan gelen ISO tarih/saat değerini ilgili HTML input'unun kabul ettiği biçime
- * indirger. Tarayıcı `datetime-local` / `date` / `time` kutularına yazılan değeri
- * sanitize eder: kesirli saniye ("…T07:27:04.72") veya 'Z' eki gibi kabul etmediği
- * her biçim SESSİZCE boş string'e düşer. Alan boş görünür, kullanıcı boş sanıp takvim
- * kutucuğuna dokununca tarayıcı o anki zamanı yazar ve kayıttaki gerçek tarih ezilir.
+ * Reduces the server's ISO date/time value to the format the relevant HTML input accepts.
+ * The browser sanitizes the value written to `datetime-local` / `date` / `time` boxes:
+ * any format it does not accept, such as fractional seconds ("…T07:27:04.72") or a 'Z' suffix,
+ * SILENTLY becomes an empty string. The field looks empty, the user thinks it is empty, taps the
+ * calendar box, the browser writes the current time and the record's real date is overwritten.
  *
- * Değer `new Date(...)` ile ayrıştırılmaz — sunucu saat dilimi taşımayan (Kind=Unspecified)
- * bir değer gönderiyor; ayrıştırmak yerel saat kaydırması yaratıp tarihi yine bozar.
- * Bunun yerine string sınırlarından kırpılır:
+ * The value is not parsed with `new Date(...)` — the server sends a value without a time zone
+ * (Kind=Unspecified); parsing would introduce a local time shift and corrupt the date again.
+ * Instead it is trimmed at string boundaries:
  *   datetime → 'YYYY-MM-DDTHH:mm:ss'   dateonly → 'YYYY-MM-DD'   timeonly → 'HH:mm:ss'
  *
- * Tarih/saat olmayan kolonlarda değer olduğu gibi (null dahil) geri döner.
+ * For non-date/time columns the value is returned as is (including null).
  */
 export function toInputValue(dataType: string, raw: unknown): unknown {
   if (dataType !== 'datetime' && dataType !== 'dateonly' && dataType !== 'timeonly') {
@@ -75,18 +75,18 @@ export function toInputValue(dataType: string, raw: unknown): unknown {
 }
 
 /**
- * Form değerini backend JSON deserializasyonu için temizler.
- * Boş değer ('' / null / undefined) → null (backend Nullable<DateTime>/<bool>/<int>
- * null kabul eder, '' edemez). boolean kolonlar gerçek boolean'a normalize edilir.
+ * Cleans the form value for backend JSON deserialization.
+ * Empty value ('' / null / undefined) → null (the backend accepts null for Nullable<DateTime>/<bool>/<int>,
+ * not ''). Boolean columns are normalised to real booleans.
  *
- * STRING kolonlar da dahildir: backend `ValidateDynamicEntity` null değerlerde tüm
- * kural kontrollerini atlar (`if (value == null) continue;`) ama boş string'i normal
- * bir değer sayar — yani boş bırakılan opsiyonel bir alan '' olarak gönderilirse
- * regex/minLength kuralı '' üzerinde çalışır ve kayıt gereksiz yere reddedilir.
- * Zorunlu alanlarda davranış değişmez: backend `IsNullOrWhiteSpace` ile bakar.
+ * STRING columns are included too: the backend's `ValidateDynamicEntity` skips all rule
+ * checks for null values (`if (value == null) continue;`) but treats an empty string as a normal
+ * value — so if an optional field left empty were sent as '', the
+ * regex/minLength rule would run on '' and the record would be rejected needlessly.
+ * Behaviour for required fields is unchanged: the backend checks with `IsNullOrWhiteSpace`.
  *
- * Değişmeyen dosya (sunucunun gönderdiği `FileRef`) payload'dan ÇIKARILIR: sunucu anahtarı
- * olmayan dosya kolonuna dokunmaz. Dosyanın kendisi istemcide yok; geri gönderilecek içerik de yok.
+ * An unchanged file (the `FileRef` sent by the server) is REMOVED from the payload: the server does not touch
+ * a file column whose key is absent. The file itself is not on the client; there is no content to send back.
  */
 export function sanitizePayload(columns: PublishedColumn[], formValue: DataRow): DataRow {
   const typeByName = new Map(columns.map(c => [c.columnName, c.dataType]));
@@ -97,7 +97,7 @@ export function sanitizePayload(columns: PublishedColumn[], formValue: DataRow):
       continue;
     }
     const dataType = typeByName.get(key);
-    if (!dataType) continue;                 // ID gibi meta alanlar dokunulmaz
+    if (!dataType) continue;                 // meta fields such as ID are left untouched
     if (dataType === 'boolean') {
       out[key] = val === '' || val == null ? null : Boolean(val);
       continue;
@@ -110,8 +110,8 @@ export function sanitizePayload(columns: PublishedColumn[], formValue: DataRow):
 }
 
 /**
- * Base64 string'inin ilk birkaç baytına bakarak MIME tipini tahmin eder.
- * Tanınamayan format için null döner.
+ * Guesses the MIME type by looking at the first few bytes of a base64 string.
+ * Returns null for an unrecognised format.
  */
 export function mimeFromBase64(b64: string): string | null {
   if (!b64) return null;
@@ -125,8 +125,8 @@ export function mimeFromBase64(b64: string): string | null {
 }
 
 /**
- * base64 magic byte'larından dosya uzantısını tahmin eder.
- * Oturum kapandıktan sonra yüklenen dosyalar için fallback.
+ * Guesses the file extension from base64 magic bytes.
+ * Fallback for files uploaded after the session was closed.
  */
 export function extFromBase64(b64: string): string {
   const p = b64.substring(0, 8);
@@ -141,29 +141,29 @@ export function extFromBase64(b64: string): string {
   return '.bin';
 }
 
-/** Enum kolonu için izinli değerleri '|' ayraçlı metinden diziye çevirir. */
+/** Converts an enum column's allowed values from '|'-separated text to an array. */
 export function parseEnumValues(enumValues: string | null | undefined): string[] {
   if (!enumValues) return [];
   return enumValues.split('|').map(v => v.trim()).filter(v => v.length > 0);
 }
 
-/** Değer bir resim base64'ü ise true döner */
+/** Returns true if the value is an image base64 */
 export function isImage(value: unknown): boolean {
   if (typeof value !== 'string' || !value) return false;
   return mimeFromBase64(value) !== null;
 }
 
-/** base64 resmi için <img src> değeri üretir */
+/** Produces the <img src> value for a base64 image */
 export function imageSrc(b64: string): string {
   const mime = mimeFromBase64(b64) ?? 'image/jpeg';
   return `data:${mime};base64,${b64}`;
 }
 
 /**
- * Değerin yüklenen dosyaya ait base64 binary içerik olup olmadığını kontrol eder.
- * Gerçek binary data: uzundur (≥64 karakter), 4'ün katı uzunluktadır ve
- * base64 karakter setinden oluşur.  Normal metin string'lerini yanlışlıkla
- * "dosya" olarak işaretlemekten kaçınmak için bu eşikler zorunludur.
+ * Checks whether the value is base64 binary content belonging to an uploaded file.
+ * Real binary data: is long (≥64 characters), has a length that is a multiple of 4 and
+ * consists of the base64 character set. These thresholds are required to avoid
+ * accidentally flagging normal text strings as "files".
  */
 export function isBase64Value(value: unknown): boolean {
   if (typeof value !== 'string') return false;
@@ -172,25 +172,25 @@ export function isBase64Value(value: unknown): boolean {
 }
 
 /**
- * Satırdan kolon adına (casing-bağımsız) karşılık gelen ham değeri döndürür.
- * Backend kolon meta adını PascalCase (örn. "UnitPrice") döndürürken, satır verisi
- * ASP.NET Core'un varsayılan System.Text.Json politikasıyla camelCase ("unitPrice")
- * serileştirilir. Bu fonksiyon casing'den bağımsız eşleştirme yaparak ikisini birleştirir.
+ * Returns the raw value for a column name from the row (casing-independent).
+ * The backend returns column meta names in PascalCase (e.g. "UnitPrice"), while row data
+ * is serialised in camelCase ("unitPrice") by ASP.NET Core's default System.Text.Json policy.
+ * This function reconciles the two with casing-independent matching.
  */
 export function fieldValue(row: DataRow, key: string): unknown {
-  if (key in row) return row[key];               // birebir eşleşme (hızlı yol)
+  if (key in row) return row[key];               // exact match (fast path)
 
-  // Yavaş yol: satırın casing-bağımsız indeksi BİR KEZ kurulup satıra iliştirilir.
-  // Eskiden her çağrıda Object.keys(row) + N adet toLowerCase() çalışıyordu; şablon
-  // bunu hücre başına 3 kez çağırdığı ve component'ler OnPush olmadığı için maliyet
-  // her change detection turunda O(kolon²) idi.
+  // Slow path: a casing-independent index of the row is built ONCE and attached to the row.
+  // Previously Object.keys(row) + N toLowerCase() calls ran on every call; since the template
+  // called it 3 times per cell and the components were not OnPush, the cost
+  // was O(columns²) on every change detection cycle.
   let index = (row as RowWithIndex)[LOWER_KEY_INDEX];
   if (!index) {
     index = new Map<string, string>();
     for (const k of Object.keys(row)) index.set(k.toLowerCase(), k);
     Object.defineProperty(row, LOWER_KEY_INDEX, {
       value: index,
-      enumerable: false,   // JSON.stringify ve {...row} yayılımına sızmaz
+      enumerable: false,   // does not leak into JSON.stringify or {...row} spreading
       writable: true,
       configurable: true
     });
@@ -200,11 +200,11 @@ export function fieldValue(row: DataRow, key: string): unknown {
   return actualKey === undefined ? undefined : row[actualKey];
 }
 
-/** fieldValue'nun satır başına kurduğu casing-bağımsız anahtar indeksi (enumerable değil). */
+/** Casing-independent key index that fieldValue builds per row (non-enumerable). */
 const LOWER_KEY_INDEX = Symbol('lowerKeyIndex');
 type RowWithIndex = DataRow & { [LOWER_KEY_INDEX]?: Map<string, string> };
 
-/** Satırdan hücre değerini string olarak döndürür */
+/** Returns the cell value from the row as a string */
 export function cellValue(row: DataRow, key: string): string {
   const v = fieldValue(row, key);
   if (v === null || v === undefined) return '—';
@@ -213,13 +213,13 @@ export function cellValue(row: DataRow, key: string): string {
   return String(v);
 }
 
-/** Satırdan belirli bir anahtara ait değeri string olarak döndürür (büyük/küçük toleranslı) */
+/** Returns the value for a given key from the row as a string (case-tolerant) */
 export function rowVal(row: DataRow, key: string): string {
   const v = fieldValue(row, key);
   return typeof v === 'string' ? v : '';
 }
 
-/** Dosyayı orijinal adıyla (veya magic-byte tahminli adla) indirir */
+/** Downloads the file with its original name (or a name guessed from magic bytes) */
 export function downloadFile(b64: string, colName: string, fileNames: Record<string, string> = {}): void {
   const fileName = fileNames[colName] ?? `${colName}${extFromBase64(b64)}`;
   const byteChars = atob(b64);

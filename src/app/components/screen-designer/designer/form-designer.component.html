@@ -1,5 +1,5 @@
 @if (preview()) {
-  <!-- Önizleme: belge kayıt ekranının kendi bileşeniyle, seçilen genişlikte çizilir -->
+  <!-- Preview: the document is drawn with the record screen's own component, at the selected width -->
   <div class="preview-stage">
     <div class="preview-frame" [style.max-width.px]="previewWidth()">
       <app-record-layout
@@ -11,7 +11,7 @@
     </div>
   </div>
 } @else if (narrow()) {
-  <!-- Telefon: sürükle-bırak yerine yapı listesi -->
+  <!-- Phone: a structure list instead of drag and drop -->
   <div class="alert alert-info structure-notice" role="note">{{ 'screen.designer.narrowNotice' | t }}</div>
   <div class="flow">
     @for (tab of doc().tabs; track tab.id; let ti = $index) {
@@ -72,7 +72,7 @@
 } @else {
   <div class="form-designer">
 
-    <!-- ── Palet ─────────────────────────────────────────────────────────── -->
+    <!-- ── Palette ───────────────────────────────────────────────────────── -->
     <aside class="palette" [attr.aria-label]="'screen.designer.paletteAria' | t">
       <input type="search" class="input" [value]="search()" (input)="search.set($any($event.target).value)"
         [placeholder]="'screen.designer.searchPlaceholder' | t" [attr.aria-label]="'screen.designer.searchPlaceholder' | t">
@@ -137,7 +137,7 @@
       <p class="palette-help">{{ 'screen.designer.paletteHelp' | t }}</p>
     </aside>
 
-    <!-- ── Tuval ─────────────────────────────────────────────────────────── -->
+    <!-- ── Canvas ────────────────────────────────────────────────────────── -->
     <div class="canvas" #canvasBody [class.canvas--dragging]="dragging() || !!liveSpan()">
       <div class="canvas-tabs" role="tablist" [attr.aria-label]="'screen.form.tabsAria' | t">
         @for (tab of doc().tabs; track tab.id; let i = $index) {
@@ -239,7 +239,7 @@
       }
     </div>
 
-    <!-- ── İnceleyici ────────────────────────────────────────────────────── -->
+    <!-- ── Inspector ─────────────────────────────────────────────────────── -->
     <app-form-inspector
       class="inspector"
       [store]="store()"

@@ -17,7 +17,7 @@
 
       <div class="panel-body help-body">
 
-        <!-- ── Ne işe yarar ──────────────────────────────────────────────── -->
+        <!-- ── What it's for ──────────────────────────────────────────────── -->
         <section class="help-section">
           <h3 class="help-section-title">{{ 'help.sectionSummary' | t }}</h3>
           <p class="help-text">{{ content().summaryKey | t }}</p>
@@ -32,7 +32,7 @@
           }
         </section>
 
-        <!-- ── Şema (inline SVG — bağımlılık yok) ────────────────────────── -->
+        <!-- ── Diagram (inline SVG — no dependency) ────────────────────────── -->
         @if (content().diagram; as diagram) {
           <section class="help-section">
             <h3 class="help-section-title">{{ 'help.sectionDiagram' | t }}</h3>
@@ -156,7 +156,7 @@
                         <path class="d-arrowhead" d="M0 0 L10 5 L0 10 z"/>
                       </marker>
                     </defs>
-                    <!-- 1. Alt model ağacı -->
+                    <!-- 1. Child model tree -->
                     <text class="d-title" x="76" y="16" text-anchor="middle">1 · Alt model</text>
                     <rect class="d-box" x="16" y="26" width="120" height="30" rx="6"/>
                     <text class="d-label" x="76" y="46" text-anchor="middle">Order</text>
@@ -176,7 +176,7 @@
                     <text class="d-sub" x="230" y="140" text-anchor="middle">{{ fkNames.lookup }}</text>
                     <text class="d-sub" x="230" y="156" text-anchor="middle">tek yönlü, ters liste yok</text>
 
-                    <!-- 3. İlişki -->
+                    <!-- 3. Relationship -->
                     <text class="d-title" x="384" y="16" text-anchor="middle">3 · İlişki</text>
                     <rect class="d-box" x="324" y="26" width="120" height="30" rx="6"/>
                     <text class="d-label" x="384" y="46" text-anchor="middle">Customer</text>
@@ -243,7 +243,7 @@
           </section>
         }
 
-        <!-- ── Kural alanları ────────────────────────────────────────────── -->
+        <!-- ── Rule fields ────────────────────────────────────────────── -->
         <section class="help-section">
           <h3 class="help-section-title">{{ 'help.sectionRules' | t }}</h3>
           @if (content().rules.length === 0) {
@@ -260,7 +260,7 @@
           }
         </section>
 
-        <!-- ── Örnekler ──────────────────────────────────────────────────── -->
+        <!-- ── Examples ──────────────────────────────────────────────────── -->
         @if (content().samples.length > 0) {
           <section class="help-section">
             <h3 class="help-section-title">{{ 'help.sectionSamples' | t }}</h3>
@@ -291,13 +291,13 @@
           </section>
         }
 
-        <!-- ── Regex laboratuvarı (yalnızca String) ──────────────────────── -->
+        <!-- ── Regex lab (String only) ──────────────────────── -->
         @if (content().showRegexLab) {
           <section class="help-section">
             <h3 class="help-section-title">{{ 'help.regex.title' | t }}</h3>
             <p class="help-text">{{ 'help.regex.intro' | t }}</p>
 
-            <!-- Hazır desenler -->
+            <!-- Ready-made patterns -->
             <h4 class="help-subtitle">{{ 'help.regex.presets' | t }}</h4>
             <div class="help-table-wrap">
               <table class="data-table help-presets">
@@ -335,7 +335,7 @@
               </table>
             </div>
 
-            <!-- Canlı test -->
+            <!-- Live test -->
             <h4 class="help-subtitle">{{ 'help.regex.lab' | t }}</h4>
             <div class="regex-lab">
               <div class="field">
@@ -373,7 +373,7 @@
             </div>
             <p class="field-help">{{ 'help.regex.labHint' | t }}</p>
 
-            <!-- Sözdizimi -->
+            <!-- Syntax -->
             <h4 class="help-subtitle">{{ 'help.regex.syntax' | t }}</h4>
             <div class="help-table-wrap">
               <table class="data-table help-syntax">
@@ -396,7 +396,7 @@
           </section>
         }
 
-        <!-- ── Dikkat ────────────────────────────────────────────────────── -->
+        <!-- ── Caution ────────────────────────────────────────────────────── -->
         @if (content().notesKey; as notesKey) {
           <div class="alert alert-warn" role="note">
             <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none"

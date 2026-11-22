@@ -1,6 +1,6 @@
 /**
- * Kullanıcının kendi profil bilgilerini tutan model.
- * GET /Profile/me yanıtının `data` alanıyla birebir eşleşir.
+ * Model holding the user's own profile info.
+ * Matches the `data` field of the GET /Profile/me response one to one.
  */
 export interface UserProfile {
   id: number;
@@ -15,7 +15,7 @@ export interface UserProfile {
   photoUrl: string | null;
 }
 
-/** PUT /Profile/update gövdesi */
+/** Body of PUT /Profile/update */
 export interface ProfileUpdateDto {
   firstName: string;
   lastName: string;
@@ -24,7 +24,7 @@ export interface ProfileUpdateDto {
   birthDay: string;       // ISO 8601 tarih string
 }
 
-/** POST /Profile/change-password gövdesi */
+/** Body of POST /Profile/change-password */
 export interface ChangePasswordDto {
   currentPassword: string;
   newPassword: string;

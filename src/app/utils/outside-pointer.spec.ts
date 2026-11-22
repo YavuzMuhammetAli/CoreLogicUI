@@ -15,8 +15,8 @@ class HostComponent {
 }
 
 /**
- * Dinleyici yalnız açıkken bağlıdır: kapalı seçiciler sayfadaki dokunuşlarda hiç çalışmamalı,
- * içeriye dokunmak kapatmamalı, yok edilen bileşen dinleyici bırakmamalı.
+ * The listener is bound only while open: closed pickers must not run at all on page taps,
+ * tapping inside must not close, and a destroyed component must not leave a listener behind.
  */
 describe('closeOnOutsidePointer', () => {
   const pointerOn = (target: EventTarget) =>
@@ -30,13 +30,13 @@ describe('closeOnOutsidePointer', () => {
 
   const pointerAdds = () => addSpy.calls.allArgs().filter(a => a[0] === 'pointerdown').length;
 
-  it('kapalıyken dinleyici bağlamaz', () => {
+  it('does not bind a listener while closed', () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.detectChanges();
     expect(pointerAdds()).toBe(0);
   });
 
-  it('açıkken dışarı dokununca kapatır, içeri dokununca kapatmaz', () => {
+  it('while open, closes on an outside tap but not on an inside tap', () => {
     const fixture = TestBed.createComponent(HostComponent);
     const host = fixture.componentInstance;
     host.open.set(true);
@@ -49,13 +49,13 @@ describe('closeOnOutsidePointer', () => {
     pointerOn(document.body);
     expect(host.closed).toBe(1);
 
-    // Kapandıktan sonra dinleyici kalkar: ikinci dışarı dokunuş işleyiciyi çalıştırmaz.
+    // After closing the listener is removed: a second outside tap does not run the handler.
     fixture.detectChanges();
     pointerOn(document.body);
     expect(host.closed).toBe(1);
   });
 
-  it('yok edilince dinleyiciyi kaldırır', () => {
+  it('removes the listener when destroyed', () => {
     const removeSpy = spyOn(document, 'removeEventListener').and.callThrough();
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.open.set(true);

@@ -5,8 +5,8 @@ import { PARAMETER_I18N } from './parameter.i18n';
 import { DESIGN_I18N } from './design.i18n';
 
 /**
- * Ana paketteki ve lazy yüklenen TÜM sözlükler — yalnız testler içindir (uygulama koduna
- * import etme: lazy sözlükleri ana pakete geri çeker).
+ * ALL dictionaries, from the main bundle and lazy-loaded — for tests only (do not import into
+ * application code: it pulls the lazy dictionaries back into the main bundle).
  */
 export const LAZY_TRANSLATIONS: Translations = { ...DATATYPE_HELP_I18N, ...PARAMETER_I18N, ...DESIGN_I18N };
 

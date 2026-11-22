@@ -1,17 +1,17 @@
 /**
- * Kılavuz diyaloğunun içerik haritası.
+ * Content map of the guide dialog.
  *
- * Buradaki her "konu" (topic) bir veri tipine, bir ilişki tipine veya bir
- * kavrama (alt modeller / ilişkiler) karşılık gelir. Metinlerin tamamı i18n
- * anahtarıdır (`help.*` namespace'i, bkz. `src/app/i18n/datatype-help.i18n.ts`);
- * bu dosya yalnızca yapıyı ve dile bağlı olmayan örnek değerleri tutar.
+ * Each "topic" here corresponds to a data type, a relationship type or a
+ * concept (child models / relationships). All texts are i18n keys
+ * (the `help.*` namespace, see `src/app/i18n/datatype-help.i18n.ts`);
+ * this file only holds the structure and language-independent sample values.
  *
- * Veri tipi listesi tek kaynaktan gelir: `table-detail.component.ts`
- * (`primitiveTypes` + `referenceTypes`) — 13 primitive + 4 reference = 17 tip.
- * Yeni bir tip eklendiğinde buraya da bir kayıt eklenmelidir.
+ * The data type list comes from a single source: `table-detail.component.ts`
+ * (`primitiveTypes` + `referenceTypes`) — 13 primitive + 4 reference = 17 types.
+ * When a new type is added, an entry must be added here too.
  */
 
-/** Diyalogda çizilecek inline SVG şeması. */
+/** Inline SVG diagram to draw in the dialog. */
 export type DiagramId =
   | 'oneToOne'
   | 'oneToMany'
@@ -23,63 +23,63 @@ export type DiagramId =
   | 'lookupFlow'
   | 'enumFlow';
 
-/** Tipe özel bir kural alanının açıklaması. */
+/** Description of a type-specific rule field. */
 export interface HelpRule {
   labelKey: string;
   descKey: string;
 }
 
 /**
- * "Örnekler" tablosunun bir satırı.
+ * A row of the "Örnekler" (Examples) table.
  *
- * `value` dile BAĞLI DEĞİLDİR (kod/identifier örneği: `Customer.Orders`, `A → B → A`).
- * Örnek bir cümle ya da açıklama ise `value` yerine `valueKey` kullanılmalıdır —
- * aksi halde metin EN dilinde çevrilmeden görünür.
+ * `value` is NOT language-dependent (a code/identifier example: `Customer.Orders`, `A → B → A`).
+ * If the example is a sentence or explanation, `valueKey` must be used instead of `value` —
+ * otherwise the text shows untranslated in EN.
  */
 export interface HelpSample {
-  /** Dile bağlı olmayan ham değer. `valueKey` verilmişse yok sayılır. */
+  /** Language-independent raw value. Ignored if `valueKey` is given. */
   value: string;
-  /** Çevrilecek değer anahtarı; doluysa `value` yerine bu gösterilir. */
+  /** Key of the value to translate; if set, this is shown instead of `value`. */
   valueKey?: string;
   ok: boolean;
   noteKey: string;
 }
 
-/** Diyalogda gösterilen tam konu içeriği. */
+/** Full topic content shown in the dialog. */
 export interface HelpTopic {
   titleKey: string;
-  /** Rozette gösterilen C# karşılığı — kavramsal konularda boştur. */
+  /** C# equivalent shown in the badge — empty for conceptual topics. */
   csharpType?: string;
   summaryKey: string;
   useCaseKeys: string[];
   rules: HelpRule[];
   samples: HelpSample[];
   diagram?: DiagramId;
-  /** Doluysa "Dikkat" uyarı kutusu gösterilir. */
+  /** If set, the "Dikkat" (Caution) warning box is shown. */
   notesKey?: string;
-  /** Yalnızca `string` tipinde true — regex laboratuvarını açar. */
+  /** True only for the `string` type — enables the regex lab. */
   showRegexLab?: boolean;
 }
 
 /**
- * Konu kimliği: bir veri tipi anahtarı ('string', 'int', ...), bir kavram
- * ('subModels', 'relationships') veya 'rel:' önekli bir ilişki tipi.
+ * Topic id: a data type key ('string', 'int', ...), a concept
+ * ('subModels', 'relationships') or a relationship type prefixed with 'rel:'.
  */
 export type HelpTopicId = string;
 
-/** Sütun kural alanları için ortak anahtar üreticisi. */
+/** Shared key builder for column rule fields. */
 const rule = (name: string): HelpRule => ({
   labelKey: `help.rule.${name}.label`,
   descKey: `help.rule.${name}.desc`
 });
 
-/** İlişki popup'ı alanları için ortak anahtar üreticisi. */
+/** Shared key builder for relationship popup fields. */
 const relRule = (name: string): HelpRule => ({
   labelKey: `help.relField.${name}.label`,
   descKey: `help.relField.${name}.desc`
 });
 
-/** Bir konunun 1..3 numaralı örnek notu anahtarları. */
+/** Keys of a topic's example notes numbered 1..3. */
 const sample = (topic: string, index: number, value: string, ok: boolean): HelpSample => ({
   value,
   ok,
@@ -87,8 +87,8 @@ const sample = (topic: string, index: number, value: string, ok: boolean): HelpS
 });
 
 /**
- * Değeri de çevrilen örnek satırı — örnek ham bir identifier değil, cümle ise
- * kullanılır (ör. "İki kayıt aynı profile bağlanır").
+ * Example row whose value is translated too — used when the example is a sentence rather than
+ * a raw identifier (e.g. "İki kayıt aynı profile bağlanır" — two records link to the same profile).
  */
 const sampleT = (topic: string, index: number, ok: boolean): HelpSample => ({
   value: '',
@@ -100,7 +100,7 @@ const sampleT = (topic: string, index: number, ok: boolean): HelpSample => ({
 const STRING_RULES = [rule('minLength'), rule('maxLength'), rule('regex'), rule('regexMessage')];
 const NUMERIC_RULES = [rule('min'), rule('max')];
 
-/** Ondalıklı olmayan sayısal tipler aynı kural setini ve örnek yapısını paylaşır. */
+/** Non-decimal numeric types share the same rule set and example structure. */
 function integerTopic(id: string, csharpType: string, ok: string, fail: string): HelpTopic {
   return {
     titleKey: `help.type.${id}.title`,
@@ -119,7 +119,7 @@ function integerTopic(id: string, csharpType: string, ok: string, fail: string):
 
 export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
 
-  // ══ Primitive tipler ══════════════════════════════════════════════════════
+  // ══ Primitive types ══════════════════════════════════════════════════════
 
   string: {
     titleKey: 'help.type.string.title',
@@ -130,7 +130,7 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
     samples: [
       sample('string', 1, 'Kablosuz Kulaklık', true),
       sample('string', 2, 'ali@ornek', false),
-      // Tırnaklar kasıtlı: yalnızca boşluktan oluşan değer tabloda görünsün.
+      // The quotes are intentional: so a whitespace-only value is visible in the table.
       sample('string', 3, '"   "', false)
     ],
     notesKey: 'help.type.string.notes',
@@ -267,7 +267,7 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
     notesKey: 'help.type.guid.notes'
   },
 
-  // ══ Reference tipler ══════════════════════════════════════════════════════
+  // ══ Reference types ══════════════════════════════════════════════════════
 
   lookup: {
     titleKey: 'help.type.lookup.title',
@@ -327,7 +327,7 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
     notesKey: 'help.type.file.notes'
   },
 
-  // ══ Kavramlar ═════════════════════════════════════════════════════════════
+  // ══ Concepts ═════════════════════════════════════════════════════════════
 
   subModels: {
     titleKey: 'help.subModels.title',
@@ -357,7 +357,7 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
     notesKey: 'help.relationships.notes'
   },
 
-  // ══ İlişki tipleri ════════════════════════════════════════════════════════
+  // ══ Relationship types ════════════════════════════════════════════════════════
 
   'rel:OneToOne': {
     titleKey: 'help.rel.oneToOne.title',
@@ -436,8 +436,8 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
 };
 
 /**
- * Bilinmeyen bir konu kimliği geldiğinde (örn. ileride eklenen bir tip için
- * henüz içerik yazılmamışsa) diyalog boş kalmasın diye genel bir konu döner.
+ * When an unknown topic id arrives (e.g. a type added later with no content
+ * written yet), a general topic is returned so the dialog isn't empty.
  */
 export const FALLBACK_TOPIC: HelpTopic = {
   titleKey: 'help.fallback.title',

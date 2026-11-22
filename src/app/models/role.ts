@@ -1,12 +1,12 @@
 /**
- * İsimli rol (RBAC) — GET /Role/getall yanıt öğesi.
- * Backend RoleDto ile eşleşir.
+ * Named role (RBAC) — GET /Role/getall response item.
+ * Matches the backend RoleDto.
  */
 export interface Role {
   id: number;
   name: string;
-  /** Bu role üye olan aktif kullanıcı sayısı. */
+  /** Number of active users who are members of this role. */
   userCount: number;
-  /** Bu role üye kullanıcıların login sonrası yönlendirileceği route; yoksa null. */
+  /** Route the members of this role are redirected to after login; null if none. */
   defaultLandingPage?: string | null;
 }

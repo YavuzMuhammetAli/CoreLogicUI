@@ -1,6 +1,6 @@
 :host { display: block; }
 
-// Düğüm düzenleyicilerinin ortak stili (koşul, bitiş; Faz 10'da alan güncelle, bildirim, bekleme).
+// Shared style of the node editors (condition, end; in Phase 10 field update, notification, wait).
 
 .editor-section {
   display: grid;
@@ -38,7 +38,7 @@
   cursor: pointer;
 }
 
-// ── Koşul durumları ─────────────────────────────────────────────────────────
+// ── Condition cases ─────────────────────────────────────────────────────────
 
 .case-card {
   display: grid;
@@ -86,7 +86,7 @@
   gap: var(--space-2);
 }
 
-// Alan | operatör | değer | sil — sabit sütunlar, satırlar alt alta hizalı.
+// Field | operator | value | delete — fixed columns, rows aligned under each other.
 .case-row {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) 36px;
@@ -106,9 +106,9 @@
 
 .case-expression { resize: vertical; min-height: 56px; }
 
-// ── Alan güncelle ──────────────────────────────────────────────────────────
+// ── Field update ──────────────────────────────────────────────────────────
 
-// Alan | kaynak | sil
+// Field | source | delete
 .action-row {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 36px;
@@ -122,7 +122,7 @@
   }
 }
 
-// ── Bildirim ───────────────────────────────────────────────────────────────
+// ── Notification ───────────────────────────────────────────────────────────────
 
 .recipient-chips {
   display: flex;
@@ -147,7 +147,7 @@
   .btn { padding: 0 var(--space-1); min-height: 0; line-height: 1.4; }
 }
 
-// Tür | seçim | ekle
+// Type | selection | add
 .recipient-add {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto;

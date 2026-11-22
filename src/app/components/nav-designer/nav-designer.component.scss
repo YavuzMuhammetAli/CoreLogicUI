@@ -37,7 +37,7 @@
   color: var(--fg-2);
 }
 
-/* ── Üç sütun: palet · ağaç · özellikler ───────────────────────────────────── */
+/* ── Three columns: palette · tree · properties ───────────────────────────── */
 
 .nav-designer {
   display: grid;
@@ -137,7 +137,7 @@
   color: var(--success);
 }
 
-/* ── Ağaç: kenar çubuğu görünümünde ────────────────────────────────────────── */
+/* ── Tree: in sidebar view ─────────────────────────────────────────────────── */
 
 .tree-wrap {
   display: flex;
@@ -300,7 +300,7 @@
   pointer-events: none;
 }
 
-/* ── Özellikler ────────────────────────────────────────────────────────────── */
+/* ── Properties ────────────────────────────────────────────────────────────── */
 
 .inspector-head {
   display: flex;
@@ -318,7 +318,7 @@
   align-self: flex-start;
 }
 
-/* ── Sorunlar ──────────────────────────────────────────────────────────────── */
+/* ── Issues ────────────────────────────────────────────────────────────────── */
 
 .issues-head {
   display: flex;

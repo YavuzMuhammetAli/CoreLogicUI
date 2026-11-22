@@ -1,15 +1,15 @@
 import { Translations } from './translations.model';
 
 /**
- * Veri tipi / kural yardım sistemi — sütun popup'ındaki "i" butonları,
- * alan etiketlerindeki ipucu baloncukları ve `<app-datatype-help>` kılavuz
- * diyaloğu (17 veri tipi, alt modeller, ilişkiler ve 5 ilişki tipi).
+ * Data type / rule help system — the "i" buttons in the column popup,
+ * the hint bubbles on field labels and the `<app-datatype-help>` guide
+ * dialog (17 data types, sub-models, relationships and the 5 relationship types).
  *
- * Yapı için bkz. `components/shared/datatype-help/datatype-help.data.ts`.
+ * For the structure see `components/shared/datatype-help/datatype-help.data.ts`.
  */
 export const DATATYPE_HELP_I18N: Translations = {
 
-  // ── Diyalog çerçevesi ──────────────────────────────────────────────────────
+  // ── Dialog frame ─────────────────────────────────────────────────────────────
   'help.dialogAria':      { tr: 'Veri tipi kılavuzu', en: 'Data type guide' },
   'help.close':           { tr: 'Kapat', en: 'Close' },
   'help.openTypeHelp':    { tr: 'Bu veri tipi hakkında', en: 'About this data type' },
@@ -31,7 +31,7 @@ export const DATATYPE_HELP_I18N: Translations = {
   'help.fallback.title':   { tr: 'Bu alan hakkında', en: 'About this field' },
   'help.fallback.summary': { tr: 'Bu tip için henüz ayrıntılı kılavuz yazılmadı. Alan etiketlerindeki "i" baloncuklarına bakabilirsiniz.', en: 'No detailed guide has been written for this type yet. See the "i" bubbles next to the field labels.' },
 
-  // ══ VERİ TİPLERİ ═══════════════════════════════════════════════════════════
+  // ══ DATA TYPES ═════════════════════════════════════════════════════════════
 
   // ── Text ───────────────────────────────────────────────────────────────
   'help.type.text.title':    { tr: 'Text — çok satırlı metin', en: 'Text — multi-line text' },
@@ -264,7 +264,7 @@ export const DATATYPE_HELP_I18N: Translations = {
   'help.rule.mechanismRelationship.label': { tr: '3. İlişki (bu sekme)', en: '3. Relationship (this tab)' },
   'help.rule.mechanismRelationship.desc':  { tr: 'Çift yönlü navigation property üretir ve karşı modeli de yeniden derler. Çoka-çok ilişkiyi yalnızca bu mekanizma destekler. FK adı: FK_{tablo}_{kolon}_Rel.', en: 'Generates navigation properties on both sides and recompiles the target model too. Only this mechanism supports many-to-many. FK name: FK_{table}_{column}_Rel.' },
 
-  // ══ İLİŞKİ ALANLARI ════════════════════════════════════════════════════════
+  // ══ RELATIONSHIP FIELDS ════════════════════════════════════════════════════
 
   'help.relField.target.label': { tr: 'Hedef Model', en: 'Target Model' },
   'help.relField.target.desc':  { tr: 'İlişki kurulacak model. Yalnızca YAYINLANMIŞ modeller önerilir — taslak bir model hedef seçilemez.', en: 'The model to relate to. Only PUBLISHED models are suggested — a draft model cannot be a target.' },
@@ -305,7 +305,7 @@ export const DATATYPE_HELP_I18N: Translations = {
   'help.type.subModels.sample3': { tr: 'Derinlik sınırı aşılır — "Yeni Alt Model" butonu kilitlenir', en: 'Exceeds the depth limit — the "New Sub-model" button locks' },
   'help.subModels.notes':    { tr: 'Alt model, bağımsız olarak da kullanılacak bir varlıksa (örneğin Müşteri) alt model yapmayın — ayrı bir model yayınlayıp "İlişkiler" sekmesinden veya Lookup ile bağlayın.', en: 'Do not make something a sub-model if it is also used independently (a Customer, say) — publish it as its own model and link it from the Relationships tab or with Lookup.' },
 
-  // ══ İLİŞKİLER (genel) ══════════════════════════════════════════════════════
+  // ══ RELATIONSHIPS (general) ════════════════════════════════════════════════
 
   'help.relationships.title':    { tr: 'Model İlişkileri', en: 'Model Relationships' },
   'help.relationships.summary':  { tr: 'Bu model ile daha önce yayınlanmış modeller arasında bağ kurar. Yayınlandığında üretilen kodda navigation property\'ler, veritabanında yabancı anahtar ve gerekiyorsa ara tablo oluşur.', en: 'Links this model to previously published models. On publish, navigation properties appear in the generated code and a foreign key — plus a bridge table when needed — appears in the database.' },
@@ -317,7 +317,7 @@ export const DATATYPE_HELP_I18N: Translations = {
   'help.type.relationships.sample3': { tr: 'Döngüsel ilişki — yasaktır, doğrulama hata verir', en: 'A cyclic relationship — forbidden, validation fails' },
   'help.relationships.notes':    { tr: 'İlişki derinliği en fazla 3\'tür ve döngü kurulamaz (SelfReference hariç). Kaydetmeden önce doğrulama uyarılarını, oluşacak yapıyı görmek için de "Önizleme" düğmesini kullanın.', en: 'Relationship depth is capped at 3 and cycles are not allowed (except SelfReference). Check the validation warnings before saving, and use "Preview" to see the resulting structure.' },
 
-  // ══ İLİŞKİ TİPLERİ ═════════════════════════════════════════════════════════
+  // ══ RELATIONSHIP TYPES ═════════════════════════════════════════════════════
 
   'help.rel.oneToOne.title':    { tr: 'OneToOne — bire bir', en: 'OneToOne — one to one' },
   'help.rel.oneToOne.summary':  { tr: 'Her kayıt karşı modelden en fazla bir kayda bağlanır ve o kayıt da başkasına bağlanamaz. Yabancı anahtar bu modele düşer ve benzersiz (unique) olur.', en: 'Each record links to at most one record on the other side, and that record cannot be linked by anyone else. The foreign key lands on this model and is made unique.' },
@@ -402,7 +402,7 @@ export const DATATYPE_HELP_I18N: Translations = {
   'help.regex.colToken':   { tr: 'İfade', en: 'Token' },
   'help.regex.colMeaning': { tr: 'Anlamı', en: 'Meaning' },
 
-  // Hazır desen adları
+  // Preset pattern names
   'help.regex.preset.email':         { tr: 'E-posta adresi', en: 'E-mail address' },
   'help.regex.preset.mobilePhone':   { tr: 'Cep telefonu (05XXXXXXXXX)', en: 'Mobile phone (05XXXXXXXXX)' },
   'help.regex.preset.landlinePhone': { tr: 'Sabit telefon (0XXXXXXXXXX)', en: 'Landline (0XXXXXXXXXX)' },
@@ -420,7 +420,7 @@ export const DATATYPE_HELP_I18N: Translations = {
   'help.regex.preset.productCode':   { tr: 'Ürün kodu (ABC-001234)', en: 'Product code (ABC-001234)' },
   'help.regex.preset.noWhitespace':  { tr: 'Boşluk içermez', en: 'Contains no whitespace' },
 
-  // Hazır desenlerin hazır hata mesajları (regexMessage alanına yazılır)
+  // Ready-made error messages of the preset patterns (written into the regexMessage field)
   'help.regex.presetMsg.email':         { tr: 'Geçerli bir e-posta adresi girin (örn. ali@ornek.com).', en: 'Enter a valid e-mail address (e.g. ali@example.com).' },
   'help.regex.presetMsg.mobilePhone':   { tr: 'Cep telefonu 05 ile başlamalı ve 11 haneli olmalıdır.', en: 'The mobile number must start with 05 and be 11 digits long.' },
   'help.regex.presetMsg.landlinePhone': { tr: 'Sabit telefon 0 ile başlamalı ve 11 haneli olmalıdır.', en: 'The landline number must start with 0 and be 11 digits long.' },
@@ -438,7 +438,7 @@ export const DATATYPE_HELP_I18N: Translations = {
   'help.regex.presetMsg.productCode':   { tr: 'Ürün kodu ABC-001234 biçiminde olmalıdır.', en: 'The product code must look like ABC-001234.' },
   'help.regex.presetMsg.noWhitespace':  { tr: 'Bu alan boşluk içeremez.', en: 'This field cannot contain whitespace.' },
 
-  // Sözdizimi tablosu
+  // Syntax table
   'help.regex.syntax.caret':     { tr: 'Metnin başlangıcı', en: 'Start of the text' },
   'help.regex.syntax.dollar':    { tr: 'Metnin sonu', en: 'End of the text' },
   'help.regex.syntax.dot':       { tr: 'Herhangi bir tek karakter', en: 'Any single character' },
@@ -460,7 +460,7 @@ export const DATATYPE_HELP_I18N: Translations = {
   'help.regex.syntax.group':     { tr: 'Gruplama — tekrar ve seçenekleri bir arada tutar', en: 'Grouping — keeps repetitions and alternatives together' },
   'help.regex.syntax.escape':    { tr: 'Özel karakterin kendisi (nokta, artı vb.)', en: 'The literal special character (dot, plus, etc.)' },
 
-  // ══ ALAN İPUÇLARI (küçük "i" baloncukları) ═════════════════════════════════
+  // ══ FIELD HINTS (small "i" bubbles) ════════════════════════════════════════
 
   'help.hint.columnName':          { tr: 'Veritabanındaki kolon adı. Etiketten otomatik üretilir (Stok Adedi → StokAdedi); elle değiştirirseniz Türkçe karakter ve boşluklar anında temizlenir. Kaydedildikten sonra değiştirilemez.', en: 'The column name in the database. Generated from the label (Stock Count → StockCount); if you edit it, spaces and special characters are removed as you type. Cannot be changed once saved.' },
   'help.hint.label':               { tr: 'Ekranlarda gösterilecek insan-dostu başlık ("Stok Adedi"). Alan adı bundan üretilir.', en: 'A human-friendly heading shown on screens ("Stock Count"). The field name is generated from it.' },

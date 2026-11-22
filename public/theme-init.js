@@ -1,5 +1,5 @@
-// Tema ilk boyamadan önce uygulanır (açık → koyu parlaması olmasın). index.html'de satır içi değil
-// dosya olarak durur: içerik güvenliği politikası (CSP) satır içi betiğe izin vermez.
+// The theme is applied before the first paint (so there is no light → dark flash). It lives as a file,
+// not inline in index.html: the content security policy (CSP) does not allow inline scripts.
 (function () {
   try {
     var t = localStorage.getItem('theme');

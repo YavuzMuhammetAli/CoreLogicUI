@@ -5,7 +5,7 @@ import {
 import { edgeGeometry, NODE_HEIGHT, NODE_WIDTH, BRANCH_LINE_HEIGHT } from '../workflow-graph/workflow-edge.geometry';
 import { WorkflowGraph, WorkflowStep } from '../../../models/workflow.model';
 
-/** Saf fonksiyonlar — TestBed yok. */
+/** Pure functions — no TestBed. */
 function step(key: string, extra: Partial<WorkflowStep> = {}): WorkflowStep {
   return {
     key,
@@ -25,11 +25,11 @@ function node(key: string, x: number, y: number, width = NODE_WIDTH, height = NO
 }
 
 describe('resolveNodePositions', () => {
-  it('grafik yoksa boş liste döner', () => {
+  it('returns an empty list when there is no graph', () => {
     expect(resolveNodePositions(null, [], {})).toEqual([]);
   });
 
-  it('canlı sürükleme konumu her şeyi ezer', () => {
+  it('the live drag position overrides everything', () => {
     const nodes = resolveNodePositions(
       graph([step('a', { x: 200, y: 300 })]),
       [{ key: 'a', x: 500, y: 600 }],
@@ -39,7 +39,7 @@ describe('resolveNodePositions', () => {
     expect(nodes[0].y).toBe(22);
   });
 
-  it('canlı konum yoksa tanımdaki x/y kullanılır', () => {
+  it('uses the definition\'s x/y when there is no live position', () => {
     const nodes = resolveNodePositions(
       graph([step('a', { x: 200, y: 300 })]),
       [{ key: 'a', x: 500, y: 600 }],
@@ -49,28 +49,28 @@ describe('resolveNodePositions', () => {
     expect(nodes[0].y).toBe(300);
   });
 
-  it('tanımda konum yoksa otomatik yerleşime düşer', () => {
+  it('falls back to auto layout when the definition has no position', () => {
     const nodes = resolveNodePositions(graph([step('a')]), [{ key: 'a', x: 500, y: 600 }], {});
 
     expect(nodes[0].x).toBe(500);
     expect(nodes[0].y).toBe(600);
   });
 
-  it('hiçbiri yoksa varsayılan konuma düşer', () => {
+  it('falls back to the default position when none is available', () => {
     const nodes = resolveNodePositions(graph([step('a')]), [], {});
 
     expect(nodes[0].x).toBe(DEFAULT_NODE_X);
     expect(nodes[0].y).toBe(DEFAULT_NODE_Y);
   });
 
-  it('otomatik yerleşim eşleşmesi büyük/küçük harf duyarsız', () => {
+  it('auto layout matching is case-insensitive', () => {
     const nodes = resolveNodePositions(graph([step('Onay')]), [{ key: 'onay', x: 77, y: 88 }], {});
 
     expect(nodes[0].x).toBe(77);
   });
 
-  it('otomatik konumlu düğüm elle konumlanmış düğümün üstüne düşmez', () => {
-    // 'a' elle 24,24'e konmuş; 'b'nin otomatik konumu tam oraya düşüyor.
+  it('an auto-positioned node does not land on a manually positioned node', () => {
+    // 'a' was placed manually at 24,24; 'b''s auto position falls exactly there.
     const nodes = resolveNodePositions(
       graph([step('a', { x: 24, y: 24 }), step('b')]),
       [{ key: 'a', x: 300, y: 24 }, { key: 'b', x: 24, y: 24 }],
@@ -82,7 +82,7 @@ describe('resolveNodePositions', () => {
     expect(b.y).toBeGreaterThanOrEqual(a.y + a.height);
   });
 
-  it('elle konumlanmış düğümler birbirine binse bile yerinden oynatılmaz', () => {
+  it('manually positioned nodes are not moved even if they overlap each other', () => {
     const nodes = resolveNodePositions(
       graph([step('a', { x: 50, y: 50 }), step('b', { x: 60, y: 60 })]), [], {});
 
@@ -90,22 +90,22 @@ describe('resolveNodePositions', () => {
     expect(nodes[1].y).toBe(60);
   });
 
-  it('sıfır konumu varsayılana düşmez', () => {
-    // `?? ` kullanıldığı için 0 geçerli bir konumdur; `||` olsaydı sıfır
-    // yutulur ve düğüm 24,24'e kaçardı.
+  it('a zero position does not fall back to the default', () => {
+    // Since `?? ` is used, 0 is a valid position; with `||` zero would be
+    // swallowed and the node would jump to 24,24.
     const nodes = resolveNodePositions(graph([step('a', { x: 0, y: 0 })]), [], {});
 
     expect(nodes[0].x).toBe(0);
     expect(nodes[0].y).toBe(0);
   });
 
-  it('başlangıç adımını büyük/küçük harf duyarsız işaretler', () => {
+  it('marks the start step case-insensitively', () => {
     const nodes = resolveNodePositions(graph([step('Onay')], 'onay'), [], {});
 
     expect(nodes[0].isStart).toBeTrue();
   });
 
-  it('paralel adımın dal etiketlerini ve yüksekliğini üretir', () => {
+  it('produces the branch labels and height of a parallel step', () => {
     const parallel = step('p', {
       type: 'parallel',
       mode: 'all',
@@ -117,13 +117,13 @@ describe('resolveNodePositions', () => {
 
     const nodes = resolveNodePositions(graph([parallel]), [], {});
 
-    // Adı boş dal anahtarına düşer.
+    // A branch with an empty name falls back to its key.
     expect(nodes[0].branchLabels).toEqual(['Finans', 'satinalma']);
     expect(nodes[0].height).toBe(NODE_HEIGHT + 2 * BRANCH_LINE_HEIGHT);
     expect(nodes[0].isParallel).toBeTrue();
   });
 
-  it('adı boş adımda anahtarı etiket yapar', () => {
+  it('uses the key as the label for a step with an empty name', () => {
     const nodes = resolveNodePositions(graph([step('a', { name: '' })]), [], {});
 
     expect(nodes[0].label).toBe('a');
@@ -133,21 +133,21 @@ describe('resolveNodePositions', () => {
 describe('nodeAt', () => {
   const nodes = [node('a', 0, 0), node('b', 300, 200)];
 
-  it('düğümün içindeki noktayı bulur', () => {
+  it('finds a point inside the node', () => {
     expect(nodeAt(nodes, { x: 350, y: 220 })?.key).toBe('b');
   });
 
-  it('düğümlerin dışında null döner', () => {
+  it('returns null outside the nodes', () => {
     expect(nodeAt(nodes, { x: 2000, y: 2000 })).toBeNull();
   });
 
-  it('kenar noktaları da isabet sayılır', () => {
+  it('edge points also count as hits', () => {
     expect(nodeAt(nodes, { x: 0, y: 0 })?.key).toBe('a');
     expect(nodeAt(nodes, { x: NODE_WIDTH, y: NODE_HEIGHT })?.key).toBe('a');
   });
 
-  it('örtüşmede SONRA çizilen düğüm kazanır', () => {
-    // DOM'da sonraki düğüm üstte çizilir; kullanıcı onu tıkladığını sanır.
+  it('on overlap the node drawn LATER wins', () => {
+    // The later node is drawn on top in the DOM; the user thinks they clicked it.
     const overlapping = [node('alt', 0, 0), node('ust', 10, 10)];
 
     expect(nodeAt(overlapping, { x: 20, y: 20 })?.key).toBe('ust');
@@ -168,26 +168,26 @@ describe('edgeAt', () => {
     geometry: edgeGeometry(source, target)
   };
 
-  // Kaynak ve hedef aynı sütunda olduğu için yol dümdüz aşağı iniyor.
+  // Since source and target are in the same column, the path goes straight down.
   const onPath = { x: 100 + NODE_WIDTH / 2, y: 300 };
 
-  it('yolun üzerindeki noktada kenarı bulur', () => {
+  it('finds the edge at a point on the path', () => {
     expect(edgeAt([edge], onPath, 1)?.key).toBe(edge.key);
   });
 
-  it('toleransın dışındaki noktada null döner', () => {
+  it('returns null at a point outside the tolerance', () => {
     expect(edgeAt([edge], { x: onPath.x + 60, y: onPath.y }, 1)).toBeNull();
   });
 
-  it('tolerans ekran koordinatında ölçülür — uzaklaşınca dünyada genişler', () => {
+  it('tolerance is measured in screen coordinates — it widens in the world when zoomed out', () => {
     const point = { x: onPath.x + 20, y: onPath.y };
 
-    // zoom=1'de 20 birim tolerans (8) dışında; zoom=0.25'te 8/0.25 = 32 içinde.
+    // At zoom=1, 20 units is outside the tolerance (8); at zoom=0.25 it is inside 8/0.25 = 32.
     expect(edgeAt([edge], point, 1)).toBeNull();
     expect(edgeAt([edge], point, 0.25)?.key).toBe(edge.key);
   });
 
-  it('birden çok aday varsa en yakını seçer', () => {
+  it('picks the nearest when there are several candidates', () => {
     const farTarget = node('c', 600, 400);
     const farEdge: CanvasEdge = {
       ...edge,
@@ -202,7 +202,7 @@ describe('edgeAt', () => {
     expect(edgeAt([farEdge, edge], onPath, 1)?.key).toBe(edge.key);
   });
 
-  it('kenar yoksa null döner', () => {
+  it('returns null when there are no edges', () => {
     expect(edgeAt([], onPath, 1)).toBeNull();
   });
 });
@@ -210,31 +210,31 @@ describe('edgeAt', () => {
 describe('nodesInRect', () => {
   const nodes = [node('a', 0, 0), node('b', 300, 200), node('c', 900, 800)];
 
-  it('kısmen örtüşen düğümü de kapsar', () => {
+  it('includes a partially overlapping node', () => {
     const selected = nodesInRect(nodes, { x: -50, y: -50 }, { x: 20, y: 20 });
 
     expect(selected.map(n => n.key)).toEqual(['a']);
   });
 
-  it('ters köşelerle verilen dikdörtgen de çalışır', () => {
+  it('works with a rectangle given by reversed corners', () => {
     const selected = nodesInRect(nodes, { x: 20, y: 20 }, { x: -50, y: -50 });
 
     expect(selected.map(n => n.key)).toEqual(['a']);
   });
 
-  it('birden çok düğümü birlikte seçer', () => {
+  it('selects several nodes together', () => {
     const selected = nodesInRect(nodes, { x: -10, y: -10 }, { x: 500, y: 400 });
 
     expect(selected.map(n => n.key)).toEqual(['a', 'b']);
   });
 
-  it('hiçbirine değmeyen çerçeve boş döner', () => {
+  it('a frame touching no node returns empty', () => {
     expect(nodesInRect(nodes, { x: 5000, y: 5000 }, { x: 5100, y: 5100 })).toEqual([]);
   });
 });
 
 describe('portsOf', () => {
-  it('onay adımında onay ve red portu simetrik dizilir', () => {
+  it('on an approval step the approve and reject ports are laid out symmetrically', () => {
     const ports = portsOf(step('a', { onApprove: 'b', onReject: null }), 168);
 
     expect(ports.map(p => [p.port, p.kind, p.target])).toEqual([
@@ -244,15 +244,15 @@ describe('portsOf', () => {
     expect(ports.map(p => p.offset)).toEqual([56, 112]);
   });
 
-  it('red kapalı adımda red portu çizilmez, onay portu ortaya gelir', () => {
-    // Kapalı porttan çizilen bağlantı kayıtta sessizce kayboluyordu.
+  it('on a step with reject disabled no reject port is drawn and the approve port is centred', () => {
+    // A connection drawn from a disabled port silently vanished on save.
     const ports = portsOf(step('a', { form: { fields: [], allowReject: false } }), 168);
 
     expect(ports.map(p => p.port)).toEqual(['approve']);
     expect(ports[0].offset).toBe(84);
   });
 
-  it('paralel adımda tamamlanma ve herhangi-biri-reddederse portları', () => {
+  it('complete and any-reject ports on a parallel step', () => {
     const parallel: WorkflowStep = {
       key: 'p', type: 'parallel', name: 'P', mode: 'all',
       branches: [{ key: 'a', name: 'A' }, { key: 'b', name: 'B' }],
@@ -265,7 +265,7 @@ describe('portsOf', () => {
     ]);
   });
 
-  it('çözülen düğüm portlarını taşır', () => {
+  it('a resolved node carries its ports', () => {
     const [a] = resolveNodePositions(graph([step('a', { onApprove: 'b' }), step('b')]), [], {});
     expect(a.ports.length).toBe(2);
   });

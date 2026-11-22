@@ -1,8 +1,8 @@
 import { Translations } from './translations.model';
 
 /**
- * Tüm ekranlarda paylaşılan ortak metinler (buton, durum, genel mesaj).
- * Ekrana özel çeviri dosyaları bu anahtarları tekrar tanımlamaz, doğrudan kullanır.
+ * Common texts shared by all screens (buttons, states, general messages).
+ * Screen-specific translation files do not redefine these keys; they use them directly.
  */
 export const COMMON_I18N: Translations = {
   'common.save': { tr: 'Kaydet', en: 'Save' },
@@ -30,11 +30,12 @@ export const COMMON_I18N: Translations = {
   'common.refresh': { tr: 'Yenile', en: 'Refresh' },
   'common.active': { tr: 'Aktif', en: 'Active' },
   'common.inactive': { tr: 'Pasif', en: 'Inactive' },
-  // Sunucu hata mesajı boş geldiğinde kullanılan son çare metni.
+  // Last-resort text used when the server error message is empty.
   'common.error': { tr: 'Bir hata oluştu.', en: 'An error occurred.' },
   'common.rateLimited': { tr: 'Çok fazla istek gönderildi. Lütfen biraz bekleyip yeniden deneyin.', en: 'Too many requests. Please wait a moment and try again.' },
+  'common.maintenance': { tr: 'Bakım', en: 'Maintenance' },
 
-  // confirm-dialog.component.html — paylaşılan onay modalı statik metinleri
+  // confirm-dialog.component.html — static texts of the shared confirmation modal
   'confirm.usageIntro': { tr: "'{name}' kullanılıyor:", en: "'{name}' is in use:" },
   'confirm.usageReports': { tr: 'Raporlarda:', en: 'In reports:' },
   'confirm.usageDashboards': { tr: 'Dashboardlarda:', en: 'In dashboards:' },

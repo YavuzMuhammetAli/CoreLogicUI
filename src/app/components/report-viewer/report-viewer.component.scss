@@ -2,7 +2,7 @@
   display: block;
 }
 
-/* Ardışık paneller arasına dikey boşluk (KPI / Export / Grafik / Veri) */
+/* Vertical spacing between consecutive panels (KPI / Export / Chart / Data) */
 .panel + .panel,
 .kpi-strip + .panel {
   margin-top: var(--space-6);
@@ -14,7 +14,7 @@
   gap: var(--space-4);
 }
 
-/* KPI tile'ları soldan sağa sırayla (stagger) belirir */
+/* KPI tiles appear left to right one after another (stagger) */
 .kpi-tile {
   display: flex;
   flex-direction: column;
@@ -23,7 +23,7 @@
   box-shadow: var(--elev-raised);
   border-radius: var(--radius-lg);
   min-width: 0;
-  /* Değer yazısı kutu genişliğine göre ölçeklenir — telefonda iki kutu yan yana ~150px */
+  /* The value text scales with the box width — on phones two boxes side by side are ~150px */
   container-type: inline-size;
   animation: fade-rise 240ms var(--ease-out-strong, ease-out) both;
 
@@ -32,7 +32,7 @@
   }
 }
 
-/* Chart ↔ Tablo toggle geçişi — yeni içerik giriş animasyonuyla belirir */
+/* Chart ↔ Table toggle transition — the new content appears with an entrance animation */
 .view-panel {
   animation: fade-rise 180ms var(--ease-out-strong, ease-out) both;
 }
@@ -52,8 +52,8 @@
   overflow-wrap: anywhere;
 }
 
-/* Tablo raporu sayfalaması — sayım solda, sayfa başı seçici ve gezinme düğmeleri sağda;
-   .cluster sayesinde dar ekranda alt satıra sarılır. */
+/* Table report pagination — count on the left, page-size selector and navigation buttons on the right;
+   thanks to .cluster it wraps onto the next line on narrow screens. */
 .table-pager {
   padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--border-soft);

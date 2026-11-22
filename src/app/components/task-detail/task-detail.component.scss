@@ -1,4 +1,4 @@
-// Görev künyesi — etiket/değer çiftleri esnek ızgarada.
+// Task summary — label/value pairs in a flexible grid.
 .task-meta {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -23,7 +23,7 @@
   }
 }
 
-// Süreç geçmişi — sol kenarda dikey çizgi, her olay bir nokta.
+// Process history — vertical line on the left edge, each event is a dot.
 .timeline {
   list-style: none;
   margin: 0;
@@ -75,7 +75,7 @@
   }
 }
 
-// Yönetici işlemleri satırı.
+// Admin actions row.
 .admin-row {
   display: flex;
   align-items: center;
@@ -85,7 +85,7 @@
   .input { flex: 1 1 200px; max-width: 320px; }
 }
 
-// Atlama yıkıcı sayılmaz ama dikkat çekmeli — dolgu yerine renkli ghost.
+// Skip isn't considered destructive but should draw attention — colored ghost instead of filled.
 .wf-skip {
   color: var(--warn);
   margin-left: auto;

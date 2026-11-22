@@ -76,23 +76,23 @@ import { IconComponent } from '../shared/icon/icon.component';
 
 type TabId = 'steps' | 'canvas' | 'trigger';
 
-/** Bu genişliğin altında tuval yerine Adımlar sekmesi açılır (mobil kırılma noktası). */
+/** Below this width the Steps tab opens instead of the canvas (mobile breakpoint). */
 const NARROW_SCREEN_QUERY = '(max-width: 768px)';
 
 /**
- * Son düzenlemeden bu kadar sonra sunucuda doğrulanır. Yazarken her tuşta istek
- * atılmasın; konum değişiklikleri (sürükleme) hiç doğrulama tetiklemez.
+ * Validated on the server this long after the last edit. No request on every
+ * keystroke while typing; position changes (dragging) never trigger validation.
  */
 const VALIDATION_DEBOUNCE_MS = 800;
 
-/** Açık adım pop-up'ı: düzenlenen adım (yenide null), durum etiketi ve önerilen anahtar. */
+/** Open step pop-up: the edited step (null for a new one), status label and suggested key. */
 interface StepDialogState {
   step: WorkflowStep | null;
   statusLabel: string;
   newKey: string;
 }
 
-/** Adımlar sekmesindeki bir satır — şablonda metot çağrısı yapılmasın diye önceden hesaplanır. */
+/** A row in the Steps tab — precomputed so the template does not call methods. */
 interface StepRow {
   key: string;
   name: string;
@@ -107,23 +107,23 @@ interface StepRow {
 }
 
 /**
- * Akış tasarım ekranı — liste ve canvas AYNI belgeyi düzenler.
+ * Flow design screen — the list and the canvas edit the SAME document.
  *
- * Üç sekme: Adımlar (liste), Tasarım (sürükle-bırak canvas), Tetikleyici.
- * Salt-okunur sürümde tuval şemayı gösterir (ayrı önizleme sekmesi yok).
+ * Three tabs: Steps (list), Design (drag-and-drop canvas), Trigger.
+ * In a read-only version the canvas shows the diagram (no separate preview tab).
  *
- * Kaydet ekranda kalır (taslak eksikleriyle de kaydedilir); Kaydet ve Yayınla
- * yayınlanan sürümü salt-okunur açar. Kaydedilmemiş değişiklikle ayrılırken
- * sorulur (rota guard'ı + beforeunload).
+ * Save stays on the screen (a draft is saved with its gaps too); Save and Publish
+ * opens the published version read-only. Leaving with unsaved changes
+ * asks for confirmation (route guard + beforeunload).
  *
- * Doğruluk kaynağı tasarım belgesidir (WorkflowDesignerStore). Belge yalnız saf
- * komutlarla değişir (designer/workflow-design.commands.ts) ve her değişiklik
- * geri al geçmişine yazılır. Reactive Forms yalnız iki yerde kalır: başlık
- * alanları + tetik koşulları (bu formun değeri belgeye yazılır) ve adım pop-up'ı
- * (kaydedince adım nesnesine çevrilir).
+ * The source of truth is the design document (WorkflowDesignerStore). The document only changes
+ * through pure commands (designer/workflow-design.commands.ts) and every change
+ * is written to undo history. Reactive Forms remain in only two places: the header
+ * fields + trigger conditions (this form's value is written to the document) and the step pop-up
+ * (converted to a step object on save).
  *
- * Projede CDK, drag-drop ve diyagram kütüphanesi YOK — canvas native Pointer
- * Events ile yazıldı (dashboard-build'in sürükleme deseni).
+ * The project has NO CDK, drag-drop or diagram library — the canvas is written with native Pointer
+ * Events (the drag pattern of dashboard-build).
  */
 @Component({
     selector: 'app-workflow-build',
@@ -158,7 +158,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   private readonly roleService = inject(RoleAdminService);
   private readonly userService = inject(UserAdminService);
   private readonly languageService = inject(LanguageService);
-  /** Şablon da okur: tam ekranda layout'un bildirim banner'ı katmanın altında kalıyor. */
+  /** Read by the template too: in full screen the layout's notification banner stays beneath the layer. */
   readonly notification = inject(NotificationService);
 
   readonly store = inject(WorkflowDesignerStore);
@@ -166,46 +166,46 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   readonly triggerEventOptions = TRIGGER_EVENT_OPTIONS;
   readonly operators = WORKFLOW_OPERATORS;
 
-  /** Masaüstünde tuval, telefonda Adımlar açılır (tuval dokunmatikte zor; bkz. canvasMobileNotice). */
+  /** Canvas opens on desktop, Steps on phones (the canvas is hard on touch; see canvasMobileNotice). */
   readonly activeTab = signal<TabId>(this.initialTab());
 
-  /** Tuvale saklı kamera yokken verilen başlangıç değeri. */
+  /** Initial value given when the canvas has no stored camera. */
   readonly identityCamera = IDENTITY_CAMERA;
 
-  /** "Kaydetmeden ayrıl?" sorusu açık mı; cevap bekleyen guard'ın çözücüsü. */
+  /** Is the "Kaydetmeden ayrıl?" (Leave without saving?) question open; resolver of the guard waiting for the answer. */
   readonly leaveConfirm = signal(false);
   private leaveResolver: ((leave: boolean) => void) | null = null;
 
-  /** Açık adım pop-up'ı; kapalıyken null. */
+  /** Open step pop-up; null when closed. */
   readonly stepDialog = signal<StepDialogState | null>(null);
 
   /**
-   * Yayınlanmış akış düzenlenemez. Belge komutları salt-okunurken uygulanmaz;
-   * canvas da taşıma ve bağlantı çizmeyi bu bayrakla kapatır.
+   * A published flow cannot be edited. Document commands are not applied while read-only;
+   * the canvas also disables moving and drawing connections with this flag.
    */
   readonly readonlyMode = this.store.readonly;
 
-  /** Tasarım tuvali — klavye kısayolları görünüm komutlarını (sığdır, it) ona iletir. */
+  /** Design canvas — keyboard shortcuts forward view commands (fit, nudge) to it. */
   private readonly canvas = viewChild(WorkflowCanvasComponent);
 
-  /** Sayfa içi pano (kopyala/yapıştır). */
+  /** In-page clipboard (copy/paste). */
   private clipboard: DesignClipboard | null = null;
 
-  /** Tuvalin grafiği; adım yoksa tuval boş durum gösterir. */
+  /** The canvas graph; with no steps the canvas shows an empty state. */
   readonly canvasGraph = computed<WorkflowGraph | null>(() => {
     const graph = this.store.graph();
     return graph.steps.length > 0 ? graph : null;
   });
 
-  /** Hedef ve başlangıç adımı açılır listeleri. */
+  /** Target and start step dropdowns. */
   readonly stepKeys = computed(() => this.store.graph().steps.map(step => step.key).filter(Boolean));
 
   readonly roles = signal<Role[]>([]);
   readonly users = signal<AppUser[]>([]);
 
   /**
-   * Rol/kullanıcı adlarını ve çeviriyi özet fonksiyonlarına veren bağlam. Dil
-   * değişince de yeniden kurulur — özet metinleri çevrilmiş parçalar içeriyor.
+   * Context that passes role/user names and the translation to the summary functions. Also
+   * rebuilt when the language changes — the summary texts contain translated parts.
    */
   private readonly summaryLookup = computed<SummaryLookup>(() => {
     this.languageService.lang();
@@ -218,37 +218,37 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     };
   });
 
-  // ── Canlı doğrulama ───────────────────────────────────────────────────────
+  // ── Live validation ───────────────────────────────────────────────────────
 
-  /** Sunucunun son doğrulama bulguları (taslak; yayınlanmış sürümde boş). */
+  /** The server's latest validation findings (draft; empty in a published version). */
   readonly issues = signal<WorkflowIssue[]>([]);
   readonly validating = signal(false);
   readonly issuesExpanded = signal(true);
 
-  /** Belge yüklendi mi — yükleme bitmeden boş belgeyi doğrulayıp yalancı sorun gösterme. */
+  /** Is the document loaded — don't validate the empty document before loading finishes and show false issues. */
   private readonly docReady = signal(false);
 
-  /** Doğrulamayı tetikleyen anahtar: konumsuz belge; salt-okunurda ya da yüklenmeden null. */
+  /** Key that triggers validation: the position-free document; null when read-only or not loaded. */
   private readonly validationKey = computed(() =>
     this.docReady() && !this.store.readonly() ? semanticKey(this.store.doc()) : null);
 
-  // ── Simülasyon ────────────────────────────────────────────────────────────
+  // ── Simulation ────────────────────────────────────────────────────────────
 
-  /** Simülasyon paneli açık mı (özellik panelinin yerini alır). */
+  /** Is the simulation panel open (takes the place of the inspector panel). */
   readonly simulating = signal(false);
 
-  /** Tasarım alanı (palet + tuval + panel) tam ekranda mı. */
+  /** Is the design area (palette + canvas + panel) in full screen. */
   readonly fullscreen = signal(false);
 
-  /** Son simülasyonun şemadaki yolu; belge anlamca değişince silinir (eskimiş yol yanıltır). */
+  /** Path of the last simulation on the diagram; deleted when the document changes in meaning (a stale path misleads). */
   readonly simOverlay = signal<WorkflowOverlay | null>(null);
 
-  /** Simülasyona gönderilen tanım — kaydedilmemiş taslak da koşturulabilir. */
+  /** Definition sent to the simulation — an unsaved draft can be run too. */
   readonly simPayload = computed(() => docToPayload(this.store.doc(), this.editingId));
 
   private readonly semanticDoc = computed(() => semanticKey(this.store.doc()));
 
-  /** Sorun satırları — dil ya da adım adı değişince metinler yenilenir. */
+  /** Issue rows — texts refresh when the language or a step name changes. */
   readonly issueRows = computed<IssueRow[]>(() => {
     this.languageService.lang();
     return issueRows(this.issues(), this.store.doc(), this.languageService);
@@ -256,18 +256,18 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
 
   readonly issueCounts = computed(() => countIssues(this.issueRows()));
 
-  /** Adım başına sorunlar (anahtar küçük harfli) — rozet, liste ve özellik paneli. */
+  /** Issues per step (lower-case key) — badge, list and inspector panel. */
   readonly stepIssues = computed<Record<string, IssueRow[]>>(() =>
     Object.fromEntries(rowsByStep(this.issueRows())));
 
-  /** Özellik panelinde seçili adımın sorunları. */
+  /** Issues of the selected step in the inspector panel. */
   readonly selectedIssues = computed<IssueRow[]>(() => {
     const selection = this.store.selection();
     if (selection.edge || selection.nodes.length !== 1) return [];
     return this.stepIssues()[selection.nodes[0].toLowerCase()] ?? [];
   });
 
-  /** Tuval kartlarının tip etiketi, ikonu, özet satırı ve sorun rozeti (anahtar küçük harfli). */
+  /** Type label, icon, summary line and issue badge of the canvas cards (lower-case key). */
   readonly nodeMeta = computed<Record<string, CanvasNodeMeta>>(() => {
     const lookup = this.summaryLookup();
     const byStep = this.stepIssues();
@@ -291,7 +291,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     return meta;
   });
 
-  /** Adımlar sekmesinin satırları. */
+  /** Rows of the Steps tab. */
   readonly rows = computed<StepRow[]>(() => {
     const lookup = this.summaryLookup();
     const graph = this.store.graph();
@@ -318,13 +318,13 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     });
   });
 
-  /** Başlık alanları + tetik koşulları. Değeri belgeye yazılır (bkz. pushFormToDoc). */
+  /** Header fields + trigger conditions. Its value is written to the document (see pushFormToDoc). */
   form!: FormGroup;
 
-  /** Model seçimi: değer tablo adı, görünen metin etiket (yoksa tablo adı). */
+  /** Model selection: value is the table name, display text is the label (table name if none). */
   models: Array<{ typeName: string; label: string }> = [];
   modelColumns: string[] = [];
-  /** Kolonların tam meta verisi — adım pop-up'ındaki kayıt alanı seçicisi etiket/tip gösterir. */
+  /** Full metadata of the columns — the record field picker in the step pop-up shows label/type. */
   modelColumnMeta: PublishedColumn[] = [];
 
   isNew = true;
@@ -334,32 +334,32 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   loadError: string | null = null;
   submitError: string | null = null;
 
-  /** Salt-okunur açılan sürüm (yayınlanmış/arşiv); taslakta null. */
+  /** Version opened read-only (published/archived); null for a draft. */
   readonlyVersion: number | null = null;
 
-  /** Yeni sürüm taslağının yayınlanınca alacağı numara; ilk taslakta null. */
+  /** Number the new version draft will get when published; null for the first draft. */
   draftNextVersion: number | null = null;
 
   /**
-   * Salt okunur sürümün zincirinde açık taslak var mı — varsa başlıktaki düğme
-   * "Yeni Sürüm Oluştur" değil "Taslağa Git" der (sunucu yeni taslak açmaz, onu döner).
+   * Is there an open draft in the read-only version's chain — if so the header button
+   * says "Taslağa Git" (Go to draft), not "Yeni Sürüm Oluştur" (Create new version) (the server does not open a new draft, it returns that one).
    */
   hasOpenDraft = false;
 
   /**
-   * Taslağın sunucudaki son değişiklik damgası — kayıtta geri gönderilir; arada
-   * başka biri kaydettiyse sunucu reddeder (iyimser kilit). Yeni taslakta null.
+   * The draft's last-modified stamp on the server — sent back on save; if someone
+   * else saved in between the server rejects it (optimistic lock). null for a new draft.
    */
   private lastModifiedOn: string | null = null;
 
   constructor() {
-    // Tam ekrandayken sayfadan ayrılınca tarayıcı tam ekranda kalmasın.
+    // When leaving the page while in full screen, the browser should not stay in full screen.
     inject(DestroyRef).onDestroy(() => {
       if (this.fullscreen()) this.exitFullscreen();
     });
 
-    // Başlangıç adımı belgede birçok yoldan değişir (silme, yeniden adlandırma —
-    // özellik paneli dahil, geri alma); başlıktaki seçici her zaman belgeyi göstersin.
+    // The start step changes in the document in many ways (delete, rename —
+    // including the inspector panel, undo); the header picker should always reflect the document.
     effect(() => {
       const start = this.store.graph().startStep;
       untracked(() => {
@@ -368,8 +368,8 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
       });
     });
 
-    // Şemadaki simülasyon yolu, akış ANLAMCA değişince silinir (taşımak silmez):
-    // eski yolu yeni şemanın üstünde göstermek yanıltırdı.
+    // The simulation path on the diagram is deleted when the flow changes IN MEANING (moving does not delete it):
+    // showing the old path on top of the new diagram would mislead.
     let lastSemantic: string | null = null;
     effect(() => {
       const key = this.semanticDoc();
@@ -379,9 +379,9 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
       });
     });
 
-    // Canlı doğrulama: belge (konumlar hariç) değişip durulunca sunucuya sorulur;
-    // yeni düzenleme gelirse önceki istek iptal edilir. Ağ hatasında son sonuç
-    // ekranda kalır — doğrulama yardımcıdır, düzenlemeyi engellemez.
+    // Live validation: the server is asked once the document (excluding positions) changes and settles;
+    // if a new edit arrives the previous request is cancelled. On a network error the last result
+    // stays on screen — validation is a helper, it does not block editing.
     toObservable(this.validationKey).pipe(
       debounceTime(VALIDATION_DEBOUNCE_MS),
       distinctUntilChanged(),
@@ -415,8 +415,8 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
       if (id) this.loadExisting(id);
     }
 
-    // Başlık alanları ve koşullar belgeye yazılır. Programatik yazımlar
-    // (yükleme, geri alma) emitEvent:false ile yapıldığı için döngü oluşmaz.
+    // Header fields and conditions are written to the document. Programmatic writes
+    // (load, undo) use emitEvent:false, so no loop occurs.
     this.form.valueChanges.subscribe(() => this.pushFormToDoc());
   }
 
@@ -436,12 +436,12 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     return this.form.get('conditions') as FormArray;
   }
 
-  // ── Form ↔ belge ──────────────────────────────────────────────────────────
+  // ── Form ↔ document ──────────────────────────────────────────────────────────
 
   /**
-   * Başlık formunun değerini belgeye yazar. Aynı sebep ('form') ile kısa
-   * aralıkla gelen yazımlar tek geri al adımında birleşir — her harf ayrı
-   * adım olmaz.
+   * Writes the header form's value to the document. Writes arriving shortly after each other
+   * with the same reason ('form') merge into a single undo step — each letter is not
+   * a separate step.
    */
   private pushFormToDoc(): void {
     const raw = this.form.getRawValue();
@@ -464,7 +464,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     });
   }
 
-  /** Belgeyi forma yazar (yükleme, geri alma). Olay üretmez. */
+  /** Writes the document to the form (load, undo). Emits no events. */
   private syncFormFromDoc(): void {
     const doc = this.store.doc();
 
@@ -485,29 +485,29 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     if (this.readonlyMode()) this.form.disable({ emitEvent: false });
   }
 
-  /** Adım komutları başlangıç adımını değiştirebilir (ekleme, yeniden adlandırma, silme). */
+  /** Step commands may change the start step (add, rename, delete). */
   private syncStartStep(): void {
     this.form.patchValue({ startStep: this.store.graph().startStep }, { emitEvent: false });
   }
 
-  // ── Adımlar ───────────────────────────────────────────────────────────────
+  // ── Steps ───────────────────────────────────────────────────────────────
 
   removeStep(key: string): void {
     this.store.dispatch('', doc => removeSteps(doc, [key]));
     this.syncStartStep();
   }
 
-  // ── Adım pop-up'ı ─────────────────────────────────────────────────────────
+  // ── Step pop-up ─────────────────────────────────────────────────────────
 
-  /** Yeni adım için pop-up'ı açar. */
+  /** Opens the pop-up for a new step. */
   openNewStep(): void {
     if (this.readonlyMode()) return;
     this.stepDialog.set({ step: null, statusLabel: '', newKey: suggestKey(this.store.doc()) });
   }
 
   /**
-   * Var olan adımı pop-up'ta açar (listeden satır tıklaması, canvas'tan çift
-   * tıklama). Pop-up adımın KOPYASIYLA çalışır; kaydedilene kadar belge değişmez.
+   * Opens an existing step in the pop-up (row click in the list, double click
+   * on the canvas). The pop-up works on a COPY of the step; the document does not change until saved.
    */
   openStep(key: string): void {
     const doc = this.store.doc();
@@ -524,7 +524,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     });
   }
 
-  /** Pop-up sonucu belgeye yazılır: düzenlemede yerine konur, yeni adımda eklenir. */
+  /** The pop-up result is written to the document: replaced when editing, appended for a new step. */
   onStepSaved(result: StepDialogResult): void {
     this.store.dispatch('', doc =>
       upsertStep(doc, result.originalKey || null, result.step, result.statusLabel));
@@ -538,12 +538,12 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     this.stepDialog.set(null);
   }
 
-  // ── Yeni düğüm (palet, "+", sağ tık, bırakma) ─────────────────────────────
+  // ── New node (palette, "+", context menu, drop) ─────────────────────────────
 
   /**
-   * Paletten tıklayarak ekleme: tek adım seçiliyse yeni düğüm onun ilk boş
-   * çıkışına bağlanır (akışı yukarıdan aşağı kurmanın en kısa yolu); değilse
-   * bağlantısız eklenir.
+   * Adding by clicking in the palette: if a single step is selected the new node is connected to its
+   * first empty exit (the shortest way to build a flow top to bottom); otherwise it is
+   * added unconnected.
    */
   onPaletteAdd(kind: NodeKind): void {
     if (this.readonlyMode()) return;
@@ -558,9 +558,9 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   }
 
   /**
-   * Yeni düğümü ekler — konum, komşuların sabitlenmesi ve bağlantı TEK geri al
-   * adımında. Varsayılan ad verilir ve düğüm seçilir; eksik atama sorun olarak
-   * görünür, özellik panelinden tamamlanır.
+   * Adds the new node — position, pinning of neighbours and connection in A SINGLE undo
+   * step. A default name is given and the node is selected; a missing assignment shows up as an issue
+   * and is completed from the inspector panel.
    */
   private addNode(kind: NodeKind, at: Point | null, from: EdgeRef | null, pins: CanvasMoves): void {
     if (this.readonlyMode()) return;
@@ -589,7 +589,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     this.canvas()?.reveal(key);
   }
 
-  // ── Koşul satırları ───────────────────────────────────────────────────────
+  // ── Condition rows ───────────────────────────────────────────────────────
 
   private newConditionGroup(condition?: WorkflowCondition): FormGroup {
     return this.fb.group({
@@ -607,7 +607,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     this.conditionsArray.removeAt(index);
   }
 
-  // ── Veri yükleme ──────────────────────────────────────────────────────────
+  // ── Data loading ──────────────────────────────────────────────────────────
 
   private loadModels(): void {
     this.publishedModelService.getModels().pipe(markDirty(this.cdr)).subscribe({
@@ -621,18 +621,18 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   }
 
   /**
-   * Bu şirkette kullanılamayan düğümler paletten pasif görünür (Bekleme →
-   * migrasyon 022). Okunamazsa kısıt konmaz: yayın sunucuda zaten denetleniyor.
+   * Nodes not available in this company appear disabled in the palette (Wait →
+   * migration 022). If it cannot be read no restriction is applied: publishing is checked on the server anyway.
    */
   readonly unavailableKinds = signal<ReadonlySet<NodeKind>>(new Set());
 
-  // ── Şablonlar ve dışa aktarım ─────────────────────────────────────────────
+  // ── Templates and export ─────────────────────────────────────────────
 
   readonly templates = WORKFLOW_TEMPLATES;
 
   /**
-   * Boş yeni akışı şablonla doldurur. Rol/kolon seçimleri bilerek boş gelir;
-   * sorun paneli neyin tamamlanacağını gösterir. Tek geri al adımıdır.
+   * Fills an empty new flow with a template. Role/column selections deliberately come empty;
+   * the issues panel shows what needs completing. It is a single undo step.
    */
   applyTemplate(template: WorkflowTemplate): void {
     if (this.readonlyMode()) return;
@@ -648,7 +648,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     this.syncStartStep();
   }
 
-  /** Ekrandaki (kaydedilmemiş değişiklikler dahil) tasarımı paket olarak indirir. */
+  /** Downloads the on-screen design (including unsaved changes) as a package. */
   exportDesign(): void {
     const payload = docToPayload(this.store.doc(), this.editingId);
     downloadText(
@@ -661,7 +661,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
         isEnabled: payload.isEnabled ?? true,
         definitionJson: payload.definitionJson ?? '{}'
       })),
-      packageFileName(payload.code || 'akis'));
+      packageFileName(payload.code || 'workflow'));
   }
 
   private loadCapabilities(): void {
@@ -669,7 +669,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
       next: res => {
         if (res.success && res.data && !res.data.timers) this.unavailableKinds.set(new Set<NodeKind>(['timer']));
       },
-      error: () => { /* kısıt yok */ }
+      error: () => { /* no restriction */ }
     });
   }
 
@@ -682,7 +682,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     });
   }
 
-  /** Kullanıcıya atama seçicisi için şirket kullanıcıları (yalnız aktifler). */
+  /** Company users for the user assignment picker (active ones only). */
   private loadUsers(): void {
     this.userService.getUsers().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
@@ -693,9 +693,9 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   }
 
   /**
-   * Seçili modelin kolonları — koşul alanı açılır listesini besler. Model adı
-   * formdan okunur: şablondaki (change) ile formun belgeye yazımı arasında sıra
-   * varsayımı yapılmasın.
+   * Columns of the selected model — feeds the condition field dropdown. The model name
+   * is read from the form: no ordering assumption between (change) in the template and
+   * the form's write to the document.
    */
   onModelChange(): void {
     const modelName = String(this.form.getRawValue().modelName ?? '');
@@ -724,14 +724,14 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
         this.editingId = workflow.id;
         this.lastModifiedOn = workflow.lastModifiedOn ?? null;
 
-        // Yayınlanmış akış düzenlenemez ama ŞEMASI GÖRÜNEBİLMELİ: önce doldur,
-        // sonra kilitle (kilit, belge komutlarını ve formu kapatır).
+        // A published flow cannot be edited but its DIAGRAM MUST BE VISIBLE: fill first,
+        // then lock (the lock disables document commands and the form).
         const readonly = workflow.status !== 'Draft';
         this.readonlyMode.set(readonly);
         this.populate(workflow);
         this.docReady.set(true);
 
-        // Hata değil bilgi: kullanıcıya yolu ("Yeni Sürüm Oluştur") gösteriyoruz.
+        // Info, not an error: we show the user the way ("Yeni Sürüm Oluştur" — Create new version).
         if (readonly) this.readonlyVersion = workflow.version;
         this.resolveVersionInfo(workflow.code, workflow.id);
       },
@@ -743,11 +743,11 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   }
 
   /**
-   * Sürüm zincirinden başlık bilgisi:
-   * - taslakta, yayınlandığında alacağı sürüm numarası ("v3 taslağı"). Sürüm yayında
-   *   verildiği için taslakta 0 durur; zincirin en yükseğinden hesaplanır, hiç yayın
-   *   yoksa (ilk taslak) gösterilmez;
-   * - salt okunurda, zincirde açık taslak olup olmadığı (düğme etiketi).
+   * Header info from the version chain:
+   * - for a draft, the version number it will get when published ("v3 taslağı" — v3 draft). The version is assigned on publish,
+   *   so a draft holds 0; it is computed from the highest in the chain, and if there is no
+   *   publish at all (first draft) it is not shown;
+   * - when read-only, whether there is an open draft in the chain (button label).
    */
   private resolveVersionInfo(code: string, currentId: number): void {
     this.workflowService.versions(code).pipe(markDirty(this.cdr)).subscribe({
@@ -765,9 +765,9 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   }
 
   /**
-   * Salt-okunur sürümden düzenlenebilir taslak açar. Rota aynı bileşende kaldığı
-   * için (yalnız :id değişir) Angular bileşeni yeniden kurmaz; state elle
-   * sıfırlanıp taslak yeniden yüklenir.
+   * Opens an editable draft from a read-only version. Since the route stays on the same component
+   * (only :id changes) Angular does not rebuild the component; state is reset
+   * manually and the draft is reloaded.
    */
   startNewVersion(): void {
     if (!this.editingId) return;
@@ -804,9 +804,9 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     this.onModelChange();
   }
 
-  // ── Gönderim ──────────────────────────────────────────────────────────────
+  // ── Submission ──────────────────────────────────────────────────────────────
 
-  // ── Simülasyon ────────────────────────────────────────────────────────────
+  // ── Simulation ────────────────────────────────────────────────────────────
 
   openSimulation(): void {
     this.setTab('canvas');
@@ -822,40 +822,40 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     this.simOverlay.set(result ? simulationOverlay(result) : null);
   }
 
-  // ── Tam ekran ─────────────────────────────────────────────────────────────
+  // ── Full screen ─────────────────────────────────────────────────────────────
 
   toggleFullscreen(): void {
     if (this.fullscreen()) this.exitFullscreen(); else this.enterFullscreen();
   }
 
   /**
-   * İki katman: tasarım alanı sabit konumla uygulamayı örter (her zaman), tarayıcı
-   * tam ekranı da desteklenirse istenir. Tarayıcı tam ekranı tasarım kutusuna DEĞİL
-   * belgenin tamamına istenir: adım pop-up'ı, onay diyalogları ve sağ tık menüsü
-   * kutunun dışında render ediliyor, yalnız kutu tam ekran olsaydı görünmezlerdi.
+   * Two layers: the design area covers the app with fixed positioning (always), and browser
+   * full screen is requested too if supported. Browser full screen is requested NOT for the design box
+   * but for the whole document: the step pop-up, confirmation dialogs and context menu
+   * render outside the box; if only the box were full screen they would be invisible.
    */
   private enterFullscreen(): void {
     this.fullscreen.set(true);
     if (!isPlatformBrowser(this.platformId) || document.fullscreenElement) return;
-    // Desteklemeyen tarayıcıda (iPhone) ya da reddedilirse uygulama içi katman yeter.
-    document.documentElement.requestFullscreen?.().catch(() => { /* katman yeterli */ });
+    // On browsers that don't support it (iPhone) or if it is refused, the in-app layer is enough.
+    document.documentElement.requestFullscreen?.().catch(() => { /* the layer is enough */ });
   }
 
   exitFullscreen(): void {
     this.fullscreen.set(false);
     if (!isPlatformBrowser(this.platformId) || !document.fullscreenElement) return;
-    document.exitFullscreen().catch(() => { /* zaten çıkılmış */ });
+    document.exitFullscreen().catch(() => { /* already exited */ });
   }
 
-  /** Esc ya da tarayıcının kendi düğmesiyle çıkıldı: katman da kapansın. */
+  /** Exited with Esc or the browser's own button: the layer should close too. */
   @HostListener('document:fullscreenchange')
   onFullscreenChange(): void {
     if (!document.fullscreenElement && this.fullscreen()) this.fullscreen.set(false);
   }
 
-  // ── Sorunlar ──────────────────────────────────────────────────────────────
+  // ── Issues ──────────────────────────────────────────────────────────────
 
-  /** Başlıktaki sorun düğmesi: listeyi açar ve görünür alana getirir. */
+  /** The issues button in the header: opens the list and scrolls it into view. */
   showIssues(): void {
     this.issuesExpanded.set(true);
     if (!isPlatformBrowser(this.platformId)) return;
@@ -864,8 +864,8 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   }
 
   /**
-   * Sorun satırına tıklama: ilgili adımı seçer ve tuvalde gösterir; telefonda
-   * (tuval yok) adım pop-up'ını açar. Tetik sorunu Tetikleyici sekmesine götürür.
+   * Clicking an issue row: selects the related step and shows it on the canvas; on phones
+   * (no canvas) opens the step pop-up. A trigger issue goes to the Trigger tab.
    */
   pickIssue(row: IssueRow): void {
     if (row.target === 'trigger') {
@@ -893,9 +893,9 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   }
 
   /**
-   * Kaydeder ve EKRANDA KALIR. Yayınla seçiliyse ardından yayınlar ve yayınlanan
-   * sürüm salt-okunur açılır. Taslak eksikleriyle de kaydedilir; eksikler yayında
-   * engellenir.
+   * Saves and STAYS ON THE SCREEN. If Publish is selected it then publishes and the published
+   * version opens read-only. A draft is saved with its gaps too; gaps are
+   * blocked on publish.
    */
   onSubmit(publish: boolean): void {
     if (this.saving) return;
@@ -907,14 +907,14 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     this.saving = true;
     this.submitError = null;
 
-    // Gönderilen belge: yanıt gelene kadar yapılan düzenlemeler "kaydedildi" sayılmasın.
+    // The sent document: edits made until the response arrives should not count as "saved".
     const sent = this.store.doc();
     const payload: Partial<WorkflowDefinition> = {
       ...docToPayload(sent, this.editingId),
       expectedLastModifiedOn: this.lastModifiedOn
     };
 
-    // define() yeni ID'yi, update() yeni damgayı döner.
+    // define() returns the new ID, update() the new stamp.
     const request: Observable<DataResponseModel<number | string>> = this.editingId
       ? this.workflowService.update(payload)
       : this.workflowService.define(payload);
@@ -949,9 +949,9 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   }
 
   /**
-   * Yeni taslak kaydedildi: ekran düzenleme moduna geçer. Aksi halde ikinci
-   * Kaydet define()'ı yeniden çağırır ve aynı kodla ikinci taslak açmaya çalışırdı.
-   * define() damga dönmediği için sonraki kaydın iyimser kilidi için okunur.
+   * A new draft was saved: the screen switches to edit mode. Otherwise a second
+   * Save would call define() again and try to open a second draft with the same code.
+   * Since define() returns no stamp, it is read for the next save's optimistic lock.
    */
   private adoptNewDraft(id: number): void {
     if (!id) return;
@@ -965,7 +965,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
           this.lastModifiedOn = res.data.lastModifiedOn ?? null;
         }
       },
-      error: () => { /* damga okunamazsa sonraki kayıt kilitsiz gider; kayıt yine olur */ }
+      error: () => { /* if the stamp cannot be read the next save goes without a lock; the save still happens */ }
     });
   }
 
@@ -974,14 +974,14 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
       next: res => {
         this.saving = false;
         if (!res.success) {
-          // Taslak kaydedildi ama yayın reddedildi (eksikler): ekranda düzenlemeye devam.
+          // The draft was saved but publishing was rejected (gaps): continue editing on screen.
           this.submitError = res.message ?? this.languageService.t('workflow.build.saveFailed');
           return;
         }
 
         this.notification.success(res.message ?? '');
-        // Yayınlanan sürüm salt-okunur açılır — listeye atmak, kullanıcıya az önce
-        // yayınladığı şemayı göstermemek olurdu.
+        // The published version opens read-only — sending the user to the list would mean
+        // not showing them the diagram they just published.
         this.draftNextVersion = null;
         this.loadExisting(id);
       },
@@ -992,13 +992,13 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     });
   }
 
-  // ── Ayrılma ───────────────────────────────────────────────────────────────
+  // ── Leaving ───────────────────────────────────────────────────────────────
 
-  /** Rota guard'ı sorar: kaydedilmemiş değişiklik varsa kullanıcıya onaylatılır. */
+  /** The route guard asks: if there are unsaved changes the user is asked to confirm. */
   canLeave(): boolean | Promise<boolean> {
     if (!this.store.dirty()) return true;
 
-    // Önceki soru cevapsız kaldıysa (art arda iki gezinme) o "kal" sayılır.
+    // If the previous question went unanswered (two navigations in a row) it counts as "stay".
     this.leaveResolver?.(false);
     return new Promise<boolean>(resolve => {
       this.leaveResolver = resolve;
@@ -1014,12 +1014,12 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     resolve?.(leave);
   }
 
-  /** Sekme kapatma / yenileme rota guard'ına uğramaz; tarayıcının kendi uyarısı istenir. */
+  /** Tab close / reload does not pass through the route guard; the browser's own warning is requested. */
   @HostListener('window:beforeunload', ['$event'])
   onBeforeUnload(event: BeforeUnloadEvent): void {
     if (!this.store.dirty()) return;
     event.preventDefault();
-    // Eski tarayıcılar uyarıyı yalnız returnValue doluysa gösterir.
+    // Old browsers only show the warning if returnValue is set.
     event.returnValue = '';
   }
 
@@ -1029,23 +1029,23 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   }
 
   setTab(tab: TabId): void {
-    // Tasarım alanı yalnız tuval sekmesinde çizilir; katman kaybolurken tarayıcı
-    // tam ekranı açık kalmasın.
+    // The design area is only drawn on the canvas tab; the browser's full screen
+    // should not stay open while the layer disappears.
     if (tab !== 'canvas' && this.fullscreen()) this.exitFullscreen();
     this.activeTab.set(tab);
   }
 
-  // ── Canvas köprüsü ────────────────────────────────────────────────────────
+  // ── Canvas bridge ────────────────────────────────────────────────────────
 
-  /** Canvas'ta taşınan düğümlerin konumları belgeye yazılır (bırakışta, tek geri al adımı). */
+  /** Positions of nodes moved on the canvas are written to the document (on drop, a single undo step). */
   onNodesMoved(moves: Array<{ key: string; x: number; y: number }>): void {
     this.store.dispatch(this.moveReason, doc => moveSteps(doc, moves));
   }
 
   /**
-   * Taşımanın geçmiş nedeni. Sürükleme bırakışı tek adımdır (''); ok tuşuyla
-   * itmeler 'nudge' ile birleşir — basılı tutulan ok onlarca geri al adımı
-   * bırakmasın. Tuvalin output'u senkron yayıldığı için alan bayrağı yeterli.
+   * History reason for a move. A drag drop is a single step (''); arrow-key
+   * nudges merge under 'nudge' — so a held arrow key does not leave dozens of undo
+   * steps. Since the canvas output emits synchronously, a field flag is enough.
    */
   private moveReason = '';
 
@@ -1059,27 +1059,27 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   }
 
   /**
-   * Canvas'taki "Otomatik düzenle": konumlar silinir, canvas otomatik yerleşime
-   * düşer. null yazılır (hesaplanan koordinat değil) — böylece sonradan eklenen
-   * adımlar da aynı düzene katılır ve yerleşim kuralı değişirse tanım onu izler.
+   * "Auto arrange" on the canvas: positions are deleted, the canvas falls back to auto
+   * layout. null is written (not computed coordinates) — so steps added later
+   * join the same arrangement too, and if the layout rule changes the definition follows it.
    */
   onLayoutReset(): void {
     this.store.dispatch('', clearPositions);
   }
 
   /**
-   * Canvas'ta çizilen bağlantı adımın çıkışına yazılır. Canvas port türünü
-   * (olumlu/olumsuz) bildirir; adımın gerçek çıkışı (onay/red ya da
-   * tamamlanma/herhangi biri reddederse) tip kataloğundan çözülür.
+   * A connection drawn on the canvas is written to the step's exit. The canvas reports the port kind
+   * (positive/negative); the step's real exit (approve/reject or
+   * complete/any-reject) is resolved from the type catalogue.
    */
-  /** Porttan çizilen bağlantı — port kimliği tuvalden gelir (koşulun her durumu ayrı porttur). */
+  /** Connection drawn from a port — the port identity comes from the canvas (each condition case is a separate port). */
   onEdgeCreated(event: { from: string; to: string; exitPort: ExitPort }): void {
     this.store.dispatch('', doc => connect(doc, event.from, event.exitPort, event.to));
   }
 
   /**
-   * Adım listesinin "onaylanırsa / reddedilirse" sütunları. Koşulda tüm yollar
-   * tek sütunda ("Evet → finans · Diğer → son"), Bitiş'te çıkış yok.
+   * The "if approved / if rejected" columns of the step list. For a condition all paths are
+   * in a single column ("Evet → finans · Diğer → son" — Yes → finans · Other → son), an End has no exit.
    */
   private exitColumns(
     type: string, exits: ReturnType<typeof exitsOf>, approve?: string | null, reject?: string | null
@@ -1094,7 +1094,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     return [approve || t('workflow.build.terminalCompleted'), reject || t('workflow.build.terminalRejected')];
   }
 
-  /** Pop-up'ın hedef seçicisi için adım adları (tip: bildirimin görevli seçimi). */
+  /** Step names for the pop-up's target picker (type: the notification's assignee choice). */
   readonly stepOptions = computed(() =>
     this.store.graph().steps.map(step => ({ key: step.key, name: step.name, type: step.type })));
 
@@ -1102,7 +1102,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     this.store.selection.set(selection);
   }
 
-  /** Sağ tık menüsünden gelen, belgeyi ilgilendiren işlemler. */
+  /** Document-related actions coming from the context menu. */
   onMenuAction(action: CanvasMenuAction): void {
     switch (action.type) {
       case 'open':      this.openStep(action.key); break;
@@ -1114,7 +1114,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     }
   }
 
-  // ── Düzenleme komutları (menü + klavye) ───────────────────────────────────
+  // ── Editing commands (menu + keyboard) ───────────────────────────────────
 
   undo(): void {
     this.store.undo();
@@ -1132,9 +1132,9 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   }
 
   /**
-   * Seçimi siler: kenar seçiliyse bağlantı kaldırılır (çıkış terminale düşer),
-   * düğümler seçiliyse adımlar silinir. Onay sorulmaz — Ctrl+Z geri alır ve
-   * bildirim bunu söyler (geri alınabilir işlemde diyalog gereksiz bir adımdır).
+   * Deletes the selection: if an edge is selected the connection is removed (the exit falls to the terminal),
+   * if nodes are selected the steps are deleted. No confirmation — Ctrl+Z undoes it and
+   * the notification says so (for an undoable action a dialog is an unnecessary step).
    */
   deleteSelection(): void {
     if (this.readonlyMode()) return;
@@ -1171,7 +1171,7 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     if (clip) this.insertCopies(clip, false);
   }
 
-  /** Panodaki adımları ekler ve kopyaları seçer. */
+  /** Adds the clipboard steps and selects the copies. */
   private insertCopies(clipboard: DesignClipboard, announce: boolean): void {
     let pasted: string[] = [];
     this.store.dispatch('', doc => {
@@ -1193,9 +1193,9 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
   }
 
   /**
-   * Tasarımcı klavye kısayolları. Yazı alanındayken ya da adım pop-up'ı açıkken
-   * hiçbiri çalışmaz (orada Ctrl+Z metni geri alır). Geri al/yinele her sekmede,
-   * diğerleri yalnız Tasarım sekmesinde.
+   * Designer keyboard shortcuts. None of them work while in a text field or while the step pop-up
+   * is open (there Ctrl+Z undoes text). Undo/redo works on every tab,
+   * the others only on the Design tab.
    */
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
@@ -1213,8 +1213,8 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
     if (this.activeTab() !== 'canvas') return;
     const canvas = this.canvas();
 
-    // Yapacak işi olmayan komut tarayıcıya bırakılır: seçim yokken oklar sayfayı
-    // kaydırsın, Ctrl+C sayfadaki seçili metni kopyalasın.
+    // A command with nothing to do is left to the browser: with no selection the arrows scroll
+    // the page, Ctrl+C copies the selected text on the page.
     const hasNodes = this.store.selection().nodes.length > 0;
     if (action.command.startsWith('nudge') && !hasNodes) return;
     if ((action.command === 'copy' || action.command === 'duplicate') && !hasNodes) return;
@@ -1227,8 +1227,8 @@ export class WorkflowBuildComponent implements OnInit, HasUnsavedChanges {
       case 'duplicate':  this.duplicateSelection(); break;
       case 'selectAll':  this.selectAll(); break;
       case 'escape': {
-        // Önce seçim ve menü kapanır, sonra tam ekran. Tarayıcı tam ekranında Esc'i
-        // tarayıcı yakalar; bu yol tam ekran API'si olmayan tarayıcılar için.
+        // First the selection and menu close, then full screen. In browser full screen Esc is
+        // captured by the browser; this path is for browsers without the full screen API.
         const selection = this.store.selection();
         const idle = selection.nodes.length === 0 && !selection.edge && !canvas?.menu();
         if (idle && this.fullscreen()) {

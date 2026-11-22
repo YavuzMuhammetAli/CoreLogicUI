@@ -8,7 +8,7 @@ import { AppUser } from '../models/appUser';
 import { ModelPermission } from './permission.service';
 import { DataResponseModel } from '../models/dataResponseModel';
 
-/** Bitwise PermissionAction bayrakları — backend PermissionAction enum ile birebir eşleşir */
+/** Bitwise PermissionAction flags — match the backend PermissionAction enum one to one */
 export const PermissionFlag = {
   None:          0,
   Read:          1,
@@ -17,13 +17,13 @@ export const PermissionFlag = {
   Delete:        8,
   All:           15,
   Navigation:    16,
-  /** Kullanıcı yalnızca kendi oluşturduğu kayıtları görebilir/değiştirebilir. */
+  /** The user can see/change only the records they created. */
   OwnOnly:       32,
-  /** Kayıttaki iş akışını (ilerlenen yol + kim onayladı/bekliyor) görür. Read ile birlikte. */
+  /** Sees the record's workflow (path taken + who approved/is pending). Together with Read. */
   ViewWorkflow:  64
 } as const;
 
-/** ModelPermission'ı bitwise action int'ine dönüştürür */
+/** Converts a ModelPermission into the bitwise action int */
 export function toActionInt(p: {
   canRead: boolean;
   canCreate: boolean;
@@ -45,8 +45,8 @@ export function toActionInt(p: {
 }
 
 /**
- * Admin yetki yönetimi servisi.
- * Endpoint'ler yalnızca 'admin' rolüne sahip kullanıcılar tarafından çağrılabilir.
+ * Admin permission management service.
+ * The endpoints can only be called by users with the 'admin' role.
  */
 @Injectable({ providedIn: 'root' })
 export class PermissionAdminService {
@@ -56,20 +56,20 @@ export class PermissionAdminService {
   private readonly http = inject(HttpClient);
 
   /**
-   * Tüm kullanıcıları listeler (IsAdmin bilgisi dahil, hassas alanlar hariç).
-   * GET /User/getall — admin yetkisi gerekli.
+   * Lists all users (including IsAdmin, excluding sensitive fields).
+   * GET /User/getall — requires admin.
    */
   getUsers(): Observable<ListResponseModel<AppUser>> {
     return this.http.get<ListResponseModel<AppUser>>(`${this.userUrl}/getall`);
   }
 
   /**
-   * Belirtilen kullanıcının tüm model izinlerini döndürür.
-   * GET /Permission/forUser?userId= — admin yetkisi gerekli.
+   * Returns all model permissions of the given user.
+   * GET /Permission/forUser?userId= — requires admin.
    */
   /**
-   * Kullanıcı başına izinli model sayısı (userId → sayı) — TEK istek.
-   * GET /Permission/permittedModelCounts — admin yetkisi gerekli.
+   * Number of permitted models per user (userId → count) — ONE request.
+   * GET /Permission/permittedModelCounts — requires admin.
    */
   getPermittedModelCounts(): Observable<DataResponseModel<Record<string, number>>> {
     return this.http.get<DataResponseModel<Record<string, number>>>(`${this.permissionUrl}/permittedModelCounts`);
@@ -83,9 +83,9 @@ export class PermissionAdminService {
   }
 
   /**
-   * Kullanıcı için model izni atar veya günceller.
-   * action: bitwise int (örn. 7 = Read+Create+Update, 15 = All). toActionInt() ile hesaplanır.
-   * POST /Permission/set — admin yetkisi gerekli.
+   * Assigns or updates a model permission for the user.
+   * action: bitwise int (e.g. 7 = Read+Create+Update, 15 = All). Computed with toActionInt().
+   * POST /Permission/set — requires admin.
    */
   setPermission(userId: number, modelName: string, action: number): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(
@@ -96,9 +96,9 @@ export class PermissionAdminService {
   }
 
   /**
-   * Kullanıcıya 'admin' rolü atar (isAdmin=true) veya kaldırır (isAdmin=false).
-   * Değişiklik kullanıcının yeni JWT oturumunda etkinleşir.
-   * POST /User/setAdmin — admin yetkisi gerekli.
+   * Grants (isAdmin=true) or removes (isAdmin=false) the 'admin' role for the user.
+   * The change takes effect in the user's next JWT session.
+   * POST /User/setAdmin — requires admin.
    */
   setAdmin(userId: number, isAdmin: boolean): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(

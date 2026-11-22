@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ApexChartComponent } from './apex-chart.component';
 
-/** Gerçek ApexCharts ile: çizer, seçenek değişince yeniden çizer, yok edilince temizler. */
+/** With real ApexCharts: renders, re-renders when options change, cleans up on destroy. */
 describe('ApexChartComponent', () => {
   let fixture: ComponentFixture<ApexChartComponent>;
   let host: HTMLElement;
@@ -14,7 +14,7 @@ describe('ApexChartComponent', () => {
 
   async function until(condition: () => boolean): Promise<void> {
     for (let i = 0; i < 200 && !condition(); i++) await new Promise(res => setTimeout(res, 10));
-    expect(condition()).withContext('süre doldu').toBeTrue();
+    expect(condition()).withContext('timed out').toBeTrue();
   }
 
   beforeEach(() => {
@@ -25,14 +25,14 @@ describe('ApexChartComponent', () => {
 
   afterEach(() => host.remove());
 
-  it('grafiği çizer', async () => {
+  it('renders the chart', async () => {
     fixture.componentRef.setInput('options', options('ilk'));
     fixture.detectChanges();
 
     await until(() => !!host.querySelector('.apexcharts-canvas svg'));
   });
 
-  it('seçenek değişince tek grafik kalır', async () => {
+  it('keeps a single chart when options change', async () => {
     fixture.componentRef.setInput('options', options('ilk'));
     fixture.detectChanges();
     await until(() => !!host.querySelector('.apexcharts-canvas'));
@@ -44,7 +44,7 @@ describe('ApexChartComponent', () => {
     expect(host.querySelectorAll('.apexcharts-canvas').length).toBe(1);
   });
 
-  it('kütüphane yüklenirken gelen son seçenek kazanır', async () => {
+  it('the last option arriving while the library loads wins', async () => {
     fixture.componentRef.setInput('options', options('eski'));
     fixture.detectChanges();
     fixture.componentRef.setInput('options', options('yeni'));
@@ -54,7 +54,7 @@ describe('ApexChartComponent', () => {
     expect(host.querySelectorAll('.apexcharts-canvas').length).toBe(1);
   });
 
-  it('yok edilince grafiği temizler', async () => {
+  it('cleans up the chart on destroy', async () => {
     fixture.componentRef.setInput('options', options('ilk'));
     fixture.detectChanges();
     await until(() => !!host.querySelector('.apexcharts-canvas svg'));

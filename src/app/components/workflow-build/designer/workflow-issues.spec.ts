@@ -39,24 +39,24 @@ function doc(): WorkflowDesignDoc {
 }
 
 describe('workflow-issues', () => {
-  it('çeviriden metin kurar; port etiketi ve argümanlar yerleşir', () => {
+  it('builds text from the translation; port label and arguments are filled in', () => {
     expect(issueText(issue({ code: 'assignment.roleRequired' }), i18n)).toBe('Rol seçilmeli.');
     expect(issueText(issue({ code: 'transition.targetNotFound', port: 'approve', args: { target: 'yok' } }), i18n))
       .toBe('"Onaylanınca" çıkışının hedefi bulunamadı: yok.');
   });
 
-  it('çevirisi olmayan kodda sunucu metnine düşer', () => {
+  it('falls back to the server text for a code without translation', () => {
     expect(issueText(issue({ code: 'yeni.kod' }), i18n)).toBe('Sunucu metni');
   });
 
-  it('konum adımın ve dalın ADINI kullanır; bilinmeyende anahtar', () => {
+  it('location uses the step\'s and branch\'s NAME; the key when unknown', () => {
     expect(issueLocation(issue({ stepKey: 'MUDUR' }), doc())).toBe('Müdür Onayı');
     expect(issueLocation(issue({ stepKey: 'onaylar', branchKey: 'fin' }), doc())).toBe('Onaylar / Finans');
     expect(issueLocation(issue({ stepKey: 'silinmis' }), doc())).toBe('silinmis');
     expect(issueLocation(issue({}), doc())).toBeNull();
   });
 
-  it('satırlar: önce hatalar, hedef türü koddan', () => {
+  it('rows: errors first, target type from the code', () => {
     const rows = issueRows([
       issue({ code: 'key.nonAscii', severity: 'warning', stepKey: 'mudur' }),
       issue({ code: 'trigger.fieldEmpty' }),
@@ -69,7 +69,7 @@ describe('workflow-issues', () => {
     expect(countIssues(rows)).toEqual({ errors: 3, warnings: 1 });
   });
 
-  it('adım başına gruplar ve rozet ipucu kurar', () => {
+  it('groups per step and builds the badge tooltip', () => {
     const rows = issueRows([
       issue({ code: 'assignment.roleRequired', stepKey: 'Mudur' }),
       issue({ code: 'b', stepKey: 'mudur' }),

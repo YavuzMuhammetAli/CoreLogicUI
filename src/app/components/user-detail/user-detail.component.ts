@@ -15,12 +15,12 @@ import { IconComponent } from '../shared/icon/icon.component';
 interface RoleOption { id: number; name: string; }
 
 /**
- * Kullanıcı oluşturma (/users/new) ve düzenleme (/users/:id) — yalnızca admin.
+ * User creation (/users/new) and editing (/users/:id) — admin only.
  *
- * Oluşturma modunda parolayı admin belirler ve kullanıcıya kendi kanalından iletir;
- * sistem e-posta göndermez.
+ * In create mode the admin sets the password and passes it to the user through their own channel;
+ * the system doesn't send e-mail.
  *
- * Yıkıcı işlemler kendi hesabı için kapatılır — backend zaten reddeder, UI baştan engeller.
+ * Destructive actions are disabled for one's own account — the backend rejects them anyway, the UI prevents them up front.
  */
 @Component({
     selector: 'app-user-detail',
@@ -30,7 +30,7 @@ interface RoleOption { id: number; name: string; }
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserDetailComponent {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly fb = inject(FormBuilder);
@@ -72,7 +72,7 @@ export class UserDetailComponent {
       firstName: ['', Validators.required],
       lastName:  ['', Validators.required],
       email:     ['', [Validators.required, Validators.email]],
-      // Parola alanları yalnızca oluşturma modunda kullanılır.
+      // Password fields are used only in create mode.
       password:       [''],
       passwordRepeat: [''],
       isAdmin: [false],
@@ -94,7 +94,7 @@ export class UserDetailComponent {
 
   get f() { return this.form.controls; }
 
-  /** Düzenlenen kullanıcı oturumdaki kişi mi — yıkıcı aksiyonlar kapatılır. */
+  /** Is the edited user the signed-in person — destructive actions are disabled. */
   isSelf(): boolean {
     return this.userId !== null && this.userId === this.authService.getCurrentUserId();
   }
@@ -106,7 +106,7 @@ export class UserDetailComponent {
     return !!rpt && pwd !== rpt;
   }
 
-  // ── Yükleme ────────────────────────────────────────────────────────────────
+  // ── Loading ────────────────────────────────────────────────────────────────
 
   private loadRoles(): void {
     this.roleAdminService.getRoles().pipe(markDirty(this.cdr)).subscribe({
@@ -118,8 +118,8 @@ export class UserDetailComponent {
   }
 
   /**
-   * Tek bir kullanıcıyı getiren endpoint yok; liste içinden bulunur
-   * (mevcut role-detail ekranındaki yaklaşımla aynı).
+   * There's no endpoint that fetches a single user; it is found in the list
+   * (same approach as the existing role-detail screen).
    */
   private loadUser(userId: number): void {
     this.loading.set(true);
@@ -150,7 +150,7 @@ export class UserDetailComponent {
     });
   }
 
-  // ── Kaydetme ───────────────────────────────────────────────────────────────
+  // ── Saving ─────────────────────────────────────────────────────────────────
 
   save(): void {
     if (this.form.invalid || this.passwordMismatch) {
@@ -203,7 +203,7 @@ export class UserDetailComponent {
     });
   }
 
-  // ── Yetki / durum / parola ────────────────────────────────────────────────
+  // ── Permissions / status / password ──────────────────────────────────────
 
   toggleAdmin(): void {
     if (this.userId === null || this.isSelf()) return;
@@ -267,7 +267,7 @@ export class UserDetailComponent {
     });
   }
 
-  // ── Kalıcı silme ──────────────────────────────────────────────────────────
+  // ── Permanent deletion ────────────────────────────────────────────────────
 
   openDelete(): void { this.confirmOpen.set(true); }
   cancelDelete(): void { this.confirmOpen.set(false); }
@@ -297,7 +297,7 @@ export class UserDetailComponent {
     return current ? `${current.firstName} ${current.lastName}`.trim() : '';
   }
 
-  // ── Yardımcılar ───────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
   private showError(text: string): void {
     this.message.set(text);

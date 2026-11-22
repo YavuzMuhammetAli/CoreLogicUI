@@ -20,8 +20,8 @@ describe('AppComponent', () => {
     expect(app.title).toEqual('CoreLogicUI');
   });
 
-  // AppComponent yalnızca <router-outlet> render eder; CLI iskeletinden gelen
-  // "Hello, CoreLogicUI" başlığı bu projede hiç var olmadı.
+  // AppComponent only renders <router-outlet>; the "Hello, CoreLogicUI" heading
+  // from the CLI scaffold never existed in this project.
   it('router-outlet render eder', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();

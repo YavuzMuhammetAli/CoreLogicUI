@@ -19,8 +19,8 @@
   }
 }
 
-/* Veri görüntülemeye giden ana link — kartın gövdesini kaplar (nested <a> olmaması için
-   Düzenle/Sil aksiyonları bu link'in DIŞINDA, .model-card-actions'ta yer alır) */
+/* Main link to the data view — covers the card body (to avoid a nested <a>, the
+   Edit/Delete actions sit OUTSIDE this link, in .model-card-actions) */
 .model-card-link {
   display: flex;
   flex-direction: column;

@@ -31,7 +31,7 @@ function parallel(key: string, onComplete: string | null = null, onAnyReject: st
   };
 }
 
-/** yonetici → onaylar(paralel) → final; onaylar reddederse yonetici'ye döner. */
+/** yonetici → onaylar(parallel) → final; if onaylar rejects, it returns to yonetici. */
 function sampleDoc(): WorkflowDesignDoc {
   const doc = emptyDoc();
   return {
@@ -51,21 +51,21 @@ function sampleDoc(): WorkflowDesignDoc {
 
 describe('workflow-design.commands', () => {
   describe('upsertStep', () => {
-    it('yeni adımı sona ekler; başlangıç yoksa o olur', () => {
+    it('appends a new step; becomes the start if there is none', () => {
       const doc = upsertStep(emptyDoc(), null, approval('ilk'), '');
 
       expect(doc.graph.steps.map(s => s.key)).toEqual(['ilk']);
       expect(doc.graph.startStep).toBe('ilk');
     });
 
-    it('başlangıç varken yeni adım başlangıcı değiştirmez', () => {
+    it('a new step does not change the start when one exists', () => {
       const doc = upsertStep(sampleDoc(), null, approval('ek'), '');
 
       expect(doc.graph.startStep).toBe('yonetici');
       expect(doc.graph.steps.length).toBe(4);
     });
 
-    it('anahtar değişince çıkışlar, başlangıç ve durum etiketi taşınır', () => {
+    it('when the key changes, exits, the start and the status label are moved', () => {
       const original = sampleDoc();
       const renamed = { ...findStep(original, 'yonetici')!, key: 'mudur' };
 
@@ -77,7 +77,7 @@ describe('workflow-design.commands', () => {
       expect('yonetici' in doc.graph.entityStatusMap).toBeFalse();
     });
 
-    it('yeniden adlandırma büyük/küçük harf duyarsız eşleşir (backend FindStep gibi)', () => {
+    it('renaming matches case-insensitively (like backend FindStep)', () => {
       const original = sampleDoc();
       const steps = original.graph.steps.map(s => s.key === 'onaylar' ? { ...s, onAnyReject: 'YONETICI' } : s);
       const doc = upsertStep({ ...original, graph: { ...original.graph, steps } },
@@ -86,9 +86,9 @@ describe('workflow-design.commands', () => {
       expect(findStep(doc, 'onaylar')!.onAnyReject).toBe('mudur');
     });
 
-    it('bitiş etiketleri ve diğer adımların etiketleri korunur', () => {
-      // Eski buildGraph haritayı adımlardan yeniden kurduğu için bitiş etiketleri
-      // her kayıtta siliniyordu.
+    it('end labels and other steps\' labels are kept', () => {
+      // Because the old buildGraph rebuilt the map from the steps, end labels
+      // were deleted on every save.
       const doc = upsertStep(sampleDoc(), 'final', approval('final'), 'Son kontrol');
 
       expect(doc.graph.entityStatusMap).toEqual({
@@ -100,14 +100,14 @@ describe('workflow-design.commands', () => {
       });
     });
 
-    it('boş durum etiketi girdiyi siler', () => {
+    it('an empty status label deletes the entry', () => {
       const doc = upsertStep(sampleDoc(), 'yonetici', findStep(sampleDoc(), 'yonetici')!, '  ');
       expect('yonetici' in doc.graph.entityStatusMap).toBeFalse();
     });
   });
 
   describe('removeStep', () => {
-    it('adıma bağlanan çıkışlar terminale düşer, etiketi silinir', () => {
+    it('exits connected to the step fall to the terminal, its label is deleted', () => {
       const doc = removeStep(sampleDoc(), 'onaylar');
 
       expect(doc.graph.steps.map(s => s.key)).toEqual(['yonetici', 'final']);
@@ -116,36 +116,36 @@ describe('workflow-design.commands', () => {
       expect(doc.graph.entityStatusMap['__completed']).toBe('Onaylandı');
     });
 
-    it('başlangıç adımı silinince kalan ilk adım başlangıç olur', () => {
+    it('when the start step is deleted the first remaining step becomes the start', () => {
       const doc = removeStep(sampleDoc(), 'YONETICI');
 
       expect(doc.graph.startStep).toBe('onaylar');
       expect(findStep(doc, 'onaylar')!.onAnyReject).toBeNull();
     });
 
-    it('bilinmeyen adımda belge aynen döner', () => {
+    it('returns the document unchanged for an unknown step', () => {
       const doc = sampleDoc();
       expect(removeStep(doc, 'yok')).toBe(doc);
     });
   });
 
   describe('connect', () => {
-    it('onay adımında approve/reject alanlarına yazar', () => {
+    it('writes to approve/reject fields on an approval step', () => {
       const doc = connect(sampleDoc(), 'final', 'reject', 'yonetici');
       expect(findStep(doc, 'final')!.onReject).toBe('yonetici');
     });
 
-    it('paralel adımda complete/anyReject alanlarına yazar', () => {
+    it('writes to complete/anyReject fields on a parallel step', () => {
       const doc = connect(sampleDoc(), 'onaylar', 'complete', 'yonetici');
       expect(findStep(doc, 'onaylar')!.onComplete).toBe('yonetici');
     });
 
-    it('kendine bağlantıyı yok sayar', () => {
+    it('ignores a self-connection', () => {
       const doc = sampleDoc();
       expect(connect(doc, 'final', 'approve', 'FINAL')).toBe(doc);
     });
 
-    it('red kapalı adımın red çıkışına yazmaz (kayıtta sessizce kaybolmasın)', () => {
+    it('does not write to the reject exit of a step with rejection disabled (so it does not silently vanish on save)', () => {
       const base = sampleDoc();
       const steps = base.graph.steps.map(s =>
         s.key === 'final' ? { ...s, form: { fields: [], allowReject: false } } : s);
@@ -154,24 +154,24 @@ describe('workflow-design.commands', () => {
       expect(connect(doc, 'final', 'reject', 'yonetici')).toBe(doc);
     });
 
-    it('adıma ait olmayan portu yok sayar', () => {
+    it('ignores a port that does not belong to the step', () => {
       const doc = sampleDoc();
       expect(findStep(connect(doc, 'onaylar', 'approve', 'final'), 'onaylar')!.onApprove).toBeUndefined();
     });
   });
 
-  describe('konum', () => {
-    it('taşıma tam piksele yuvarlanır', () => {
+  describe('position', () => {
+    it('a move is rounded to whole pixels', () => {
       const doc = moveStep(sampleDoc(), 'final', 10.4, 20.6);
       expect([findStep(doc, 'final')!.x, findStep(doc, 'final')!.y]).toEqual([10, 21]);
     });
 
-    it('aynı konuma taşıma belgeyi değiştirmez', () => {
+    it('moving to the same position does not change the document', () => {
       const moved = moveStep(sampleDoc(), 'final', 10, 20);
       expect(moveStep(moved, 'final', 10, 20)).toBe(moved);
     });
 
-    it('otomatik düzenle konumları siler; konumsuzsa belge aynen döner', () => {
+    it('auto arrange deletes positions; without positions the document is returned unchanged', () => {
       const moved = moveStep(sampleDoc(), 'final', 10, 20);
       const cleared = clearPositions(moved);
 
@@ -180,8 +180,8 @@ describe('workflow-design.commands', () => {
     });
   });
 
-  describe('çoklu işlemler', () => {
-    it('moveSteps hepsini tek belgede yazar; hiçbiri değişmezse aynı belge döner', () => {
+  describe('bulk operations', () => {
+    it('moveSteps writes all in a single document; if none change the same document is returned', () => {
       const doc = moveSteps(sampleDoc(), [{ key: 'yonetici', x: 0, y: 0 }, { key: 'FINAL', x: 40, y: 80 }]);
 
       expect([findStep(doc, 'yonetici')!.x, findStep(doc, 'final')!.y]).toEqual([0, 80]);
@@ -189,7 +189,7 @@ describe('workflow-design.commands', () => {
       expect(moveSteps(doc, [{ key: 'yok', x: 1, y: 1 }])).toBe(doc);
     });
 
-    it('removeSteps birden çok adımı siler ve tüm referanslarını temizler', () => {
+    it('removeSteps deletes several steps and clears all their references', () => {
       const doc = removeSteps(sampleDoc(), ['onaylar', 'yonetici']);
 
       expect(doc.graph.steps.map(s => s.key)).toEqual(['final']);
@@ -198,7 +198,7 @@ describe('workflow-design.commands', () => {
       expect(doc.graph.entityStatusMap['__completed']).toBe('Onaylandı');
     });
 
-    it('disconnect çıkışı terminale düşürür, diğer çıkışa dokunmaz', () => {
+    it('disconnect drops the exit to the terminal, does not touch the other exit', () => {
       const doc = disconnect(sampleDoc(), 'onaylar', 'anyReject');
       const step = findStep(doc, 'onaylar')!;
 
@@ -206,34 +206,34 @@ describe('workflow-design.commands', () => {
       expect(step.onComplete).toBe('final');
     });
 
-    it('bağlı olmayan çıkışı ya da bilinmeyen adımı kesmek belgeyi değiştirmez', () => {
+    it('cutting an unconnected exit or an unknown step does not change the document', () => {
       const doc = sampleDoc();
       expect(disconnect(doc, 'final', 'approve')).toBe(doc);
       expect(disconnect(doc, 'yok', 'approve')).toBe(doc);
     });
   });
 
-  describe('başlık', () => {
-    it('değişmeyen değer aynı belgeyi döner (boş geri al adımı olmasın)', () => {
+  describe('header', () => {
+    it('an unchanged value returns the same document (no empty undo step)', () => {
       const doc = sampleDoc();
       expect(setMeta(doc, { name: doc.meta.name, isEnabled: doc.meta.isEnabled })).toBe(doc);
       expect(setConditions(doc, [])).toBe(doc);
       expect(setStart(doc, 'yonetici')).toBe(doc);
     });
 
-    it('değişen değer yeni belge döner', () => {
+    it('a changed value returns a new document', () => {
       const doc = sampleDoc();
       expect(setMeta(doc, { name: 'Satın alma' }).meta.name).toBe('Satın alma');
       expect(setConditions(doc, [{ field: 'Tutar', operator: 'gt', value: '0' }]).conditions.length).toBe(1);
     });
   });
 
-  it('önerilen anahtar mevcut anahtarlarla çakışmaz', () => {
-    const doc = upsertStep(upsertStep(emptyDoc(), null, approval('adim2'), ''), null, approval('adim3'), '');
-    expect(suggestKey(doc)).toBe('adim4');
+  it('the suggested key does not collide with existing keys', () => {
+    const doc = upsertStep(upsertStep(emptyDoc(), null, approval('step2'), ''), null, approval('step3'), '');
+    expect(suggestKey(doc)).toBe('step4');
   });
 
-  it('komutlar girdiyi değiştirmez', () => {
+  it('commands do not mutate the input', () => {
     const doc = sampleDoc();
     const snapshot = JSON.stringify(doc);
 

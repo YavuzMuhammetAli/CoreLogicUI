@@ -1,12 +1,12 @@
 import { AggregateFunction, ReportAggregate } from '../models/report.model';
 
 /**
- * Rapor sonuç kolonunun başlığı — SAF, DOM yok.
+ * Header of a report result column — PURE, no DOM.
  *
- * Çalıştırılan raporda başlık sunucudan gelir (`ReportColumnInfo.label`, backend
- * `ReportingManager.ApplyColumnLabels`). Bu yardımcı yalnız rapor OLUŞTURUCUSUNUN sentetik
- * önizlemesi ve sıralama listesi içindir; metinler backend `Messages.ReportColumn*` ile
- * aynı kalmalıdır (bkz. report.i18n.ts 'report.columnLabel.*').
+ * In a run report the header comes from the server (`ReportColumnInfo.label`, backend
+ * `ReportingManager.ApplyColumnLabels`). This helper is only for the report BUILDER's synthetic
+ * preview and the sort list; the texts must stay the same as backend `Messages.ReportColumn*`
+ * (see report.i18n.ts 'report.columnLabel.*').
  */
 
 const AGGREGATE_LABEL_KEYS: Record<AggregateFunction, string> = {
@@ -19,15 +19,15 @@ const AGGREGATE_LABEL_KEYS: Record<AggregateFunction, string> = {
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
-/** Sunucudaki alias kuralı (ReportingManager.BuildProjection): `{FONKSİYON}_{Alan|All}`. */
+/** The server-side alias rule (ReportingManager.BuildProjection): `{FUNCTION}_{Field|All}`. */
 export function aggregateAlias(agg: Pick<ReportAggregate, 'function' | 'field'>): string {
   return `${agg.function}_${agg.field || 'All'}`;
 }
 
 /**
- * `name` bir aggregate alias'ıysa "Toplam {alan etiketi}" / "Kayıt sayısı"; düz kolonsa
- * kolonun etiketi; hiçbiri yoksa adın kendisi. COUNT alandan bağımsızdır (sunucu
- * `Count()` çağırır) — `COUNT_ID` de "Kayıt sayısı"dır.
+ * If `name` is an aggregate alias: "Toplam {field label}" (Total) / "Kayıt sayısı" (record count); if a plain
+ * column, the column's label; otherwise the name itself. COUNT is independent of the field (the server
+ * calls `Count()`) — `COUNT_ID` is also "Kayıt sayısı".
  */
 export function reportColumnLabel(
   name: string,

@@ -17,53 +17,53 @@ import { AuthService } from './services/auth.service';
 import { PermissionService } from './services/permission.service';
 
 /**
- * Uygulama başlatma fabrikası — guard'lar çalışmadan önce izinleri yükler.
+ * App startup factory — loads permissions before the guards run.
  *
- * NEDEN GEREKLİ:
- * adminGuard, PermissionService.isAdmin() sinyalini senkron okur.
- * Önceki tasarımda izinler yalnızca LayoutComponent.ngOnInit içinde yükleniyordu.
- * Bu yüzden /build, /drafts, /permissions gibi admin route'larına doğrudan
- * navigasyon veya sayfa yenilemesinde sinyal boş (null) kalıyor, isAdmin()
- * false dönüyor ve admin kullanıcı /login'e atılıyordu (yarış durumu).
+ * WHY IT IS NEEDED:
+ * adminGuard reads the PermissionService.isAdmin() signal synchronously.
+ * In the previous design permissions were loaded only in LayoutComponent.ngOnInit.
+ * So on direct navigation to admin routes like /build, /drafts, /permissions
+ * or on a page reload the signal stayed empty (null), isAdmin() returned
+ * false and the admin user was sent to /login (race condition).
  *
- * APP_INITIALIZER ile izinler Angular router etkinleşmeden önce çözülür;
- * sinyal dolu olduğunda guard'lar doğru sonucu verir.
- * Oturum açık değilse istek 401 ile döner, hata sessizce yutulur ve
- * authGuard normal akışta /login'e yönlendirir.
+ * With APP_INITIALIZER the permissions are resolved before the Angular router activates;
+ * once the signal is filled the guards give the right result.
+ * If no session is open the request returns 401, the error is swallowed silently and
+ * authGuard redirects to /login in the normal flow.
  */
 function loadInitialPermissions(
   auth: AuthService,
   permissionService: PermissionService,
   platformId: Object
 ): Promise<void> {
-  // Tarayıcı dışında (artık olmasa da guard yapısını bozmamak için korundu)
+  // Outside the browser (kept so as not to break the guard structure, even though it no longer happens)
   if (!isPlatformBrowser(platformId)) return Promise.resolve();
 
-  // Oturum yoksa (anonim ziyaretçi — /login veya /register-company) izin isteği
-  // atma: aksi halde /Permission/my 401 döner ve error interceptor kullanıcıyı
-  // yanıltıcı "oturum süresi doldu" mesajıyla login'e yönlendirirdi
-  // (kayıt sihirbazına deep-link'i kırıyordu).
+  // Without a session (anonymous visitor — /login or /register-company) don't send the permission
+  // request: otherwise /Permission/my returns 401 and the error interceptor would redirect the user
+  // to login with a misleading "session expired" message
+  // (it broke deep links to the sign-up wizard).
   //
-  // ensureSession/ensureLoaded: uçuştaki isteği guard'larla PAYLAŞIR. Router'ın ilk gezinmesi de
-  // bir initializer'dır ve bununla paralel başlar; doğrudan loadMyPermissions çağrılınca guard'lar
-  // isteği göremiyor, korumalı her sayfa açılışında /Permission/my ikinci kez gidiyordu.
+  // ensureSession/ensureLoaded: SHARES the in-flight request with the guards. The router's first navigation is
+  // also an initializer and starts in parallel with this; when loadMyPermissions was called directly the guards
+  // could not see the request, and /Permission/my went out a second time on every protected page load.
   const permissions$ = auth.ensureSession().pipe(
     switchMap(session => (session ? permissionService.ensureLoaded() : of(null)))
   );
   return firstValueFrom(permissions$)
-    .then(() => {}) // başarılı — sinyal set edildi
-    .catch(() => {}); // hata (401, ağ vb.) — sessizce geç, authGuard devralır
+    .then(() => {}) // success — the signal was set
+    .catch(() => {}); // error (401, network etc.) — pass silently, authGuard takes over
 }
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
-    // withEnabledBlockingInitialNavigation: APP_INITIALIZER (izin yüklemesi) tamamlanana
-    // dek navigasyon başlamaz; guard'lar sinyal dolu olduğunda çalışır → login flash yok.
+    // withEnabledBlockingInitialNavigation: navigation does not start until APP_INITIALIZER
+    // (permission load) completes; guards run once the signal is filled → no login flash.
     provideRouter(routes, withEnabledBlockingInitialNavigation()),
     provideHttpClient(withInterceptors([languageInterceptor, errorInterceptor])),
 
-    // Guard yarış durumu düzeltmesi: izinleri router etkinleşmeden yükle
+    // Guard race condition fix: load permissions before the router activates
     provideAppInitializer(() => loadInitialPermissions(inject(AuthService), inject(PermissionService), inject(PLATFORM_ID)))
   ]
 };

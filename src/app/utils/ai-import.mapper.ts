@@ -1,12 +1,12 @@
 /**
- * Yapay Zeka önerilerini (G4) mevcut servislerin payload'larına çeviren saf
- * fonksiyonlar.
+ * Pure functions that convert AI proposals (G4) into the payloads of the existing
+ * services.
  *
- * Orkestrasyondan ayrı tutulur çünkü buradaki hatalar en pahalı olanlardır:
- * yanlış sıra (alt model önce), ters çevrilmemiş isNullable, ya da ada göre
- * çözülememiş bir rapor referansı sessizce bozuk bir model üretir. Saf
- * oldukları için `ai-import.mapper.spec.ts` ile doğrudan test edilirler
- * (`cron-builder.ts` / `entity-graph.layout.ts` deseni).
+ * Kept separate from orchestration because mistakes here are the most expensive:
+ * the wrong order (sub-model first), an un-inverted isNullable, or a report reference
+ * that could not be resolved by name silently produces a broken model. Being pure,
+ * they are tested directly by `ai-import.mapper.spec.ts`
+ * (the `cron-builder.ts` / `entity-graph.layout.ts` pattern).
  */
 
 import {
@@ -34,7 +34,7 @@ import {
 import { RelationshipType, RelationshipUpsert } from '../models/relationship.model';
 import { COLUMN_NAME_PATTERN, MODEL_NAME_PATTERN } from './identifier';
 
-/** Backend tool şemasıyla aynı beyaz listeler — istemci tarafı ikinci savunma hattı. */
+/** Same whitelists as the backend tool schema — a second, client-side line of defence. */
 const DATA_TYPES = new Set([
   'string', 'int', 'long', 'short', 'byte', 'decimal', 'double', 'float',
   'boolean', 'datetime', 'timeonly', 'dateonly', 'guid',
@@ -52,18 +52,18 @@ const OPERATORS = new Set<ReportOperator>([
 const AGGREGATES = new Set<AggregateFunction>(['SUM', 'COUNT', 'AVG', 'MIN', 'MAX']);
 
 
-/** Dashboard grid genişliği (dashboard-build.component.ts:20 ile aynı). */
+/** Dashboard grid width (same as dashboard-build.component.ts:20). */
 const GRID_COLS = 12;
 
-/** Tek bir modelin (kök ya da alt) aktarılacak hali. */
+/** The importable form of a single model (root or sub). */
 export interface ImportNode {
   entityName: string;
-  /** null ise kök model. */
+  /** Null for the root model. */
   parentName: string | null;
   columns: AiProposedColumn[];
 }
 
-/** Öneri JSON'unu çözer; bozuksa null. */
+/** Parses the proposal JSON; null if corrupt. */
 export function parseProposalPayload<T>(payloadJson: string): T | null {
   try {
     return JSON.parse(payloadJson) as T;
@@ -73,10 +73,10 @@ export function parseProposalPayload<T>(payloadJson: string): T | null {
 }
 
 /**
- * Model önerisini parent-first düğüm listesine çevirir.
+ * Converts a model proposal into a parent-first node list.
  *
- * Sıra bağlayıcıdır: `addTable` alt modeli kaydederken `parentTableName`
- * üzerinden ana tabloyu arar, dolayısıyla ana model ÖNCE var olmalıdır.
+ * The order is binding: when saving a sub-model `addTable` looks up the parent table via
+ * `parentTableName`, so the parent model must exist FIRST.
  */
 export function flattenModelPayload(payload: AiModelPayload): ImportNode[] {
   const nodes: ImportNode[] = [
@@ -95,19 +95,19 @@ export function flattenModelPayload(payload: AiModelPayload): ImportNode[] {
 }
 
 /**
- * Model önerisini aktarmadan önce doğrular. Hata varsa kullanıcıya gösterilecek
- * metni döner; sorun yoksa null.
+ * Validates a model proposal before importing. On error returns the text to show
+ * the user; null if there is no problem.
  *
- * Backend zaten doğruluyor, ama oradan dönen mesaj "addMember failed" gibi ham
- * olur ve hangi kolonun bozuk olduğunu söylemez.
+ * The backend validates too, but its message is raw, like "addMember failed",
+ * and does not say which column is broken.
  */
 export function validateModelPayload(payload: AiModelPayload | null): string | null {
   if (!payload) return 'payload';
-  if (!MODEL_NAME_PATTERN.test(payload.entityName ?? '')) return `ad:${payload.entityName}`;
-  if (!payload.columns?.length) return 'kolon-yok';
+  if (!MODEL_NAME_PATTERN.test(payload.entityName ?? '')) return `name:${payload.entityName}`;
+  if (!payload.columns?.length) return 'no-columns';
 
   for (const node of flattenModelPayload(payload)) {
-    if (!MODEL_NAME_PATTERN.test(node.entityName)) return `ad:${node.entityName}`;
+    if (!MODEL_NAME_PATTERN.test(node.entityName)) return `name:${node.entityName}`;
 
     for (const column of node.columns) {
       const problem = validateProposedColumn(column);
@@ -118,10 +118,10 @@ export function validateModelPayload(payload: AiModelPayload | null): string | n
   return null;
 }
 
-/** Önerilen tek kolonun doğrulaması — yeni model ve değişiklik önerisi ortak. */
+/** Validation of a single proposed column — shared by new-model and change proposals. */
 function validateProposedColumn(column: AiProposedColumn): string | null {
-  if (!COLUMN_NAME_PATTERN.test(column.columnName ?? '')) return `kolon:${column.columnName}`;
-  if (!DATA_TYPES.has(column.dataType)) return `tip:${column.dataType}`;
+  if (!COLUMN_NAME_PATTERN.test(column.columnName ?? '')) return `column:${column.columnName}`;
+  if (!DATA_TYPES.has(column.dataType)) return `type:${column.dataType}`;
   if (column.dataType === 'enum' && !column.enumValues?.trim()) return `enum:${column.columnName}`;
   if (column.dataType === 'lookup' && !column.lookupTargetTable?.trim()) {
     return `lookup:${column.columnName}`;
@@ -130,14 +130,14 @@ function validateProposedColumn(column: AiProposedColumn): string | null {
 }
 
 /**
- * Değişiklik önerisini aktarmadan önce doğrular (kayıtlı şemaya bakmadan yapılabilenler).
- * Kolonların gerçekten var olduğu `toMemberMetadataUpdates`'te, şemayla denetlenir.
+ * Validates a change proposal before importing (the checks possible without the saved schema).
+ * That the columns actually exist is checked against the schema in `toMemberMetadataUpdates`.
  */
 export function validateModelChangePayload(payload: AiModelChangePayload | null): string | null {
   if (!payload?.entityName?.trim()) return 'payload';
   const alters = payload.alterColumns ?? [];
   const adds = payload.addColumns ?? [];
-  if (alters.length === 0 && adds.length === 0) return 'degisiklik-yok';
+  if (alters.length === 0 && adds.length === 0) return 'no-changes';
 
   for (const column of adds) {
     const problem = validateProposedColumn(column);
@@ -148,16 +148,16 @@ export function validateModelChangePayload(payload: AiModelChangePayload | null)
 
 export interface MetadataMergeResult {
   updates: MemberMetadataUpdate[];
-  /** İlk sorun (ör. `kolon-yok:Ad`); varsa hiçbir güncelleme uygulanmamalı. */
+  /** The first problem (e.g. `column-missing:Name`); if set, no update must be applied. */
   error: string | null;
 }
 
 /**
- * Değişiklik önerisini kayıtlı şemayla birleştirip `updateMemberMetadata` gövdelerine çevirir.
+ * Merges a change proposal with the saved schema and turns it into `updateMemberMetadata` bodies.
  *
- * Uç TAM değiştirme yapar (boş kural kaldırılır); öneri ise yalnız değişen alanları taşır.
- * Birleştirme burada yapılmazsa önerinin söylemediği her kural sessizce silinirdi.
- * Kural tipe göre ayıklanır (`toMemberMetadataUpdate`) — sayı kolonuna regex gitmez.
+ * The endpoint does a FULL replacement (an empty rule is removed); the proposal carries only changed fields.
+ * Without merging here, every rule the proposal does not mention would be silently deleted.
+ * Rules are filtered by type (`toMemberMetadataUpdate`) — no regex is sent for a numeric column.
  */
 export function toMemberMetadataUpdates(
   schema: PublishedTableSchema,
@@ -168,7 +168,7 @@ export function toMemberMetadataUpdates(
 
   for (const change of payload.alterColumns ?? []) {
     const current = byName.get((change.columnName ?? '').toLowerCase());
-    if (!current) return { updates: [], error: `kolon-yok:${change.columnName}` };
+    if (!current) return { updates: [], error: `column-missing:${change.columnName}` };
 
     const isRequired = change.isNullable === undefined || change.isNullable === null
       ? current.isRequired
@@ -190,8 +190,8 @@ export function toMemberMetadataUpdates(
       enumValues: change.enumValues ?? current.enumValues,
       lookupTargetTable: current.lookupTargetTable,
       lookupDisplayColumn: change.lookupDisplayColumn ?? current.lookupDisplayColumn,
-      // Dosya kolonunda saklanan KB sınırı aynen korunsun: MB alanı aynı değerden türetilince
-      // normalizeColumnRules KB'yi yuvarlamadan geçirir (boş bırakılsa sınırı silerdi).
+      // Keep a file column's stored KB limit as is: when the MB field is derived from the same value
+      // normalizeColumnRules passes the KB through without rounding (leaving it empty would delete the limit).
       maxFileSizeMb: kbToMb(maxLength)
     })));
   }
@@ -200,8 +200,8 @@ export function toMemberMetadataUpdates(
 }
 
 /**
- * İlişki önerisini `RelationshipService.add` gövdesine çevirir.
- * `depth` ve `relationshipId` istemciden GÖNDERİLMEZ — backend hesaplar.
+ * Converts a relationship proposal into a `RelationshipService.add` body.
+ * `depth` and `relationshipId` are NOT sent by the client — the backend computes them.
  */
 export function toRelationshipUpsert(
   relationship: AiProposedRelationship,
@@ -220,7 +220,7 @@ export function toRelationshipUpsert(
   };
 }
 
-/** Rapor önerisini `ReportService.define` gövdesine çevirir. */
+/** Converts a report proposal into a `ReportService.define` body. */
 export function toReportDefinition(payload: AiReportPayload): Partial<ReportDefinition> {
   return {
     id: 0,
@@ -233,7 +233,7 @@ export function toReportDefinition(payload: AiReportPayload): Partial<ReportDefi
       .map<ReportFilter>(f => ({
         field: f.field,
         operator: f.operator as ReportOperator,
-        // Backend her filtre değerini string bekler.
+        // The backend expects every filter value as a string.
         value: f.value == null ? '' : String(f.value)
       })),
     aggregates: (payload.aggregates ?? [])
@@ -254,16 +254,16 @@ export function toReportDefinition(payload: AiReportPayload): Partial<ReportDefi
 
 export interface DashboardMappingResult {
   widgets: DashboardWidget[];
-  /** Adı çözülemeyen raporlar — hepsi çözülemezse aktarım başarısız sayılır. */
+  /** Reports whose name could not be resolved — if none resolve, the import counts as failed. */
   unresolved: string[];
 }
 
 /**
- * Dashboard önerisindeki rapor ADLARINI ID'ye çevirir.
+ * Converts the report NAMES in a dashboard proposal into IDs.
  *
- * Öneri üretildiğinde raporların henüz ID'si yoktur; eşleme ancak raporlar
- * tanımlandıktan sonra yapılabilir. Bu yüzden dashboard aktarımı her zaman
- * rapor aktarımından SONRA gelir.
+ * When the proposal is produced the reports have no IDs yet; mapping is only possible after the
+ * reports are defined. That is why the dashboard import always comes
+ * AFTER the report import.
  */
 export function toDashboardWidgets(
   payload: AiDashboardPayload,
@@ -279,8 +279,8 @@ export function toDashboardWidgets(
       continue;
     }
 
-    // Grid sınırlarını kırp: model x+w<=12 kuralına uyması için yönlendirilir
-    // ama garanti edilmez, taşan widget yerleşimi bozardı.
+    // Clamp to grid bounds: the model is instructed to follow the x+w<=12 rule
+    // but it is not guaranteed, and an overflowing widget would break the layout.
     const w = clamp(widget.w, 2, GRID_COLS);
     const x = clamp(widget.x, 0, GRID_COLS - w);
 

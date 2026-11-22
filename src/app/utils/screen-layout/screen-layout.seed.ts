@@ -6,12 +6,12 @@ import {
 } from './screen-layout.model';
 
 /**
- * İlk taslak ve yardımcılar — SAF.
+ * Initial draft and helpers — PURE.
  *
- * Tasarımcı bir model için ilk kez açıldığında bugünkü görünümden başlar: "Kolonlar"
- * ayarında görünen alanlar tek sekme/tek bölümde iki kolonlu yerleşir, gizlenenler
- * gizli listesine girer (zorunlu alan hiçbir zaman gizlenmez). Liste için görünen
- * kolonlar şema sırasıyla, otomatik genişlikte.
+ * When the designer is opened for a model for the first time it starts from the current view: fields
+ * visible in the "Kolonlar" (Columns) setting are placed in two columns in a single tab/section, hidden ones
+ * go to the hidden list (a required field is never hidden). For the list, the visible
+ * columns in schema order, at automatic width.
  */
 
 export function layoutFacts(
@@ -62,7 +62,7 @@ export function seedListLayout(
   };
 }
 
-/** Belgedeki tüm kimlikler (sekme, bölüm, öğe). */
+/** All ids in the document (tab, section, item). */
 export function collectIds(layout: FormLayout): Set<string> {
   const ids = new Set<string>();
   for (const tab of layout.tabs) {
@@ -76,8 +76,8 @@ export function collectIds(layout: FormLayout): Set<string> {
 }
 
 /**
- * Kullanılmayan yeni kimlik: önek + sayı (t3, s7, f12 …). Deterministik — aynı belgeye
- * aynı kimliği verir; geri al / yinele ve spec'ler rastgeleliğe takılmaz.
+ * A new unused id: prefix + number (t3, s7, f12 …). Deterministic — gives the same id for the
+ * same document; undo / redo and specs do not trip over randomness.
  */
 export function nextId(used: ReadonlySet<string>, prefix: string): string {
   let max = 0;

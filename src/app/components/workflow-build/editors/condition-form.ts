@@ -2,9 +2,9 @@ import { WorkflowCase, WorkflowCondition, WorkflowStep } from '../../../models/w
 import { ExpressionError, parseExpression, referencedFields, usesSequence } from '../../../utils/auto-value/expression';
 
 /**
- * Koşul düğümü düzenleyicisinin dönüşümleri — SAF. Her biri adımın yeni halini
- * döner (girdi değişmez). Durumlar SIRALIDIR: ilk eşleşen kazanır, bu yüzden
- * yukarı/aşağı taşıma bir anlam değişikliğidir.
+ * Transformations of the condition node editor — PURE. Each returns the new step
+ * (the input is not mutated). Cases are ORDERED: the first match wins, so
+ * moving up/down changes the meaning.
  */
 
 function withCases(step: WorkflowStep, cases: WorkflowCase[]): WorkflowStep {
@@ -15,12 +15,12 @@ function cases(step: WorkflowStep): WorkflowCase[] {
   return step.cases ?? [];
 }
 
-/** Çakışmayan durum anahtarı: durum1, durum2… */
+/** Non-colliding case key: case1, case2… */
 export function nextCaseKey(step: WorkflowStep): string {
   const taken = new Set(cases(step).map(c => c.key.toLowerCase()));
   let index = cases(step).length + 1;
-  while (taken.has(`durum${index}`)) index++;
-  return `durum${index}`;
+  while (taken.has(`case${index}`)) index++;
+  return `case${index}`;
 }
 
 export function addCase(step: WorkflowStep, label: string): WorkflowStep {
@@ -31,7 +31,7 @@ export function removeCase(step: WorkflowStep, index: number): WorkflowStep {
   return withCases(step, cases(step).filter((_, i) => i !== index));
 }
 
-/** Durumu bir yukarı (-1) ya da aşağı (+1) taşır; sınırdaysa aynı adım. */
+/** Moves a case one up (-1) or down (+1); at the boundary, the same step. */
 export function moveCase(step: WorkflowStep, index: number, delta: -1 | 1): WorkflowStep {
   const target = index + delta;
   const list = cases(step);
@@ -47,8 +47,8 @@ export function updateCase(step: WorkflowStep, index: number, patch: Partial<Wor
 }
 
 /**
- * Formül ↔ satır modu. Formüle geçerken satırlar korunur (geri dönülebilsin);
- * motor formül doluysa onu esas alır, satır moduna dönünce formül temizlenir.
+ * Formula ↔ row mode. Rows are kept when switching to formula (so you can switch back);
+ * the engine uses the formula if it is filled in; switching back to row mode clears the formula.
  */
 export function setFormulaMode(step: WorkflowStep, index: number, formula: boolean): WorkflowStep {
   const current = cases(step)[index];
@@ -77,17 +77,17 @@ export function removeRow(step: WorkflowStep, caseIndex: number, rowIndex: numbe
 }
 
 export interface ExpressionCheck {
-  /** Sözdizimi hatası kodu (ör. "unexpected"); geçerliyse null. */
+  /** Syntax error code (e.g. "unexpected"); null if valid. */
   error: string | null;
-  /** SEQ kullanılmış — koşulda yasak. */
+  /** SEQ is used — forbidden in conditions. */
   sequence: boolean;
-  /** Modelde ve önceki adımlarda bulunmayan alanlar. */
+  /** Fields not found in the model or in previous steps. */
   unknown: string[];
 }
 
 /**
- * Formülü istemcide denetler (sunucu da yayında denetler). Alan "Kolon" ya da
- * "adim.alan" olabilir; ikincisinde yalnız adımın varlığına bakılır.
+ * Checks the formula on the client (the server also checks on publish). A field can be "Column" or
+ * "step.field"; for the latter only the step's existence is checked.
  */
 export function checkExpression(
   expression: string, columns: ReadonlyArray<string>, stepKeys: ReadonlyArray<string>
@@ -108,7 +108,7 @@ export function checkExpression(
   }
 }
 
-/** Satır değerinin giriş tipi — kolon tipine göre (sunucu ISO tarih ve nokta ondalık bekler). */
+/** Input type of a row value — from the column type (the server expects ISO dates and dot decimals). */
 export type ValueInputKind = 'number' | 'date' | 'boolean' | 'text';
 
 export function valueInputKind(dataType: string | null | undefined): ValueInputKind {

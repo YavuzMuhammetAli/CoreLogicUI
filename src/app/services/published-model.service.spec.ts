@@ -6,9 +6,9 @@ import { PublishedModelService } from './published-model.service';
 import { AuthService } from './auth.service';
 
 /**
- * Model listesi önbelleği. Korunan davranışlar: aynı oturumda tek istek (sayfa açılışı eskiden
- * 2-3 kez istiyordu), şema değişince ve başka kullanıcıyla girişte yeniden istek, başarısız
- * yanıtın önbellekte kalmaması.
+ * Model list cache. Behaviours under guard: a single request per session (page load used to
+ * request it 2-3 times), a new request when the schema changes and on login as another user, and a
+ * failed response is not kept in the cache.
  */
 describe('PublishedModelService.getModels', () => {
   const url = `${environment.apiBaseUrl}/PublishedModel/models`;
@@ -27,7 +27,7 @@ describe('PublishedModelService.getModels', () => {
 
   const ok = { success: true, message: '', data: [{ typeName: 'Urun', columns: [] }] };
 
-  it('aynı oturumda tek istek atar', () => {
+  it('sends a single request per session', () => {
     service.getModels().subscribe();
     service.getModels().subscribe();
     httpMock.expectOne(url).flush(ok);
@@ -37,7 +37,7 @@ describe('PublishedModelService.getModels', () => {
     expect(typeName).toBe('Urun');
   });
 
-  it('geçersiz kılınınca yeniden ister ve olayı yayınlar', () => {
+  it('requests again when invalidated and publishes the event', () => {
     let invalidated = 0;
     service.modelsInvalidated$.subscribe(() => invalidated++);
 
@@ -50,7 +50,7 @@ describe('PublishedModelService.getModels', () => {
     expect(invalidated).toBe(1);
   });
 
-  it('başka kullanıcıyla girişte yeniden ister', () => {
+  it('requests again on login as another user', () => {
     service.getModels().subscribe();
     httpMock.expectOne(url).flush(ok);
 
@@ -59,7 +59,7 @@ describe('PublishedModelService.getModels', () => {
     httpMock.expectOne(url).flush(ok);
   });
 
-  it('başarısız yanıt önbellekte kalmaz', () => {
+  it('a failed response is not kept in the cache', () => {
     service.getModels().subscribe();
     httpMock.expectOne(url).flush({ success: false, message: 'Assembly yüklenmedi', data: [] });
 

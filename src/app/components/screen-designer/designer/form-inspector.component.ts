@@ -19,14 +19,14 @@ type Target =
   | { kind: 'tab'; tab: FormTab; index: number; count: number };
 
 /**
- * Ekran tasarımcısının sağ paneli — seçili öğenin, bölümün ya da sekmenin özellikleri.
+ * Right panel of the screen designer — properties of the selected item, section or tab.
  *
- * Yalnız SUNUMU değiştirir (genişlik, satır başı, gösterim biçimi, başlıklar). Alanın etiketi,
- * zorunluluğu ve kuralları şemanındır; burada salt-okunur gösterilir ve şema ekranına
- * bağlantı verilir — tasarımcıda ikinci bir kural kaynağı olsaydı istemci ile sunucu ayrışırdı.
+ * Changes only the PRESENTATION (width, row break, display type, headings). The field's label,
+ * required flag and rules belong to the schema; they are shown read-only here with a link to the
+ * schema screen — a second rule source in the designer would make client and server diverge.
  *
- * Metin girdilerinin değişiklikleri `inspector:{alan}:{kimlik}` sebebiyle gönderilir: aynı
- * alana yazılan harfler tek geri al adımında birleşir.
+ * Changes from text inputs are sent with the reason `inspector:{field}:{id}`: letters typed into
+ * the same field merge into a single undo step.
  */
 @Component({
     selector: 'app-form-inspector',
@@ -79,13 +79,13 @@ export class FormInspectorComponent {
     return this.mustStay().has(name);
   }
 
-  /** Bu kolonda seçilebilecek gösterim biçimi (yalnız metin ve enum'da var). */
+  /** Display type selectable for this column (only text and enum have one). */
   widgetChoice(name: string): 'string' | 'enum' | null {
     const type = this.column(name)?.dataType;
     return type === 'string' || type === 'enum' ? type : null;
   }
 
-  // ─── Komutlar ──────────────────────────────────────────────────────────────
+  // ─── Commands ──────────────────────────────────────────────────────────────
 
   private apply(reason: string, command: (doc: FormLayout) => FormLayout): void {
     this.store().dispatch(reason, command);

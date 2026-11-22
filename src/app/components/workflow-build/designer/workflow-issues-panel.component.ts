@@ -4,11 +4,11 @@ import { IssueRow, countIssues } from './workflow-issues';
 import { IconComponent } from '../../shared/icon/icon.component';
 
 /**
- * Akışın doğrulama sorunları — tasarım ekranının altında, her sekmede görünür.
+ * Validation issues of the flow — below the design screen, visible on every tab.
  *
- * Sorunlar kaydı engellemez (taslak eksikleriyle kaydedilir); hatalar yayını
- * engeller, uyarılar yalnız dikkat çeker. Satıra tıklamak ilgili adımı seçer
- * (tetik sorunu tetikleyici sekmesini açar).
+ * Issues do not block saving (a draft is saved with its gaps); errors block
+ * publishing, warnings only draw attention. Clicking a row selects the related step
+ * (a trigger issue opens the trigger tab).
  */
 @Component({
     selector: 'app-workflow-issues-panel',
@@ -19,9 +19,9 @@ import { IconComponent } from '../../shared/icon/icon.component';
 })
 export class WorkflowIssuesPanelComponent {
   readonly rows = input<IssueRow[]>([]);
-  /** Sunucu doğrulaması sürüyor. */
+  /** Server validation is in progress. */
   readonly validating = input(false);
-  /** Liste açık mı — başlıktaki sorun düğmesi de açar. */
+  /** Is the list open — the issues button in the header opens it too. */
   readonly expanded = model(true);
 
   readonly pick = output<IssueRow>();

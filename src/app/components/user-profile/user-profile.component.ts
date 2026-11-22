@@ -11,7 +11,7 @@ import { markDirty } from '../../utils/change-detection';
 import { userInitials } from '../../utils/user-initials';
 import { IconComponent } from '../shared/icon/icon.component';
 
-/** Şifre tekrar eşleşme validasyonu */
+/** Password confirmation match validation */
 function passwordsMatch(control: AbstractControl) {
   const group = control as import('@angular/forms').FormGroup;
   const pw  = group.get('newPassword')?.value;
@@ -27,7 +27,7 @@ function passwordsMatch(control: AbstractControl) {
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserProfileComponent implements OnInit {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   @ViewChild('photoInput') photoInputRef!: ElementRef<HTMLInputElement>;
@@ -38,16 +38,16 @@ export class UserProfileComponent implements OnInit {
   private readonly platformId    = inject(PLATFORM_ID);
   private readonly languageService = inject(LanguageService);
 
-  /* ── Profil verisi ── */
+  /* ── Profile data ── */
   profile        = signal<UserProfile | null>(null);
   loading        = signal(true);
   loadError      = signal('');
 
-  /* ── Fotoğraf ── */
-  photoPreview   = signal<string | null>(null);   // önizleme URL'si
+  /* ── Photo ── */
+  photoPreview   = signal<string | null>(null);   // preview URL
   photoUploading = signal(false);
 
-  /* ── Bilgiler formu ── */
+  /* ── Details form ── */
   infoSaving     = signal(false);
   infoForm = this.fb.group({
     firstName: ['', [Validators.required, Validators.maxLength(100)]],
@@ -57,7 +57,7 @@ export class UserProfileComponent implements OnInit {
     birthDay:  ['']
   });
 
-  /* ── Şifre formu ── */
+  /* ── Password form ── */
   pwSaving       = signal(false);
   pwSuccess      = signal(false);
   pwForm = this.fb.group({
@@ -66,7 +66,7 @@ export class UserProfileComponent implements OnInit {
     confirmPassword:  ['', Validators.required]
   }, { validators: passwordsMatch });
 
-  /* ── Getter kısa yollar ── */
+  /* ── Getter shortcuts ── */
   get fi() { return this.infoForm.controls; }
   get fp() { return this.pwForm.controls; }
 
@@ -75,7 +75,7 @@ export class UserProfileComponent implements OnInit {
     this.loadProfile();
   }
 
-  /* ──────────────── Profil yükleme ──────────────── */
+  /* ──────────────── Profile loading ──────────────── */
 
   loadProfile(): void {
     this.loading.set(true);
@@ -100,7 +100,7 @@ export class UserProfileComponent implements OnInit {
   }
 
   private patchInfoForm(p: UserProfile): void {
-    // BirthDay ISO string → date input değeri (YYYY-MM-DD)
+    // BirthDay ISO string → date input value (YYYY-MM-DD)
     const bd = p.birthDay ? p.birthDay.substring(0, 10) : '';
     this.infoForm.patchValue({
       firstName: p.firstName,
@@ -111,7 +111,7 @@ export class UserProfileComponent implements OnInit {
     });
   }
 
-  /* ──────────────── Fotoğraf ──────────────── */
+  /* ──────────────── Photo ──────────────── */
 
   triggerPhotoInput(): void {
     this.photoInputRef?.nativeElement.click();
@@ -122,12 +122,12 @@ export class UserProfileComponent implements OnInit {
     const file  = input.files?.[0];
     if (!file) return;
 
-    // Anlık önizleme
+    // Instant preview
     const reader = new FileReader();
     reader.onload = e => this.photoPreview.set(e.target?.result as string);
     reader.readAsDataURL(file);
 
-    // Yükle
+    // Upload
     this.photoUploading.set(true);
     this.profileSvc.uploadPhoto(file).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
@@ -141,7 +141,7 @@ export class UserProfileComponent implements OnInit {
           this.notif.success(this.languageService.t('profile.photoUpdated'));
         } else {
           this.notif.warn(res.message || this.languageService.t('profile.photoUploadFailed'));
-          // Önizlemeyi geri al
+          // Revert the preview
           const p = this.profile();
           this.photoPreview.set(this.resolvePhotoUrl(p?.photoUrl ?? null));
         }
@@ -179,7 +179,7 @@ export class UserProfileComponent implements OnInit {
     });
   }
 
-  /* ──────────────── Bilgiler formu ──────────────── */
+  /* ──────────────── Details form ──────────────── */
 
   saveInfo(): void {
     if (this.infoForm.invalid || this.infoSaving()) return;
@@ -197,7 +197,7 @@ export class UserProfileComponent implements OnInit {
       next: res => {
         this.infoSaving.set(false);
         if (res.success) {
-          // Profil verisini güncelle
+          // Update the profile data
           const p = this.profile();
           if (p) {
             this.applyProfile({
@@ -221,7 +221,7 @@ export class UserProfileComponent implements OnInit {
     });
   }
 
-  /* ──────────────── Şifre formu ──────────────── */
+  /* ──────────────── Password form ──────────────── */
 
   changePassword(): void {
     if (this.pwForm.invalid || this.pwSaving()) return;
@@ -251,31 +251,31 @@ export class UserProfileComponent implements OnInit {
     });
   }
 
-  /* ──────────────── Yardımcı ──────────────── */
+  /* ──────────────── Helpers ──────────────── */
 
-  /** Göreli PhotoUrl'yi tam URL'ye çevirir. */
+  /** Converts a relative PhotoUrl to a full URL. */
   resolvePhotoUrl(url: string | null | undefined): string | null {
     if (!url) return null;
     if (url.startsWith('http')) return url;
     return `${environment.apiBaseUrl}${url}`;
   }
 
-  /** Profildeki ad ve soyadın baş harfleri (topbar ile aynı kural) */
+  /** Initials of the first and last name in the profile (same rule as the topbar) */
   get initials(): string {
     const p = this.profile();
     return p ? userInitials(p.firstName, p.lastName, p.email) : '?';
   }
 
   /**
-   * Kaydedilen değişikliği hem bu ekrana hem paylaşılan profile yazar —
-   * topbar avatarı (fotoğraf / baş harfler / ad) sayfa yenilenmeden güncellenir.
+   * Writes the saved change both to this screen and to the shared profile —
+   * the topbar avatar (photo / initials / name) updates without a page reload.
    */
   private applyProfile(p: UserProfile): void {
     this.profile.set(p);
     this.profileSvc.setCurrent(p);
   }
 
-  /** Tarih string'ini okunabilir biçime çevirir */
+  /** Converts a date string to a readable format */
   formatDate(iso: string | null | undefined): string {
     if (!iso) return '—';
     try {

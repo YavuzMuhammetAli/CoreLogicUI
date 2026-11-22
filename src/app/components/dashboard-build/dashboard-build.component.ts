@@ -14,7 +14,7 @@ import { ModelLabelPipe } from '../../pipes/model-label.pipe';
 import { markDirty } from '../../utils/change-detection';
 import { IconComponent } from '../shared/icon/icon.component';
 
-/** Canvas üzerinde düzenlenen widget — kaydedilirken `reportName` ayıklanır (DashboardWidget'ta yok). */
+/** Widget edited on the canvas — `reportName` is stripped on save (not in DashboardWidget). */
 interface EditableWidget extends DashboardWidget {
   reportName: string;
 }
@@ -22,13 +22,13 @@ interface EditableWidget extends DashboardWidget {
 const GRID_COLS = 12;
 const DEFAULT_W = 6;
 const DEFAULT_H = 4;
-/** Bir `h` biriminin piksel karşılığı (gap dahil) — sürükle/yeniden-boyutlandır hesaplarında kullanılır. */
+/** Pixel size of one `h` unit (gap included) — used in drag/resize calculations. */
 const ROW_PITCH_PX = 56;
 
 /**
- * Dashboard tasarımcısı: ad ver, mevcut raporlardan widget ekle, 12 kolonluk canvas'ta
- * sürükle-bırak ile konumlandır/yeniden boyutlandır, widget başına grafik tipini seç.
- * Sürükleme harici bir kütüphane kullanmaz — native Pointer Events ile uygulanır.
+ * Dashboard designer: name it, add widgets from existing reports, position/resize them
+ * with drag-and-drop on a 12-column canvas, pick a chart type per widget.
+ * Dragging uses no external library — implemented with native Pointer Events.
  */
 @Component({
     selector: 'app-dashboard-build',
@@ -38,7 +38,7 @@ const ROW_PITCH_PX = 56;
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardBuildComponent implements OnInit {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly platformId = inject(PLATFORM_ID);
@@ -58,9 +58,9 @@ export class DashboardBuildComponent implements OnInit {
   readonly widgets = signal<EditableWidget[]>([]);
 
   /**
-   * Telefondaki görünüm sırası (önce satır, sonra sütun) — dashboard ekranı dar ekranda
-   * widget'ları bu sırayla alt alta dizer. Dar ekranda sürükle-bırak tuvali yerine bu
-   * liste gösterilir; yerleşim geniş ekranda düzenlenir.
+   * Display order on phones (row first, then column) — the dashboard screen stacks widgets
+   * in this order on narrow screens. On narrow screens this list is shown instead of the
+   * drag-and-drop canvas; the layout is edited on a wide screen.
    */
   readonly widgetsInOrder = computed(() =>
     [...this.widgets()].sort((a, b) => a.y - b.y || a.x - b.x));
@@ -139,7 +139,7 @@ export class DashboardBuildComponent implements OnInit {
     );
   }
 
-  // ── Sürükle (taşı) ───────────────────────────────────────────────────────
+  // ── Drag (move) ──────────────────────────────────────────────────────────
 
   onDragStart(ev: PointerEvent, widget: EditableWidget): void {
     if (!isPlatformBrowser(this.platformId) || !this.canvasRef) return;
@@ -176,7 +176,7 @@ export class DashboardBuildComponent implements OnInit {
     document.removeEventListener('pointerup', this.onDragEnd);
   };
 
-  // ── Yeniden boyutlandır ──────────────────────────────────────────────────
+  // ── Resize ───────────────────────────────────────────────────────────────
 
   onResizeStart(ev: PointerEvent, widget: EditableWidget): void {
     if (!isPlatformBrowser(this.platformId) || !this.canvasRef) return;
@@ -214,7 +214,7 @@ export class DashboardBuildComponent implements OnInit {
     document.removeEventListener('pointerup', this.onResizeEnd);
   };
 
-  // ── Kaydet ───────────────────────────────────────────────────────────────
+  // ── Save ─────────────────────────────────────────────────────────────────
 
   onSubmit(): void {
     this.submitError = null;
@@ -235,7 +235,7 @@ export class DashboardBuildComponent implements OnInit {
     this.dashboardService.define({
       name: this.form.value.name,
       widgets,
-      // Backend yalnızca admin için bu bayrağı uygular; normal kullanıcıdan gelse de sessizce yok sayılır.
+      // The backend applies this flag only for admins; if it comes from a regular user it is silently ignored.
       showInNav: this.permissionService.isAdmin() ? this.form.value.showInNav : false
     }).pipe(markDirty(this.cdr)).subscribe({
       next: res => {

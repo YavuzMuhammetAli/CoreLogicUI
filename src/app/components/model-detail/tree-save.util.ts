@@ -2,36 +2,36 @@ import { TreeSaveResult } from '../../services/published-model.service';
 import { StagedNode, flattenNodes } from './staged-tree.util';
 
 /**
- * "Kaydet" akışındaki tek bir sunucu adımı.
+ * A single server step in the "Kaydet" (Save) flow.
  *
- * Bir kaydetme iki farklı istek türünden oluşabilir: yeni satırların TEK
- * transaction'da yazıldığı `addTree` ve kaydedilmiş ama değiştirilmiş her satır
- * için ayrı bir `update`. İkisi `forkJoin` ile birlikte yürütülür, sonuçlar bu
- * ortak biçimde toplanır.
+ * A save may consist of two different request kinds: `addTree`, where new rows are
+ * written in a SINGLE transaction, and a separate `update` for every saved but modified
+ * row. Both run together via `forkJoin` and their results are collected in this
+ * common shape.
  */
 export interface TreeStep {
   kind: 'tree' | 'update';
   ok: boolean;
   message: string;
-  /** `kind: 'tree'` için sunucunun ID/hata sözlüğü. */
+  /** The server's ID/error dictionary for `kind: 'tree'`. */
   data?: TreeSaveResult;
-  /** `kind: 'update'` için hedef düğüm. */
+  /** Target node for `kind: 'update'`. */
   node?: StagedNode;
 }
 
-/** Kaydetme turunun ağaç dışı (update) adımlarından çıkan özet. */
+/** Summary of the non-tree (update) steps of a save round. */
 export interface UpdateOutcome {
-  /** Kullanıcıya gösterilecek "tip: mesaj" satırları. */
+  /** "type: message" lines to show to the user. */
   errors: string[];
 }
 
 /**
- * Sunucu yanıtındaki gerçek ID'leri ve satır bazlı hataları ağaca yazar.
- * Eşleme istemcinin geçici `localId`'si (clientId) üzerinden yapılır.
+ * Writes the real IDs and row-level errors from the server response into the tree.
+ * Mapping is done via the client's temporary `localId` (clientId).
  *
- * Düğümleri YERİNDE değiştirir (savedId/error) ve kullanıcıya gösterilecek
- * hata satırlarını döner. Ayrı bir fonksiyon olması, id/hata eşlemesinin
- * HTTP kurulumundan bağımsız test edilebilmesini sağlar.
+ * Mutates the nodes IN PLACE (savedId/error) and returns the error lines to show
+ * to the user. Being a separate function lets the id/error mapping be tested
+ * independently of the HTTP setup.
  */
 export function applyTreeResult(rootNode: StagedNode, data: TreeSaveResult): string[] {
   const errors: string[] = [];
@@ -58,9 +58,9 @@ export function applyTreeResult(rootNode: StagedNode, data: TreeSaveResult): str
 }
 
 /**
- * `update` adımlarının sonuçlarını düğümlere yazar ve hata özetini döner.
- * Başarılı adımda düğümün `dirty` bayrağı düşer — aksi halde kullanıcı hiç
- * değişiklik yapmadan tekrar kaydettiğinde aynı istek yeniden gönderilirdi.
+ * Writes the results of the `update` steps to the nodes and returns the error summary.
+ * On a successful step the node's `dirty` flag is cleared — otherwise saving again
+ * without any change would resend the same request.
  */
 export function applyUpdateResults(steps: TreeStep[]): UpdateOutcome {
   const errors: string[] = [];

@@ -35,7 +35,7 @@
     } @else {
       <form class="panel-body step-dialog-body" [formGroup]="form" (ngSubmit)="save()">
 
-        <!-- ── Genel ───────────────────────────────────────────────────────── -->
+        <!-- ── General ───────────────────────────────────────────────────────── -->
         <section class="step-section">
           <span class="eyebrow">{{ 'workflow.build.sectionGeneral' | t }}</span>
           <div class="dialog-grid">
@@ -118,7 +118,7 @@
           </div>
         </section>
 
-        <!-- ── Geçişler ────────────────────────────────────────────────────── -->
+        <!-- ── Transitions ────────────────────────────────────────────────────── -->
         <section class="step-section">
           <span class="eyebrow">{{ 'workflow.build.sectionTransitions' | t }}</span>
           <div class="dialog-grid dialog-grid--2">
@@ -143,7 +143,7 @@
           </div>
         </section>
 
-        <!-- ── Süre (SLA) — paralelde dal başına girilir ───────────────────── -->
+        <!-- ── Duration (SLA) — entered per branch in a parallel step ───────────────────── -->
         @if (!isParallel) {
           <section class="step-section">
             <span class="eyebrow">{{ 'workflow.build.sectionSla' | t }}</span>
@@ -168,7 +168,7 @@
           </section>
         }
 
-        <!-- ── Paralel dallar ──────────────────────────────────────────────── -->
+        <!-- ── Parallel branches ──────────────────────────────────────────────── -->
         @if (isParallel) {
           <section class="step-section">
             <div class="section-head">
@@ -235,8 +235,8 @@
                       <label [for]="'wf-br-due-' + b">{{ 'workflow.build.dueHours' | t }}</label>
                       <input [id]="'wf-br-due-' + b" class="input" type="number" min="1" formControlName="dueHours" />
                     </div>
-                    <!-- Dalın yükseltme süresi ve zaman aşımı davranışı. Önceden girdisi
-                         yoktu; API/AI ile tanımlananlar kayıtta korunuyor ama değiştirilemiyordu. -->
+                    <!-- The branch's escalation duration and timeout behaviour. Previously there was no
+                         input; values defined via API/AI were kept on save but could not be changed. -->
                     <div class="field">
                       <label [for]="'wf-br-esc-' + b">{{ 'workflow.build.escalateHours' | t }}</label>
                       <input [id]="'wf-br-esc-' + b" class="input" type="number" min="1" formControlName="escalateAfterHours" />
@@ -256,7 +256,7 @@
           </section>
         }
 
-        <!-- ── Kayıt alanları: görevlinin bu adımda dolduracağı model kolonları ── -->
+        <!-- ── Record fields: model columns the assignee fills in at this step ── -->
         @if (!isParallel) {
           <section class="step-section">
             <div class="section-head">
@@ -302,7 +302,7 @@
             }
           </section>
 
-          <!-- ── Kayıt ekranındaki butonlar ────────────────────────────────── -->
+          <!-- ── Buttons on the record screen ────────────────────────────────── -->
           <section class="step-section">
             <span class="eyebrow">{{ 'workflow.build.sectionButtons' | t }}</span>
             <p class="field-help">{{ 'workflow.build.buttonsHelp' | t }}</p>
@@ -329,7 +329,7 @@
           </section>
         }
 
-        <!-- ── Görev formu alanları (paralel adımın kendi formu yok) ───────── -->
+        <!-- ── Task form fields (a parallel step has no form of its own) ───────── -->
         @if (!isParallel) {
           <section class="step-section">
             <div class="section-head">

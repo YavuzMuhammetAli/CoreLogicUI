@@ -1,17 +1,17 @@
 /**
- * Canvas kamerası — SAF fonksiyonlar, Angular ve DOM import'u YOK.
+ * Canvas camera — PURE functions, NO Angular or DOM imports.
  *
- * Kamera, dünya koordinatını ekrana yansıtan TEK afin dönüşümdür:
+ * The camera is the SINGLE affine transform projecting world coordinates onto the screen:
  *
- *     ekran = dünya × zoom + pan + viewport.sol
+ *     screen = world × zoom + pan + viewport.left
  *
- * Dünya koordinatı hiç değişmez: `layoutWorkflow()`, `step.x/y` ve düğümlerin
- * `left/top` değerleri bugünkü anlamını korur. Tasarımcı yalnızca bu dönüşümü
- * değiştirerek yakınlaşır/kaydırır.
+ * World coordinates never change: `layoutWorkflow()`, `step.x/y` and the nodes'
+ * `left/top` values keep their current meaning. The designer zooms/pans only by
+ * changing this transform.
  *
- * Kaydırma `overflow: auto` ile YAPILMAZ. `scrollLeft/scrollTop` ile `transform`
- * aynı anda haritalamaya karışır ve kaydırılabilir alan `scale` ile birlikte
- * büyümez; iki doğruluk kaynağı sürekli bir hata kaynağı olurdu.
+ * Panning is NOT done with `overflow: auto`. `scrollLeft/scrollTop` and `transform`
+ * would both take part in the mapping, and the scrollable area doesn't grow along with
+ * `scale`; two sources of truth would be a constant source of bugs.
  */
 
 export interface Point {
@@ -25,7 +25,7 @@ export interface Camera {
   panY: number;
 }
 
-/** Viewport'un ekrandaki yeri ve ölçüsü — `getBoundingClientRect()` ile uyumlu. */
+/** On-screen position and size of the viewport — compatible with `getBoundingClientRect()`. */
 export interface ViewportRect {
   left: number;
   top: number;
@@ -47,14 +47,14 @@ export const ZOOM_STEP = 1.15;
 export const IDENTITY_CAMERA: Camera = { zoom: 1, panX: 0, panY: 0 };
 
 export function clampZoom(zoom: number): number {
-  // NaN savunması: sıfıra bölme sonucu kameraya sızarsa tüm şema kaybolurdu.
-  // Sonsuz değerler ayrı ele alınmaz, aşağıdaki kelepçe onları zaten sınıra çeker.
+  // NaN guard: if a division-by-zero result leaked into the camera, the whole diagram would vanish.
+  // Infinite values aren't handled separately; the clamp below pulls them to the limit anyway.
   if (Number.isNaN(zoom)) return 1;
 
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
 }
 
-/** Ekran (client) koordinatını dünya koordinatına çevirir. */
+/** Converts a screen (client) coordinate to a world coordinate. */
 export function screenToWorld(clientX: number, clientY: number, rect: ViewportRect, camera: Camera): Point {
   return {
     x: (clientX - rect.left - camera.panX) / camera.zoom,
@@ -62,7 +62,7 @@ export function screenToWorld(clientX: number, clientY: number, rect: ViewportRe
   };
 }
 
-/** Dünya koordinatını ekran (client) koordinatına çevirir. */
+/** Converts a world coordinate to a screen (client) coordinate. */
 export function worldToScreen(x: number, y: number, rect: ViewportRect, camera: Camera): Point {
   return {
     x: x * camera.zoom + camera.panX + rect.left,
@@ -71,17 +71,17 @@ export function worldToScreen(x: number, y: number, rect: ViewportRect, camera: 
 }
 
 /**
- * İmcin altındaki dünya noktasını SABİT TUTARAK yakınlaştırır.
+ * Zooms while KEEPING the world point under the cursor FIXED.
  *
- * Bu, wheel zoom'un "imce yapışkan" hissini veren tek formül:
- *     pan' = çapa − (çapa − pan) × (zoom' / zoom)
+ * This is the one formula that gives wheel zoom its "sticks to the cursor" feel:
+ *     pan' = anchor − (anchor − pan) × (zoom' / zoom)
  *
- * Çapasız (merkezden) zoom yapılsaydı kullanıcı her tekerlek hareketinde
- * baktığı yeri kaybederdi.
+ * With anchorless (centre) zoom the user would lose the spot they were looking at
+ * on every wheel movement.
  */
 export function zoomAt(camera: Camera, factor: number, anchorClientX: number, anchorClientY: number, rect: ViewportRect): Camera {
   const zoom = clampZoom(camera.zoom * factor);
-  // Kelepçeye çarptıysak oran 1 olur ve pan hiç oynamaz.
+  // If we hit the clamp the ratio is 1 and pan doesn't move at all.
   const ratio = zoom / camera.zoom;
 
   const anchorX = anchorClientX - rect.left;
@@ -94,25 +94,25 @@ export function zoomAt(camera: Camera, factor: number, anchorClientX: number, an
   };
 }
 
-/** Viewport merkezinden yakınlaştırır — araç çubuğu düğmeleri için. */
+/** Zooms from the viewport centre — for the toolbar buttons. */
 export function zoomAtCenter(camera: Camera, factor: number, rect: ViewportRect): Camera {
   return zoomAt(camera, factor, rect.left + rect.width / 2, rect.top + rect.height / 2, rect);
 }
 
-/** Kamerayı ekran pikseli kadar kaydırır. */
+/** Pans the camera by screen pixels. */
 export function panBy(camera: Camera, deltaX: number, deltaY: number): Camera {
   return { zoom: camera.zoom, panX: camera.panX + deltaX, panY: camera.panY + deltaY };
 }
 
 /**
- * Verilen dünya sınırlarını viewport'a sığdırır.
+ * Fits the given world bounds into the viewport.
  *
- * `maxZoom` varsayılanı 1: tek düğümlü bir şemayı ekranı dolduracak kadar
- * büyütmek istemiyoruz, sığdırmak "her şeyi gör" demek, "yakınlaş" demek değil.
+ * `maxZoom` defaults to 1: we don't want to enlarge a single-node diagram to fill the
+ * screen; fitting means "see everything", not "zoom in".
  *
- * `align`: `center` sınırı ortalar; `start` sol-üst köşeye (padding kadar
- * içeriden) yaslar. Tasarımcı `start` kullanır — zoom 1'de kalan küçük bir
- * şemanın ortada, her yanında boşlukla durması "sığdırılmamış" gibi görünüyordu.
+ * `align`: `center` centres the bounds; `start` aligns them to the top-left corner (inset by the
+ * padding). The designer uses `start` — a small diagram left at zoom 1 sitting in the middle with
+ * space all around looked "not fitted".
  */
 export function fitToView(
   bounds: Bounds,
@@ -124,7 +124,7 @@ export function fitToView(
   const width = bounds.maxX - bounds.minX;
   const height = bounds.maxY - bounds.minY;
 
-  // Ölçüsüz sınır ya da henüz yerleşmemiş viewport: kamerayı oynatma.
+  // Zero-size bounds or a viewport not yet laid out: don't move the camera.
   if (width <= 0 || height <= 0 || viewport.width <= 0 || viewport.height <= 0) {
     return IDENTITY_CAMERA;
   }
@@ -155,9 +155,9 @@ export function fitToView(
 }
 
 /**
- * Kutuyu (dünya koordinatı) görünür alana getiren EN KÜÇÜK kaydırma; zaten
- * görünürse aynı kamera nesnesi döner. Zoom değişmez. Kutu görünür alandan
- * büyükse sol/üst kenarı hizalanır (başlık ve ad görünsün).
+ * The SMALLEST pan that brings the box (world coordinates) into view; if it's already
+ * visible the same camera object is returned. Zoom doesn't change. If the box is larger than
+ * the visible area its left/top edge is aligned (so the title and name are visible).
  */
 export function revealBox(
   camera: Camera,
@@ -180,35 +180,35 @@ export function revealBox(
   return dx === 0 && dy === 0 ? camera : panBy(camera, dx, dy);
 }
 
-/** Izgaranın dünya birimindeki temel aralığı (zoom 1'de noktalar arası px). */
+/** Base grid spacing in world units (px between dots at zoom 1). */
 export const GRID_STEP = 20;
-/** Bundan sık ızgara gürültüye döner; aralık ikiye katlanır. */
+/** A grid denser than this turns into noise; the spacing is doubled. */
 export const GRID_MIN_SCREEN_STEP = 10;
 
 /**
- * Viewport arka planındaki noktalı ızgaranın ekran uzayındaki ölçüsü ve kayması.
+ * Screen-space size and offset of the dotted grid in the viewport background.
  *
- * Izgara `.canvas-world`'de değil viewport'ta çiziliyor: dünya elemanı yalnızca
- * içerik kadar büyük, uzaklaşınca/kaydırınca pencerenin kalanı ızgarasız kalıyordu.
- * Kamerayla senkron olsun diye aralık zoom ile ölçeklenir ve pan kadar kayar —
- * noktalar dünya koordinatına bağlı kalır, düğümlerle birlikte hareket eder.
+ * The grid is drawn on the viewport, not on `.canvas-world`: the world element is only as large
+ * as its content, so when zooming out/panning the rest of the window was left without a grid.
+ * To stay in sync with the camera the spacing scales with zoom and shifts by pan —
+ * the dots stay tied to world coordinates and move with the nodes.
  */
 export function gridStyle(camera: Camera): { step: number; offsetX: number; offsetY: number } {
   let step = GRID_STEP * camera.zoom;
-  // Uzaklaştıkça aralık ikiye katlanır (tasarım araçlarındaki gibi). zoom ≤ 0
-  // savunması: sonsuz döngüye girilmesin.
+  // As you zoom out the spacing doubles (like in design tools). zoom ≤ 0
+  // guard: avoid an infinite loop.
   while (step > 0 && step < GRID_MIN_SCREEN_STEP) step *= 2;
   if (step <= 0) step = GRID_STEP;
 
   return { step, offsetX: positiveMod(camera.panX, step), offsetY: positiveMod(camera.panY, step) };
 }
 
-/** JS `%` negatif sonuç verebilir; background-position için [0, m) aralığı gerekir. */
+/** JS `%` can return a negative result; background-position needs the range [0, m). */
 function positiveMod(value: number, m: number): number {
   return ((value % m) + m) % m;
 }
 
-/** Düğüm kutularından kapsayan sınır. Liste boşsa null. */
+/** Enclosing bounds of the node boxes. Null if the list is empty. */
 export function boundsOf(boxes: ReadonlyArray<{ x: number; y: number; width: number; height: number }>): Bounds | null {
   if (boxes.length === 0) return null;
 

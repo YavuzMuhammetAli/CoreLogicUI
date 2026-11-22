@@ -2,21 +2,21 @@
   display: block;
   padding: var(--space-6);
 
-  /* Dar ekranda boşluğu .page-content zaten veriyor — çift boşluk içeriği daraltıyordu */
+  /* On narrow screens .page-content already provides the spacing — double spacing was squeezing the content */
   @media (max-width: 768px) {
     padding: 0;
   }
 }
 
-/* Sekme çubuğu panelin üst kenarına oturur; taşan köşeler kırpılır. */
+/* The tab bar sits on the panel's top edge; overflowing corners are clipped. */
 .tabs-panel {
   overflow: hidden;
 }
 
 /*
- * `.tab-*` sınıfları styles.scss'te GLOBAL DEĞİL — projede her sekmeli ekran
- * kendi kopyasını taşıyor (table-detail, role-detail, model-detail,
- * record-form-dialog). Bu blok table-detail.component.scss'ten alındı.
+ * `.tab-*` classes are NOT GLOBAL in styles.scss — every tabbed screen in the project
+ * carries its own copy (table-detail, role-detail, model-detail,
+ * record-form-dialog). This block was taken from table-detail.component.scss.
  */
 
 .tab-bar {

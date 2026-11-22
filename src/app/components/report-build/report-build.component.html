@@ -18,7 +18,7 @@
 @if (!loadingModels && !loadingExisting && !loadError) {
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flow">
 
-    <!-- Temel bilgiler -->
+    <!-- Basic details -->
     <div class="panel">
       <div class="panel-head"><h3>{{ 'report.build.basicInfo' | t }}</h3></div>
       <div class="panel-body">
@@ -77,7 +77,7 @@
       </div>
     </div>
 
-    <!-- Canlı Önizleme -->
+    <!-- Live preview -->
     <div class="panel">
       <div class="panel-head"><h3>{{ 'report.build.livePreview' | t }}</h3></div>
       <div class="panel-body">
@@ -127,7 +127,7 @@
       </div>
     </div>
 
-    <!-- SQL Önizleme -->
+    <!-- SQL preview -->
     <div class="panel">
       <div class="panel-head">
         <h3>{{ 'report.build.sqlPreview' | t }}</h3>
@@ -160,7 +160,7 @@
     </div>
 
     @if (availableColumns.length > 0) {
-      <!-- Kolonlar -->
+      <!-- Columns -->
       <div class="panel">
         <div class="panel-head"><h3>{{ 'report.build.columns' | t }}</h3></div>
         <div class="panel-body">
@@ -176,7 +176,7 @@
         </div>
       </div>
 
-      <!-- Filtreler -->
+      <!-- Filters -->
       <div class="panel">
         <div class="panel-head">
           <h3>{{ 'report.build.filters' | t }}</h3>
@@ -210,7 +210,7 @@
         </div>
       </div>
 
-      <!-- Gruplama -->
+      <!-- Grouping -->
       <div class="panel">
         <div class="panel-head"><h3>{{ 'report.build.groupBy' | t }}</h3></div>
         <div class="panel-body">
@@ -240,8 +240,8 @@
           <div formArrayName="aggregates" class="stack">
             @for (group of aggregatesArray.controls; track $index; let i = $index) {
               <div [formGroupName]="i" class="row-fields">
-                <!-- Yalnız sayısal kolonlar: SUM/AVG backend'de sayısal olmayan alanı
-                     reddediyor; liste filtrelenmezse hata ancak Kaydet'te görülüyordu. -->
+                <!-- Numeric columns only: the backend rejects SUM/AVG on non-numeric fields;
+                     without filtering the list, the error only showed up on Save. -->
                 <select formControlName="field">
                   <option value="">{{ 'report.build.countNoFieldNeeded' | t }}</option>
                   @for (col of availableColumns; track col.columnName) {
@@ -263,7 +263,7 @@
         </div>
       </div>
 
-      <!-- Sıralama -->
+      <!-- Sorting -->
       <div class="panel">
         <div class="panel-head">
           <h3>{{ 'report.build.sortBy' | t }}</h3>

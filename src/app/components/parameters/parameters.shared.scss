@@ -1,20 +1,20 @@
 /*
- * Üç sekme component'inin (yedekleme · e-posta · abonelik) paylaştığı stiller.
+ * Styles shared by the three tab components (backup · email · subscription).
  *
- * Sekme ÇUBUĞU burada değil parameters.component.scss'te: butonları kabuk
- * render ediyor. Burada yalnızca sekme GÖVDESİNİN ihtiyaç duyduğu sınıflar var,
- * böylece aynı CSS üç kez kopyalanmıyor.
+ * The tab BAR is not here but in parameters.component.scss: the shell renders
+ * the buttons. Only the classes the tab BODY needs are here,
+ * so the same CSS is not copied three times.
  */
 
 .tab-panel {
   padding: var(--space-4);
 }
 
-/* ── Form yerleşimi ──────────────────────────────────────────────────────── */
+/* ── Form layout ─────────────────────────────────────────────────────────── */
 
 /*
- * Zamanlama/SMTP alanları otomatik sığdırılır: sıklık değiştikçe görünen alan
- * sayısı değiştiği için sabit kolon sayısı boşluk bırakırdı.
+ * Schedule/SMTP fields are auto-fitted: since the number of visible fields changes
+ * with the frequency, a fixed column count would leave gaps.
  */
 .settings-grid {
   display: grid;
@@ -23,7 +23,7 @@
   align-items: start;
 }
 
-/* Aynı form içindeki ikinci bölüm başlığı (ör. e-posta sekmesinde "Bildirim e-postaları"). */
+/* Second section heading within the same form (e.g. "Bildirim e-postaları" (Notification emails) in the email tab). */
 .settings-subhead {
   margin: var(--space-6) 0 var(--space-1);
   padding-top: var(--space-5);
@@ -40,7 +40,7 @@
   margin-top: var(--space-5);
 }
 
-/* ── Durum / özet kutuları ───────────────────────────────────────────────── */
+/* ── Status / summary boxes ──────────────────────────────────────────────── */
 
 .status-grid {
   display: grid;
@@ -68,7 +68,7 @@
   color: var(--fg);
 }
 
-/* Cron özeti + sıradaki koşular — kullanıcı kaydetmeden ne olacağını görür. */
+/* Cron summary + upcoming runs — the user sees what will happen before saving. */
 .schedule-preview {
   padding: var(--space-4);
   background: var(--surface-warm);
@@ -102,11 +102,11 @@
   color: var(--fg-2);
 }
 
-/* ── Plan kartları ───────────────────────────────────────────────────────── */
+/* ── Plan cards ──────────────────────────────────────────────────────────── */
 
 .plan-grid {
   display: grid;
-  /* min(…, 100%): telefonda kart 260px'ten dar kabı taşırmasın */
+  /* min(…, 100%): on phones a 260px card must not overflow a narrower container */
   grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
   gap: var(--space-4);
 }
@@ -126,7 +126,7 @@
     box-shadow: var(--elev-raised);
   }
 
-  /* Mevcut plan vurgulanır ki kullanıcı nerede olduğunu kartlara bakar bakmaz görsün. */
+  /* The current plan is highlighted so the user sees where they are at a glance. */
   &.is-current {
     border-color: var(--accent);
     box-shadow: var(--elev-ring);
@@ -194,7 +194,7 @@
   }
 }
 
-/* Yedek geçmişi: başarısız yedeğin nedeni satırın altında, kesilmeden */
+/* Backup history: the failed backup's reason below the row, not truncated */
 .backup-error-row td {
   white-space: normal;
   max-width: none;

@@ -1,20 +1,20 @@
 /**
- * Regex kılavuzunda gösterilen hazır desen kütüphanesi ve sözdizimi tablosu.
+ * Ready-made pattern library and syntax table shown in the regex guide.
  *
- * Buradaki desenler kullanıcının "Kullan" butonuyla doğrudan sütunun `regex`
- * alanına yazılır; `messageKey` de boşsa `regexMessage` alanını doldurur.
- * Desenler backend'de C# `Regex` ile de çalışacak şekilde sade tutulmuştur —
- * lookbehind/named group gibi motor-özel özellikler kullanılmaz.
+ * These patterns are written straight into the column's `regex` field when the user presses
+ * "Kullan" (Use); `messageKey` also fills the `regexMessage` field if it is empty.
+ * The patterns are kept simple so they also work with C# `Regex` on the backend —
+ * engine-specific features like lookbehind/named groups aren't used.
  */
 
 export interface RegexPreset {
-  /** i18n anahtarı soneki: `help.regex.preset.<key>` ve `...<key>Message`. */
+  /** i18n key suffix: `help.regex.preset.<key>` and `...<key>Message`. */
   key: string;
-  /** Desenin kendisi — forma bu string yazılır. */
+  /** The pattern itself — this string is written to the form. */
   pattern: string;
-  /** Desene UYAN örnek değer (canlı teste otomatik yazılır). */
+  /** Sample value that MATCHES the pattern (written automatically into the live test). */
   sampleOk: string;
-  /** Desene UYMAYAN örnek değer. */
+  /** Sample value that does NOT match the pattern. */
   sampleFail: string;
 }
 
@@ -117,7 +117,7 @@ export const REGEX_PRESETS: RegexPreset[] = [
   }
 ];
 
-/** Sözdizimi tablosu satırı — `help.regex.syntax.<key>` anahtarıyla açıklanır. */
+/** Syntax table row — described by the `help.regex.syntax.<key>` key. */
 export interface RegexSyntaxRow {
   key: string;
   token: string;
@@ -147,11 +147,11 @@ export const REGEX_SYNTAX: RegexSyntaxRow[] = [
 ];
 
 /**
- * Canlı test kutusunun kabul ettiği en uzun desen/değer.
+ * Longest pattern/value accepted by the live test box.
  *
- * Kullanıcının yazdığı desen her tuş vuruşunda tarayıcıda çalıştığı için
- * katastrofik backtracking (ReDoS) sekmeyi kilitleyebilir. Tam izolasyon
- * Web Worker + timeout gerektirir; bu kılavuz için uzunluk sınırı yeterli
- * ve orantılı bir korumadır.
+ * Since the user's pattern runs in the browser on every keystroke,
+ * catastrophic backtracking (ReDoS) can freeze the tab. Full isolation would
+ * require a Web Worker + timeout; for this guide a length limit is a sufficient
+ * and proportionate guard.
  */
 export const REGEX_LAB_MAX_LENGTH = 200;

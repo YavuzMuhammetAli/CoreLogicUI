@@ -3,16 +3,16 @@ import { PublishedColumnSchema } from '../../services/published-table.service';
 import { Lang } from '../../services/language.service';
 import { formatFileSize } from '../file-size';
 
-/** Çeviri fonksiyonu — `LanguageService.t` ile aynı imza (spec'te sahtesi verilir). */
+/** Translation function — same signature as `LanguageService.t` (a fake is supplied in specs). */
 export type Translate = (key: string, params?: Record<string, string | number>) => string;
 
 /**
- * Bir kayıt alanının doğrulama hatasını okunur metne çevirir; hata yoksa null.
+ * Turns a record field's validation error into readable text; null if there is no error.
  *
- * Kayıt formu (model-detail) ve alt kayıt pop-up'ı bu metni eskiden ayrı ayrı, birebir
- * aynı kodla üretiyordu. Öncelik validator'ların bağlanma sırasıdır (bkz. `validatorsFor`):
- * zorunluluk → desen → uzunluk → aralık → dosya boyutu. `pattern` hatasında şema
- * builder'da yazılan "Regex Mesajı" tercih edilir — kullanıcıya en anlamlı açıklama odur.
+ * The record form (model-detail) and the sub-record pop-up used to produce this text separately, with
+ * identical code. Precedence follows the order validators are attached (see `validatorsFor`):
+ * required → pattern → length → range → file size. For a `pattern` error the "Regex Mesajı" (regex message)
+ * written in the schema builder is preferred — it is the most meaningful explanation for the user.
  */
 export function fieldErrorText(
   errors: ValidationErrors | null,

@@ -41,5 +41,5 @@ testem.log
 .DS_Store
 Thumbs.db
 
-# CodeGraph local index (yerel araç indeksi — commit edilmez)
+# CodeGraph local index (local tool index — not committed)
 .codegraph/

@@ -2,19 +2,19 @@ import { Signal, WritableSignal, computed, signal } from '@angular/core';
 import { DesignHistory, canRedo, canUndo, createHistory, record, redo, undo } from '../../../utils/design-history';
 
 /**
- * Ekran tasarımcısının belge deposu — bir görünüm (form ya da liste) için.
+ * Document store of the screen designer — for one view (form or list).
  *
- * İş akışı tasarımcısının deposuyla aynı ilke: belge DEĞİŞMEZ, tek değiştirme yolu
- * `dispatch(sebep, komut)`; geri al / yinele `utils/design-history` ile, aynı sebeple
- * 600 ms içinde gelen değişiklikler tek adımda birleşir (inceleyicide yazılan her harf ayrı
- * adım olmaz). "Kaydedilmemiş değişiklik" içerik karşılaştırmasıyla bulunur: geri alıp
- * kaydedilmiş hâle dönmek kirliliği siler.
+ * Same principle as the workflow designer's store: the document is IMMUTABLE, the only way to change it is
+ * `dispatch(reason, command)`; undo / redo via `utils/design-history`, changes with the same reason
+ * arriving within 600 ms merge into one step (each letter typed in the inspector does not become a separate
+ * step). "Unsaved changes" are detected by content comparison: undoing back to the
+ * saved state clears the dirty flag.
  *
- * Bileşene bağlı değil, düz bir sınıf: tasarımcı iki örnek tutar (form + liste), her biri
- * kendi kirliliği ve iyimser kilit damgasıyla.
+ * Not tied to a component, a plain class: the designer holds two instances (form + list), each
+ * with its own dirty flag and optimistic-lock stamp.
  */
 export class LayoutDesignerStore<T> {
-  // Başlatma yapıcıda: alan başlatıcıları parametre özelliklerinden önce çalışabilir.
+  // Initialised in the constructor: field initialisers may run before parameter properties.
   private readonly history: WritableSignal<DesignHistory<T>>;
   private readonly savedSnapshot: WritableSignal<string>;
 
@@ -23,10 +23,10 @@ export class LayoutDesignerStore<T> {
   readonly canRedo: Signal<boolean>;
   readonly dirty: Signal<boolean>;
 
-  /** Seçili öğe/bölüm/sekme kimliği (form) ya da kolon adı (liste). */
+  /** Selected item/section/tab id (form) or column name (list). */
   readonly selection = signal<string | null>(null);
 
-  /** Sunucudaki satırın iyimser kilit damgası; satır yoksa null. */
+  /** Optimistic-lock stamp of the server row; null if there is no row. */
   readonly lastModifiedOn = signal<string | null>(null);
 
   private readonly serialize: (doc: T) => string;
@@ -41,7 +41,7 @@ export class LayoutDesignerStore<T> {
     this.dirty = computed(() => this.serialize(this.doc()) !== this.savedSnapshot());
   }
 
-  /** Belgeyi yükler: geçmiş sıfırlanır, belge "kaydedilmiş" sayılır. */
+  /** Loads the document: history is reset, the document counts as "saved". */
   load(doc: T, lastModifiedOn: string | null): void {
     this.history.set(createHistory(doc));
     this.savedSnapshot.set(this.serialize(doc));
@@ -64,8 +64,8 @@ export class LayoutDesignerStore<T> {
   }
 
   /**
-   * Kayıt başarılı. İstek gönderilirken kullanılan belge verilir: istek sürerken yapılan
-   * düzenleme kaydedilmiş sayılmasın.
+   * Save succeeded. The document used when sending the request is passed in: edits made
+   * while the request was in flight must not count as saved.
    */
   markSaved(sent: T, lastModifiedOn: string | null): void {
     this.savedSnapshot.set(this.serialize(sent));
@@ -73,8 +73,8 @@ export class LayoutDesignerStore<T> {
   }
 
   /**
-   * Belgeye dokunmayan bir yazım (ad/rol/öncelik) satırın damgasını yeniledi — kirlilik
-   * korunur, sonraki kayıt yeni damgayla gider (yoksa kendi değişikliğimiz çakışma sayılırdı).
+   * A write that does not touch the document (name/roles/priority) refreshed the row's stamp — the dirty flag
+   * is kept, the next save goes with the new stamp (otherwise our own change would count as a conflict).
    */
   restamp(lastModifiedOn: string | null): void {
     this.lastModifiedOn.set(lastModifiedOn);

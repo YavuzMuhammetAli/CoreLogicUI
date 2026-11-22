@@ -4,10 +4,10 @@ import { ChartTokenColors, buildSeriesPalette } from './chart-colors';
 import { Lang } from '../../services/language.service';
 import { formatNumber, formatDate } from '../../utils/locale-format';
 
-/** ApexCharts'ın gerçekten çizdiği tip — `table` çizilmez, `kpi` yalnız küçük eğri çizer. */
+/** The type ApexCharts actually draws — `table` is not drawn, `kpi` draws only a small sparkline. */
 export type ApexRenderType = 'bar' | 'line' | 'area' | 'pie' | 'donut' | 'radialBar';
 
-/** Seçeneklerin çizime giden kısmı. Tipler apexcharts'ın genel bildirimlerinden gelir. */
+/** The part of the options that goes to drawing. Types come from apexcharts' public declarations. */
 export function toApexOptions(build: ChartBuildOutput): ApexCharts.ApexOptions {
   const {
     chart, series, labels, xaxis, yaxis, legend, colors, dataLabels, tooltip,
@@ -19,7 +19,7 @@ export function toApexOptions(build: ChartBuildOutput): ApexCharts.ApexOptions {
   };
 }
 
-/** KPI kartındaki küçük eğri: eksen ve ipucu yok. */
+/** Small sparkline in the KPI card: no axes and no tooltip. */
 export function toSparklineOptions(build: ChartBuildOutput): ApexCharts.ApexOptions {
   const { chart, series, colors, stroke, legend, dataLabels } = build;
   return { chart, series, colors, stroke, legend, dataLabels };
@@ -31,9 +31,9 @@ export interface KpiResult {
 }
 
 /**
- * `buildChartOptions` tüm grafik tiplerinin TEK giriş noktasıdır — her ChartType + RunResult
- * çifti buradan bir ApexOptions parça kümesine eşlenir. chart.component bunun dışında hiçbir
- * ad-hoc dönüşüm yapmaz.
+ * `buildChartOptions` is the SINGLE entry point for all chart types — every ChartType + RunResult
+ * pair is mapped from here to a set of ApexOptions parts. chart.component does no other
+ * ad-hoc conversion.
  */
 export interface ChartBuildOutput {
   apexType: ApexRenderType | null;
@@ -54,50 +54,50 @@ export interface ChartBuildOutput {
   theme: ApexTheme;
   responsive: ApexResponsive[];
   noData: ApexNoData;
-  /** Sadece chartType === 'kpi' için doldurulur. */
+  /** Filled only for chartType === 'kpi'. */
   kpi: KpiResult | null;
-  /** Veri MAX_*_POINTS sınırına göre kırpıldıysa kullanıcıya gösterilecek bilgi notu. */
+  /** Info note to show the user if the data was trimmed to the MAX_*_POINTS limit. */
   note: string | null;
 }
 
 
-/** Çeviri fonksiyonu imzası — `LanguageService.t` ile uyumlu. */
+/** Translation function signature — compatible with `LanguageService.t`. */
 export type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
 
 /**
- * Grafik kurulumunun dil bağlamı.
+ * Language context of the chart setup.
  *
- * `t` ve `lang` ZORUNLUDUR. Önceden `t` varsayılan bir TR sözlüğe düşüyordu ve
- * sayı/tarih biçimlendiricileri `tr-TR` sabitiyle kuruluyordu; çağıran dili
- * geçirmeyi unuttuğunda EN modunda Türkçe metin ve Türkçe sayı biçimi sızıyordu.
+ * `t` and `lang` are REQUIRED. Previously `t` fell back to a default TR dictionary and
+ * number/date formatters were built with a fixed `tr-TR`; when a caller forgot to pass
+ * the language, Turkish text and Turkish number formatting leaked into EN mode.
  */
 export interface ChartLocaleContext {
   t: TranslateFn;
   lang: Lang;
 }
 
-/** Aktif dile göre sayı biçimi (bkz. utils/locale-format). */
+/** Number format for the active language (see utils/locale-format). */
 const fmtNum = (locale: ChartLocaleContext, value: number): string =>
   formatNumber(value, locale.lang);
 
-/** Aktif dile göre tarih biçimi. */
+/** Date format for the active language. */
 const fmtDate = (locale: ChartLocaleContext, value: Date): string =>
   formatDate(value, locale.lang);
 
 /**
- * Backend `/Report/run` sorgusunda satır limiti yok (bkz. ReportingManager.ExecuteQuery) —
- * gruplama/aggregate olmadan kurulan bir grafik modeldeki TÜM satırları döndürebilir.
- * ApexCharts binlerce noktayı senkron çizmeye çalışınca tarayıcı kilitlenir (rapor
- * görüntülemede "site donuyor" hatası). Bu yüzden çizim öncesi satır sayısı güvenli bir
- * üst sınıra kırpılır; tam veri Tablo görünümünde ve export'ta hâlâ mevcuttur.
+ * The backend `/Report/run` query has no row limit (see ReportingManager.ExecuteQuery) —
+ * a chart built without grouping/aggregates can return ALL rows of the model.
+ * When ApexCharts tries to draw thousands of points synchronously the browser freezes (the
+ * "site freezes" bug in the report viewer). So before drawing the row count is trimmed to a safe
+ * upper limit; the full data is still available in the Table view and in export.
  */
 const MAX_BAR_POINTS = 50;
 const MAX_LINE_POINTS = 200;
 
 /**
- * Grafik türünün çizebileceği en fazla satır — sunucudan bundan fazlası istenmez (backend
- * DashboardManager.RowCapFor ile aynı). null: tavan yok — kpi ve radialBar TÜM satırlardan
- * toplam/oran hesaplar, erken kırpmak yanlış sayı üretir.
+ * Maximum number of rows the chart type can draw — no more than this is requested from the server (same as the backend's
+ * DashboardManager.RowCapFor). null: no cap — kpi and radialBar compute totals/ratios from ALL
+ * rows, trimming early would produce wrong numbers.
  */
 export function chartRowCap(chartType: string | null | undefined): number | null {
   switch (chartType) {
@@ -134,12 +134,12 @@ function formatCategory(value: unknown, columnType: string, locale: ChartLocaleC
   return String(value);
 }
 
-/** Seri/KPI adı: sunucunun başlığı ("Toplam Net Tutar"); yoksa satır anahtarı. */
+/** Series/KPI name: the server's header ("Toplam Net Tutar"); otherwise the row key. */
 function columnTitle(col: ReportColumnInfo): string {
   return col.label || col.name;
 }
 
-/** Palet, seri sayısından azsa baştan tekrarlanarak (cycle) genişletilir. */
+/** If the palette is shorter than the series count, it is extended by repeating from the start (cycle). */
 function cyclePalette(palette: string[], count: number): string[] {
   if (palette.length === 0 || count <= 0) return [];
   return Array.from({ length: count }, (_, i) => palette[i % palette.length]);
@@ -189,9 +189,9 @@ export function buildChartOptions(
   const valueCols = pickValueColumns(columns, categoryCol);
   if (valueCols.length === 0) return empty;
 
-  // Backend /Report/run sorgusunda satır limiti yok — gruplama/aggregate olmadan kurulan bir
-  // grafik tüm tablo satırlarını döndürebilir. ApexCharts binlerce noktayı senkron çizmeye
-  // çalışınca tarayıcı kilitlenir; bu yüzden tip bazlı güvenli bir üst sınıra kırpılır.
+  // The backend /Report/run query has no row limit — a chart built without grouping/aggregates
+  // can return all table rows. When ApexCharts tries to draw thousands of points synchronously
+  // the browser freezes; so it is trimmed to a safe per-type upper limit.
   const isBarLike = chartType === 'pie' || chartType === 'donut' || chartType === 'column' || chartType === 'bar';
   const cap = isBarLike ? MAX_BAR_POINTS : MAX_LINE_POINTS;
   const { rows: plotRows, note } = chartType === 'radialBar' ? { rows, note: null } : capRows(rows, cap, locale);
@@ -204,10 +204,10 @@ export function buildChartOptions(
   ];
 
   /**
-   * Eksenli grafiklerde (çizgi/alan/çubuk) yakınlaştırma ve araç çubuğu kapalı.
-   * ApexCharts'ta zoom varsayılan AÇIK ve dokunmatikte 10px'lik sürüklemeyi zoom sayar:
-   * sayfayı kaydırmak için grafiğe değen parmak grafiği 1-2 noktaya yakınlaştırıyordu,
-   * geri dönüş de küçük bir ikondan ibaretti.
+   * Zoom and toolbar are off on axis charts (line/area/bar).
+   * In ApexCharts zoom is ON by default and on touch it counts a 10px drag as a zoom:
+   * a finger touching the chart to scroll the page zoomed the chart into 1-2 points,
+   * and the only way back was a tiny icon.
    */
   const noZoom = { zoom: { enabled: false }, toolbar: { show: false } };
 
@@ -233,7 +233,7 @@ export function buildChartOptions(
         apexType: chartType,
         isEmpty: false,
         chart: { type: chartType, height: 360, animations: { enabled: false } },
-        // Dar ekranda çok kategorili legend pastayı ezmesin: yükseklik sınırlı, kendi içinde kayar.
+        // On narrow screens a many-category legend must not squash the pie: height is limited, it scrolls internally.
         responsive: [
           base[0],
           { breakpoint: 768, options: { chart: { height: 320 }, legend: { fontSize: '11px', height: 64 } } }
@@ -269,15 +269,15 @@ export function buildChartOptions(
 
     case 'radialBar': {
       const valueCol = valueCols[0];
-      // Tek geçiş: ara dizi kurmadan hem toplam hem ilk değer hesaplanır.
-      // Eskiden 100k satır için tam boy bir ara dizi ayrılıp yalnız tek bir yüzde
-      // üretiliyordu (rows.map(...) + reduce). Radyal gösterge tavandan muaftır
-      // çünkü oran TÜM satırların toplamına göre hesaplanmalıdır.
+      // Single pass: both the total and the first value are computed without building an intermediate array.
+      // Previously, for 100k rows a full-size intermediate array was allocated just to produce a single
+      // percentage (rows.map(...) + reduce). The radial gauge is exempt from the cap
+      // because the ratio must be computed against the total of ALL rows.
       let total = 0;
       for (const r of rows) total += toNumber(r[valueCol.name]);
       const firstValue = rows.length > 0 ? toNumber(rows[0][valueCol.name]) : 0;
       const rawValues = [firstValue];
-      // Radyal gösterge tek oran gösterir: ilk kategorinin toplam içindeki payı (%).
+      // The radial gauge shows a single ratio: the first category's share of the total (%).
       const pct = total > 0 ? Math.min(100, Math.max(0, Math.round((rawValues[0] / total) * 100))) : 0;
       return {
         ...empty,
@@ -341,8 +341,8 @@ export function buildChartOptions(
     default: {
       const series = valueCols.map(col => ({ name: columnTitle(col), data: plotRows.map(r => toNumber(r[col.name])) }));
       const colors = cyclePalette(palette, series.length);
-      // Yatay çubukta her kategori bir satır: sabit yükseklikte 50 kategori ~4px'lik çubuklar
-      // demekti. Yükseklik kategori sayısıyla büyür; dar ekranda y etiketleri daraltılır.
+      // On a horizontal bar each category is a row: at a fixed height 50 categories meant ~4px
+      // bars. Height grows with the category count; on narrow screens the y labels are narrowed.
       const horizontal = chartType === 'bar';
       const barHeight = (min: number) => horizontal ? Math.max(min, categories.length * 24 + 60) : min;
       return {
@@ -369,7 +369,7 @@ export function buildChartOptions(
           axisTicks: { color: tokens.border }
         },
         yaxis: {
-          // Yatay çubukta y ekseni kategori adlarıdır; uzun adlar dar ekranda grafiğin yarısını yemesin.
+          // On a horizontal bar the y axis holds the category names; long names must not eat half the chart on narrow screens.
           labels: { style: { colors: tokens.muted }, formatter: (val: number) => fmtNum(locale, val), ...(horizontal ? { maxWidth: 120 } : {}) }
         }
       };
@@ -377,7 +377,7 @@ export function buildChartOptions(
   }
 }
 
-/** chartType === 'kpi' için: tek toplam değer + (birden çok satır varsa) sparkline serisi. */
+/** For chartType === 'kpi': a single total value + (if there are several rows) a sparkline series. */
 export function buildKpiOutput(
   result: ReportRunResult,
   tokens: ChartTokenColors,
@@ -400,8 +400,8 @@ export function buildKpiOutput(
     return { ...base, apexType: null, isEmpty: false, kpi };
   }
 
-  // Birden çok satır varsa küçük bir sparkline ile eğilimi göster. KPI toplamı (yukarıda)
-  // her zaman TÜM satırlardan hesaplanır — yalnızca görsel sparkline noktaları kırpılır.
+  // If there are several rows, show the trend with a small sparkline. The KPI total (above)
+  // is always computed from ALL rows — only the visual sparkline points are trimmed.
   const { rows: sparkRows, note: sparkNote } = capRows(rows, MAX_LINE_POINTS, locale);
   const sparkSeries = [{ name: columnTitle(valueCol), data: sparkRows.map(r => toNumber(r[valueCol.name])) }];
   return {

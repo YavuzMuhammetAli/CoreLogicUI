@@ -5,41 +5,41 @@ import {
 } from '../../models/workflow.model';
 
 /**
- * Bir adımın çıkışları — tek sözlük.
+ * A step's exits — the single dictionary.
  *
- * Tekil (onay) adım `onApprove/onReject`, paralel adım `onComplete/onAnyReject`,
- * koşul her durum için `cases[i].to` + `defaultTo` kullanır; Bitiş'in çıkışı
- * yoktur. Tasarım ekranı, canvas, yerleşim ve doğrulama aynı listeyi görür —
- * yeni düğüm tipi yalnız buraya eklenir.
+ * A single (approval) step uses `onApprove/onReject`, a parallel step `onComplete/onAnyReject`,
+ * a condition uses `cases[i].to` per case + `defaultTo`; End has no exits.
+ * The design screen, canvas, layout and validation all see the same list —
+ * a new node type is added only here.
  *
- * Port adları backend `WorkflowPorts` / `WorkflowExits` ile AYNIDIR —
- * doğrulama bulguları (`WorkflowIssue.port`) ve olay verisi bu adlarla gelir.
+ * Port names are IDENTICAL to backend `WorkflowPorts` / `WorkflowExits` —
+ * validation findings (`WorkflowIssue.port`) and event data arrive with these names.
  */
 export type ExitPort = 'approve' | 'reject' | 'complete' | 'anyReject' | 'default' | 'next' | `case:${string}`;
 
 /**
- * Canvas'taki port türü: olumlu (onay/tamamlanma), olumsuz (red) ya da nötr
- * (koşul yolları — biri ötekinden "iyi" değil).
+ * Port kind on the canvas: positive (approve/complete), negative (reject) or neutral
+ * (condition paths — none is "better" than another).
  */
 export type ExitKind = 'approve' | 'reject' | 'neutral';
 
 export interface WorkflowExit {
   port: ExitPort;
   kind: ExitKind;
-  /** Hedef adım anahtarı; boşsa akış `fallback` terminaline düşer (varsa). */
+  /** Target step key; if empty the flow falls back to the `fallback` terminal (if any). */
   target: string | null;
   /**
-   * Boş hedefin düştüğü terminal. Koşul yollarında null: hedefsiz yol bir
-   * doğrulama hatasıdır, sessizce bir terminale düşmez.
+   * The terminal an empty target falls back to. Null for condition paths: an untargeted path is a
+   * validation error and does not silently fall back to a terminal.
    */
   fallback: typeof WORKFLOW_TERMINAL_COMPLETED | typeof WORKFLOW_TERMINAL_REJECTED | null;
   /**
-   * Bu çıkışa bağlantı kurulabilir mi. Red kapalı onay adımında ya da hiçbir
-   * dalı reddedemeyen paralel adımda red çıkışı yoktur — doğrulayıcı oraya
-   * hedef yazılmasını reddediyor.
+   * Whether a connection can be made to this exit. An approval step with reject disabled, or a
+   * parallel step where no branch can reject, has no reject exit — the validator rejects
+   * writing a target there.
    */
   enabled: boolean;
-  /** Koşul durumunun etiketi ("Evet"); varsayılan yolda ve onay/red'de null. */
+  /** The condition case's label ("Evet"); null for the default path and for approve/reject. */
   label?: string | null;
 }
 
@@ -49,12 +49,12 @@ export function casePort(caseKey: string): ExitPort {
   return `${CASE_PREFIX}${caseKey}`;
 }
 
-/** Port bir koşul durumuna aitse durumun anahtarı; değilse null. */
+/** The case key if the port belongs to a condition case; otherwise null. */
 export function caseKeyOf(port: string | null | undefined): string | null {
   return port?.startsWith(CASE_PREFIX) ? port.slice(CASE_PREFIX.length) : null;
 }
 
-/** Adımın çıkışları, çizim sırasıyla (olumlu önce; koşulda durum sırası, varsayılan en sonda). */
+/** The step's exits in drawing order (positive first; for a condition, case order with default last). */
 export function exitsOf(step: WorkflowStep): WorkflowExit[] {
   switch (step.type) {
     case 'parallel':
@@ -82,7 +82,7 @@ export function exitsOf(step: WorkflowStep): WorkflowExit[] {
     case 'end':
       return [];
 
-    // Alan güncelle / bildirim / bekleme: tek "sonraki" çıkışı; hedefsiz kalırsa doğrulama hatası.
+    // Update field / notification / timer: a single "next" exit; a validation error if left without a target.
     case 'action':
     case 'notify':
     case 'timer':
@@ -102,12 +102,12 @@ export function exitsOf(step: WorkflowStep): WorkflowExit[] {
   }
 }
 
-/** Canvas port türünü (olumlu/olumsuz) adımın ilk eşleşen çıkışına çevirir. */
+/** Resolves a canvas port kind (positive/negative) to the step's first matching exit. */
 export function exitForKind(step: WorkflowStep, kind: ExitKind): WorkflowExit | undefined {
   return exitsOf(step).find(exit => exit.kind === kind);
 }
 
-/** Çıkışın hedefini yazar; adımın KOPYASINI döner. Adıma ait olmayan port yok sayılır. */
+/** Writes the exit's target; returns a COPY of the step. A port not belonging to the step is ignored. */
 export function setExit(step: WorkflowStep, port: ExitPort, target: string | null): WorkflowStep {
   const value = target || null;
 
@@ -138,9 +138,9 @@ export function setExit(step: WorkflowStep, port: ExitPort, target: string | nul
 }
 
 /**
- * Adımın tüm çıkış hedeflerini `map` üzerinden yeniden yazar (yeniden adlandırma,
- * silme). `map` yeni anahtarı ya da hedefi temizlemek için null döner. Hiçbir
- * hedef değişmezse AYNI nesne döner — değişmeyen adımlar yeniden çizilmesin.
+ * Rewrites all of the step's exit targets through `map` (rename,
+ * delete). `map` returns the new key, or null to clear the target. If no
+ * target changes the SAME object is returned — so unchanged steps are not redrawn.
  */
 export function mapRefs(step: WorkflowStep, map: (key: string) => string | null): WorkflowStep {
   let next = step;
@@ -152,7 +152,7 @@ export function mapRefs(step: WorkflowStep, map: (key: string) => string | null)
   return next;
 }
 
-/** Anahtar karşılaştırması büyük/küçük harf duyarsız — backend FindStep ile aynı. */
+/** Key comparison is case-insensitive — same as backend FindStep. */
 export function sameKey(a: string | null | undefined, b: string | null | undefined): boolean {
   return (a ?? '').toLowerCase() === (b ?? '').toLowerCase();
 }

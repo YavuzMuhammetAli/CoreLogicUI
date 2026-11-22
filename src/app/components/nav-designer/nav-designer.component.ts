@@ -1,4 +1,4 @@
-import '../../i18n/lazy/design'; // design.* sözlüğü bu parçayla iner
+import '../../i18n/lazy/design'; // the design.* dictionary loads with this chunk
 import {
   ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, NgZone, computed, inject, signal, viewChild
 } from '@angular/core';
@@ -43,13 +43,13 @@ import { DesignSettings, DesignSettingsDialogComponent } from '../shared/design-
 import { roleNames } from '../shared/role-picker/role-picker.component';
 import { SidebarNavComponent } from '../layout/sidebar-nav/sidebar-nav.component';
 
-/** Ağaçta çizilen satır: klasör başlığı, bağlantı ya da klasör sonundaki bırakma alanı. */
+/** A row drawn in the tree: folder header, link, or the drop zone at the end of a folder. */
 type TreeRow =
   | { readonly kind: 'folder'; readonly key: string; readonly node: NavFolder }
   | { readonly kind: 'link'; readonly key: string; readonly node: NavLink; readonly folderId: string | null }
   | { readonly kind: 'folderEnd'; readonly key: string; readonly folderId: string; readonly empty: boolean };
 
-/** Paletten eklenecek düğümün tanımı — düğüm bırakıldığı anda (güncel kimlikle) üretilir. */
+/** Definition of a node to add from the palette — the node is created (with a fresh id) when dropped. */
 export type PaletteSpec =
   | { readonly kind: 'folder' }
   | { readonly kind: 'url' }
@@ -58,7 +58,7 @@ export type PaletteSpec =
   | { readonly kind: 'dashboard'; readonly dashboard: DashboardDefinition }
   | { readonly kind: 'report'; readonly report: ReportDefinition };
 
-/** Sürükleme oturumu: ağaçtaki düğümü taşı ya da paletten yeni düğüm ekle. */
+/** Drag session: move a node in the tree or add a new node from the palette. */
 type Session = {
   readonly startX: number;
   readonly startY: number;
@@ -82,14 +82,14 @@ const PAGE_ICONS: Record<NavPage, IconName> = {
 };
 
 /**
- * Navigasyon tasarımcısı — /design/navigation/:id (admin).
+ * Navigation designer — /design/navigation/:id (admin).
  *
- * Admin olmayan kullanıcıların kenar çubuğunu tasarlar: palet (klasör, sayfalar, modeller,
- * dashboard'lar, raporlar, bağlantı) · ağaç (sürükle-bırak, klavye) · özellikler. Tek seviye klasör.
- * Yaşam döngüsü ekran tasarımıyla aynı: Kaydet taslağı yazar, kullanıcılar yalnız yayındakini görür;
- * "Yayınla" sunucuda güncel modellere/dashboard'lara/raporlara karşı yeniden doğrulanır.
+ * Designs the sidebar of non-admin users: palette (folder, pages, models,
+ * dashboards, reports, link) · tree (drag-and-drop, keyboard) · properties. Single-level folders.
+ * Same lifecycle as the screen designer: Save writes the draft, users see only the published one;
+ * "Yayınla" (Publish) is revalidated on the server against the current models/dashboards/reports.
  *
- * Telefonda sürükleme yok: özellik panelindeki düğmelerle taşınır.
+ * No dragging on phones: items are moved with the buttons in the properties panel.
  */
 @Component({
     selector: 'app-nav-designer',
@@ -142,7 +142,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
   readonly confirmLeave = signal(false);
   private resolveLeave: ((leave: boolean) => void) | null = null;
 
-  // ─── Türetilmiş ────────────────────────────────────────────────────────────
+  // ─── Derived ───────────────────────────────────────────────────────────────
 
   private readonly modelByName = computed(() => new Map(this.models().map(m => [m.typeName, m])));
   private readonly dashboardById = computed(() => new Map((this.dashboards() ?? []).map(d => [d.id, d])));
@@ -203,7 +203,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
     return this.languageService.t(detail.isDefault ? 'design.roles.everyone' : 'design.roles.nobody');
   });
 
-  // ─── Sürükle-bırak durumu ──────────────────────────────────────────────────
+  // ─── Drag-and-drop state ───────────────────────────────────────────────────
 
   private readonly canvas = viewChild<ElementRef<HTMLElement>>('canvas');
   readonly dragging = signal(false);
@@ -211,7 +211,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
   readonly dropLine = signal<{ top: number; inset: boolean } | null>(null);
   readonly ghost = signal<{ x: number; y: number; label: string } | null>(null);
   private session: Session | null = null;
-  /** Sürükleme aynı düğmede bittiyse ardından gelen tıklama ikinci kez eklemesin. */
+  /** If a drag ended on the same button, the following click must not add a second time. */
   private suppressClick = false;
   private frame = 0;
   private pointer = { x: 0, y: 0 };
@@ -235,7 +235,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
     destroyRef.onDestroy(() => query.removeEventListener('change', sync));
   }
 
-  // ─── Yükleme ───────────────────────────────────────────────────────────────
+  // ─── Loading ───────────────────────────────────────────────────────────────
 
   private load(): void {
     const id = this.id();
@@ -280,9 +280,9 @@ export class NavDesignerComponent implements HasUnsavedChanges {
     this.load();
   }
 
-  // ─── Görünüm yardımcıları ──────────────────────────────────────────────────
+  // ─── View helpers ──────────────────────────────────────────────────────────
 
-  /** Düğümün tasarımcıda görünen adı (boş etikette varsayılan ad). */
+  /** Name of the node shown in the designer (default name for an empty label). */
   labelOf(node: NavNode): string {
     switch (node.kind) {
       case 'folder': return node.label || this.languageService.t('design.nav.untitledFolder');
@@ -297,7 +297,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
     }
   }
 
-  /** Etiket alanının yer tutucusu — boş bırakılırsa kullanılacak ad. */
+  /** Placeholder of the label field — the name used if left empty. */
   defaultLabelOf(node: NavNode): string {
     switch (node.kind) {
       case 'model': return this.modelByName().get(node.typeName)?.label || node.typeName;
@@ -327,7 +327,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
     return this.languageService.t('design.nav.kind.' + node.kind);
   }
 
-  /** Hedefi silinmiş/bilinmeyen bağlantı (ağaçta uyarı işareti). */
+  /** Link whose target is deleted/unknown (warning marker in the tree). */
   isBroken(node: NavNode): boolean {
     const facts = this.facts();
     if (node.kind === 'model') return !!facts.models && !facts.models.has(node.typeName);
@@ -354,7 +354,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
     if (issue.targetId && findNavNode(this.doc(), issue.targetId)) this.select(issue.targetId);
   }
 
-  // ─── Komutlar ──────────────────────────────────────────────────────────────
+  // ─── Commands ──────────────────────────────────────────────────────────────
 
   select(id: string | null): void {
     this.selection.set(id);
@@ -364,7 +364,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
     this.store.dispatch(reason, command);
   }
 
-  /** Paletten eklenecek yer: seçili klasörün sonu, seçili bağlantının arkası, yoksa kökün sonu. */
+  /** Where to add from the palette: end of the selected folder, after the selected link, otherwise end of the root. */
   private insertTarget(isFolder: boolean): NavTarget {
     const at = this.selectedLocation();
     if (!at) return { folderId: null };
@@ -393,7 +393,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
     }
   }
 
-  /** Palet tıklaması (fare, dokunma, klavye): seçime göre uygun yere ekler. Sürükleme bittiyse yok sayılır. */
+  /** Palette click (mouse, touch, keyboard): adds at the appropriate place for the selection. Ignored if a drag just ended. */
   addFromPalette(spec: PaletteSpec): void {
     if (this.suppressClick) return;
     this.insert(this.create(spec));
@@ -439,7 +439,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
     this.apply(d => outdentNavNode(d, id));
   }
 
-  /** Bağlantı hemen üstündeki klasöre alınabilir mi (Alt+→). */
+  /** Can the link be moved into the folder right above it (Alt+→)? */
   canIndent(): boolean {
     const at = this.selectedLocation();
     if (!at || at.folderId !== null || at.node.kind === 'folder' || at.index === 0) return false;
@@ -456,7 +456,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
     return to >= 0 && to < size;
   }
 
-  // ─── Sürükle-bırak ─────────────────────────────────────────────────────────
+  // ─── Drag-and-drop ─────────────────────────────────────────────────────────
 
   onRowPointerDown(event: PointerEvent, node: NavNode): void {
     if (!event.isPrimary || event.button !== 0 || this.narrow()) return;
@@ -514,7 +514,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
   private pointerUp(event: PointerEvent, cancelled: boolean): void {
     const session = this.session;
     if (session?.active) {
-      // Tıklama ekleme yolu paletteki (click) olayıdır; sürüklemenin ardından gelen tıklama yutulur.
+      // The click-to-add path is the (click) event in the palette; the click following a drag is swallowed.
       this.suppressClick = true;
       setTimeout(() => { this.suppressClick = false; });
       if (!cancelled) {
@@ -541,7 +541,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
     this.ghost.set(null);
   }
 
-  /** İmleç ağacın üstündeyse bırakma yeri; taşınan düğüm (ve klasörse çocukları) hesaba katılmaz. */
+  /** Drop position if the pointer is over the tree; the dragged node (and its children if a folder) is excluded. */
   private computeDrop(x: number, y: number, session: Session) {
     const host = this.canvas()?.nativeElement;
     if (!host) return null;
@@ -561,7 +561,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
     return navDropTarget(this.doc(), boxes, y - area.top, session.isFolder);
   }
 
-  // ─── Kaydet / yayınla ──────────────────────────────────────────────────────
+  // ─── Save / publish ────────────────────────────────────────────────────────
 
   undo(): void {
     this.store.undo();
@@ -649,7 +649,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
     return null;
   }
 
-  // ─── Tasarım ayarları (ad, roller, varsayılan, etkin) ─────────────────────
+  // ─── Design settings (name, roles, default, enabled) ──────────────────────
 
   openSettings(): void {
     const detail = this.detail();
@@ -679,7 +679,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
       }
       const updated = res.data;
       this.detail.set({ ...detail, ...updated, draftJson: detail.draftJson, publishedJson: detail.publishedJson });
-      // Belgeye dokunmayan yazım damgayı yeniledi; açık taslak bir sonraki kayıtta çakışmasın.
+      // A write that doesn't touch the document renewed the stamp; the open draft must not conflict on the next save.
       this.store.restamp(updated.lastModifiedOn);
       this.settingsOpen.set(false);
       this.notification.success(res.message);
@@ -688,7 +688,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
     }
   }
 
-  // ─── Klavye ────────────────────────────────────────────────────────────────
+  // ─── Keyboard ──────────────────────────────────────────────────────────────
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
@@ -706,7 +706,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
       case 'delete': if (!id) return; this.remove(id); break;
       case 'moveBack': if (!id) return; this.moveBy(id, -1); break;
       case 'moveForward': if (!id) return; this.moveBy(id, 1); break;
-      // Alt+→ klasöre al, Alt+← klasörden çıkar.
+      // Alt+→ moves into a folder, Alt+← moves out of the folder.
       case 'wider': if (!id) return; this.indent(id); break;
       case 'narrower': if (!id) return; this.outdent(id); break;
       default: return;
@@ -714,7 +714,7 @@ export class NavDesignerComponent implements HasUnsavedChanges {
     event.preventDefault();
   }
 
-  // ─── Ayrılma ───────────────────────────────────────────────────────────────
+  // ─── Leaving ───────────────────────────────────────────────────────────────
 
   canLeave(): boolean | Promise<boolean> {
     if (!this.store.dirty()) return true;

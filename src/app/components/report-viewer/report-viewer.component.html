@@ -80,7 +80,7 @@
         </table>
       </div>
 
-      <!-- Sayfalama: yalnız tablo görünümünde. Sunucu her yanıtta total döndürür. -->
+      <!-- Pagination: only in table view. The server returns total in every response. -->
       @if (isTableView() && (res.total ?? 0) > res.rows.length) {
         <div class="table-pager cluster">
           <span class="pager-info">

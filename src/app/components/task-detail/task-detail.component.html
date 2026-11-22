@@ -70,12 +70,12 @@
       <div class="alert alert-info" role="status">{{ 'task.detail.alreadyClosed' | t }}</div>
     }
 
-    <!-- Karar formu — kayıt detayındaki "Onayınızı bekliyor" paneliyle ortak. -->
+    <!-- Decision form — shared with the "Onayınızı bekliyor" (Awaiting your approval) panel on the record detail. -->
     <app-task-decision-form [task]="t" (completed)="onCompleted($event)" />
 
     <!--
-      Yönetici işlemleri. Atlama, ONAYDAN AYRI bir uç: audit'te "müdür onayladı"
-      ile "yönetici geçti" ayırt edilebilmeli.
+      Admin actions. Skip is a SEPARATE endpoint FROM APPROVAL: the audit must be able to tell
+      "the manager approved" apart from "an admin skipped".
     -->
     @if (isAdmin && !isClosed) {
       <div class="panel">

@@ -1,10 +1,10 @@
 import { Translations } from './translations.model';
 
 /**
- * Şirket içi kullanıcı yönetimi — /users (liste), /users/new (oluştur), /users/:id (düzenle).
+ * In-company user management — /users (list), /users/new (create), /users/:id (edit).
  *
- * Genel amaçlı anahtarlar (kaydet/iptal/sil/yenile) common.i18n.ts'te; burada
- * tekrar tanımlanmaz.
+ * General-purpose keys (save/cancel/delete/refresh) are in common.i18n.ts; they are
+ * not redefined here.
  */
 export const USER_I18N: Translations = {
   // ── Liste ─────────────────────────────────────────────────────────────────
@@ -40,7 +40,7 @@ export const USER_I18N: Translations = {
     en: 'You cannot perform this action on your own account.'
   },
 
-  // ── Oluşturma / düzenleme ─────────────────────────────────────────────────
+  // ── Create / edit ─────────────────────────────────────────────────────────
   'user.detail.newTitle': { tr: 'Yeni Kullanıcı', en: 'New User' },
   'user.detail.editTitle': { tr: 'Kullanıcıyı Düzenle', en: 'Edit User' },
   'user.detail.newSubtitle': {
@@ -103,7 +103,7 @@ export const USER_I18N: Translations = {
     en: '"{name}" will be permanently deleted. This cannot be undone.'
   },
 
-  // ── Doğrulama / bildirim ──────────────────────────────────────────────────
+  // ── Validation / notification ─────────────────────────────────────────────
   'user.detail.firstNameRequired': { tr: 'Ad zorunludur.', en: 'First name is required.' },
   'user.detail.lastNameRequired': { tr: 'Soyad zorunludur.', en: 'Last name is required.' },
   'user.detail.emailRequired': { tr: 'E-posta zorunludur.', en: 'Email is required.' },

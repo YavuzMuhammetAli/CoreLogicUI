@@ -22,14 +22,14 @@ const cases = vectors.cases as unknown as VectorCase[];
 const key = (i: { code: string; severity: string; targetId?: string }) => `${i.code}|${i.severity}|${i.targetId ?? ''}`;
 
 describe('nav-layout.validate', () => {
-  describe('sunucuyla ortak vektörler', () => {
+  describe('vectors shared with the server', () => {
     for (const c of cases) {
       it(c.name, () => {
         const text = c.raw ?? JSON.stringify(c.layout);
         const actual = validateNavLayoutText(text, facts, c.mode).map(key).sort();
         expect(actual).toEqual(c.expected.map(key).sort());
 
-        // Sunucunun normalize çıktısıyla bayt bayt aynı metin — aksi halde kaydedilen taslak hep "değişmiş" görünür.
+        // Byte-for-byte the same text as the server's normalized output — otherwise a saved draft always looks "changed".
         if (c.normalized !== undefined) {
           const doc = parseNavLayout(text);
           expect(doc).not.toBeNull();
@@ -39,12 +39,12 @@ describe('nav-layout.validate', () => {
     }
   });
 
-  it('bilgi yoksa hedef denetimleri atlanır', () => {
+  it('skips target checks when there are no facts', () => {
     const doc = { schemaVersion: 1, items: [{ kind: 'model', id: 'm1', typeName: 'Yok' }] };
     expect(validateNavLayout(doc, null, 'publish')).toEqual([]);
   });
 
-  it('yalnız http(s) bağlantılara izin verilir', () => {
+  it('allows only http(s) links', () => {
     expect(isAllowedNavUrl('https://ornek.com.tr/yol?a=1')).toBeTrue();
     expect(isAllowedNavUrl('http://intranet')).toBeTrue();
     expect(isAllowedNavUrl('javascript:alert(1)')).toBeFalse();
@@ -53,14 +53,14 @@ describe('nav-layout.validate', () => {
     expect(isAllowedNavUrl('https://')).toBeFalse();
   });
 
-  it('önem derecesi kipten gelir', () => {
+  it('severity comes from the mode', () => {
     expect(navSeverityOf('badUrl', 'draft')).toBe('error');
     expect(navSeverityOf('emptyLabel', 'draft')).toBe('warning');
     expect(navSeverityOf('emptyLabel', 'publish')).toBe('error');
     expect(navSeverityOf('emptyFolder', 'publish')).toBe('warning');
   });
 
-  it('yapısal hatalı metin okunmaz', () => {
+  it('does not parse text with structural errors', () => {
     expect(parseNavLayout('{"schemaVersion":1,"items":[{"kind":"folder","id":"f1","label":"A","children":[{"kind":"folder","id":"f2","label":"B","children":[]}]}]}')).toBeNull();
     expect(parseNavLayout(null)).toBeNull();
   });

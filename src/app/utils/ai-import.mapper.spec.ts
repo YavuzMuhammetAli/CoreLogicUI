@@ -12,12 +12,12 @@ import { AiDashboardPayload, AiModelChangePayload, AiModelPayload, AiReportPaylo
 import { PublishedTableSchema } from '../services/published-table.service';
 
 /**
- * Yapay Zeka önerilerini (G4) mevcut servis payload'larına çeviren saf
- * fonksiyonların testleri.
+ * Tests for the pure functions that convert AI proposals (G4) into existing
+ * service payloads.
  *
- * Buradaki hatalar sessizdir: yanlış sıra ya da ters çevrilmemiş bir bayrak
- * hata vermez, sadece bozuk bir model üretir. Bu yüzden dönüşümün kendisi
- * orkestrasyondan ayrılıp doğrudan test edilir.
+ * Mistakes here are silent: a wrong order or an un-inverted flag raises
+ * no error, it just produces a broken model. That is why the conversion itself
+ * is separated from orchestration and tested directly.
  */
 describe('ai-import.mapper', () => {
   const column = (over: Partial<AiModelPayload['columns'][0]> = {}) => ({
@@ -36,72 +36,72 @@ describe('ai-import.mapper', () => {
   });
 
   describe('parseProposalPayload', () => {
-    it('bozuk JSON için null döner', () => {
+    it('returns null for corrupt JSON', () => {
       expect(parseProposalPayload('{ bozuk')).toBeNull();
     });
 
-    it('geçerli JSON çözülür', () => {
+    it('parses valid JSON', () => {
       expect(parseProposalPayload<{ a: number }>('{"a":1}')).toEqual({ a: 1 });
     });
   });
 
   describe('flattenModelPayload', () => {
-    it('ana modeli alt modellerden ÖNCE koyar', () => {
+    it('puts the parent model BEFORE the sub-models', () => {
       const nodes = flattenModelPayload(
         modelPayload({
           subModels: [{ entityName: 'SiparisKalemi', columns: [column()] }]
         })
       );
 
-      // Sıra bağlayıcı: addTable alt modeli kaydederken ana tabloyu arar.
+      // The order is binding: addTable looks up the parent table when saving a sub-model.
       expect(nodes.map(n => n.entityName)).toEqual(['Musteri', 'SiparisKalemi']);
       expect(nodes[0].parentName).toBeNull();
       expect(nodes[1].parentName).toBe('Musteri');
     });
 
-    it('alt model yoksa tek düğüm döner', () => {
+    it('returns a single node when there are no sub-models', () => {
       expect(flattenModelPayload(modelPayload()).length).toBe(1);
     });
   });
 
   describe('validateModelPayload', () => {
-    it('geçerli yük için null döner', () => {
+    it('returns null for a valid payload', () => {
       expect(validateModelPayload(modelPayload())).toBeNull();
     });
 
-    it('PascalCase olmayan model adını reddeder', () => {
-      expect(validateModelPayload(modelPayload({ entityName: 'musteri' }))).toContain('ad:');
+    it('rejects a non-PascalCase model name', () => {
+      expect(validateModelPayload(modelPayload({ entityName: 'musteri' }))).toContain('name:');
     });
 
-    it('beyaz liste dışı veri tipini reddeder', () => {
+    it('rejects a data type outside the whitelist', () => {
       const payload = modelPayload({ columns: [column({ dataType: 'money' })] });
-      expect(validateModelPayload(payload)).toContain('tip:');
+      expect(validateModelPayload(payload)).toContain('type:');
     });
 
-    it('enum tipinde enumValues zorunludur', () => {
+    it('enumValues is required for the enum type', () => {
       const payload = modelPayload({ columns: [column({ dataType: 'enum' })] });
       expect(validateModelPayload(payload)).toContain('enum:');
     });
 
-    it('lookup tipinde hedef tablo zorunludur', () => {
+    it('a target table is required for the lookup type', () => {
       const payload = modelPayload({ columns: [column({ dataType: 'lookup' })] });
       expect(validateModelPayload(payload)).toContain('lookup:');
     });
 
-    it('alt modelin kolonlarını da denetler', () => {
+    it('also checks the sub-model columns', () => {
       const payload = modelPayload({
         subModels: [{ entityName: 'Kalem', columns: [column({ columnName: '1Adet' })] }]
       });
-      expect(validateModelPayload(payload)).toContain('kolon:');
+      expect(validateModelPayload(payload)).toContain('column:');
     });
 
-    it('kolonsuz modeli reddeder', () => {
-      expect(validateModelPayload(modelPayload({ columns: [] }))).toBe('kolon-yok');
+    it('rejects a model without columns', () => {
+      expect(validateModelPayload(modelPayload({ columns: [] }))).toBe('no-columns');
     });
   });
 
   describe('toRelationshipUpsert', () => {
-    it('derinlik/ID göndermez, sırayı taşır', () => {
+    it('does not send depth/ID, carries the order', () => {
       const upsert = toRelationshipUpsert(
         {
           targetModel: 'Siparis',
@@ -116,7 +116,7 @@ describe('ai-import.mapper', () => {
 
       expect(upsert.order).toBe(3);
       expect(upsert.inverseProperty).toBe('Musteri');
-      // FK ve join tablosu adlarını backend türetir.
+      // The backend derives the FK and join table names.
       expect(upsert.foreignKeyName).toBeNull();
       expect(upsert.joinTableName).toBeNull();
     });
@@ -131,7 +131,7 @@ describe('ai-import.mapper', () => {
       ...over
     });
 
-    it('filtre değerini string\'e çevirir', () => {
+    it('converts the filter value to a string', () => {
       const result = toReportDefinition(
         reportPayload({
           filters: [{ field: 'Tutar', operator: 'gt', value: 100 as unknown as string }]
@@ -140,25 +140,25 @@ describe('ai-import.mapper', () => {
       expect(result.filters?.[0].value).toBe('100');
     });
 
-    it('beyaz liste dışı operatörü eler', () => {
+    it('drops an operator outside the whitelist', () => {
       const result = toReportDefinition(
         reportPayload({ filters: [{ field: 'Tutar', operator: 'like', value: 'x' }] })
       );
       expect(result.filters?.length).toBe(0);
     });
 
-    it('beyaz liste dışı aggregate fonksiyonunu eler', () => {
+    it('drops an aggregate function outside the whitelist', () => {
       const result = toReportDefinition(
         reportPayload({ aggregates: [{ field: 'Tutar', function: 'MEDIAN' }] })
       );
       expect(result.aggregates?.length).toBe(0);
     });
 
-    it('bilinmeyen grafik tipinde table\'a düşer', () => {
+    it('falls back to table for an unknown chart type', () => {
       expect(toReportDefinition(reportPayload({ chartType: 'sankey' })).chartType).toBe('table');
     });
 
-    it('geçersiz sıralama yönünü ASC yapar', () => {
+    it('turns an invalid sort direction into ASC', () => {
       const result = toReportDefinition(
         reportPayload({ sortBy: [{ field: 'SUM_Tutar', direction: 'yukari' }] })
       );
@@ -173,7 +173,7 @@ describe('ai-import.mapper', () => {
       ...over
     });
 
-    it('rapor adını büyük/küçük harf duyarsız çözer', () => {
+    it('resolves the report name case-insensitively', () => {
       const ids = new Map([['aylık ciro', 42]]);
       const { widgets, unresolved } = toDashboardWidgets(dashboardPayload(), ids);
 
@@ -181,14 +181,14 @@ describe('ai-import.mapper', () => {
       expect(widgets[0].reportDefinitionId).toBe(42);
     });
 
-    it('çözülemeyen raporu bildirir ve widget üretmez', () => {
+    it('reports an unresolved report and produces no widget', () => {
       const { widgets, unresolved } = toDashboardWidgets(dashboardPayload(), new Map());
 
       expect(widgets.length).toBe(0);
       expect(unresolved).toEqual(['Aylık Ciro']);
     });
 
-    it('grid taşmasını kırpar (x + w <= 12)', () => {
+    it('clamps grid overflow (x + w <= 12)', () => {
       const ids = new Map([['aylık ciro', 1]]);
       const { widgets } = toDashboardWidgets(
         dashboardPayload({
@@ -199,15 +199,15 @@ describe('ai-import.mapper', () => {
 
       expect(widgets[0].w).toBe(12);
       expect(widgets[0].x).toBe(0);
-      // h en az 2 olmalı, aksi halde widget okunamaz yükseklikte kalır.
+      // h must be at least 2, otherwise the widget is too short to read.
       expect(widgets[0].h).toBe(2);
     });
   });
 });
 
 /**
- * Model değişikliği önerisi (propose_model_change). Uç TAM değiştirme yapar; öneri yalnız
- * değişen alanları taşır — birleştirme yanlışsa önerinin söylemediği kurallar sessizce silinir.
+ * Model change proposal (propose_model_change). The endpoint does a FULL replacement; the proposal carries only
+ * changed fields — if merging is wrong, rules the proposal does not mention are silently deleted.
  */
 describe('toMemberMetadataUpdates', () => {
   const schema: PublishedTableSchema = {
@@ -226,7 +226,7 @@ describe('toMemberMetadataUpdates', () => {
     return { entityName: 'Musteri', reason: 'test', alterColumns };
   }
 
-  it('verilmeyen alanı kayıtlı değerinde bırakır', () => {
+  it('leaves an omitted field at its saved value', () => {
     const { updates, error } = toMemberMetadataUpdates(schema, change([{ columnName: 'Unvan', isNullable: false }]));
 
     expect(error).toBeNull();
@@ -235,54 +235,54 @@ describe('toMemberMetadataUpdates', () => {
     })]);
   });
 
-  it('kolon adını büyük/küçük harfe duyarsız eşler, kayıtlı adı kullanır', () => {
+  it('matches the column name case-insensitively and uses the saved name', () => {
     const { updates } = toMemberMetadataUpdates(schema, change([{ columnName: 'unvan', label: 'Ticari Ünvan' }]));
 
     expect(updates[0].memberName).toBe('Unvan');
     expect(updates[0].label).toBe('Ticari Ünvan');
   });
 
-  it('enum değerlerini tamamen değiştirir', () => {
+  it('replaces enum values entirely', () => {
     const { updates } = toMemberMetadataUpdates(schema, change([{ columnName: 'Durum', enumValues: 'Aktif|Askıda' }]));
 
     expect(updates[0].enumValues).toBe('Aktif|Askıda');
     expect(updates[0].isRequired).toBeTrue();
   });
 
-  it('dosya kolonunun KB sınırını yuvarlamadan korur', () => {
+  it('keeps a file column\'s KB limit without rounding', () => {
     const { updates } = toMemberMetadataUpdates(schema, change([{ columnName: 'Logo', label: 'Firma logosu' }]));
 
     expect(updates[0].maxLength).toBe(1000);
   });
 
-  it('tipe uymayan kuralı göndermez', () => {
+  it('does not send a rule that does not fit the type', () => {
     const { updates } = toMemberMetadataUpdates(schema, change([{ columnName: 'Yas', regex: 'x', max: 120 }]));
 
     expect(updates[0]).toEqual(jasmine.objectContaining({ min: 0, max: 120, regex: null }));
   });
 
-  it('bilinmeyen kolonda hiçbir güncelleme üretmez', () => {
+  it('produces no updates for an unknown column', () => {
     const result = toMemberMetadataUpdates(schema, change([
       { columnName: 'Unvan', label: 'X' },
       { columnName: 'Yok', label: 'Y' }
     ]));
 
-    expect(result.error).toBe('kolon-yok:Yok');
+    expect(result.error).toBe('column-missing:Yok');
     expect(result.updates).toEqual([]);
   });
 });
 
 describe('validateModelChangePayload', () => {
-  it('boş öneriyi ve değişikliksiz öneriyi reddeder', () => {
+  it('rejects an empty proposal and one without changes', () => {
     expect(validateModelChangePayload(null)).toBe('payload');
-    expect(validateModelChangePayload({ entityName: 'Musteri', reason: '' })).toBe('degisiklik-yok');
+    expect(validateModelChangePayload({ entityName: 'Musteri', reason: '' })).toBe('no-changes');
   });
 
-  it('eklenen kolonları yeni model kurallarıyla doğrular', () => {
+  it('validates added columns with the new-model rules', () => {
     expect(validateModelChangePayload({
       entityName: 'Musteri', reason: '',
       addColumns: [{ columnName: 'Tür', dataType: 'string', isNullable: true, label: 'Tür' }]
-    })).toBe('kolon:Tür');
+    })).toBe('column:Tür');
     expect(validateModelChangePayload({
       entityName: 'Musteri', reason: '',
       addColumns: [{ columnName: 'Tur', dataType: 'enum', isNullable: true, label: 'Tür' }]

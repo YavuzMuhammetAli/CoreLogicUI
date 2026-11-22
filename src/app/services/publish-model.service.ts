@@ -12,11 +12,11 @@ export class PublishModelService {
   constructor(private http: HttpClient) {}
 
   /**
-   * Sunucu yeniden başladığında assembly'i yükle.
+   * Loads the assembly after the server restarts.
    *
-   * Uç admin'e özeldir ve her çağrısı yardımcı niteliktedir: backend
-   * TenantResolutionMiddleware assembly'yi tenant'ın ilk isteğinde zaten kendisi
-   * yükler. 403 kullanıcıyı sayfadan koparmasın diye yönlendirme kapalı.
+   * The endpoint is admin-only and every call is auxiliary: the backend
+   * TenantResolutionMiddleware already loads the assembly itself on the tenant's first request.
+   * The redirect is disabled so that a 403 does not pull the user off the page.
    */
   loadAssembly(): Observable<ResponseModel> {
     return this.http.get<ResponseModel>(`${this.baseUrl}/loadAssembly`, {

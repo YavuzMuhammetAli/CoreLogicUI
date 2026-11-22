@@ -1,9 +1,9 @@
 import { WorkflowAssignment, WorkflowRecipient, WorkflowStep } from '../../models/workflow.model';
 
 /**
- * Adımın tek satırlık özeti (atama, süre) — SAF. Adım listesi, düğüm kartı ve
- * özellik paneli aynı metni gösterir; rol/kullanıcı adları ve çeviri dışarıdan
- * verilir.
+ * One-line summary of a step (assignment, duration) — PURE. The step list, the node card and
+ * the properties panel show the same text; role/user names and translation are supplied
+ * from outside.
  */
 export interface SummaryLookup {
   roleName(id: number): string | null;
@@ -11,10 +11,10 @@ export interface SummaryLookup {
   t(key: string, params?: Record<string, string | number>): string;
 }
 
-/** Atama tanımlı değil ya da seçim eksik. */
+/** Assignment not defined or selection missing. */
 export const MISSING = '—';
 
-/** "Müdür" · "Ayşe Yılmaz" · "Kaydı oluşturan" · eksikse "—". */
+/** "Müdür" (role) · "Ayşe Yılmaz" (user) · "Kaydı oluşturan" (record creator) · "—" if missing. */
 export function assignmentText(assignment: WorkflowAssignment | null | undefined, lookup: SummaryLookup): string {
   switch (assignment?.mode) {
     case 'role':
@@ -28,7 +28,7 @@ export function assignmentText(assignment: WorkflowAssignment | null | undefined
   }
 }
 
-/** Liste sütunu: tekil adımda atama, paralelde dal sayısı. */
+/** List column: the assignment for a single step, the branch count for parallel. */
 export function assignmentSummary(step: WorkflowStep, lookup: SummaryLookup): string {
   switch (step.type) {
     case 'parallel':  return lookup.t('workflow.build.branchCount', { n: (step.branches ?? []).length });
@@ -41,7 +41,7 @@ export function assignmentSummary(step: WorkflowStep, lookup: SummaryLookup): st
   }
 }
 
-/** Kartın özet satırı: atama özeti, varsa "· 48 sa" süre sınırı; koşulda durum sayısı, bitişte sonuç. */
+/** The card's summary line: assignment summary plus a "· 48 h" time limit if any; case count for a condition, outcome for an end. */
 export function stepSummary(step: WorkflowStep, lookup: SummaryLookup): string {
   if (step.type === 'condition') return lookup.t('workflow.node.caseCount', { n: (step.cases ?? []).length });
   if (step.type === 'end') {
@@ -57,7 +57,7 @@ export function stepSummary(step: WorkflowStep, lookup: SummaryLookup): string {
   return parts.join(' · ');
 }
 
-/** Alan güncelle özeti: tek alanda "Durum = Onaylandı", çoğunda alan sayısı. */
+/** Update-field summary: "Durum = Onaylandı" for a single field, the field count for several. */
 export function actionSummary(step: WorkflowStep, lookup: SummaryLookup): string {
   const sets = (step.sets ?? []).filter(set => set.column);
   if (sets.length === 0) return MISSING;
@@ -71,7 +71,7 @@ export function actionSummary(step: WorkflowStep, lookup: SummaryLookup): string
   }
 }
 
-/** Alıcının görünen adı: "Kaydı oluşturan", rol/kişi adı, "Finans Onayı görevlileri". */
+/** Recipient's display name: "Kaydı oluşturan" (record creator), role/user name, "Finans Onayı görevlileri" (step assignees). */
 export function recipientText(recipient: WorkflowRecipient, lookup: SummaryLookup): string {
   switch (recipient.kind) {
     case 'creator':       return lookup.t('workflow.recipient.creator');
@@ -83,14 +83,14 @@ export function recipientText(recipient: WorkflowRecipient, lookup: SummaryLooku
   }
 }
 
-/** Kart özeti: ilk alıcı, fazlası "+2". */
+/** Card summary: the first recipient, the rest as "+2". */
 export function recipientsSummary(recipients: ReadonlyArray<WorkflowRecipient>, lookup: SummaryLookup): string {
   if (recipients.length === 0) return MISSING;
   const first = recipientText(recipients[0], lookup);
   return recipients.length > 1 ? `${first} +${recipients.length - 1}` : first;
 }
 
-/** Bekleme özeti: "2 gün", "Bitis tarihine kadar", "Bitis − 24 sa". */
+/** Timer summary: "2 days", "until Bitis", "Bitis − 24 h". */
 export function timerSummary(step: WorkflowStep, lookup: SummaryLookup): string {
   const timer = step.timer;
   if (!timer) return MISSING;

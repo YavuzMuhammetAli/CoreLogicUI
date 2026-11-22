@@ -13,33 +13,33 @@ import {
 } from '../models/relationship.model';
 
 /**
- * Model ilişkileri API'si (G1).
+ * Model relationships API (G1).
  *
- * Base URL deseni: /publish/models/{tableId}/...
- * {tableId} = PublishedTable.ID — `PublishedTableService.getAllTables()` bu id'yi döner.
+ * Base URL pattern: /publish/models/{tableId}/...
+ * {tableId} = PublishedTable.ID — `PublishedTableService.getAllTables()` returns this id.
  *
- * Not: Yayınlama akışının kendisi DEĞİŞMEZ; ilişkiler `/Published/publish`
- * çağrısına otomatik dahil olur. Buradaki endpoint'ler yalnızca tanımları
- * yönetir ve publish öncesi doğrulama/önizleme sağlar.
+ * Note: the publish flow itself does NOT CHANGE; relationships are included automatically in the
+ * `/Published/publish` call. The endpoints here only manage the definitions
+ * and provide pre-publish validation/preview.
  */
 @Injectable({ providedIn: 'root' })
 export class RelationshipService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/publish/models`;
 
-  /** Kaynak modelin tüm ilişki tanımlarını döner. */
+  /** Returns all relationship definitions of the source model. */
   list(tableId: number): Observable<ListResponseModel<RelationshipDefinition>> {
     return this.http.get<ListResponseModel<RelationshipDefinition>>(
       `${this.baseUrl}/${tableId}/relationships`);
   }
 
-  /** Yeni ilişki ekler. sourceModel/depth backend tarafından belirlenir. */
+  /** Adds a new relationship. sourceModel/depth are determined by the backend. */
   add(tableId: number, body: RelationshipUpsert): Observable<DataResponseModel<RelationshipDefinition>> {
     return this.http.post<DataResponseModel<RelationshipDefinition>>(
       `${this.baseUrl}/${tableId}/relationships`, body);
   }
 
-  /** Mevcut ilişkiyi günceller. */
+  /** Updates an existing relationship. */
   update(
     tableId: number,
     relationshipId: string,
@@ -49,22 +49,22 @@ export class RelationshipService {
       `${this.baseUrl}/${tableId}/relationships/${relationshipId}`, body);
   }
 
-  /** İlişkiyi siler (soft-delete). SQL FK constraint'i bir sonraki publish'te düşer. */
+  /** Deletes the relationship (soft-delete). The SQL FK constraint is dropped on the next publish. */
   delete(tableId: number, relationshipId: string): Observable<ResponseModel> {
     return this.http.delete<ResponseModel>(
       `${this.baseUrl}/${tableId}/relationships/${relationshipId}`);
   }
 
   /**
-   * Graph'ı doğrular (döngü, derinlik, çakışma…). Publish BAŞLATMAZ —
-   * kullanıcı kaydetmeden önce uyarı görsün diye kullanılır.
+   * Validates the graph (cycle, depth, conflict…). Does NOT START a publish —
+   * used so the user sees warnings before saving.
    */
   validateGraph(tableId: number): Observable<DataResponseModel<RelationshipValidationResult>> {
     return this.http.post<DataResponseModel<RelationshipValidationResult>>(
       `${this.baseUrl}/${tableId}/validate-graph`, {});
   }
 
-  /** Oluşacak entity graph'ı, üretilecek C#'ı ve DDL'i assembly'e yazmadan döner. */
+  /** Returns the resulting entity graph, the C# to be generated and the DDL without writing to the assembly. */
   preview(tableId: number): Observable<DataResponseModel<PublishPreview>> {
     return this.http.post<DataResponseModel<PublishPreview>>(
       `${this.baseUrl}/${tableId}/preview`, {});

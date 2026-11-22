@@ -1,18 +1,18 @@
-<!-- Sayfa başlığı -->
+<!-- Page header -->
 <div class="page-header">
-  <!-- Meta gelene kadar boşluk: önce tablo adı yazıp etikete "sıçramasın" -->
+  <!-- Placeholder until meta arrives: so the table name is not shown first and then "jumps" to the label -->
   <span class="eyebrow">@if (!model && loadingRows) { &nbsp; } @else { {{ modelTitle }} }</span>
 </div>
 
 @if (!model && loadingRows) {
-  <!-- Model meta yükleniyor — kısa bekleme -->
+  <!-- Model meta loading — short wait -->
   <div class="panel">
     <div class="empty-state">
       <span class="spinner" style="width: 32px; height: 32px;" [attr.aria-label]="'model.data.loadingAria' | t"></span>
     </div>
   </div>
 } @else if (!model) {
-  <!-- Model bulunamadı (yükleme tamamlandıktan sonra) -->
+  <!-- Model not found (after loading has completed) -->
   <div class="panel">
     <div class="empty-state">
       <app-icon class="empty-icon" name="error" size="40" />
@@ -22,7 +22,7 @@
     </div>
   </div>
 } @else {
-  <!-- Veri paneli -->
+  <!-- Data panel -->
   <div class="panel">
     <div class="panel-head">
       <div>
@@ -36,7 +36,7 @@
           </button>
         }
         @if (permissionService.isAdmin()) {
-          <!-- Yayınlanmış liste tasarımı "Kolonlar" ayarının yerini alır: tek doğruluk kaynağı. -->
+          <!-- A published list design replaces the "Kolonlar" (Columns) setting: a single source of truth. -->
           <a class="btn btn-ghost btn-sm" [routerLink]="['/build', typeName, 'screen']" [queryParams]="designQuery"
              [attr.aria-label]="'screen.designScreenAria' | t"><app-icon name="dashboard_customize" size="14" />{{ 'screen.designScreen' | t }}</a>
           @if (!listLayout) {
@@ -66,12 +66,12 @@
       </div>
     </div>
 
-    <!-- Hata -->
+    <!-- Error -->
     @if (loadError) {
       <div class="alert alert-danger" style="margin: var(--space-4) var(--space-5)" role="alert">{{ loadError }}</div>
     }
 
-    <!-- Toplu silmede silinemeyenlerin özeti — o satırlar seçili kalır -->
+    <!-- Summary of rows that could not be bulk-deleted — those rows stay selected -->
     @if (bulkErrors.length > 0) {
       <div class="alert alert-danger" style="margin: var(--space-4) var(--space-5)" role="alert">
         <div class="bulk-error-list">
@@ -85,7 +85,7 @@
       </div>
     }
 
-    <!-- Arama ve filtre: seçim sonucu boş kalsa da açık kalmalı, yoksa seçimden çıkılamazdı -->
+    <!-- Search and filter: must stay open even if the selection yields nothing, otherwise you could not leave the selection -->
     @if (total > 0 || isQueryActive) {
       <div class="list-toolbar">
         <div class="list-search">
@@ -162,7 +162,7 @@
       }
     }
 
-    <!-- Yükleniyor -->
+    <!-- Loading -->
     @if (loadingRows && rows.length === 0) {
       <div class="empty-state">
         <span class="spinner" style="width: 32px; height: 32px;" [attr.aria-label]="'model.data.loadingAria' | t"></span>
@@ -170,7 +170,7 @@
       </div>
     }
 
-    <!-- Tablo -->
+    <!-- Table -->
     @if (!loadingRows || rows.length > 0) {
       @if (total === 0 && !loadError && isQueryActive) {
         <div class="empty-state">
@@ -226,9 +226,9 @@
                   </th>
                 }
                 <!--
-                  H: Süreç durumu kolonu — YALNIZCA bu modelde akış varsa çizilir.
-                  Kolon her modelde görünseydi, akış kullanmayan modellerde
-                  sürekli boş bir sütun olurdu.
+                  H: Process status column — drawn ONLY if this model has a workflow.
+                  If the column appeared on every model, models without workflows
+                  would always have an empty column.
                 -->
                 @if (hasWorkflowStatus) {
                   <th scope="col">{{ 'workflow.panel.title' | t }}</th>
@@ -244,7 +244,7 @@
                   role="link"
                   [attr.aria-label]="'model.data.rowAriaLabel' | t:{ typeName, id: rowId(row) }">
                   @if (permissionService.can(typeName, 'delete')) {
-                    <!-- Satır routerLink taşıyor: seçim tıklaması detaya gitmemeli -->
+                    <!-- The row carries a routerLink: the selection click must not navigate to the detail -->
                     <td class="select-cell" (click)="$event.stopPropagation()">
                       <label class="select-hit">
                         <input
@@ -294,7 +294,7 @@
           </table>
         </div>
         <div class="table-footer">
-          <!-- Kayıt aralığı -->
+          <!-- Record range -->
           <span class="eyebrow">
             @if (total > 0) {
               {{ 'model.data.recordCount' | t:{ start: pageRangeStart, end: pageRangeEnd, total } }}
@@ -303,7 +303,7 @@
             }
           </span>
 
-          <!-- Sayfa numarası butonları (tek sayfa ise gizle) -->
+          <!-- Page number buttons (hidden if there is a single page) -->
           @if (totalPages > 1) {
             <nav class="pagination" [attr.aria-label]="'model.data.paginationAriaLabel' | t">
               <button class="page-btn" type="button" (click)="prevPage()"
@@ -337,7 +337,7 @@
             </nav>
           }
 
-          <!-- Sayfa başına kayıt seçici -->
+          <!-- Records-per-page selector -->
           <div class="page-size-selector">
             <label class="sr-only" for="pageSizeSelect">{{ 'model.data.pageSizeLabel' | t }}</label>
             <select id="pageSizeSelect"
@@ -353,7 +353,7 @@
     }
   </div>
 
-  <!-- Sürüm Geçmişi Paneli -->
+  <!-- Version History Panel -->
   @if (permissionService.isAdmin() && showVersionPanel()) {
     <div class="panel" style="margin-top: 1.5rem">
       <div class="panel-head">
@@ -410,7 +410,7 @@
     </div>
   }
 
-  <!-- Toplu silme onayı -->
+  <!-- Bulk delete confirmation -->
   <app-confirm-dialog
     [open]="confirmOpen()"
     [title]="'model.data.bulkDeleteTitle' | t"
@@ -421,7 +421,7 @@
 
 }
 
-<!-- Sürüm geri alma onayı — native confirm() yerine tasarım sistemine uygun diyalog -->
+<!-- Version rollback confirmation — a design-system dialog instead of native confirm() -->
 <app-confirm-dialog
   [open]="pendingRollbackVersion !== null"
   [title]="'model.data.rollbackConfirmTitle' | t"

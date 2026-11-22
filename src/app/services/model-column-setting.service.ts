@@ -5,20 +5,20 @@ import { ResponseModel } from '../models/responseModel';
 import { DataResponseModel } from '../models/dataResponseModel';
 import { environment } from '../../environments/environment';
 
-/** Görünüm türü: listeleme grid'i veya detay sayfası üst kayıt formu */
+/** View type: the list grid or the parent record form of the detail page */
 export type ColumnViewType = 'list' | 'detail';
 
-/** Kolon görünürlük ayarı — backend ModelColumnSettingDto ile eşleşir */
+/** Column visibility setting — matches the backend ModelColumnSettingDto */
 export interface ModelColumnSettingDto {
   typeName: string;
   viewType: ColumnViewType;
-  /** Görünür kolon adları. Boş dizi = ayar yok, tüm kolonlar görünür kabul edilir. */
+  /** Visible column names. Empty array = no setting, all columns are considered visible. */
   visibleColumns: string[];
 }
 
 /**
- * Admin tarafından yönetilen, model bazlı kolon görünürlük ayarları.
- * Yazma (set) yalnızca admin tarafından çağrılmalı — backend [Authorize(Roles="admin")] ile sınırlar.
+ * Admin-managed, per-model column visibility settings.
+ * Writing (set) must be called only by an admin — the backend restricts it with [Authorize(Roles="admin")].
  */
 @Injectable({ providedIn: 'root' })
 export class ModelColumnSettingService {
@@ -26,13 +26,13 @@ export class ModelColumnSettingService {
 
   constructor(private http: HttpClient) {}
 
-  /** Model + görünüm türü için kayıtlı kolon ayarını getirir (ayar yoksa visibleColumns boş döner) */
+  /** Fetches the saved column setting for model + view type (visibleColumns is empty if there is none) */
   get(typeName: string, viewType: ColumnViewType): Observable<DataResponseModel<ModelColumnSettingDto>> {
     const params = new HttpParams().set('typeName', typeName).set('viewType', viewType);
     return this.http.get<DataResponseModel<ModelColumnSettingDto>>(`${this.baseUrl}/get`, { params });
   }
 
-  /** Model + görünüm türü için görünür kolon listesini yazar (admin) */
+  /** Writes the visible column list for model + view type (admin) */
   set(dto: ModelColumnSettingDto): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/set`, dto);
   }

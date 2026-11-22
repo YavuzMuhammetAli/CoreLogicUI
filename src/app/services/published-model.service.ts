@@ -10,47 +10,47 @@ import { AuthService } from './auth.service';
 import type { PublishedTableSchema } from './published-table.service';
 import type { ListQueryParams } from '../utils/list-query';
 
-/** Kolon meta verisi — backend PublishedColumnInfo ile eşleşir */
+/** Column metadata — matches the backend PublishedColumnInfo */
 export interface PublishedColumn {
   columnName: string;
-  // UI tip anahtarları: string / int / long / short / byte / decimal / double / float / boolean /
+  // UI type keys: string / int / long / short / byte / decimal / double / float / boolean /
   // datetime / dateonly / timeonly / guid / enum / lookup / image / file
   dataType: string;
   isNullable: boolean;
-  // Yeni tip metadata'sı: enum / lookup (şemadan — reflection'dan değil)
+  // New type metadata: enum / lookup (from the schema — not from reflection)
   enumValues?: string | null;
   lookupTargetTable?: string | null;
   lookupDisplayColumn?: string | null;
-  /** string'te karakter sınırı; image/file'da dosya boyutu sınırı (KB) — bkz. utils/file-size.ts */
+  /** Character limit for string; file size limit (KB) for image/file — see utils/file-size.ts */
   maxLength?: number | null;
-  // UI metadata: kullanıcı dostu gösterim (şemadan — reflection'dan değil)
+  // UI metadata: user-friendly display (from the schema — not from reflection)
   label?: string | null;
   description?: string | null;
 }
 
-/** Model meta verisi — backend PublishedModelInfo ile eşleşir */
+/** Model metadata — matches the backend PublishedModelInfo */
 export interface PublishedModel {
   typeName: string;
-  /** Kullanıcı dostu model adı (PublishedTable.Label). Boşsa typeName gösterilir. */
+  /** User-friendly model name (PublishedTable.Label). If empty, typeName is shown. */
   label?: string | null;
-  /** Model ikonu (PublishedTable.Icon, Material Symbols adı) — `<app-model-icon>` çizer. */
+  /** Model icon (PublishedTable.Icon, Material Symbols name) — drawn by `<app-model-icon>`. */
   icon?: string | null;
   columns: PublishedColumn[];
 }
 
 /**
- * Lookup kolonu için bir seçenek: FK olarak kaydedilecek ID + gösterilecek etiket.
- * Backend LookupOptionDto ile eşleşir.
+ * One option for a lookup column: the ID to store as the FK + the label to show.
+ * Matches the backend LookupOptionDto.
  *
- * Burada tanımlıdır (record-metadata.service.ts'te değil) çünkü onu üreten uç bu servistedir;
- * record-metadata bu servisi zaten import ediyor, tersi dairesel bağımlılık olurdu.
+ * Defined here (not in record-metadata.service.ts) because the endpoint producing it is in this service;
+ * record-metadata already imports this service, the reverse would be a circular dependency.
  */
 export interface LookupOption {
   id: number;
   label: string;
 }
 
-/** Sayfalı yanıt verisi — backend PagedResult ile eşleşir */
+/** Paged response data — matches the backend PagedResult */
 export interface PagedData<T> {
   items: T[];
   total: number;
@@ -58,40 +58,40 @@ export interface PagedData<T> {
   pageSize: number;
 }
 
-/** Sayfalı getAll yanıtı */
+/** Paged getAll response */
 export interface PagedResponseModel<T> extends ResponseModel {
   data: PagedData<T>;
 }
 
 /**
- * Kaydedilecek bir kayıt ve tüm alt ağacı — POST /PublishedModel/addTree gövdesi.
+ * A record to save with its whole subtree — the body of POST /PublishedModel/addTree.
  *
- * FK alanları BURADA GÖNDERİLMEZ: sunucu her düğümü kaydettikten sonra EF'in
- * döndürdüğü gerçek ID'yi çocuğun `{ÜstTip}Id` kolonuna kendisi yazar. Böylece
- * istemcinin ID tahmin etmesi (liste çekip max(ID) alması) gerekmez — eşzamanlı
- * kullanıcılarda alt kayıtların yabancı bir üst kayda bağlanması imkânsızdır.
+ * FK fields are NOT SENT HERE: after saving each node the server itself writes the real ID
+ * returned by EF into the child's `{ParentType}Id` column. So the client does not have to
+ * guess IDs (fetch the list and take max(ID)) — with concurrent users it is impossible
+ * for child records to be attached to someone else's parent record.
  */
 export interface DynamicTreeNodeDto {
   typeName: string;
-  /** İstemcinin geçici kimliği; yanıttaki savedIds/errors bu anahtarla döner. */
+  /** The client's temporary ID; savedIds/errors in the response come back under this key. */
   clientId: string;
   jsonData: Record<string, unknown>;
-  /** Doluysa düğüm EKLENMEZ, yalnızca çocuklarının FK hedefi olur (mevcut kayda ekleme). */
+  /** If set, the node is NOT INSERTED, it only serves as the FK target of its children (append to an existing record). */
   existingId?: number | null;
   children: DynamicTreeNodeDto[];
 }
 
-/** addTree yanıtı. Hata varsa HİÇBİR kayıt oluşmaz ve tüm hatalar birden döner. */
+/** addTree response. If there is an error NO record is created and all errors are returned at once. */
 export interface TreeSaveResult {
-  /** clientId → veritabanındaki gerçek ID */
+  /** clientId → the real ID in the database */
   savedIds: Record<string, number>;
-  /** clientId → doğrulama hata mesajı */
+  /** clientId → validation error message */
   errors: Record<string, string>;
 }
 
 /**
- * Yardımcı isteklerin bağlamı: 403 kullanıcıyı sayfadan koparmasın. Lookup hedefini ya da
- * alt modeli okuma izni olmayan kullanıcı ham id / kuralsız form görür, /models'e atılmaz.
+ * Context for auxiliary requests: a 403 must not pull the user off the page. A user without read
+ * permission on the lookup target or the sub-model sees the raw id / a form without rules and is not sent to /models.
  */
 const AUXILIARY = () => new HttpContext().set(SKIP_FORBIDDEN_REDIRECT, true);
 
@@ -100,14 +100,14 @@ export class PublishedModelService {
   private readonly baseUrl = `${environment.apiBaseUrl}/PublishedModel`;
 
   /**
-   * Model listesi önbelleği süresi. Liste başka bir admin'in yayınıyla değişebilir; bu oturumun
-   * kendi şema değişiklikleri `invalidateModels()` ile anında düşer (PublishedTableService çağırır).
+   * Model list cache lifetime. The list can change through another admin's publish; this session's
+   * own schema changes drop it immediately via `invalidateModels()` (called by PublishedTableService).
    */
   static readonly MODELS_TTL_MS = 5 * 60 * 1000;
 
   private modelsCache: { at: number; owner: string | null; models$: Observable<ListResponseModel<PublishedModel>> } | null = null;
 
-  /** Model listesi geçersiz kılındı — türetilmiş önbellekler (RecordMetadataService) de düşsün. */
+  /** The model list was invalidated — derived caches (RecordMetadataService) should drop too. */
   readonly modelsInvalidated$ = new Subject<void>();
 
   private readonly auth = inject(AuthService);
@@ -115,12 +115,12 @@ export class PublishedModelService {
   constructor(private http: HttpClient) {}
 
   /**
-   * Assembly'deki tüm model tiplerini ve kolon meta verilerini getirir — ÖNBELLEKLİ.
+   * Fetches all model types in the assembly and their column metadata — CACHED.
    *
-   * Kabuk, model listesi, kayıt/liste ekranları, şema/rapor/akış tasarımcıları ve izin ekranları
-   * bunu ayrı ayrı istiyordu: tek bir sayfa açılışı 2-3 kez, sunucuda da her biri model başına
-   * izin + şema sorgusu. Liste kullanıcının izinlerine göre süzüldüğü için önbellek oturuma
-   * bağlıdır: çıkış yapıp başka kullanıcıyla girilince yeniden istenir.
+   * The shell, model list, record/list screens, schema/report/workflow designers and permission screens
+   * each requested it separately: a single page load 2-3 times, and on the server each one ran a
+   * permission + schema query per model. Since the list is filtered by the user's permissions, the cache is
+   * bound to the session: after logging out and in as another user it is requested again.
    */
   getModels(): Observable<ListResponseModel<PublishedModel>> {
     const now = Date.now();
@@ -131,7 +131,7 @@ export class PublishedModelService {
     }
 
     const models$ = this.http.get<ListResponseModel<PublishedModel>>(`${this.baseUrl}/models`).pipe(
-      // Başarısız yanıt ya da hata önbellekte kalmasın: sonraki çağrı yeniden denesin.
+      // Don't keep a failed response or an error in the cache: the next call should retry.
       tap({
         next: res => { if (!res.success) this.dropCache(models$); },
         error: () => this.dropCache(models$)
@@ -142,7 +142,7 @@ export class PublishedModelService {
     return models$;
   }
 
-  /** Model listesini (ve ondan türetilen önbellekleri) düşürür — şema değiştiğinde çağrılır. */
+  /** Drops the model list (and the caches derived from it) — called when the schema changes. */
   invalidateModels(): void {
     this.modelsCache = null;
     this.modelsInvalidated$.next();
@@ -152,7 +152,7 @@ export class PublishedModelService {
     if (this.modelsCache?.models$ === models$) this.modelsCache = null;
   }
 
-  /** Tüm kayıtları getirir. parentColumn + parentId verilirse FK filtrelemesi yapılır. */
+  /** Fetches all records. If parentColumn + parentId are given, filters by FK. */
   getAll(typeName: string, parentColumn?: string, parentId?: number): Observable<ListResponseModel<Record<string, unknown>>> {
     let params = new HttpParams().set('typeName', typeName);
     if (parentColumn && parentId != null) {
@@ -162,13 +162,13 @@ export class PublishedModelService {
   }
 
   /**
-   * Lookup dropdown'u için sayfalı + aranabilir {id, label} listesi.
+   * Paged + searchable {id, label} list for the lookup dropdown.
    *
-   * Eski yol hedef tablonun TÜM satırlarını tam entity olarak çekiyordu
-   * (Musteri: 12.025 satır / 5 MB / ~3,9 sn). Bu uç yalnız iki kolonu projekte eder
-   * ve sayfalar — aynı tablo için 50 kayıt ~2 KB.
+   * The old path fetched ALL rows of the target table as full entities
+   * (Musteri: 12,025 rows / 5 MB / ~3.9 s). This endpoint projects only two columns
+   * and pages — 50 records of the same table ~2 KB.
    *
-   * `search` sunucuda `contains` olarak uygulanır; arama sonucunda da sayfalama sürer.
+   * `search` is applied on the server as `contains`; paging continues on search results too.
    */
   lookupOptions(
     typeName: string,
@@ -187,12 +187,12 @@ export class PublishedModelService {
   }
 
   /**
-   * Belirli FK id'lerinin etiketlerini TEK istekte çözer (arama/sayfalama yok sayılır).
+   * Resolves the labels of specific FK ids in ONE request (search/paging are ignored).
    *
-   * İki yerde şart:
-   *  1) Düzenleme formunda seçili değer ilk 50 seçenek arasında olmayabilir — etiketi
-   *     çözülmezse kullanıcı boş bir kutu görür ve kaydettiğinde FK sessizce silinir.
-   *  2) Liste/tablo hücrelerinde FK id'lerini etikete çevirmek (sayfa başına tek istek).
+   * Required in two places:
+   *  1) In the edit form the selected value may not be among the first 50 options — if its label
+   *     is not resolved the user sees an empty box and the FK is silently erased on save.
+   *  2) Turning FK ids into labels in list/table cells (one request per page).
    */
   lookupOptionsByIds(
     typeName: string,
@@ -209,9 +209,9 @@ export class PublishedModelService {
   }
 
   /**
-   * Sayfalı kayıt listesi getirir. Backend'e page + pageSize gönderilir; yalnız ilgili
-   * sayfa döner. Alt-model sekmeleri paramsız getAll kullanmaya devam eder.
-   * `query`: arama, sıralama ve filtre (bkz. utils/list-query).
+   * Fetches a paged record list. page + pageSize are sent to the backend; only the relevant
+   * page is returned. Sub-model tabs keep using the parameterless getAll.
+   * `query`: search, sort and filter (see utils/list-query).
    */
   getAllPaged(
     typeName: string,
@@ -234,16 +234,16 @@ export class PublishedModelService {
     return this.http.get<PagedResponseModel<Record<string, unknown>>>(`${this.baseUrl}/getall`, { params });
   }
 
-  /** Belirtilen parent modelin doğrudan alt model adlarını döndürür. */
+  /** Returns the direct sub-model names of the given parent model. */
   getChildModels(parentTypeName: string): Observable<ListResponseModel<string>> {
     const params = new HttpParams().set('parentTypeName', parentTypeName);
     return this.http.get<ListResponseModel<string>>(`${this.baseUrl}/children`, { params });
   }
 
   /**
-   * Kayıt formunun şema kuralları (doğrulama, otomatik değer, salt okunur) — modelde Read
-   * izni yeter. Admin'e özel /Published/getTable ile AYNI veriyi döner; kayıt formları bunu,
-   * şema tasarım ekranları (admin) getTable'ı kullanır.
+   * Schema rules of the record form (validation, auto value, read-only) — Read permission on the
+   * model is enough. Returns the SAME data as the admin-only /Published/getTable; record forms use this,
+   * schema design screens (admin) use getTable.
    */
   getSchema(typeName: string): Observable<DataResponseModel<PublishedTableSchema>> {
     const params = new HttpParams().set('typeName', typeName);
@@ -252,36 +252,36 @@ export class PublishedModelService {
     );
   }
 
-  /** Tek kayıt getirir */
+  /** Fetches a single record */
   get(typeName: string, id: number): Observable<DataResponseModel<Record<string, unknown>>> {
     const params = new HttpParams().set('typeName', typeName).set('id', id);
     return this.http.get<DataResponseModel<Record<string, unknown>>>(`${this.baseUrl}/get`, { params });
   }
 
   /**
-   * Yeni kayıt ekler ve OLUŞAN KAYDIN ID'sini döndürür (`data`).
-   * ID dönmeseydi çağıran eklediği kaydı bulmak için ayrı bir sorgu atmak zorunda kalırdı;
-   * unique kısıt olmadığı için de doğru kaydı bulma garantisi olmazdı.
+   * Adds a new record and returns the ID OF THE CREATED RECORD (`data`).
+   * Without the ID the caller would have to send a separate query to find the record it added;
+   * and with no unique constraint there would be no guarantee of finding the right record.
    */
   add(typeName: string, jsonData: Record<string, unknown>): Observable<DataResponseModel<number>> {
     return this.http.post<DataResponseModel<number>>(`${this.baseUrl}/add`, { typeName, jsonData });
   }
 
   /**
-   * Bir kayıt ağacını (ana kayıt + alt kayıtlar + torunlar) TEK istekte gönderir.
-   * Sunucu hepsini TEK transaction içinde yazar: bir alan bile geçersizse hiçbir
-   * kayıt oluşmaz ve hataların tamamı `errors` içinde birden döner.
+   * Sends a record tree (main record + child records + grandchildren) in ONE request.
+   * The server writes all of them in ONE transaction: if even one field is invalid no
+   * record is created and all errors are returned at once in `errors`.
    */
   addTree(root: DynamicTreeNodeDto): Observable<DataResponseModel<TreeSaveResult>> {
     return this.http.post<DataResponseModel<TreeSaveResult>>(`${this.baseUrl}/addTree`, root);
   }
 
-  /** Kayıt günceller */
+  /** Updates a record */
   update(typeName: string, jsonData: Record<string, unknown>): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/update`, { typeName, jsonData });
   }
 
-  /** Kayıt siler */
+  /** Deletes a record */
   delete(typeName: string, id: number): Observable<ResponseModel> {
     const params = new HttpParams().set('typeName', typeName).set('id', id);
     return this.http.post<ResponseModel>(`${this.baseUrl}/delete`, null, { params });

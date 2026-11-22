@@ -1,10 +1,10 @@
 :host { display: block; }
 
-// Özellik paneliyle aynı kutu — simülasyon açıkken onun yerini alır.
+// Same box as the inspector panel — takes its place while the simulation is open.
 .sim {
   display: flex;
   flex-direction: column;
-  max-height: var(--wf-panel-max-height, 640px); // tam ekranda tasarımcı 100% verir
+  max-height: var(--wf-panel-max-height, 640px); // in full screen the designer sets 100%
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 10px);
   background: var(--surface);
@@ -90,7 +90,7 @@
   background: var(--surface-warm);
 }
 
-// Otomatik eylemin özeti (yazılan alanlar / bildirim konusu) — adımın altında.
+// Summary of the automatic action (written fields / notification subject) — below the step.
 .sim-note {
   flex-basis: 100%;
   font-size: var(--text-xs);

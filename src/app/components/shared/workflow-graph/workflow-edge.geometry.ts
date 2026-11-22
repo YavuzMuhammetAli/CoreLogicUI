@@ -1,43 +1,43 @@
 import { WorkflowStep } from '../../../models/workflow.model';
 
 /**
- * Akış şeması geometrisi — SAF fonksiyonlar, Angular import'u YOK.
+ * Flow diagram geometry — PURE functions, NO Angular imports.
  *
- * Bu dosya yalnızca MATEMATİĞİ taşır: bir kenarın yolu nereden geçer, bir düğüm
- * ne kadar yer kaplar, portlar nereye düşer. "Hangi hedef çizilir" POLİTİKASI
- * burada değildir — onu iki çağıran kendi yerinde tutar ve kasıtlı olarak farklı
- * davranırlar:
+ * This file carries only the MATH: where an edge's path goes, how much space a node
+ * takes, where the ports land. The POLICY of "which target is drawn" is not
+ * here — the two callers keep it in their own place and deliberately behave
+ * differently:
  *
- *   workflow-graph.layout.ts  → boş hedefi terminale düşürür, terminalleri çizer
- *   workflow-canvas.component → boş hedefi hiç çizmez, terminalleri çizmez
+ *   workflow-graph.layout.ts  → drops an empty target to a terminal, draws terminals
+ *   workflow-canvas.component → never draws an empty target, does not draw terminals
  *
- * Ortak olan tek şey formüldü; duplike olan da oydu. Politika ayrı kaldığı için
- * iki çağıranın davranışı bu ayrıştırmayla değişmez.
+ * The only shared thing was the formula; that was also what was duplicated. Since the policy stays separate,
+ * the behaviour of the two callers does not change with this split.
  */
 
 export const NODE_WIDTH = 168;
 /**
- * Canvas kutusu bu yükseklikte SABİT çizilir (min-height değil). Daha önce 52'ydi
- * ve DOM içeriği (başlık + anahtar + padding) kutuyu ~60px'e uzatıyordu; model
- * gerçekte olduğundan kısa sandığı için alt satır kutunun üstüne biniyordu.
+ * The canvas box is drawn at this FIXED height (not min-height). It used to be 52
+ * and the DOM content (title + key + padding) stretched the box to ~60px; since the model
+ * thought it was shorter than it really was, the row below overlapped the box.
  */
 export const NODE_HEIGHT = 60;
-/** Aynı katmandaki iki kutu arası. */
+/** Gap between two boxes in the same layer. */
 export const COLUMN_GAP = 56;
-/** Katmanlar arası — "onay"/"red" etiketi ve ok başı buraya sığmalı. */
+/** Gap between layers — the "onay"/"red" (approve/reject) label and the arrowhead must fit here. */
 export const ROW_GAP = 80;
 export const PADDING = 24;
 export const TERMINAL_HEIGHT = 34;
 export const LABEL_OFFSET = 6;
-/** Paralel kutuda her dal satırının yüksekliği. */
+/** Height of each branch row in a parallel box. */
 export const BRANCH_LINE_HEIGHT = 15;
-/** Geri dönen kenarın, yolundaki en sağ kutudan ne kadar açıkta dolaşacağı. */
+/** How far outside the rightmost box on its path a returning edge goes around. */
 export const BACK_EDGE_BULGE = 40;
-/** Dikeyde örtüşen geri dönüşler arasındaki yatay şerit aralığı. */
+/** Horizontal lane spacing between vertically overlapping back edges. */
 export const BACK_EDGE_LANE_GAP = 18;
-/** Hedef, kaynağın altından en az bu kadar aşağıdaysa kenar "ileri" sayılır. */
+/** An edge counts as "forward" if the target is at least this far below the source. */
 export const FORWARD_MIN_GAP = 16;
-/** Etiketin kenar üzerindeki konumu (0 = kaynak): portun hemen altına düşer. */
+/** Position of the label along the edge (0 = source): lands just below the port. */
 const LABEL_T = 0.3;
 
 export interface Point {
@@ -45,7 +45,7 @@ export interface Point {
   y: number;
 }
 
-/** Kenarın bağlandığı dikdörtgen — hem LayoutNode hem CanvasNode bu şekle uyar. */
+/** Rectangle an edge connects to — both LayoutNode and CanvasNode fit this shape. */
 export interface EdgeBox {
   x: number;
   y: number;
@@ -54,17 +54,17 @@ export interface EdgeBox {
 }
 
 /**
- * Kenar çizim biçimi.
+ * Edge drawing style.
  *
- * Tasarım tuvali dik açılı, yuvarlak köşeli kenar kullanır (`routeOrthogonal`);
- * çok çıkışlı adımlarda eğriler üst üste biniyordu. Salt-okunur önizleme şeması
- * hâlâ Bézier'dir (`routeEdges`). `edgeGeometry(…, 'orthogonal')` keskin köşeli
- * eski biçimdir ve spec'i biçimini sabitlediği için değiştirilmedi.
+ * The design canvas uses orthogonal edges with rounded corners (`routeOrthogonal`);
+ * on steps with many exits the curves overlapped. The read-only preview diagram
+ * is still Bézier (`routeEdges`). `edgeGeometry(…, 'orthogonal')` is the old sharp-cornered
+ * style and was not changed because its spec pins the shape.
  */
 export type EdgeStyle = 'bezier' | 'orthogonal';
 
 export interface EdgeGeometry {
-  /** SVG `d` özniteliği. */
+  /** SVG `d` attribute. */
   path: string;
   labelX: number;
   labelY: number;
@@ -73,9 +73,9 @@ export interface EdgeGeometry {
   maxX: number;
   maxY: number;
   /**
-   * Yolun dört kontrol noktası. Hit-test'in `d` string'ini yeniden ayrıştırmak
-   * zorunda kalmaması için taşınır. `bezier`de kübik eğrinin kontrol noktaları,
-   * `orthogonal`de kırık çizginin köşeleri — ikisi de aynı dört nokta.
+   * The path's four control points. Carried so the hit test does not have to
+   * re-parse the `d` string. In `bezier` they are the cubic curve's control points,
+   * in `orthogonal` the polyline's corners — both are the same four points.
    */
   p0: Point;
   p1: Point;
@@ -83,22 +83,22 @@ export interface EdgeGeometry {
   p3: Point;
   style: EdgeStyle;
   /**
-   * Kırık çizgi (dik açılı) yolun köşe noktaları, uçlar dahil. Doluysa isabet
-   * testi bunları kullanır; yuvarlatılmış köşeler isabet için yeterince yakın.
+   * Corner points of the polyline (orthogonal) path, ends included. If set, the hit
+   * test uses them; rounded corners are close enough for hit testing.
    */
   points?: Point[];
 }
 
 /**
- * Kaynağın altından hedefin üst-ortasına kenar geometrisi.
+ * Edge geometry from the bottom of the source to the top-centre of the target.
  *
- * `sourceOffsetX` çıkış noktasının kaynağın soluna göre yatay konumudur — onay ve
- * red kenarları kendi portlarından (bkz. `portPositions`) çıksın, aynı noktadan
- * çıkıp üst üste binmesin diye. Verilmezse alt-orta.
+ * `sourceOffsetX` is the exit point's horizontal position relative to the source's left — so the approve and
+ * reject edges leave from their own ports (see `portPositions`) instead of leaving the same point
+ * and overlapping. If not given, bottom-centre.
  *
- * Sınırlar (min/max) yalnızca UÇ NOKTALARDAN hesaplanır, kontrol noktalarından
- * değil: dikey eğri uçların çizdiği kutunun dışına taşmaz ve mevcut viewBox
- * davranışı böyle kurulmuştu.
+ * Bounds (min/max) are computed only from the END POINTS, not the control points:
+ * a vertical curve does not overflow the box drawn by its ends, and the existing viewBox
+ * behaviour was built that way.
  */
 export function edgeGeometry(
   source: EdgeBox,
@@ -121,8 +121,8 @@ export function edgeGeometry(
     ? `M ${x1} ${y1} V ${midY} H ${x2} V ${y2}`
     : `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
 
-  // Etiket orta noktada değil kaynağa yakın: hangi porttan çıktığı okunur ve
-  // çok girişli bir hedefin üstünde etiketler üst üste yığılmaz.
+  // The label is near the source, not at the midpoint: you can read which port it leaves from and
+  // labels do not pile up above a target with many inputs.
   const label = cubicPointAt(p0, p1, p2, p3, LABEL_T);
 
   return {
@@ -139,8 +139,8 @@ export function edgeGeometry(
 }
 
 /**
- * Kendine dönen kenar. Düğümün sağından çıkıp sağından girer; düz bir çizgi
- * görünmez olurdu.
+ * Self-loop edge. Leaves from the node's right and enters on its right; a straight line
+ * would be invisible.
  */
 export function selfLoopGeometry(node: EdgeBox): EdgeGeometry {
   const x = node.x + node.width;
@@ -167,14 +167,14 @@ export function selfLoopGeometry(node: EdgeBox): EdgeGeometry {
 }
 
 /**
- * Geri dönen (rework) kenar: hedef kaynağın altında değil.
+ * Returning (rework) edge: the target is not below the source.
  *
- * Alttan çıkıp üstteki hedefe inen bir eğri aradaki kutuların İÇİNDEN geçerdi.
- * Bunun yerine kaynağın sağ-ortasından çıkar, `clearX` hizasına kadar sağa açılıp
- * yukarı dolaşır ve hedefe sağından girer.
+ * A curve leaving from the bottom and going down to a target above would pass THROUGH the boxes in between.
+ * Instead it leaves from the source's right-centre, opens to the right up to `clearX`,
+ * goes around upward and enters the target from its right.
  *
- * Kübik eğri kontrol noktalarının x'ine ulaşamaz; kontrol noktası, eğrinin en
- * sağ noktası tam `clearX`'e dayanacak şekilde hesaplanır (bkz. backControlX).
+ * A cubic curve cannot reach the x of its control points; the control point is computed so that
+ * the curve's rightmost point touches exactly `clearX` (see backControlX).
  */
 export function backEdgeGeometry(source: EdgeBox, target: EdgeBox, clearX: number): EdgeGeometry {
   const p0: Point = { x: source.x + source.width, y: source.y + source.height / 2 };
@@ -200,11 +200,11 @@ export function backEdgeGeometry(source: EdgeBox, target: EdgeBox, clearX: numbe
 }
 
 /**
- * İki kontrol noktası da aynı `cx`'te olan kübik eğride
- * `x(t) = u³·x0 + 3ut·cx + t³·x3` (u = 1 − t) — her t için cx'e göre artan
- * doğrusal. Eğrinin tepesinin `clearX`'e ulaştığı en küçük cx, t örnekleri
- * üzerinden `(clearX − u³·x0 − t³·x3) / 3ut`'nin en küçüğüdür. Uçlar farklı
- * hizadayken sabit bir oran (ör. 3/4) tutmuyor, tepe kısa kalıyordu.
+ * For a cubic curve whose two control points share the same `cx`,
+ * `x(t) = u³·x0 + 3ut·cx + t³·x3` (u = 1 − t) — for every t it is linear and increasing
+ * in cx. The smallest cx at which the curve's apex reaches `clearX` is the minimum of
+ * `(clearX − u³·x0 − t³·x3) / 3ut` over t samples. When the ends are at different
+ * alignments a fixed ratio (e.g. 3/4) does not hold, and the apex fell short.
  */
 function backControlX(x0: number, x3: number, clearX: number): number {
   let best = Infinity;
@@ -218,12 +218,12 @@ function backControlX(x0: number, x3: number, clearX: number): number {
   return best;
 }
 
-/** Hedef kaynağın altında mı? Değilse kenar geri döner ve yandan dolaştırılır. */
+/** Is the target below the source? If not, the edge returns and is routed around the side. */
 export function isForward(source: EdgeBox, target: EdgeBox): boolean {
   return target.y >= source.y + source.height + FORWARD_MIN_GAP;
 }
 
-/** `routeEdges` girdisi: bir kenarın uçları ve çıkış portu. */
+/** `routeEdges` input: an edge's ends and exit port. */
 export interface EdgeRequest {
   source: EdgeBox;
   target: EdgeBox;
@@ -231,15 +231,15 @@ export interface EdgeRequest {
 }
 
 /**
- * Kenarların hepsini birlikte yönlendirir — geri dönüşlerin şerit ataması
- * birbirine bağlı olduğu için tek tek hesaplanamaz.
+ * Routes all edges together — back edges' lane assignment depends on each other,
+ * so they cannot be computed one by one.
  *
- *   - İleri kenar: porttan hedefin üst-ortasına bezier.
- *   - Geri kenar: dikey aralığındaki (`obstacles`) en sağ kutunun sağından,
- *     kendisiyle dikeyde örtüşen önceki geri dönüş sayısı kadar dış şeritte.
- *     Kısa döngüler önce yönlendirilir ki içte kalsın, uzunlar dışa açılsın.
+ *   - Forward edge: bezier from the port to the target's top-centre.
+ *   - Back edge: from the right of the rightmost box within its vertical range (`obstacles`),
+ *     in an outer lane as many as the earlier back edges vertically overlapping it.
+ *     Short loops are routed first so they stay inside, long ones open outward.
  *
- * Sonuç girdiyle AYNI sırada döner.
+ * The result is returned in the SAME order as the input.
  */
 export function routeEdges(
   requests: ReadonlyArray<EdgeRequest>,
@@ -288,11 +288,11 @@ export function routeEdges(
 }
 
 /**
- * Adımın kapladığı kutu. Paralel adım dallarını da listelediği için dal başına
- * bir satır yüksekliği büyür.
+ * The box a step occupies. Since a parallel step also lists its branches it grows by
+ * one row height per branch.
  *
- * Bu formül daha önce layout ve canvas'ta ayrı ayrı duruyordu; ikisi arasındaki
- * sessiz sapma riskini kapatmak için tek yere indi.
+ * This formula used to live separately in the layout and the canvas; it was moved to one place
+ * to close the risk of silent drift between the two.
  */
 export function nodeSize(step: WorkflowStep): { width: number; height: number } {
   const branchCount = step.type === 'parallel' ? (step.branches ?? []).length : 0;
@@ -304,11 +304,11 @@ export function nodeSize(step: WorkflowStep): { width: number; height: number } 
 }
 
 /**
- * Düğüm altındaki çıkış portlarının yatay konumları (px, düğümün soluna göre).
+ * Horizontal positions of the exit ports below a node (px, relative to the node's left).
  *
- * Eşit aralıklı ve simetrik: `width * (i + 1) / (count + 1)`. İki port için
- * 1/3 ve 2/3 — eski sabit %32/%62 değerleri simetrik değildi (merkezleri 47'ye
- * düşüyordu), N porta genellenemezdi.
+ * Evenly spaced and symmetric: `width * (i + 1) / (count + 1)`. For two ports
+ * 1/3 and 2/3 — the old fixed 32%/62% values were not symmetric (their centre landed
+ * at 47) and could not be generalised to N ports.
  */
 export function portPositions(count: number, width: number): number[] {
   if (count <= 0) return [];
@@ -321,7 +321,7 @@ export function portPositions(count: number, width: number): number[] {
   return positions;
 }
 
-/** Kübik Bézier üzerinde t ∈ [0,1] noktasının koordinatı. */
+/** Coordinate of the point at t ∈ [0,1] on a cubic Bézier. */
 export function cubicPointAt(p0: Point, p1: Point, p2: Point, p3: Point, t: number): Point {
   const u = 1 - t;
   const a = u * u * u;
@@ -335,16 +335,16 @@ export function cubicPointAt(p0: Point, p1: Point, p2: Point, p3: Point, t: numb
   };
 }
 
-/** Kenar hit-test'inde kullanılan örnek sayısı. */
+/** Number of samples used in the edge hit test. */
 export const EDGE_SAMPLE_COUNT = 24;
 
 /**
- * Bir noktanın kenara en kısa uzaklığı (dünya koordinatında).
+ * Shortest distance from a point to an edge (in world coordinates).
  *
- * `path.getTotalLength()` / `isPointInStroke()` KULLANILMAZ: ikisi de DOM'a
- * bağlıdır, TestBed'siz test edilemez ve zoom altında tolerans hesabını
- * bulandırır. Analitik örnekleme yeterince ucuz — 100 kenar × 24 örnek tıklama
- * başına milisaniyenin altında kalıyor.
+ * `path.getTotalLength()` / `isPointInStroke()` are NOT USED: both depend on the DOM,
+ * cannot be tested without TestBed and blur the tolerance calculation
+ * under zoom. Analytic sampling is cheap enough — 100 edges × 24 samples stay
+ * under a millisecond per click.
  */
 export function distanceToEdge(geometry: EdgeGeometry, point: Point, samples = EDGE_SAMPLE_COUNT): number {
   const { p0, p1, p2, p3 } = geometry;
@@ -355,7 +355,7 @@ export function distanceToEdge(geometry: EdgeGeometry, point: Point, samples = E
   }
 
   if (geometry.style === 'orthogonal') {
-    // Kırık çizgi: üç düz parçanın en yakınına bak.
+    // Polyline: check the nearest of the three straight segments.
     best = Math.min(
       distanceToSegment(point, p0, p1),
       distanceToSegment(point, p1, p2),
@@ -374,22 +374,22 @@ export function distanceToEdge(geometry: EdgeGeometry, point: Point, samples = E
   return best;
 }
 
-/** Noktanın [a,b] doğru parçasına uzaklığı. */
+/** Distance from the point to the segment [a,b]. */
 function distanceToSegment(point: Point, a: Point, b: Point): number {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const lengthSquared = dx * dx + dy * dy;
 
-  // Sıfır uzunluklu parça: tek noktaya uzaklık.
+  // Zero-length segment: distance to a single point.
   if (lengthSquared === 0) return Math.hypot(point.x - a.x, point.y - a.y);
 
-  // Parçanın dışına taşan izdüşümler uçlara kelepçelenir.
+  // Projections beyond the segment are clamped to the ends.
   const t = Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSquared));
 
   return Math.hypot(point.x - (a.x + t * dx), point.y - (a.y + t * dy));
 }
 
-/** Noktanın kırık çizgiye (ardışık parçalar) en kısa uzaklığı. */
+/** Shortest distance from the point to a polyline (consecutive segments). */
 export function distanceToPolyline(points: ReadonlyArray<Point>, point: Point): number {
   let best = Infinity;
   for (let i = 1; i < points.length; i++) {
@@ -398,18 +398,18 @@ export function distanceToPolyline(points: ReadonlyArray<Point>, point: Point): 
   return best;
 }
 
-// ── Dik açılı (orthogonal) yönlendirme ──────────────────────────────────────
+// ── Orthogonal routing ──────────────────────────────────────
 
-/** Dik açılı kenarın köşe yuvarlama yarıçapı (px). */
+/** Corner rounding radius of an orthogonal edge (px). */
 export const EDGE_CORNER_RADIUS = 8;
 
 /**
- * Köşeleri yuvarlatılmış kırık çizgi için SVG yolu.
+ * SVG path for a polyline with rounded corners.
  *
- * Her köşe, gelen ve giden parçanın kısa olanının yarısını aşmayan bir ikinci
- * derece eğriyle (Q) yumuşatılır — kısa bir parçada yarıçap komşu köşeyle
- * çakışmasın. Aynı noktada tekrar eden ya da aynı doğru üzerinde kalan ara
- * noktalar atılır; düz hizadaki iki uç tek bir çizgi olur.
+ * Each corner is smoothed with a quadratic curve (Q) that does not exceed half of the shorter
+ * of the incoming and outgoing segments — so on a short segment the radius does not collide with
+ * the neighbouring corner. Intermediate points repeated at the same spot or lying on the same line
+ * are dropped; two ends in straight alignment become a single line.
  */
 export function roundedPolyline(points: ReadonlyArray<Point>, radius = EDGE_CORNER_RADIUS): string {
   const pts = simplifyPolyline(points);
@@ -437,7 +437,7 @@ export function roundedPolyline(points: ReadonlyArray<Point>, radius = EDGE_CORN
   return d;
 }
 
-/** Tekrarlanan ve aynı doğru üzerindeki ara noktaları atar. */
+/** Drops repeated intermediate points and those on the same line. */
 export function simplifyPolyline(points: ReadonlyArray<Point>): Point[] {
   const unique: Point[] = [];
   for (const point of points) {
@@ -461,16 +461,16 @@ export function simplifyPolyline(points: ReadonlyArray<Point>): Point[] {
 }
 
 /**
- * Kenarların hepsini dik açılı yönlendirir; sonuç girdiyle AYNI sırada döner.
+ * Routes all edges orthogonally; the result is returned in the SAME order as the input.
  *
- *   - İleri kenar: porttan aşağı, yatay bir "kanalda" hedefin hizasına, sonra
- *     hedefin üst-ortasına. Kanal önce kaynağın hemen altındaki boşlukta denenir;
- *     oradan inen dikey parça başka bir kutunun içinden geçecekse hedefin hemen
- *     üstündeki boşluk kullanılır (çok katmanı atlayan kenarlar ara kutuları
- *     kesmesin). Hizalı uçlar tek dikey çizgidir.
- *   - Geri kenar (hedef kaynağın altında değil): kaynağın sağından çıkar, dikey
- *     aralığındaki en sağ kutunun dışındaki şeritten dolaşır, hedefe sağından
- *     girer. Kısa döngüler önce yönlendirilir ki içte kalsın (bkz. routeEdges).
+ *   - Forward edge: down from the port, through a horizontal "channel" to the target's alignment, then
+ *     to the target's top-centre. The channel is first tried in the gap just below the source;
+ *     if the vertical segment going down from there would pass through another box, the gap just
+ *     above the target is used (so edges skipping many layers do not cut the boxes in
+ *     between). Aligned ends are a single vertical line.
+ *   - Back edge (target not below the source): leaves from the source's right, goes around through
+ *     the lane outside the rightmost box within its vertical range, enters the target
+ *     from its right. Short loops are routed first so they stay inside (see routeEdges).
  */
 export function routeOrthogonal(
   requests: ReadonlyArray<EdgeRequest>,
@@ -532,7 +532,7 @@ function forwardOrthogonal(request: EdgeRequest, obstacles: ReadonlyArray<EdgeBo
   const x2 = target.x + target.width / 2;
   const y2 = target.y;
 
-  // Etiket portun hemen altında: hangi çıkıştan çıktığı okunur.
+  // The label is just below the port: you can read which exit it leaves from.
   const label = { x: x1, y: y1 + Math.min(16, (y2 - y1) / 2) };
 
   if (Math.abs(x1 - x2) < 0.5) {
@@ -554,13 +554,13 @@ function forwardOrthogonal(request: EdgeRequest, obstacles: ReadonlyArray<EdgeBo
     return polylineGeometry(viaAbove, radius, label);
   }
 
-  // İki kanal da bir kutudan geçiyor: kaynağa yakın olan tercih edilir (kenar
-  // en azından çıktığı yerde okunaklı kalsın).
+  // Both channels pass through a box: the one closer to the source is preferred (so the edge
+  // is at least readable where it leaves).
   return polylineGeometry(
     [{ x: x1, y: y1 }, { x: x1, y: below }, { x: x2, y: below }, { x: x2, y: y2 }], radius, label);
 }
 
-/** x hizasındaki [y1, y2] dikey parçası herhangi bir kutunun içinden geçiyor mu? */
+/** Does the vertical segment [y1, y2] at x pass through any box? */
 function verticalHits(boxes: ReadonlyArray<EdgeBox>, x: number, y1: number, y2: number): boolean {
   const top = Math.min(y1, y2);
   const bottom = Math.max(y1, y2);
@@ -596,7 +596,7 @@ function distance(a: Point, b: Point): number {
   return Math.hypot(b.x - a.x, b.y - a.y);
 }
 
-/** `from`'dan `to` yönünde `length` kadar ilerlemiş nokta. */
+/** The point advanced by `length` from `from` towards `to`. */
 function towards(from: Point, to: Point, length: number): Point {
   const total = distance(from, to);
   if (total === 0) return { ...from };

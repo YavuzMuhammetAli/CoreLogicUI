@@ -22,14 +22,14 @@ import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.
 import { IconComponent } from '../shared/icon/icon.component';
 import type { IconName } from '../shared/icon/icons.generated';
 
-/** Akış sırasında tamamlanan tek adım (tool çağrısı) — "Model önerildi: Musteri". */
+/** A single step (tool call) completed during the stream — "Model önerildi: Musteri" (Model proposed). */
 interface StreamStep {
   id: number;
   icon: IconName;
   text: string;
 }
 
-/** Bilinen tool'ların adım ikonu; bilinmeyen tool genel satırla gösterilir. */
+/** Step icon for known tools; an unknown tool is shown with a generic row. */
 const STEP_ICONS: Record<string, IconName> = {
   propose_model: 'table',
   propose_report: 'bar_chart',
@@ -38,31 +38,31 @@ const STEP_ICONS: Record<string, IconName> = {
   propose_model_change: 'edit_note'
 };
 
-/** Akışın en son ne yaptığı — faz etiketini seçer. */
+/** What the stream did most recently — selects the phase label. */
 type StreamPhase = 'waiting' | 'thinking' | 'proposing' | 'writing';
 
-/** Sağ paneldeki öneri kartının görünüm modeli. */
+/** View model of a proposal card in the right panel. */
 interface ProposalCard {
   id: number;
   kind: AiProposal['kind'];
   name: string;
   status: AiProposal['status'];
-  /** Kartın altındaki tek satırlık özet (kolon sayısı, hedef model vb.). */
+  /** One-line summary under the card (column count, target model, etc.). */
   summary: string;
-  /** Model değişikliği kartında kolon başına önerilen yeni değerler. */
+  /** Proposed new values per column on a model-change card. */
   details: string[];
   errorMessage?: string | null;
-  /** O an süren aktarım/yayınlama durumu. */
+  /** The import/publish operation currently running. */
   progress?: AiImportProgress;
 }
 
 /**
- * Yapay Zeka asistanı (G4).
+ * AI assistant (G4).
  *
- * Üç sütun: sohbet listesi · mesaj akışı · öneriler. Modelin ürettiği hiçbir şey
- * burada otomatik uygulanmaz — öneriler kart olarak listelenir ve yalnızca
- * kullanıcı "İçeri Aktar" / "Hepsini Yayınla" dediğinde mevcut, izin denetimli
- * servisler üzerinden yazılır (bkz. AiImportService).
+ * Three columns: conversation list · message stream · proposals. Nothing the model produces
+ * is applied automatically here — proposals are listed as cards and are written only
+ * when the user says "İçeri Aktar" (Import) / "Hepsini Yayınla" (Publish all), through the existing,
+ * permission-checked services (see AiImportService).
  */
 @Component({
     selector: 'app-ai-chat',
@@ -87,9 +87,9 @@ export class AiChatComponent implements OnInit, OnDestroy {
   readonly isStreaming = signal(false);
 
   /**
-   * Canlı ilerleme: model metin yazmadan önce tool çağırabilir (Gemini çoğu zaman öyle yapar),
-   * o sürede yalnız çember görünüyordu. Adımlar, faz etiketi ve geçen süre bekleyişi görünür kılar;
-   * sağlayıcı yoğunken sunucunun "yeniden deneniyor" metni `streamStatus`'ta durur.
+   * Live progress: the model may call tools before writing text (Gemini often does),
+   * and during that time only the spinner was visible. Steps, phase label and elapsed time make the wait visible;
+   * while the provider is busy, the server's "retrying" text is kept in `streamStatus`.
    */
   readonly streamSteps = signal<StreamStep[]>([]);
   readonly streamStatus = signal('');
@@ -100,7 +100,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
   readonly loadError = signal('');
   readonly actionError = signal('');
 
-  /** Aktarım/yayınlama sürerken butonları kilitler. */
+  /** Locks the buttons while import/publish is running. */
   readonly busy = signal(false);
   readonly publishConfirmOpen = signal(false);
   readonly deleteConfirmId = signal<number | null>(null);
@@ -111,7 +111,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
   private streamSub?: Subscription;
   private actionSub?: Subscription;
 
-  // ── Türetilmiş durum ─────────────────────────────────────────────────────
+  // ── Derived state ────────────────────────────────────────────────────────
 
   readonly cards = computed<ProposalCard[]>(() => {
     const progress = this.progress();
@@ -127,15 +127,15 @@ export class AiChatComponent implements OnInit, OnDestroy {
     }));
   });
 
-  /** Aktarılmayı bekleyen model ve model değişikliği sayısı. */
+  /** Number of models and model changes waiting to be imported. */
   readonly importableCount = computed(
     () => this.proposals().filter(p => isModelKind(p.kind) && p.status === 'proposed').length
   );
 
   /**
-   * Yayınlanacak öğe sayısı: aktarılmış modeller + bekleyen rapor/dashboard'lar.
-   * Rapor ve dashboard'ların ayrı bir "aktarma" adımı yoktur; ikisi de yayınlama
-   * aşamasında tanımlanır çünkü yayınlanmış bir model gerektirirler.
+   * Number of items to publish: imported models + pending reports/dashboards.
+   * Reports and dashboards have no separate "import" step; both are defined
+   * during the publish phase because they require a published model.
    */
   readonly publishableCount = computed(
     () =>
@@ -150,7 +150,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
     () => this.draft().trim().length > 0 && !this.isStreaming() && !this.busy() && !this.quotaExhausted()
   );
 
-  /** Kota şeridi: "240.000 / 1.000.000". Plan AI içermiyorsa null. */
+  /** Quota strip: "240.000 / 1.000.000". null if the plan has no AI. */
   readonly quotaLabel = computed(() => {
     const usage = this.usage();
     if (!usage?.entitled || usage.limit == null) return null;
@@ -158,7 +158,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
     return `${formatNumber(usage.used, lang)} / ${formatNumber(usage.limit, lang)}`;
   });
 
-  /** Sunucunun başlatma kuralı (`canStart`) — arayüz kendi eşiğini hesaplamaz. */
+  /** The server's start rule (`canStart`) — the UI does not compute its own threshold. */
   readonly quotaExhausted = computed(() => {
     const usage = this.usage();
     return !!usage && usage.entitled && !usage.canStart;
@@ -169,7 +169,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
     return !!usage && !usage.entitled;
   });
 
-  // ── Yaşam döngüsü ────────────────────────────────────────────────────────
+  // ── Lifecycle ────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
     this.loadConversations();
@@ -177,13 +177,13 @@ export class AiChatComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // Abonelik sonlandırılınca fetch iptal edilir; sunucu tarafı akış da kapanır.
+    // Unsubscribing aborts the fetch; the server-side stream closes as well.
     this.streamSub?.unsubscribe();
     this.actionSub?.unsubscribe();
     this.stopElapsed();
   }
 
-  // ── Sohbet yönetimi ──────────────────────────────────────────────────────
+  // ── Conversation management ──────────────────────────────────────────────
 
   private loadConversations(): void {
     this.aiService.getConversations().subscribe({
@@ -200,7 +200,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
       next: res => {
         if (res.success) this.usage.set(res.data);
       },
-      // Kota okunamazsa ekran çalışmaya devam eder; şerit gizlenir.
+      // If the quota can't be read the screen keeps working; the strip is hidden.
       error: () => this.usage.set(null)
     });
   }
@@ -237,8 +237,8 @@ export class AiChatComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Akış sürerken yalnız öneri kartlarını tazeler — mesajlara dokunmaz (sunucuda asistan
-   * mesajı tur bitene dek boştur; iyimser kullanıcı balonu da yerinde kalmalı).
+   * While streaming, refreshes only the proposal cards — does not touch messages (on the server the assistant
+   * message is empty until the turn ends; the optimistic user bubble must also stay in place).
    */
   private reloadProposals(): void {
     const id = this.activeId();
@@ -246,10 +246,10 @@ export class AiChatComponent implements OnInit, OnDestroy {
 
     this.aiService.getConversation(id).subscribe({
       next: res => {
-        // Bu arada başka bir sohbete geçildiyse eski sohbetin kartları yazılmaz.
+        // If another conversation was opened meanwhile, the old one's cards are not written.
         if (res.success && res.data && this.activeId() === id) this.proposals.set(res.data.proposals ?? []);
       },
-      // Sessiz: tur sonundaki tam yeniden yükleme kartları zaten getirir.
+      // Silent: the full reload at the end of the turn fetches the cards anyway.
       error: () => undefined
     });
   }
@@ -279,7 +279,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ── Mesaj gönderme ───────────────────────────────────────────────────────
+  // ── Sending messages ─────────────────────────────────────────────────────
 
   send(): void {
     const text = this.draft().trim();
@@ -295,8 +295,8 @@ export class AiChatComponent implements OnInit, OnDestroy {
     this.isStreaming.set(true);
     this.startElapsed();
 
-    // İyimser gösterim: kullanıcı turu sunucudan dönmeden ekranda belirir.
-    // Geçici kimlik negatif — sunucudan gelen gerçek kimliklerle çakışmaz.
+    // Optimistic display: the user turn appears before the server responds.
+    // Temporary id is negative — never collides with real ids from the server.
     this.messages.update(list => [
       ...list,
       {
@@ -321,7 +321,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
   private handleStreamEvent(event: AiStreamEvent): void {
     switch (event.type) {
       case 'meta':
-        // Yeni sohbette kimlik ilk olayla gelir; sonraki mesajlar buna eklenir.
+        // In a new conversation the id arrives with the first event; later messages attach to it.
         this.activeId.set(event.conversationId);
         break;
       case 'text':
@@ -338,7 +338,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
         this.addStep(event.name, event.subject);
         this.streamStatus.set('');
         this.streamPhase.set('proposing');
-        // Kart oluşur oluşmaz sağ panelde görünsün (önceden tur bitince geliyordu).
+        // Show the card in the right panel as soon as it is created (it used to arrive at turn end).
         if (event.name !== 'list_published_models') this.reloadProposals();
         break;
       case 'status':
@@ -353,7 +353,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
       case 'quota':
         this.actionError.set(event.message || this.languageService.t('ai.quotaExhaustedMidStream'));
         break;
-      // 'usage' akış sonundaki yeniden yüklemeyle zaten yansır.
+      // 'usage' is reflected anyway by the reload at the end of the stream.
     }
   }
 
@@ -386,8 +386,8 @@ export class AiChatComponent implements OnInit, OnDestroy {
     this.stopElapsed();
     if (error) this.actionError.set(error);
 
-    // Kalıcı hâli sunucudan çekilir: asistan mesajı (yarıda kalan turun hata notu dahil),
-    // öneriler ve kota tek kaynaktan gelir; akış tamponu böylece atılabilir.
+    // The persisted state is fetched from the server: the assistant message (including the error note of an interrupted turn),
+    // proposals and quota come from one source; so the stream buffer can be discarded.
     this.streamingText.set('');
     this.streamingThinking.set('');
     this.streamSteps.set([]);
@@ -397,7 +397,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
     this.loadConversations();
   }
 
-  // ── İçeri aktarma / yayınlama ────────────────────────────────────────────
+  // ── Import / publish ─────────────────────────────────────────────────────
 
   runImport(): void {
     if (this.busy() || this.importableCount() === 0) return;
@@ -442,13 +442,13 @@ export class AiChatComponent implements OnInit, OnDestroy {
   private finishAction(error?: string): void {
     this.busy.set(false);
     if (error) this.actionError.set(error);
-    // Kart durumları sunucuda güncellendi; tek kaynaktan tazele.
+    // Card statuses were updated on the server; refresh from the single source.
     this.reloadConversation();
   }
 
-  // ── Görünüm yardımcıları ─────────────────────────────────────────────────
+  // ── View helpers ─────────────────────────────────────────────────────────
 
-  /** Kart durumuna göre rozet sınıfı. */
+  /** Badge class for the card status. */
   badgeClass(card: ProposalCard): string {
     if (card.progress?.state === 'running') return 'badge badge-meta';
     switch (card.status) {
@@ -468,7 +468,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
     return this.languageService.t(`ai.status.${card.status}`);
   }
 
-  /** Kartın altındaki tek satırlık özet — payload'dan türetilir. */
+  /** One-line summary under the card — derived from the payload. */
   private summarize(proposal: AiProposal): string {
     const t = (key: string, params?: Record<string, string | number>) =>
       this.languageService.t(key, params);
@@ -507,8 +507,8 @@ export class AiChatComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Model değişikliği kartında kolon başına önerilen değerler ("Ad: zorunlu, etiket 'Ünvan'").
-   * Yalnız önerinin taşıdığı alanlar yazılır; verilmeyen alan kayıtlı değerinde kalır.
+   * Proposed values per column on a model-change card ("Ad: zorunlu, etiket 'Ünvan'").
+   * Only the fields the proposal carries are written; an omitted field keeps its stored value.
    */
   private changeLines(proposal: AiProposal): string[] {
     if (proposal.kind !== 'model_change') return [];
@@ -536,7 +536,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
   }
 }
 
-/** Taslak olarak aktarılıp sonra yayınlanan öneri türleri (yeni model + model değişikliği). */
+/** Proposal types imported as drafts and published later (new model + model change). */
 function isModelKind(kind: AiProposal['kind']): boolean {
   return kind === 'model' || kind === 'model_change';
 }

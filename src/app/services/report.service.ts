@@ -14,36 +14,36 @@ export class ReportService {
   constructor(private http: HttpClient) {}
 
   /**
-   * Yeni rapor tanımı kaydeder ve oluşan raporun ID'sini döner.
+   * Saves a new report definition and returns the created report's ID.
    *
-   * ID dönmesi G4 için gerekli: Yapay Zeka önerilerinden bir dashboard
-   * aktarılırken widget'lar raporlara ADIYLA referans verir; ad→ID eşlemesi
-   * raporun tanımlandığı anda yapılmalıdır. Sonradan `list()` çekip ada göre
-   * eşleştirmek aynı adlı iki raporda yanlış hedefi seçerdi.
-   * (`dashboard.service.ts` `define()` zaten ID dönüyordu — simetrik oldu.)
+   * Returning the ID is required for G4: when a dashboard is imported from AI
+   * proposals, its widgets refer to reports by NAME; the name→ID mapping
+   * must be done at the moment the report is defined. Fetching `list()` later and matching
+   * by name would pick the wrong target when two reports share a name.
+   * (`define()` in `dashboard.service.ts` already returned the ID — now they are symmetric.)
    */
   define(report: Partial<ReportDefinition>): Observable<DataResponseModel<number>> {
     return this.http.post<DataResponseModel<number>>(`${this.baseUrl}/define`, report)
       .pipe(tap(() => this.invalidateListCache()));
   }
 
-  /** Mevcut rapor tanımını günceller (report.id zorunlu). */
+  /** Updates an existing report definition (report.id required). */
   update(report: ReportDefinition): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/update`, report)
       .pipe(tap(() => this.invalidateListCache()));
   }
 
-  /** Tenant içinde, kullanıcının modelde Read yetkisi olan raporları getirir. */
+  /** Fetches the reports in the tenant whose model the user has Read permission on. */
   list(): Observable<ListResponseModel<ReportDefinition>> {
     return this.http.get<ListResponseModel<ReportDefinition>>(`${this.baseUrl}/list`);
   }
 
   /**
-   * list() sonucunun önbelleklenmiş hali. Rapor görüntüleyici ve dashboard yalnızca
-   * rapor ADINI çözmek için tüm tanımları çekiyordu; her gezinmede tekrarlanan bu istek
-   * shareReplay ile tek sefere indirilir (record-metadata.service.ts ile aynı desen).
+   * Cached version of the list() result. The report viewer and dashboard fetched all
+   * definitions just to resolve the report NAME; this request, repeated on every navigation,
+   * is reduced to one with shareReplay (same pattern as record-metadata.service.ts).
    *
-   * Tanım değişince (define/update/delete/restore) invalidateListCache() çağrılır.
+   * invalidateListCache() is called when a definition changes (define/update/delete/restore).
    */
   listCached(): Observable<ListResponseModel<ReportDefinition>> {
     if (!this.listCache$) {
@@ -52,7 +52,7 @@ export class ReportService {
     return this.listCache$;
   }
 
-  /** Tanım değiştiren her işlemden sonra çağrılır; sonraki listCached() yeniden çeker. */
+  /** Called after every definition-changing operation; the next listCached() fetches again. */
   invalidateListCache(): void {
     this.listCache$ = null;
   }
@@ -60,15 +60,15 @@ export class ReportService {
   private listCache$: Observable<ListResponseModel<ReportDefinition>> | null = null;
 
   /**
-   * Raporu çalıştırır.
+   * Runs the report.
    *
-   * page + pageSize verilirse o sayfa döner (sunucu pageSize'ı 1..500'e kırpar).
-   * Verilmezse sunucu 5000 satırlık güvenlik tavanı uygular ve kırpılma olduysa
-   * yanıtta truncated = true gelir. Her durumda total, filtre sonrası gerçek satır sayısıdır.
+   * If page + pageSize are given, that page is returned (the server clamps pageSize to 1..500).
+   * Otherwise the server applies a 5000-row safety cap and, if truncated,
+   * the response has truncated = true. In every case total is the real row count after filtering.
    */
   /**
-   * `maxRows`: sayfasız (grafik) çalıştırmada en fazla satır — grafik zaten 50/200 noktadan
-   * fazlasını çizmez; sunucu 5000'e kadar satır üretip göndermesin.
+   * `maxRows`: maximum rows for an unpaged (chart) run — the chart does not draw more than
+   * 50/200 points anyway; the server should not produce and send up to 5000 rows.
    */
   run(id: number, page?: number, pageSize?: number, maxRows?: number | null): Observable<DataResponseModel<ReportRunResult>> {
     let params = new HttpParams().set('id', id);
@@ -80,36 +80,36 @@ export class ReportService {
     return this.http.get<DataResponseModel<ReportRunResult>>(`${this.baseUrl}/run`, { params });
   }
 
-  /** Henüz kaydedilmemiş bir rapor tanımı için üretilecek SQL'i, çalıştırmadan döndürür. */
+  /** Returns the SQL that would be generated for a not-yet-saved report definition, without running it. */
   previewSql(report: Partial<ReportDefinition>): Observable<DataResponseModel<string>> {
     return this.http.post<DataResponseModel<string>>(`${this.baseUrl}/preview-sql`, report);
   }
 
-  /** Raporu .xlsx olarak indirir. */
+  /** Downloads the report as .xlsx. */
   exportExcel(id: number): Observable<Blob> {
     const params = new HttpParams().set('id', id);
     return this.http.get(`${this.baseUrl}/export/excel`, { params, responseType: 'blob' });
   }
 
-  /** Raporu .pdf olarak indirir. */
+  /** Downloads the report as .pdf. */
   exportPdf(id: number): Observable<Blob> {
     const params = new HttpParams().set('id', id);
     return this.http.get(`${this.baseUrl}/export/pdf`, { params, responseType: 'blob' });
   }
 
-  /** Raporu pasife alır (soft-delete). */
+  /** Deactivates the report (soft-delete). */
   delete(id: number): Observable<ResponseModel> {
     const params = new HttpParams().set('id', id);
     return this.http.post<ResponseModel>(`${this.baseUrl}/delete`, null, { params })
       .pipe(tap(() => this.invalidateListCache()));
   }
 
-  /** Tenant içinde pasiflenmiş (silinmiş) raporları getirir. */
+  /** Fetches the deactivated (deleted) reports in the tenant. */
   listDeleted(): Observable<ListResponseModel<ReportDefinition>> {
     return this.http.get<ListResponseModel<ReportDefinition>>(`${this.baseUrl}/deleted`);
   }
 
-  /** Silinmiş bir raporu yeniden aktif eder (Active=true). */
+  /** Reactivates a deleted report (Active=true). */
   restore(id: number): Observable<ResponseModel> {
     const params = new HttpParams().set('id', id);
     return this.http.post<ResponseModel>(`${this.baseUrl}/restore`, null, { params })

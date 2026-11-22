@@ -3,12 +3,12 @@ import { RecordField, RecordWorkflowState } from '../../models/workflow.model';
 import { sanitizePayload } from '../model-data/model-data.util';
 
 /**
- * Form tabanlı akışın kayıt ekranı kuralları — SAF (spec'li).
+ * Record screen rules of a form-based workflow — PURE (with spec).
  *
- * Kilit kararının asıl sahibi sunucudur (`/WorkflowInstance/recordState` ve
- * PublishedModelManager aynı kapıdan geçer); buradaki fonksiyonlar yalnızca o
- * kararı forma uygular. Kolon adları sunucuda harf duyarsız eşlendiği için
- * burada da öyle eşlenir.
+ * The server owns the lock decision (`/WorkflowInstance/recordState` and
+ * PublishedModelManager go through the same gate); these functions only apply
+ * that decision to the form. Column names are matched case-insensitively on the
+ * server, so they are matched that way here too.
  */
 
 type DataRow = Record<string, unknown>;
@@ -16,8 +16,8 @@ type DataRow = Record<string, unknown>;
 const lower = (value: string) => value.toLowerCase();
 
 /**
- * Formda kilitlenecek (disabled) kolonlar. Kilit yoksa ya da kullanıcı kilidi
- * aşabiliyorsa (admin) boş küme; aksi halde düzenlenebilir kolonlar DIŞINDAKİ her şey.
+ * Columns to lock (disable) in the form. Empty set when there is no lock or the user
+ * can bypass it (admin); otherwise everything EXCEPT the editable columns.
  */
 export function lockedColumns(
   columns: PublishedColumn[], state: RecordWorkflowState | null
@@ -31,14 +31,14 @@ export function lockedColumns(
       .map(c => c.columnName));
 }
 
-/** Değer "boş" mu — sunucudaki zorunluluk denetimiyle aynı: null, boş/boşluk metin. false DOLUDUR. */
+/** Whether a value is "empty" — same as the server's required check: null, empty/whitespace text. false is FILLED. */
 export function isEmptyValue(value: unknown): boolean {
   if (value === null || value === undefined) return true;
   if (typeof value === 'string') return value.trim() === '';
   return false;
 }
 
-/** Adımın zorunlu kayıt alanlarından formda boş kalanlar (formdaki gerçek kolon adıyla). */
+/** The step's required record fields left empty in the form (by their real form column name). */
 export function missingRequired(
   fields: RecordField[], raw: DataRow, columns: PublishedColumn[]
 ): string[] {
@@ -51,9 +51,9 @@ export function missingRequired(
 }
 
 /**
- * Sunucuya gidecek kayıt değerleri: YALNIZ verilen kolonlar, model tiplerine göre
- * temizlenmiş (boş metin → null). Kısmi payload bilinçli — sunucu yalnız gelen
- * anahtarları yazar, diğer alanlar ezilmez.
+ * Record values to send to the server: ONLY the given columns, sanitized by the
+ * model types (empty text → null). The partial payload is intentional — the server
+ * writes only the keys it receives, other fields are not overwritten.
  */
 export function buildRecordValues(
   columnNames: string[], raw: DataRow, columns: PublishedColumn[]

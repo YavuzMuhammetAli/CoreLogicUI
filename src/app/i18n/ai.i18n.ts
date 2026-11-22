@@ -1,10 +1,10 @@
 import { Translations } from './translations.model';
 
 /**
- * Yapay Zeka asistanı (G4) — sohbet ekranı, öneri kartları ve aktarma akışı.
+ * AI assistant (G4) — chat screen, proposal cards and the import flow.
  */
 export const AI_I18N: Translations = {
-  // ── Sayfa kabuğu ─────────────────────────────────────────────────────────
+  // ── Page shell ───────────────────────────────────────────────────────────
   'ai.title': { tr: 'Yapay Zeka', en: 'AI Assistant' },
   'ai.quota': { tr: 'Token', en: 'Tokens' },
   'ai.quotaAria': { tr: 'Aylık token kullanımı', en: 'Monthly token usage' },
@@ -40,7 +40,7 @@ export const AI_I18N: Translations = {
   'ai.noConversations': { tr: 'Henüz sohbet yok.', en: 'No conversations yet.' },
   'ai.deleteChat': { tr: 'Sohbeti sil', en: 'Delete conversation' },
 
-  // ── Mesaj akışı ──────────────────────────────────────────────────────────
+  // ── Message stream ───────────────────────────────────────────────────────
   'ai.chatAria': { tr: 'Sohbet', en: 'Chat' },
   'ai.emptyTitle': { tr: 'Ne yapmak istersiniz?', en: 'What would you like to build?' },
   'ai.emptyBody': {
@@ -51,7 +51,7 @@ export const AI_I18N: Translations = {
   'ai.assistant': { tr: 'Asistan', en: 'Assistant' },
   'ai.thinking': { tr: 'Düşünüyor', en: 'Thinking' },
   'ai.working': { tr: 'Çalışıyor…', en: 'Working…' },
-  // Akış sırasındaki canlı ilerleme (faz etiketi + geçen süre + tool adımları)
+  // Live progress during the stream (phase label + elapsed time + tool steps)
   'ai.phase.waiting': { tr: 'Yanıt bekleniyor…', en: 'Waiting for a response…' },
   'ai.phase.thinking': { tr: 'Düşünüyor…', en: 'Thinking…' },
   'ai.phase.proposing': { tr: 'Öneri hazırlıyor…', en: 'Preparing proposals…' },
@@ -71,7 +71,7 @@ export const AI_I18N: Translations = {
   },
   'ai.send': { tr: 'Gönder', en: 'Send' },
 
-  // ── Öneriler ─────────────────────────────────────────────────────────────
+  // ── Proposals ────────────────────────────────────────────────────────────
   'ai.proposals': { tr: 'Öneriler', en: 'Proposals' },
   'ai.proposalsAria': { tr: 'Yapay zeka önerileri', en: 'AI proposals' },
   'ai.noProposals': {
@@ -100,7 +100,7 @@ export const AI_I18N: Translations = {
   'ai.summary.report': { tr: '{model} · {chart}', en: '{model} · {chart}' },
   'ai.summary.dashboard': { tr: '{n} widget', en: '{n} widgets' },
 
-  // ── Onay diyalogları ─────────────────────────────────────────────────────
+  // ── Confirmation dialogs ─────────────────────────────────────────────────
   'ai.publishConfirmTitle': { tr: 'Hepsini yayınla', en: 'Publish everything' },
   'ai.publishConfirmMessage': {
     tr: 'Aktarılan modeller derlenip veritabanı tabloları oluşturulacak, ardından raporlar ve dashboard\'lar tanımlanacak. Bu işlem geri alınamaz.',

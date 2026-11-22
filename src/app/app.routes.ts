@@ -5,21 +5,21 @@ import { modelPermissionGuard } from './guards/model-permission.guard';
 import { unsavedChangesGuard } from './guards/unsaved-changes.guard';
 
 export const routes: Routes = [
-  // Giriş ekranı (korumasız)
+  // Login screen (unprotected)
   {
     path: 'login',
     loadComponent: () =>
       import('./components/login/login.component').then(m => m.LoginComponent)
   },
 
-  // Yeni şirket kayıt sihirbazı (korumasız — henüz hesap yokken kullanılır)
+  // New company sign-up wizard (unprotected — used while there is no account yet)
   {
     path: 'register-company',
     loadComponent: () =>
       import('./components/register-company/register-company.component').then(m => m.RegisterCompanyComponent)
   },
 
-  // Korumalı sayfa grubu — app shell içinde
+  // Protected page group — inside the app shell
   {
     path: '',
     canActivate: [authGuard],
@@ -32,7 +32,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/model-list/model-list.component').then(m => m.ModelListComponent)
       },
-      // "deleted" sabit segmenti ":typeName" param'ından önce gelmeli — aksi halde "deleted" stringi tip adı olarak yakalanır
+      // The fixed "deleted" segment must come before the ":typeName" param — otherwise the "deleted" string is captured as a type name
       {
         path: 'models/deleted',
         canActivate: [adminGuard],
@@ -45,7 +45,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/model-data/model-data.component').then(m => m.ModelDataComponent)
       },
-      // "new" sabit segmenti ":id" param'ından önce gelmeli — aksi halde Angular "new" stringini ID olarak yakalar
+      // The fixed "new" segment must come before the ":id" param — otherwise Angular captures the "new" string as an ID
       {
         path: 'models/:typeName/new',
         canActivate: [modelPermissionGuard('create')],
@@ -65,7 +65,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/form-build/form-build.component').then(m => m.FormBuildComponent)
       },
-      // "new" sabit segmenti ":typeName" param'ından önce gelmeli — aksi halde Angular "new" stringini tip adı olarak yakalar
+      // The fixed "new" segment must come before the ":typeName" param — otherwise Angular captures the "new" string as a type name
       {
         path: 'build/new',
         canActivate: [adminGuard],
@@ -73,7 +73,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/table-detail/table-detail.component').then(m => m.TableDetailComponent)
       },
-      // Ekran tasarımı: yayınlanmış modelin form ve liste yerleşimi (?view=list → liste)
+      // Screen design: form and list layout of a published model (?view=list → list)
       {
         path: 'build/:typeName/screen',
         canActivate: [adminGuard],
@@ -81,14 +81,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/screen-designer/screen-designer.component').then(m => m.ScreenDesignerComponent)
       },
-      // ":typeName" mevcut bir modeli/taslağı düzenleme modunda açar
+      // ":typeName" opens an existing model/draft in edit mode
       {
         path: 'build/:typeName',
         canActivate: [adminGuard],
         loadComponent: () =>
           import('./components/table-detail/table-detail.component').then(m => m.TableDetailComponent)
       },
-      // Tasarım: model ekran tasarımlarına giriş + navigasyon (kenar çubuğu) tasarımları (?tab=nav)
+      // Design: entry to model screen designs + navigation (sidebar) designs (?tab=nav)
       {
         path: 'design',
         canActivate: [adminGuard],
@@ -108,7 +108,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/draft-models/draft-models.component').then(m => m.DraftModelsComponent)
       },
-      // Hiç yayınlanmamış olup pasiflenmiş (silinmiş) taslakların listesi + geri yükleme
+      // List of drafts that were never published and were deactivated (deleted) + restore
       {
         path: 'drafts/deleted',
         canActivate: [adminGuard],
@@ -119,16 +119,16 @@ export const routes: Routes = [
         path: 'database',
         canActivate: [adminGuard],
         loadComponent: () =>
-          import('./components/database-proccess/database-proccess.component').then(m => m.DatabaseProccessComponent)
+          import('./components/database-process/database-process.component').then(m => m.DatabaseProcessComponent)
       },
-      // Şirket içi kullanıcı yönetimi — kullanıcı yalnızca buradan eklenir
+      // In-company user management — users are added only from here
       {
         path: 'users',
         canActivate: [adminGuard],
         loadComponent: () =>
           import('./components/user-list/user-list.component').then(m => m.UserListComponent)
       },
-      // "new" sabit segmenti ":id" param'ından önce gelmeli
+      // The fixed "new" segment must come before the ":id" param
       {
         path: 'users/new',
         canActivate: [adminGuard],
@@ -160,7 +160,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/role-list/role-list.component').then(m => m.RoleListComponent)
       },
-      // "new" sabit segmenti ":id" param'ından önce gelmeli — aksi halde "new" stringi ID olarak yakalanır
+      // The fixed "new" segment must come before the ":id" param — otherwise the "new" string is captured as an ID
       {
         path: 'roles/new',
         canActivate: [adminGuard],
@@ -181,30 +181,30 @@ export const routes: Routes = [
           import('./components/audit-log/audit-log.component').then(m => m.AuditLogComponent)
       },
       {
-        // G3: Tenant parametreleri — yedekleme zamanlaması, sistem e-postası, abonelik
+        // G3: Tenant parameters — backup schedule, system email, subscription
         path: 'parameters',
         canActivate: [adminGuard],
         loadComponent: () =>
           import('./components/parameters/parameters.component').then(m => m.ParametersComponent)
       },
       {
-        // G4: Yapay Zeka asistanı — model/rapor/dashboard önerir, kullanıcı onayıyla aktarır.
-        // adminGuard: ürettiği modelleri yayınlamak zaten admin işi (/build ile aynı seviye).
+        // G4: AI assistant — proposes models/reports/dashboards, imports them with the user's approval.
+        // adminGuard: publishing the models it produces is admin work anyway (same level as /build).
         path: 'ai',
         canActivate: [adminGuard],
         loadComponent: () =>
           import('./components/ai-chat/ai-chat.component').then(m => m.AiChatComponent)
       },
       {
-        // Kullanıcının kendi profil sayfası — authGuard layout'tan miras alınır
+        // The user's own profile page — authGuard is inherited from the layout
         path: 'profile',
         loadComponent: () =>
           import('./components/user-profile/user-profile.component').then(m => m.UserProfileComponent)
       },
 
-      // H: Görevlerim — adminGuard YOK. Yetkilendirme atamayla yapılır (görevi
-      // yalnızca atanan kullanıcı ya da atanan rolün üyesi kapatabilir, kontrol
-      // backend'de). Bu ekran aynı zamanda görev gelen kutusudur.
+      // H: My tasks — NO adminGuard. Authorization comes from the assignment (only the assigned
+      // user or a member of the assigned role can close the task, checked
+      // on the backend). This screen is also the task inbox.
       {
         path: 'tasks',
         loadComponent: () =>
@@ -216,16 +216,16 @@ export const routes: Routes = [
           import('./components/task-detail/task-detail.component').then(m => m.TaskDetailComponent)
       },
 
-      // H: İş akışı tasarımı — tamamı adminGuard (projede adlandırılmış yetki yok,
-      // tasarım/yayın /build ve /ai gibi admin'e bağlı).
+      // H: Workflow design — all adminGuard (the project has no named permissions;
+      // design/publish is tied to admin, like /build and /ai).
       {
         path: 'workflows',
         canActivate: [adminGuard],
         loadComponent: () =>
           import('./components/workflow-list/workflow-list.component').then(m => m.WorkflowListComponent)
       },
-      // "new" ve "deleted" sabit segmentleri ":id" param'ından ÖNCE gelmeli —
-      // aksi halde Angular bu string'leri ID olarak yakalar.
+      // The fixed "new" and "deleted" segments must come BEFORE the ":id" param —
+      // otherwise Angular captures these strings as an ID.
       {
         path: 'workflows/new',
         canActivate: [adminGuard],
@@ -240,13 +240,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/deleted-workflows/deleted-workflows.component').then(m => m.DeletedWorkflowsComponent)
       },
-      // "instances" ve "versions" da sabit segment — ":id"'den ÖNCE gelmeli.
-      // Süreç detayı adminGuard'sız: başlatan, görevli ve kaydı okuyabilen de
-      // görür (kayıttaki Süreç paneli ve görev detayı buraya bağlanıyor). Yetki
-      // backend'de IWorkflowAccessPolicy ile verilir; yönetici işlemleri ekranda
-      // isAdmin ile gizlenir.
+      // "instances" and "versions" are fixed segments too — they must come BEFORE ":id".
+      // Instance detail has no adminGuard: the starter, the assignee and whoever can read the record
+      // also see it (the record's Süreç (Instance) panel and task detail link here). Permission
+      // is granted on the backend by IWorkflowAccessPolicy; admin actions are hidden on the screen
+      // with isAdmin.
       {
-        // Süreç listesi (admin) — sabit segment ":id"den ÖNCE.
+        // Instance list (admin) — fixed segment BEFORE ":id".
         path: 'workflows/instances',
         canActivate: [adminGuard],
         loadComponent: () =>
@@ -271,14 +271,14 @@ export const routes: Routes = [
           import('./components/workflow-build/workflow-build.component').then(m => m.WorkflowBuildComponent)
       },
 
-      // Metadata-driven raporlama — yetki kontrolü backend'de (model üzerinde Read);
-      // authGuard yeterli, ayrıca adminGuard gerekmiyor.
+      // Metadata-driven reporting — the permission check is on the backend (Read on the model);
+      // authGuard is enough, no adminGuard needed.
       {
         path: 'reports',
         loadComponent: () =>
           import('./components/report-list/report-list.component').then(m => m.ReportListComponent)
       },
-      // "new" sabit segmenti ":id" param'ından önce gelmeli — aksi halde "new" stringi ID olarak yakalanır
+      // The fixed "new" segment must come before the ":id" param — otherwise the "new" string is captured as an ID
       {
         path: 'reports/new',
         loadComponent: () =>
@@ -289,7 +289,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/report-build/report-build.component').then(m => m.ReportBuildComponent)
       },
-      // "deleted" sabit segmenti ":id" param'ından önce gelmeli — aksi halde "deleted" stringi ID olarak yakalanır
+      // The fixed "deleted" segment must come before the ":id" param — otherwise the "deleted" string is captured as an ID
       {
         path: 'reports/deleted',
         canActivate: [adminGuard],
@@ -302,19 +302,19 @@ export const routes: Routes = [
           import('./components/report-viewer/report-viewer.component').then(m => m.ReportViewerComponent)
       },
 
-      // Dashboard — birden çok raporu widget olarak bir araya getirir.
+      // Dashboard — combines several reports as widgets.
       {
         path: 'dashboard',
         loadComponent: () =>
           import('./components/dashboard-list/dashboard-list.component').then(m => m.DashboardListComponent)
       },
-      // "new" sabit segmenti ":id" param'ından önce gelmeli — aksi halde "new" stringi ID olarak yakalanır
+      // The fixed "new" segment must come before the ":id" param — otherwise the "new" string is captured as an ID
       {
         path: 'dashboard/new',
         loadComponent: () =>
           import('./components/dashboard-build/dashboard-build.component').then(m => m.DashboardBuildComponent)
       },
-      // "deleted" sabit segmenti ":id" param'ından önce gelmeli — aksi halde "deleted" stringi ID olarak yakalanır
+      // The fixed "deleted" segment must come before the ":id" param — otherwise the "deleted" string is captured as an ID
       {
         path: 'dashboard/deleted',
         canActivate: [adminGuard],
@@ -329,6 +329,6 @@ export const routes: Routes = [
     ]
   },
 
-  // Bilinmeyen yollar login'e yönlendirsin
+  // Unknown paths redirect to login
   { path: '**', redirectTo: 'login' }
 ];

@@ -1,6 +1,6 @@
 /**
- * GET /User/getall yanıt öğesi — hassas alanlar (PasswordHash/Salt) içermez.
- * Backend UserForListDto ile eşleşir.
+ * GET /User/getall response item — contains no sensitive fields (PasswordHash/Salt).
+ * Matches the backend UserForListDto.
  */
 export interface AppUser {
   id: number;
@@ -8,8 +8,8 @@ export interface AppUser {
   lastName: string;
   email: string;
   status: boolean;
-  /** 'admin' OperationClaim'ine sahip olup olmadığı. Değişiklik yeni JWT'de etkinleşir. */
+  /** Whether the user has the 'admin' OperationClaim. A change takes effect in the new JWT. */
   isAdmin: boolean;
-  /** Kayıt tarihi (UTC ISO metni). */
+  /** Registration date (UTC ISO text). */
   createdOn?: string;
 }

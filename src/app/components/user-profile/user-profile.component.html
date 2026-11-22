@@ -1,11 +1,11 @@
 <div class="profile-page">
 
-  <!-- Sayfa başlığı -->
+  <!-- Page header -->
   <div class="page-header">
     <span class="eyebrow">{{ 'profile.title' | t }}</span>
   </div>
 
-  <!-- Yüklenme -->
+  <!-- Loading -->
   @if (loading()) {
     <div class="profile-loading">
       <span class="spinner" [attr.aria-label]="'common.loading' | t"></span>
@@ -13,7 +13,7 @@
     </div>
   }
 
-  <!-- Hata -->
+  <!-- Error -->
   @if (!loading() && loadError()) {
     <div class="alert alert-danger" role="alert">{{ loadError() }}</div>
   }
@@ -21,10 +21,10 @@
   @if (!loading() && !loadError() && profile(); as p) {
     <div class="profile-layout">
 
-      <!-- ══════════ Sol: Fotoğraf + Hesap Bilgileri ══════════ -->
+      <!-- ══════════ Left: Photo + Account details ══════════ -->
       <div class="profile-side">
 
-        <!-- Fotoğraf paneli -->
+        <!-- Photo panel -->
         <div class="panel avatar-panel">
           <div class="panel-body avatar-body">
 
@@ -56,7 +56,7 @@
               }
             </div>
 
-            <!-- Fotoğraf yükleme input'u (gizli) -->
+            <!-- Photo upload input (hidden) -->
             <input
               #photoInput
               type="file"
@@ -95,7 +95,7 @@
           </div>
         </div>
 
-        <!-- Hesap bilgileri (salt-okunur) -->
+        <!-- Account details (read-only) -->
         <div class="panel" id="account">
           <div class="panel-head">
             <h2 class="panel-head-title">{{ 'profile.accountInfo' | t }}</h2>
@@ -136,10 +136,10 @@
 
       </div>
 
-      <!-- ══════════ Sağ: Formlar ══════════ -->
+      <!-- ══════════ Right: Forms ══════════ -->
       <div class="profile-main">
 
-        <!-- Bilgiler formu -->
+        <!-- Details form -->
         <div class="panel">
           <div class="panel-head">
             <h2 class="panel-head-title">{{ 'profile.personalInfo' | t }}</h2>
@@ -245,7 +245,7 @@
           </div>
         </div>
 
-        <!-- Şifre değiştirme formu -->
+        <!-- Change password form -->
         <div class="panel">
           <div class="panel-head">
             <h2 class="panel-head-title">{{ 'profile.changePasswordTitle' | t }}</h2>

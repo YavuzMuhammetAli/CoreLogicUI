@@ -1,4 +1,4 @@
-import '../../i18n/lazy/design'; // design.* sözlüğü bu parçayla iner
+import '../../i18n/lazy/design'; // the design.* dictionary loads with this chunk
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -27,14 +27,14 @@ import { roleNames } from '../shared/role-picker/role-picker.component';
 type Tab = 'screens' | 'navigation';
 
 /**
- * Tasarım — /design (admin).
+ * Design — /design (admin).
  *
- * İki sekme:
- * - **Ekranlar:** yayınlanmış modeller; kart ekran tasarımcısını (`/build/:typeName/screen`) açar,
- *   modelin form/liste tasarım sayısını ve rollere özel tasarımlarını gösterir.
- * - **Navigasyon:** admin olmayan kullanıcıların kenar çubuğu tasarımları. Kullanıcıya hangisinin
- *   düşeceğini sunucu seçer: etkin + yayınlanmış olanlardan listede üstte olan ve rolü eşleşen ilk
- *   tasarım; eşleşme yoksa Varsayılan; o da yoksa uygulamanın otomatik menüsü.
+ * Two tabs:
+ * - **Screens:** published models; a card opens the screen designer (`/build/:typeName/screen`),
+ *   shows the model's form/list design count and its role-specific designs.
+ * - **Navigation:** sidebar designs for non-admin users. The server picks which one a user
+ *   gets: among enabled + published ones, the first design highest in the list whose role
+ *   matches; if none matches, the Default; if that is missing too, the app's automatic menu.
  */
 @Component({
     selector: 'app-design-hub',
@@ -58,7 +58,7 @@ export class DesignHubComponent {
 
   readonly tab = signal<Tab>('screens');
 
-  // ─── Ekranlar ──────────────────────────────────────────────────────────────
+  // ─── Screens ───────────────────────────────────────────────────────────────
   readonly loadingScreens = signal(true);
   readonly screensError = signal<string | null>(null);
   readonly models = signal<PublishedModel[]>([]);
@@ -72,7 +72,7 @@ export class DesignHubComponent {
       || m.typeName.toLowerCase().includes(term));
   });
 
-  // ─── Navigasyon ────────────────────────────────────────────────────────────
+  // ─── Navigation ────────────────────────────────────────────────────────────
   readonly loadingNav = signal(true);
   readonly navError = signal<string | null>(null);
   readonly navInstalled = signal(true);
@@ -80,7 +80,7 @@ export class DesignHubComponent {
   readonly roles = signal<Role[]>([]);
   readonly busy = signal<number | 'create' | null>(null);
   readonly createOpen = signal(false);
-  /** Yeni tasarım: bugünkü menüden mi, boş mu, başka bir tasarımdan kopya mı. */
+  /** New design: from the current menu, empty, or a copy of another design. */
   readonly createFrom = signal<'current' | 'empty' | number>('current');
   readonly toDelete = signal<NavigationLayoutSummaryDto | null>(null);
 
@@ -97,7 +97,7 @@ export class DesignHubComponent {
     this.router.navigate([], { relativeTo: this.route, replaceUrl: true, queryParams: { tab: tab === 'navigation' ? 'nav' : null } });
   }
 
-  // ─── Ekranlar ──────────────────────────────────────────────────────────────
+  // ─── Screens ───────────────────────────────────────────────────────────────
 
   private loadScreens(): void {
     this.loadingScreens.set(true);
@@ -122,7 +122,7 @@ export class DesignHubComponent {
     return this.summaries().get(typeName) ?? null;
   }
 
-  // ─── Navigasyon ────────────────────────────────────────────────────────────
+  // ─── Navigation ────────────────────────────────────────────────────────────
 
   private loadNavigation(): void {
     this.loadingNav.set(true);
@@ -150,7 +150,7 @@ export class DesignHubComponent {
     return this.languageService.t(layout.isDefault ? 'design.roles.everyone' : 'design.roles.nobody');
   }
 
-  /** Bu tasarım kimseye düşmüyor mu (rolü yok ve varsayılan değil). */
+  /** Does this design reach nobody (no roles and not the default)? */
   unreachable(layout: NavigationLayoutSummaryDto): boolean {
     return !layout.isDefault && layout.roleIds.length === 0;
   }
@@ -172,7 +172,7 @@ export class DesignHubComponent {
     return typeof from === 'number' ? this.navLayouts().find(l => l.id === from)?.roleIds ?? [] : [];
   }
 
-  /** Yeni tasarım: belge tohumlanır, oluşturulur, rolleri yazılır, tasarımcı açılır. */
+  /** New design: the document is seeded, created, its roles written, the designer opened. */
   async create(settings: DesignSettings): Promise<void> {
     if (this.busy()) return;
     this.busy.set('create');
@@ -201,7 +201,7 @@ export class DesignHubComponent {
       const source = await this.call(this.navigationLayouts.get(from));
       return source?.success ? source.data?.draftJson ?? serializeNavLayout(EMPTY_NAV_LAYOUT) : null;
     }
-    // Bugünkü menü: tüm yayınlanmış modeller + menüye yayınlanmış dashboard'lar.
+    // Current menu: all published models + dashboards published to the menu.
     const nav = await firstValueFrom(this.dashboards.nav().pipe(catchError(() => of(null))));
     return serializeNavLayout(seedNavLayout({
       models: this.models(),
@@ -227,7 +227,7 @@ export class DesignHubComponent {
       }));
       if (!res?.success || !res.data) return;
       const updated = res.data;
-      // Varsayılan tek: yenisi seçilince eskisi düşer.
+      // Only one default: choosing a new one drops the old one.
       this.navLayouts.update(list => list.map(l =>
         l.id === updated.id ? updated : (updated.isDefault ? { ...l, isDefault: false } : l)));
       this.notification.success(res.message);

@@ -1,6 +1,6 @@
 <div class="page-header">
   <span class="eyebrow">{{ 'model.list.title' | t }}</span>
-  <!-- Sadece admin yeni model oluşturabilir / silinmiş modelleri görebilir -->
+  <!-- Only admins can create new models / see deleted models -->
   @if (!noPermission) {
     <div class="cluster">
       @if (isAdmin) {
@@ -17,7 +17,7 @@
   }
 </div>
 
-<!-- Yükleniyor -->
+<!-- Loading -->
 @if (loading) {
   <div class="panel">
     <div class="empty-state">
@@ -26,12 +26,12 @@
   </div>
 }
 
-<!-- Hata -->
+<!-- Error -->
 @if (loadError) {
   <div class="alert alert-danger" role="alert">{{ loadError }}</div>
 }
 
-<!-- Normal kullanıcı — hiç tablo erişimi yok -->
+<!-- Regular user — no table access at all -->
 @if (noPermission) {
   <div class="panel">
     <div class="empty-state">
@@ -42,7 +42,7 @@
   </div>
 }
 
-<!-- Admin: Model Listesi -->
+<!-- Admin: Model list -->
 @if (!loading && !loadError && !noPermission) {
   @if (models.length > 0) {
     <div class="model-grid">
@@ -78,7 +78,7 @@
       }
     </div>
   } @else {
-    <!-- Admin — henüz model yok -->
+    <!-- Admin — no models yet -->
     <div class="panel">
       <div class="empty-state">
         <app-icon class="empty-icon" name="folder_open" size="40" />

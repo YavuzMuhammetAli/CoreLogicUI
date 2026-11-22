@@ -2,17 +2,17 @@ import { NavLayout } from './nav-layout.model';
 import { NavTarget, findNavNode } from './nav-layout.commands';
 
 /**
- * Navigasyon tasarımcısında sürüklenen düğümün bırakılacağı yer — SAF (DOM yok; satır kutuları
- * çağırandan gelir). Taşınan düğüm (ve klasörse çocukları) satırlara dahil EDİLMEZ.
+ * Where a node dragged in the navigation designer will be dropped — PURE (no DOM; row boxes
+ * come from the caller). The dragged node (and its children, if a folder) are NOT included in the rows.
  *
- * - Bağlantı: satırın üst yarısı → önüne, alt yarısı → arkasına (aynı kapta). Klasör başlığının
- *   üst yarısı → klasörün önüne (kök), alt yarısı → klasörün başına. Klasör sonundaki bırakma
- *   alanı → klasörün sonuna (boş klasöre bırakmanın tek yolu).
- * - Klasör: yalnız kök konumları; klasör + çocukları tek blok sayılır.
+ * - Link: top half of a row → before it, bottom half → after it (same container). Top half of a
+ *   folder header → before the folder (root), bottom half → start of the folder. The drop area at
+ *   the folder end → end of the folder (the only way to drop into an empty folder).
+ * - Folder: root positions only; a folder + its children count as one block.
  */
 
 export interface NavRowBox {
-  /** Düğüm kimliği; `folderEnd` için klasörün kimliği. */
+  /** Node id; for `folderEnd`, the folder's id. */
   readonly id: string;
   readonly kind: 'folder' | 'link' | 'folderEnd';
   readonly top: number;
@@ -21,9 +21,9 @@ export interface NavRowBox {
 
 export interface NavDrop {
   readonly target: NavTarget;
-  /** Bırakma çizgisinin dikey konumu (satır kutularıyla aynı koordinat). */
+  /** Vertical position of the drop line (same coordinates as the row boxes). */
   readonly lineY: number;
-  /** Çizgi klasör içinde mi (girintili çizilir). */
+  /** Whether the line is inside a folder (drawn indented). */
   readonly inset: boolean;
 }
 
@@ -64,7 +64,7 @@ function linkDrop(doc: NavLayout, rows: readonly NavRowBox[], y: number): NavDro
 }
 
 function folderDrop(doc: NavLayout, rows: readonly NavRowBox[], y: number): NavDrop {
-  // Kök blokları: klasör başlığı + altındaki satırlar tek blok.
+  // Root blocks: a folder header + the rows below it form one block.
   const blocks: { id: string; top: number; bottom: number }[] = [];
   for (const row of rows) {
     const rootId = rootOf(doc, row);

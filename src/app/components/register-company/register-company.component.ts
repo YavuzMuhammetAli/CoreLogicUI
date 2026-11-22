@@ -12,7 +12,7 @@ import { PROVISION_STEP_ORDER, ProvisionStatus } from '../../models/provision.mo
 import { markDirty } from '../../utils/change-detection';
 import { IconComponent } from '../shared/icon/icon.component';
 
-/** Kurulum ekranındaki tek adım satırının görünüm durumu. */
+/** View state of a single step row on the setup screen. */
 interface DisplayStep {
   name: string;
   state: 'pending' | 'running' | 'done' | 'failed';
@@ -21,17 +21,17 @@ interface DisplayStep {
 }
 
 /**
- * Yeni şirket kayıt sihirbazı — 4 adım:
- * 1. Şirket Bilgileri → 2. Yönetici Bilgileri → 3. Kurulum (gerçek ilerleme,
- * provision-status polling) → 4. Tamamlandı (otomatik login).
+ * New company sign-up wizard — 4 steps:
+ * 1. Company details → 2. Administrator details → 3. Setup (real progress,
+ * provision-status polling) → 4. Completed (automatic login).
  *
- * Doğrulama açıkken başvuru 2. adımda biter: "e-postanızı kontrol edin" gösterilir ve kurulum,
- * e-postadaki `?token=` bağlantısı bu ekranı yeniden açınca 3. adımdan başlar.
+ * When verification is on, the application ends at step 2: "check your e-mail" is shown and setup
+ * starts from step 3 when the `?token=` link in the e-mail reopens this screen.
  *
- * Kurulum backend'de arka planda çalışır; bu component provisionId ile
- * ~1.5 sn'de bir durumu poll'lar ve ProvisionLog adımlarını gerçek
- * durumlarıyla gösterir. Tamamlanan kurulumun yanıtı JWT içerir —
- * token saklanıp izinler yüklenerek doğrudan çalışma alanına girilir.
+ * Setup runs in the background on the backend; this component polls the status with the
+ * provisionId every ~1.5 s and shows the ProvisionLog steps with their real
+ * statuses. The response of a completed setup contains a JWT —
+ * the token is stored, permissions are loaded and the user goes straight to the workspace.
  */
 @Component({
     selector: 'app-register-company',
@@ -41,7 +41,7 @@ interface DisplayStep {
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RegisterCompanyComponent implements OnInit, OnDestroy {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly fb = inject(FormBuilder);
@@ -66,25 +66,25 @@ export class RegisterCompanyComponent implements OnInit, OnDestroy {
     password: ['', [Validators.required, Validators.minLength(8)]]
   });
 
-  /** Başvuru alındı, doğrulama bağlantısı bekleniyor. */
+  /** Application received, waiting for the verification link. */
   readonly verificationSent = signal(false);
-  /** E-postadaki bağlantı geçersiz ya da kurulum başlatılamadı. */
+  /** The link in the e-mail is invalid or setup could not be started. */
   readonly verifyError = signal<string | null>(null);
   readonly isStarting = signal(false);
   readonly startError = signal<string | null>(null);
   readonly provisionStatus = signal<ProvisionStatus | null>(null);
-  /** Kurulum bitti ama token alınamadı (10 dk penceresi geçti vb.) — manuel login göster. */
+  /** Setup finished but no token was obtained (10 min window passed, etc.) — show manual login. */
   readonly autoLoginFailed = signal(false);
 
-  /** Kurulum Failed/RolledBack son durumuna ulaştı mı? */
+  /** Has setup reached the Failed/RolledBack final state? */
   readonly provisionFailed = computed(() => {
     const status = this.provisionStatus()?.status;
     return status === 'Failed' || status === 'RolledBack';
   });
 
   /**
-   * Sabit adım sırası + backend'den gelen gerçek durumların birleşimi.
-   * Backend'in henüz başlamadığı adımlar 'pending' görünür.
+   * Fixed step order merged with the real statuses from the backend.
+   * Steps the backend hasn't started yet appear as 'pending'.
    */
   readonly displaySteps = computed<DisplayStep[]>(() => {
     const backendSteps = this.provisionStatus()?.steps ?? [];
@@ -114,7 +114,7 @@ export class RegisterCompanyComponent implements OnInit, OnDestroy {
     this.stopPolling();
   }
 
-  /** E-postadaki bağlantıdan gelindi: kurulum ekranı açılır, doğrulanınca ilerleme izlenir. */
+  /** Arrived from the e-mail link: the setup screen opens, progress is tracked once verified. */
   private verify(token: string): void {
     this.step.set(3);
     this.auth.verifyCompany(token).pipe(markDirty(this.cdr)).subscribe({
@@ -142,7 +142,7 @@ export class RegisterCompanyComponent implements OnInit, OnDestroy {
     this.step.set(1);
   }
 
-  /** Adım 2 → kurulumu başlat: backend senkron doğrular, provisionId döner, polling başlar. */
+  /** Step 2 → start setup: the backend validates synchronously, returns provisionId, polling starts. */
   startProvisioning(): void {
     if (this.adminForm.invalid || this.isStarting()) {
       this.adminForm.markAllAsTouched();
@@ -175,7 +175,7 @@ export class RegisterCompanyComponent implements OnInit, OnDestroy {
       },
       error: err => {
         this.isStarting.set(false);
-        // Duplicate code/email gibi senkron 400 hataları burada kullanıcıya döner
+        // Synchronous 400 errors such as duplicate code/email are returned to the user here
         this.startError.set(err?.status === 429
           ? this.languageService.t('common.rateLimited')
           : err?.error?.message ?? this.languageService.t('regco.serverUnreachable'));
@@ -183,7 +183,7 @@ export class RegisterCompanyComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Başarısız kurulumdan sonra bilgiler korunarak adım 1'e dönülür (rollback tamamlandı). */
+  /** After a failed setup, return to step 1 keeping the entered details (rollback completed). */
   retry(): void {
     this.stopPolling();
     this.provisionId = null;
@@ -195,7 +195,7 @@ export class RegisterCompanyComponent implements OnInit, OnDestroy {
   private startPolling(): void {
     this.stopPolling();
     this.pollSub = interval(1500).pipe(
-      // Geçici ağ hataları polling'i öldürmesin — null yut, sonraki tikte tekrar dene
+      // Transient network errors must not kill polling — swallow as null, retry on the next tick
       switchMap(() => this.auth.getProvisionStatus(this.provisionId!).pipe(
         catchError(() => of(null))
       ))
@@ -209,7 +209,7 @@ export class RegisterCompanyComponent implements OnInit, OnDestroy {
         this.step.set(4);
         this.autoLogin(res.data);
       } else if (res.data.status === 'Failed' || res.data.status === 'RolledBack') {
-        // Son durum — hata + rollback bilgisi adım 3 ekranında gösterilir
+        // Final state — error + rollback info is shown on the step 3 screen
         this.stopPolling();
       }
     });
@@ -220,7 +220,7 @@ export class RegisterCompanyComponent implements OnInit, OnDestroy {
     this.pollSub = null;
   }
 
-  /** Tamamlanan kurulumda oturum açıp açılış sayfasına yönlendirir. */
+  /** Signs in after a completed setup and redirects to the landing page. */
   private autoLogin(status: ProvisionStatus): void {
     if (!status.autoLoginAvailable) {
       this.autoLoginFailed.set(true);
@@ -233,8 +233,8 @@ export class RegisterCompanyComponent implements OnInit, OnDestroy {
           this.autoLoginFailed.set(true);
           return;
         }
-        // LoginComponent.onLogin ile aynı akış: eski yetki sinyalini temizle,
-        // yeni kullanıcının yetkilerini yükle, rolünün açılış sayfasına git.
+        // Same flow as LoginComponent.onLogin: clear the old permission signal,
+        // load the new user's permissions, go to their role's landing page.
         this.permissionService.clear();
         this.permissionService.loadMyPermissions().pipe(markDirty(this.cdr)).subscribe({
           next: () => this.router.navigateByUrl(this.permissionService.getLandingPage()),

@@ -5,8 +5,8 @@ import { environment } from '../../environments/environment';
 import { LookupLabelService } from './lookup-label.service';
 
 /**
- * Lookup etiket önbelleği — yalnız eksik id'ler tek istekte çözülür; anahtar
- * hedef tablo + gösterim kolonudur.
+ * Lookup label cache — only missing ids are resolved, in one request; the key is
+ * target table + display column.
  */
 describe('LookupLabelService', () => {
   const url = `${environment.apiBaseUrl}/PublishedModel/lookupOptions`;
@@ -29,7 +29,7 @@ describe('LookupLabelService', () => {
     });
   }
 
-  it('benzersiz ve geçerli id\'leri tek istekte çözer, önbellekteyse istek atmaz', () => {
+  it('resolves unique, valid ids in one request and sends no request when cached', () => {
     service.ensure('Musteri', 'Ad', [3, 3, 0, -1, 5]).subscribe();
     const request = httpMock.expectOne(r => r.url === url);
     expect(request.request.params.get('ids')).toBe('3,5');
@@ -42,7 +42,7 @@ describe('LookupLabelService', () => {
     httpMock.expectNone(r => r.url === url);
   });
 
-  it('farklı gösterim kolonu ayrı önbellektir', () => {
+  it('a different display column is a separate cache', () => {
     service.ensure('Musteri', 'Ad', [3]).subscribe();
     respond([{ id: 3, label: 'Ayşe' }]);
 
@@ -53,7 +53,7 @@ describe('LookupLabelService', () => {
     expect(service.label('Musteri', 'Ad', 3)).toBe('Ayşe');
   });
 
-  it('invalidate yalnız o tablonun etiketlerini düşürür', () => {
+  it('invalidate drops only that table\'s labels', () => {
     service.ensure('Musteri', null, [1]).subscribe();
     respond([{ id: 1, label: 'A' }]);
     service.ensure('Urun', null, [1]).subscribe();
@@ -64,7 +64,7 @@ describe('LookupLabelService', () => {
     expect(service.label('Urun', null, 1)).toBe('U');
   });
 
-  it('istek düşerse akış hatasız tamamlanır, etiket çözülmemiş kalır', () => {
+  it('if the request fails the stream completes without error, the label stays unresolved', () => {
     let completed = false;
     service.ensure('Musteri', null, [9]).subscribe({ complete: () => (completed = true) });
     httpMock.expectOne(r => r.url === url).flush(null, { status: 500, statusText: 'err' });

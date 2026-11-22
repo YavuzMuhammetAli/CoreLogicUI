@@ -14,7 +14,7 @@
   gap: var(--space-2);
 }
 
-/* 12 kolonluk sürükle-bırak canvas — grid-auto-rows + gap, ts'teki ROW_PITCH_PX (56px) ile eşleşir. */
+/* 12-column drag-and-drop canvas — grid-auto-rows + gap, matches ROW_PITCH_PX (56px) in the ts. */
 .dashboard-canvas {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
@@ -23,9 +23,9 @@
   min-height: 200px;
 }
 
-/* ≤900: tuval gizlenir, sıralı liste gösterilir. Eskiden burada sütun sayısı 6/2'ye
-   iniyordu ama sürükleme hesabı (colPitch) hep 12 sütuna göre yapıldığından widget'lar
-   parmağı izlemiyor, satır içi grid-column konumları da dağılıyordu. */
+/* ≤900: the canvas is hidden, the ordered list is shown. The column count used to drop to 6/2
+   here, but since the drag math (colPitch) was always based on 12 columns, widgets did not
+   follow the finger and the inline grid-column positions fell apart too. */
 .layout-mobile {
   display: none;
   gap: var(--space-3);

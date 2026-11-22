@@ -21,15 +21,15 @@ import { markDirty } from '../../../utils/change-detection';
 import { IconComponent } from '../../shared/icon/icon.component';
 
 /**
- * "İlişkiler" sekmesi — model ilişkilerinin (G1) tüm yaşam döngüsü.
+ * "İlişkiler" (Relationships) tab — the whole lifecycle of model relationships (G1).
  *
- * table-detail'den ayrıldı: ana ekran artık ilişki modelini hiç bilmez, yalnızca
- * kaydetme akışında <c>flush()</c> çağırır. Sekme, listeyi, canlı graph
- * doğrulamasını, silme onayını ve YENİ MODEL modundaki staging'i kendisi yönetir.
+ * Split out of table-detail: the main screen no longer knows the relationship model at all, it only
+ * calls <c>flush()</c> in the save flow. The tab manages the list, live graph
+ * validation, the delete confirmation and the staging in NEW MODEL mode itself.
  *
- * Staging neden burada: model ilk kez kaydedilene kadar tablo ID'si yoktur ve
- * ilişkiler sunucuya gönderilemez. Bekleyen kayıtlar bellekte tutulup ilk
- * kayıttan sonra sırayla POST edilir.
+ * Why staging lives here: until the model is saved for the first time there is no table ID and
+ * relationships cannot be sent to the server. Pending ones are kept in memory and POSTed
+ * in order after the first save.
  */
 @Component({
     selector: 'app-relationships-tab',
@@ -48,89 +48,89 @@ export class RelationshipsTabComponent implements OnChanges {
   private readonly languageService = inject(LanguageService);
 
   /**
-   * Kaynak modelin PublishedTable.ID değeri; ilişki uçlarının route parametresi.
-   * Yeni model modunda ilk kayıt tamamlanana kadar null'dır.
+   * The source model's PublishedTable.ID value; the route parameter of the relationship endpoints.
+   * In new model mode it is null until the first save completes.
    */
   @Input() tableId: number | null = null;
 
-  /** Bu ekranda düzenlenen modelin adı (SelfReference hedefi + staged satırlar). */
+  /** Name of the model edited on this screen (SelfReference target + staged rows). */
   @Input() modelName = '';
 
-  /** Yeni model oluşturma modu mu. */
+  /** Whether this is new model creation mode. */
   @Input() isNew = false;
 
-  /** Autocomplete kaynağı — yalnızca yayınlanmış modeller. */
+  /** Autocomplete source — only published models. */
   @Input() publishedModelNames: string[] = [];
 
   /**
-   * Sekme görünür mü. Component sekme kapalıyken de CANLI tutulur: ilişki sayısı
-   * ve doğrulama durumu sekme çubuğundaki rozette gösterilir, dolayısıyla veri
-   * sekme ilk kez açılmadan da yüklenmiş olmalıdır.
+   * Whether the tab is visible. The component is kept ALIVE even when the tab is closed: the relationship count
+   * and validation state are shown in the badge on the tab bar, so the data
+   * must be loaded even before the tab is opened for the first time.
    */
   @Input() active = false;
 
   /**
-   * Sunucuda kalıcılaşan bir ilişki değişikliği oldu. Ana ekran bunu
-   * "model yayınlanabilir" işaretlemek için kullanır.
+   * A relationship change was persisted on the server. The main screen uses this
+   * to mark the "model as publishable".
    */
   @Output() persisted = new EventEmitter<void>();
 
-  /** Sekme çubuğundaki rozet için: ilişki sayısı + graph geçerli mi. */
+  /** For the badge on the tab bar: relationship count + whether the graph is valid. */
   @Output() statusChanged = new EventEmitter<{ count: number; isValid: boolean }>();
 
-  /** İlişki kılavuzunu ana ekran açar (kılavuz sütunlarla paylaşılır). */
+  /** The main screen opens the relationship guide (the guide is shared with the columns). */
   @Output() helpRequested = new EventEmitter<void>();
   @Output() typeHelpRequested = new EventEmitter<RelationshipType>();
 
   @ViewChild(RelationshipDialogComponent) private dialog?: RelationshipDialogComponent;
   @ViewChild(PublishPreviewDialogComponent) private previewDialog?: PublishPreviewDialogComponent;
 
-  /** Sunucudaki (düzenleme modu) veya bellekte bekleyen (yeni model) ilişkiler. */
+  /** Relationships on the server (edit mode) or pending in memory (new model). */
   relationships: RelationshipDefinition[] = [];
 
-  /** Canlı doğrulama sonucu — kullanıcı kaydetmeden önce döngü/derinlik uyarısı görür. */
+  /** Live validation result — the user sees cycle/depth warnings before saving. */
   validation: RelationshipValidationResult | null = null;
 
   errorMessage: string | null = null;
   isSaving = false;
   isDeleting = false;
 
-  /** Onay bekleyen silme hedefi; null ise onay diyaloğu kapalıdır. */
+  /** Delete target awaiting confirmation; null means the confirm dialog is closed. */
   toRemove: RelationshipDefinition | null = null;
 
   relationshipTypeOptions = RELATIONSHIP_TYPE_OPTIONS;
 
   /**
-   * Geçici kimlik → bekleyen ilişki. Dizi + paralel index yerine Map kullanılır:
-   * `relationships` ile bu koleksiyon arasındaki index eşleşmesine dayanmak,
-   * araya kaydedilmiş bir ilişki girdiğinde sessizce yanlış kaydı günceller.
+   * Temporary id → pending relationship. A Map is used instead of an array + parallel index:
+   * relying on index matching between `relationships` and this collection
+   * silently updates the wrong record when a saved relationship sits in between.
    *
-   * Ekleme sırası korunur (Map insertion order) — flush sırası publish için önemlidir.
+   * Insertion order is preserved (Map insertion order) — the flush order matters for publish.
    */
   private pending = new Map<string, RelationshipUpsert>();
 
   /**
-   * Bekleyen ilişkilere geçici kimlik üreten MONOTON sayaç.
+   * MONOTONIC counter generating temporary ids for pending relationships.
    *
-   * Map boyutu kullanılamaz: bir ilişki silinip yenisi eklendiğinde aynı kimlik
-   * ikinci kez üretilir; mevcut giriş üzerine yazılır ve @for ... track duplicate
-   * anahtarla bozulur.
+   * The Map size cannot be used: when a relationship is deleted and a new one added, the same id
+   * is generated a second time; the existing entry is overwritten and @for ... track breaks
+   * with a duplicate key.
    */
   private pendingIdSeq = 0;
 
   ngOnChanges(changes: SimpleChanges): void {
-    // Tablo ID'si ilk kez çözüldüğünde (veya değiştiğinde) ilişkiler yüklenir.
+    // Relationships are loaded when the table ID is first resolved (or changes).
     if (changes['tableId'] && this.tableId !== null) {
       this.load();
     }
   }
 
-  /** İlişki eklemek için modelin kaydedilmiş (tablo ID'si oluşmuş) olması gerekir. */
+  /** To add a relationship the model must be saved (its table ID must exist). */
   get canManage(): boolean {
     return this.tableId !== null || this.isNew;
   }
 
-  // ─── Liste + doğrulama ──────────────────────────────────────────────────────
+  // ─── List + validation ──────────────────────────────────────────────────────
 
   private load(): void {
     if (this.tableId === null) return;
@@ -145,7 +145,7 @@ export class RelationshipsTabComponent implements OnChanges {
     });
   }
 
-  /** Sekme rozetini besleyen durum — liste veya doğrulama her değiştiğinde. */
+  /** State feeding the tab badge — whenever the list or validation changes. */
   private emitStatus(): void {
     this.statusChanged.emit({
       count: this.relationships.length,
@@ -153,7 +153,7 @@ export class RelationshipsTabComponent implements OnChanges {
     });
   }
 
-  /** Graph doğrulamasını çalıştırır — kullanıcı yayınlamadan önce hatayı görür. */
+  /** Runs the graph validation — the user sees the error before publishing. */
   private runValidation(): void {
     if (this.tableId === null) {
       this.validation = null;
@@ -166,14 +166,14 @@ export class RelationshipsTabComponent implements OnChanges {
         this.emitStatus();
       },
       error: (err: { error?: { data?: RelationshipValidationResult } }) => {
-        // Doğrulama hatası 400 ile de dönebilir; gövdedeki sonuç yine kullanılır.
+        // A validation error may also come back with 400; the result in the body is still used.
         this.validation = err?.error?.data ?? null;
         this.emitStatus();
       }
     });
   }
 
-  // ─── Popup akışı ────────────────────────────────────────────────────────────
+  // ─── Popup flow ─────────────────────────────────────────────────────────────
 
   openAdd(): void {
     this.errorMessage = null;
@@ -186,8 +186,8 @@ export class RelationshipsTabComponent implements OnChanges {
   }
 
   onDialogSave(body: RelationshipUpsert): void {
-    // Model henüz kaydedilmediyse ilişki bellekte bekletilir; ilk kayıttan
-    // sonra tablo ID'si oluşunca toplu gönderilir.
+    // If the model is not saved yet the relationship is kept in memory; after the first save,
+    // once the table ID exists, they are sent in bulk.
     if (this.tableId === null) {
       this.stagePending(body);
       return;
@@ -217,7 +217,7 @@ export class RelationshipsTabComponent implements OnChanges {
     });
   }
 
-  /** Yeni model modunda ilişkiyi bellekte tutar ve listede gösterir. */
+  /** In new model mode keeps the relationship in memory and shows it in the list. */
   private stagePending(body: RelationshipUpsert): void {
     const editingId = this.dialog?.editingRelationshipId ?? null;
 
@@ -236,7 +236,7 @@ export class RelationshipsTabComponent implements OnChanges {
     this.dialog?.close();
   }
 
-  /** Bellekte bekleyen ilişkiyi listede göstermek için görüntüleme nesnesine çevirir. */
+  /** Converts a relationship pending in memory into a display object to show in the list. */
   private toStagedDefinition(body: RelationshipUpsert, stagedId: string): RelationshipDefinition {
     const now = new Date().toISOString();
     return {
@@ -258,11 +258,11 @@ export class RelationshipsTabComponent implements OnChanges {
     };
   }
 
-  // ─── Silme ──────────────────────────────────────────────────────────────────
+  // ─── Delete ─────────────────────────────────────────────────────────────────
 
   /**
-   * Silme onayını açar. Silme geri alınamaz (kalıcılaşmış ilişkinin SQL FK'sı bir
-   * sonraki yayınlamada düşer), bu yüzden doğrudan DELETE atılmaz.
+   * Opens the delete confirmation. Deletion cannot be undone (the SQL FK of a persisted relationship
+   * is dropped on the next publish), so a DELETE is not sent directly.
    */
   askRemove(relationship: RelationshipDefinition): void {
     this.toRemove = relationship;
@@ -276,7 +276,7 @@ export class RelationshipsTabComponent implements OnChanges {
     const relationship = this.toRemove;
     if (!relationship) return;
 
-    // Bellekte bekleyen (henüz kaydedilmemiş) ilişki
+    // Relationship pending in memory (not saved yet)
     if (this.tableId === null) {
       this.pending.delete(relationship.relationshipId);
       this.relationships = this.relationships
@@ -304,20 +304,20 @@ export class RelationshipsTabComponent implements OnChanges {
       });
   }
 
-  // ─── Önizleme ───────────────────────────────────────────────────────────────
+  // ─── Preview ────────────────────────────────────────────────────────────────
 
   openPreview(): void {
     this.previewDialog?.show();
   }
 
-  // ─── Kaydetme akışıyla dikiş ────────────────────────────────────────────────
+  // ─── Seam with the save flow ────────────────────────────────────────────────
 
   /**
-   * Model ilk kez kaydedildikten sonra bekleyen ilişkileri sunucuya gönderir.
-   * Ana ekran onSave() tamamlandığında çağırır.
+   * Sends the pending relationships to the server after the model is saved for the first time.
+   * The main screen calls it when onSave() completes.
    *
-   * Dönüş yok: hata durumunda kullanıcıya bu sekmede mesaj gösterilir; ana
-   * ekranın kaydetme sonucu ilişkilerden bağımsızdır (model kaydedilmiştir).
+   * No return value: on error a message is shown to the user in this tab; the main
+   * screen's save result is independent of the relationships (the model has been saved).
    */
   flush(rootName: string): void {
     if (this.pending.size === 0) return;
@@ -327,9 +327,9 @@ export class RelationshipsTabComponent implements OnChanges {
         const match = (res.data ?? []).find(
           t => t.tableName.toLowerCase() === rootName.toLowerCase());
 
-        // Model kaydedildi ama tablosu listede bulunamadı — bekleyen ilişkiler
-        // gönderilemez. Sessizce dönmek yerine kullanıcıyı bilgilendir; aksi halde
-        // ilişkiler kaybolmuş gibi görünür ve neden olduğu anlaşılmaz.
+        // The model was saved but its table was not found in the list — pending relationships
+        // cannot be sent. Inform the user instead of returning silently; otherwise the
+        // relationships seem to have vanished and it is not clear why.
         if (!match) {
           this.errorMessage = this.languageService.t('relationship.flushTableNotFound');
           return;
@@ -349,22 +349,22 @@ export class RelationshipsTabComponent implements OnChanges {
           }
         });
       },
-      // Tablo listesi alınamazsa kullanıcı hiçbir geri bildirim almamalı değil.
+      // If the table list cannot be fetched, the user must not be left without any feedback.
       error: (err: { error?: { message?: string } }) => {
         this.errorMessage = err?.error?.message ?? this.languageService.t('common.error');
       }
     });
   }
 
-  // ─── Ana ekranla dikiş: sıfırlama ve ESC ────────────────────────────────────
+  // ─── Seam with the main screen: reset and ESC ───────────────────────────────
 
   /**
-   * Sekmeyi boş duruma döndürür. Ana ekran, aynı route üzerinde başka bir modele
-   * geçildiğinde (alt model satırına tıklama) çağırır: component yeniden
-   * oluşturulmadığı için önceki modelin ilişkileri aksi halde ekranda kalır.
+   * Returns the tab to an empty state. The main screen calls it when switching to another model
+   * on the same route (clicking a sub-model row): since the component is not
+   * recreated, the previous model's relationships would otherwise stay on screen.
    *
-   * `tableId` ayrıca ana ekrandan input olarak null'lanır; yeni ID çözüldüğünde
-   * ngOnChanges listeyi kendi yükler.
+   * `tableId` is also nulled as an input from the main screen; when the new ID is resolved
+   * ngOnChanges loads the list itself.
    */
   reset(): void {
     this.relationships = [];
@@ -379,11 +379,11 @@ export class RelationshipsTabComponent implements OnChanges {
   }
 
   /**
-   * ESC — ana ekranın HostListener'ından çağrılır. Bu sekmenin açık en üstteki
-   * diyaloğunu kapatır ve true döner; kapatacak bir şey yoksa false döner, ana
-   * ekran kendi popup'larıyla devam eder.
+   * ESC — called from the main screen's HostListener. Closes this tab's topmost open
+   * dialog and returns true; if there is nothing to close it returns false and the main
+   * screen continues with its own popups.
    *
-   * Silme onayı burada yoktur: ConfirmDialogComponent kendi ESC işleyicisine sahiptir.
+   * There is no delete confirmation here: ConfirmDialogComponent has its own ESC handler.
    */
   handleEscape(): boolean {
     if (this.previewDialog?.open) {
@@ -397,9 +397,9 @@ export class RelationshipsTabComponent implements OnChanges {
     return false;
   }
 
-  // ─── Görüntüleme yardımcıları ───────────────────────────────────────────────
+  // ─── Display helpers ────────────────────────────────────────────────────────
 
-  /** İlişki tipinin çeviri anahtarını döner. */
+  /** Returns the translation key of the relationship type. */
   relationshipTypeLabel(type: RelationshipType): string {
     return this.relationshipTypeOptions.find(o => o.value === type)?.labelKey ?? '';
   }

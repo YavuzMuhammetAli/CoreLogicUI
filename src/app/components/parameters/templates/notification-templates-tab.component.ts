@@ -20,20 +20,20 @@ import {
 } from '../../../models/parameter.model';
 import { IconComponent } from '../../shared/icon/icon.component';
 
-/** Kaydedilmemiş değişiklik varken istenen geçiş — onaydan sonra uygulanır. */
+/** A switch requested while there are unsaved changes — applied after confirmation. */
 interface PendingSwitch {
   kind: NotificationTemplateKind;
   lang: NotificationLanguage;
 }
 
 /**
- * Bildirim Şablonları sekmesi — her bildirim türünün e-posta konusu ve HTML'i.
+ * Notification Templates tab — the email subject and HTML of each notification kind.
  *
- * Admin hiçbir şey yapmazsa gömülü kurumsal şablon kullanılır. Kaydedilen
- * şablon yalnız o tür + dil için geçerlidir; "Varsayılana Dön" özel kaydı siler.
+ * If the admin does nothing, the embedded corporate template is used. A saved
+ * template applies only to that kind + language; "Varsayılana Dön" (Reset to default) deletes the custom record.
  *
- * Önizleme SUNUCUDA render edilir (örnek veriyle) — gerçek gönderimle aynı
- * motordan geçsin ve bilinmeyen yer tutucu hatası kaydetmeden görünsün.
+ * The preview is rendered ON THE SERVER (with sample data) — so it goes through the same
+ * engine as real sending and unknown-placeholder errors show up before saving.
  */
 @Component({
     selector: 'app-notification-templates-tab',
@@ -53,11 +53,11 @@ export class NotificationTemplatesTabComponent implements OnInit {
   readonly languages: NotificationLanguage[] = ['tr', 'en'];
 
   readonly selectedKind = signal<NotificationTemplateKind>('TaskAssigned');
-  /** Düzenlenen şablonun dili — arayüz dilinden bağımsız. */
+  /** Language of the template being edited — independent of the UI language. */
   readonly selectedLang = signal<NotificationLanguage>(
     this.languageService.lang() === 'en' ? 'en' : 'tr');
 
-  /** Tür → özel şablon var mı (seçili dil için). */
+  /** Kind → whether a custom template exists (for the selected language). */
   readonly customKinds = signal<ReadonlySet<string>>(new Set());
 
   readonly template = signal<NotificationTemplate | null>(null);
@@ -89,14 +89,14 @@ export class NotificationTemplatesTabComponent implements OnInit {
     to: ['', [Validators.required, Validators.email]]
   });
 
-  /** Yüklenen (sunucudaki) içerik — kaydedilmemiş değişiklik tespiti için. */
+  /** Loaded (server) content — for detecting unsaved changes. */
   private readonly original = signal<NotificationTemplateContent>({ subject: '', html: '' });
   private readonly current = signal<NotificationTemplateContent>({ subject: '', html: '' });
 
   readonly dirty = computed(() =>
     this.current().subject !== this.original().subject || this.current().html !== this.original().html);
 
-  /** Yer tutucu çipine basıldığında ekleneceği alan — en son odaklanılan. */
+  /** The field to insert into when a placeholder chip is pressed — the last focused one. */
   private lastField: 'subject' | 'html' = 'html';
   private readonly subjectInput = viewChild<ElementRef<HTMLInputElement>>('subjectInput');
   private readonly htmlInput = viewChild<ElementRef<HTMLTextAreaElement>>('htmlInput');
@@ -108,8 +108,8 @@ export class NotificationTemplatesTabComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.current.set(this.form.getRawValue()));
 
-    // Yazarken önizleme kendini yeniler; switchMap eski isteği iptal eder ki
-    // geç gelen bir yanıt yeni içeriğin üstüne yazmasın.
+    // The preview refreshes itself while typing; switchMap cancels the old request so
+    // a late response does not overwrite the newer content.
     this.previewRequests
       .pipe(
         debounceTime(600),
@@ -146,7 +146,7 @@ export class NotificationTemplatesTabComponent implements OnInit {
     this.loadTemplate();
   }
 
-  // ── Seçim ─────────────────────────────────────────────────────────────────
+  // ── Selection ─────────────────────────────────────────────────────────────
 
   selectKind(kind: NotificationTemplateKind): void {
     if (kind === this.selectedKind()) return;
@@ -188,7 +188,7 @@ export class NotificationTemplatesTabComponent implements OnInit {
     return this.customKinds().has(kind);
   }
 
-  // ── Yükleme ───────────────────────────────────────────────────────────────
+  // ── Loading ───────────────────────────────────────────────────────────────
 
   private loadList(): void {
     this.parameterService.listNotificationTemplates(this.selectedLang()).subscribe({
@@ -197,7 +197,7 @@ export class NotificationTemplatesTabComponent implements OnInit {
           this.customKinds.set(new Set(res.data.filter(t => t.isCustom).map(t => t.kind)));
         }
       },
-      // Liste yalnız rozetleri besliyor; düşerse düzenleyici yine çalışır.
+      // The list only feeds the badges; if it fails the editor still works.
       error: () => {}
     });
   }
@@ -231,9 +231,9 @@ export class NotificationTemplatesTabComponent implements OnInit {
     this.previewRequests.next();
   }
 
-  // ── Düzenleme ─────────────────────────────────────────────────────────────
+  // ── Editing ───────────────────────────────────────────────────────────────
 
-  /** Çipte gösterilen metin — şablonda `{{ }}` yazmak Angular interpolasyonuyla çakışırdı. */
+  /** Text shown on the chip — writing `{{ }}` in the template would clash with Angular interpolation. */
   token(name: string): string {
     return `{{${name}}}`;
   }
@@ -242,7 +242,7 @@ export class NotificationTemplatesTabComponent implements OnInit {
     this.lastField = field;
   }
 
-  /** `{{ad}}` metnini son odaklanılan alanda imlecin olduğu yere ekler. */
+  /** Inserts `{{name}}` text at the cursor position in the last focused field. */
   insertPlaceholder(name: string): void {
     const field = this.lastField;
     const element = field === 'subject'
@@ -259,7 +259,7 @@ export class NotificationTemplatesTabComponent implements OnInit {
     control.markAsDirty();
 
     if (element) {
-      // Değer yazıldıktan sonra imleci eklenen metnin sonuna taşı.
+      // After the value is written, move the cursor to the end of the inserted text.
       queueMicrotask(() => {
         element.focus();
         element.setSelectionRange(start + token.length, start + token.length);
@@ -267,7 +267,7 @@ export class NotificationTemplatesTabComponent implements OnInit {
     }
   }
 
-  /** Editördeki içeriği gömülü varsayılanla değiştirir (kaydetmez). */
+  /** Replaces the editor content with the embedded default (does not save). */
   loadDefaultIntoEditor(): void {
     const t = this.template();
     if (!t) return;
@@ -278,7 +278,7 @@ export class NotificationTemplatesTabComponent implements OnInit {
     this.previewRequests.next();
   }
 
-  // ── Kaydet / varsayılana dön ─────────────────────────────────────────────
+  // ── Save / reset to default ──────────────────────────────────────────────
 
   save(): void {
     this.clearMessages();
@@ -347,7 +347,7 @@ export class NotificationTemplatesTabComponent implements OnInit {
     });
   }
 
-  // ── Test maili ────────────────────────────────────────────────────────────
+  // ── Test mail ─────────────────────────────────────────────────────────────
 
   sendTest(): void {
     this.testError.set('');
@@ -365,7 +365,7 @@ export class NotificationTemplatesTabComponent implements OnInit {
       to: this.testForm.getRawValue().to.trim()
     }).subscribe({
       next: res => {
-        // SMTP'nin kendi hatası mesajda gelir — teşhis için en yararlı bilgi.
+        // SMTP's own error comes in the message — the most useful diagnostic information.
         if (res.success) this.testSuccess.set(res.message);
         else this.testError.set(res.message);
         this.testing.set(false);
@@ -377,12 +377,12 @@ export class NotificationTemplatesTabComponent implements OnInit {
     });
   }
 
-  // ── Yardımcılar ───────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
   /**
-   * Backend başarısız sonucu 400 ile döner (ApiControllerBase.Respond); gövdedeki
-   * mesaj ("Tanınmayan yer tutucu: {{x}}") genel metinden çok daha yararlı —
-   * varsa o gösterilir, yoksa (ağ hatası vb.) çeviri anahtarına düşülür.
+   * The backend returns a failed result with 400 (ApiControllerBase.Respond); the message in the body
+   * ("Tanınmayan yer tutucu: {{x}}" — Unknown placeholder) is far more useful than generic text —
+   * if present it is shown, otherwise (network error, etc.) we fall back to the translation key.
    */
   private errorMessage(err: unknown, fallbackKey: string): string {
     const message = (err as HttpErrorResponse)?.error?.message;
@@ -397,11 +397,11 @@ export class NotificationTemplatesTabComponent implements OnInit {
   }
 
   /**
-   * Önizleme `<iframe sandbox="">` içinde gösterilir: sandbox script çalıştırmaz,
-   * form göndermez ve iframe'e ayrı (opak) bir origin verir — içerik uygulamanın
-   * DOM'una, çerezlerine ya da token'ına erişemez. Bu yüzden Angular'ın HTML
-   * sanitizer'ı atlanabilir; atlanmasa e-posta şablonunun inline stilleri
-   * soyulur ve önizleme gerçek maile benzemezdi. Projedeki tek iframe budur.
+   * The preview is shown inside `<iframe sandbox="">`: the sandbox runs no scripts,
+   * submits no forms and gives the iframe a separate (opaque) origin — the content cannot access
+   * the app's DOM, cookies or token. So Angular's HTML
+   * sanitizer can be bypassed; otherwise the email template's inline styles would be
+   * stripped and the preview would not resemble the real mail. This is the only iframe in the project.
    */
   private trustPreview(html: string): SafeHtml {
     return this.sanitizer.bypassSecurityTrustHtml(html);

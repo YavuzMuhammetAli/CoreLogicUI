@@ -17,7 +17,7 @@ import { IconComponent } from '../shared/icon/icon.component';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ReportListComponent implements OnInit {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly languageService = inject(LanguageService);
@@ -35,7 +35,7 @@ export class ReportListComponent implements OnInit {
     this.load();
   }
 
-  /** "Silinmiş Raporlar" butonu yalnızca admin'e gösterilir. */
+  /** The "Silinmiş Raporlar" (Deleted reports) button is shown only to admins. */
   get isAdmin(): boolean {
     return this.permissionService.isAdmin();
   }

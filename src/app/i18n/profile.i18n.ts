@@ -1,16 +1,16 @@
 import { Translations } from './translations.model';
 
 /**
- * user-profile.component.html/.ts ve audit-log.component.html/.ts — kullanıcı
- * profil sayfası (kendi profilini görüntüleme/güncelleme, şifre değiştirme,
- * fotoğraf yükleme) ve denetim kayıtları (audit log) ekranlarına özel statik metinler.
+ * user-profile.component.html/.ts and audit-log.component.html/.ts — static texts specific to
+ * the user profile page (viewing/updating one's own profile, changing the password,
+ * uploading a photo) and the audit log screens.
  */
 export const PROFILE_I18N: Translations = {
-  // ── user-profile: sayfa başlığı ──
+  // ── user-profile: page header ──
   'profile.title': { tr: 'Profil Ayarları', en: 'Profile Settings' },
   'profile.loading': { tr: 'Profil yükleniyor…', en: 'Loading profile…' },
 
-  // ── user-profile: fotoğraf paneli ──
+  // ── user-profile: photo panel ──
   'profile.photoAlt': { tr: 'Profil fotoğrafı', en: 'Profile photo' },
   'profile.user': { tr: 'Kullanıcı', en: 'User' },
   'profile.admin': { tr: 'Admin', en: 'Admin' },
@@ -29,7 +29,7 @@ export const PROFILE_I18N: Translations = {
   'profile.accountStatus': { tr: 'Hesap Durumu', en: 'Account Status' },
   'profile.userId': { tr: 'Kullanıcı ID', en: 'User ID' },
 
-  // ── user-profile: kişisel bilgiler formu ──
+  // ── user-profile: personal info form ──
   'profile.personalInfo': { tr: 'Kişisel Bilgiler', en: 'Personal Information' },
   'profile.firstName': { tr: 'Ad', en: 'First Name' },
   'profile.firstNameRequired': { tr: 'Ad zorunludur.', en: 'First name is required.' },
@@ -45,7 +45,7 @@ export const PROFILE_I18N: Translations = {
   'profile.saving': { tr: 'Kaydediliyor…', en: 'Saving…' },
   'profile.saveInfo': { tr: 'Bilgileri Kaydet', en: 'Save Information' },
 
-  // ── user-profile: şifre formu ──
+  // ── user-profile: password form ──
   'profile.changePasswordTitle': { tr: 'Şifre Değiştir', en: 'Change Password' },
   'profile.currentPassword': { tr: 'Mevcut Şifre', en: 'Current Password' },
   'profile.currentPasswordRequired': { tr: 'Mevcut şifre zorunludur.', en: 'Current password is required.' },
@@ -58,7 +58,7 @@ export const PROFILE_I18N: Translations = {
   'profile.passwordsMismatch': { tr: 'Şifreler eşleşmiyor.', en: 'Passwords do not match.' },
   'profile.changePassword': { tr: 'Şifreyi Değiştir', en: 'Change Password' },
 
-  // ── user-profile: bildirim/onay mesajları (.ts) ──
+  // ── user-profile: notification/confirmation messages (.ts) ──
   'profile.loadFailed': { tr: 'Profil yüklenemedi.', en: 'Failed to load profile.' },
   'profile.loadFailedRetry': { tr: 'Profil bilgileri alınamadı. Lütfen tekrar deneyin.', en: 'Could not retrieve profile information. Please try again.' },
   'profile.photoUpdated': { tr: 'Profil fotoğrafı güncellendi.', en: 'Profile photo updated.' },
@@ -74,7 +74,7 @@ export const PROFILE_I18N: Translations = {
   'profile.passwordChangeFailed': { tr: 'Şifre değiştirilemedi.', en: 'Failed to change password.' },
   'profile.passwordChangeFailedRetry': { tr: 'Şifre değiştirilemedi. Lütfen tekrar deneyin.', en: 'Failed to change password. Please try again.' },
 
-  // ── audit-log: sayfa başlığı ──
+  // ── audit-log: page header ──
   'audit.title': { tr: 'Denetim Kayıtları', en: 'Audit Logs' },
 
   // ── audit-log: filtreler ──
@@ -85,14 +85,14 @@ export const PROFILE_I18N: Translations = {
   'audit.toDate': { tr: 'Bitiş', en: 'To' },
   'audit.clear': { tr: 'Temizle', en: 'Clear' },
 
-  // ── audit-log: kayıtlar paneli ──
+  // ── audit-log: records panel ──
   'audit.recordsTitle': { tr: 'Kayıtlar', en: 'Records' },
   'audit.loadingRecords': { tr: 'Denetim kayıtları yükleniyor...', en: 'Loading audit logs...' },
   'audit.noRecordsTitle': { tr: 'Kayıt bulunamadı', en: 'No records found' },
   'audit.noRecordsBody': { tr: 'Seçilen filtrelerle eşleşen bir denetim kaydı yok.', en: 'There are no audit logs matching the selected filters.' },
   'audit.tableAriaLabel': { tr: 'Denetim kayıtları', en: 'Audit logs' },
 
-  // ── audit-log: tablo başlıkları ──
+  // ── audit-log: table headers ──
   'audit.colDate': { tr: 'Tarih', en: 'Date' },
   'audit.colEntity': { tr: 'Entity', en: 'Entity' },
   'audit.colRecordId': { tr: 'Kayıt ID', en: 'Record ID' },
@@ -101,7 +101,7 @@ export const PROFILE_I18N: Translations = {
   'audit.colIp': { tr: 'IP', en: 'IP' },
   'audit.colDetail': { tr: 'Detay', en: 'Detail' },
 
-  // ── audit-log: satır detay genişletme ──
+  // ── audit-log: row detail expansion ──
   'audit.expandClose': { tr: 'Kapat', en: 'Close' },
   'audit.expandShow': { tr: 'Göster', en: 'Show' },
   'audit.expandDetailClose': { tr: 'kapat', en: 'close' },
@@ -119,6 +119,6 @@ export const PROFILE_I18N: Translations = {
   'audit.pageSizeAriaLabel': { tr: 'Sayfa başına kayıt', en: 'Records per page' },
   'audit.pageSizeOption': { tr: '{count} / sayfa', en: '{count} / page' },
 
-  // ── audit-log: bildirim/onay mesajları (.ts) ──
+  // ── audit-log: notification/confirmation messages (.ts) ──
   'audit.loadFailed': { tr: 'Denetim kayıtları yüklenemedi.', en: 'Failed to load audit logs.' }
 };

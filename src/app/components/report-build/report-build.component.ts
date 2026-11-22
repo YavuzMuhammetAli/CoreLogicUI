@@ -27,7 +27,7 @@ import { markDirty } from '../../utils/change-detection';
 import { aggregateAlias, reportColumnLabel } from '../../utils/report-column-label';
 import { IconComponent } from '../shared/icon/icon.component';
 
-/** `labelKey` — şablonda `| t` ile çevrilir (bkz. report.i18n.ts 'report.operator.*'). */
+/** `labelKey` — translated in the template with `| t` (see report.i18n.ts 'report.operator.*'). */
 const OPERATORS: { value: ReportOperator; labelKey: string }[] = [
   { value: 'eq', labelKey: 'report.operator.eq' },
   { value: 'ne', labelKey: 'report.operator.ne' },
@@ -39,7 +39,7 @@ const OPERATORS: { value: ReportOperator; labelKey: string }[] = [
   { value: 'startswith', labelKey: 'report.operator.startswith' }
 ];
 
-/** `labelKey` — şablonda `| t` ile çevrilir (bkz. report.i18n.ts 'report.aggregate.*'). */
+/** `labelKey` — translated in the template with `| t` (see report.i18n.ts 'report.aggregate.*'). */
 const AGGREGATE_FUNCTIONS: { value: AggregateFunction; labelKey: string }[] = [
   { value: 'SUM', labelKey: 'report.aggregate.sum' },
   { value: 'COUNT', labelKey: 'report.aggregate.count' },
@@ -48,31 +48,31 @@ const AGGREGATE_FUNCTIONS: { value: AggregateFunction; labelKey: string }[] = [
   { value: 'MAX', labelKey: 'report.aggregate.max' }
 ];
 
-/** `labelKey` — şablonda `| t` ile çevrilir (bkz. report.i18n.ts 'report.sort.*'). */
+/** `labelKey` — translated in the template with `| t` (see report.i18n.ts 'report.sort.*'). */
 const SORT_DIRECTIONS: { value: SortDirection; labelKey: string }[] = [
   { value: 'ASC', labelKey: 'report.sort.asc' },
   { value: 'DESC', labelKey: 'report.sort.desc' }
 ];
 
-/** Sayısal kolon tipleri — önizleme verisi üretirken hangi kolonun seri/kategori olduğunu ayırt eder. */
+/** Numeric column types — when generating preview data, tells which column is a series/category. */
 function isNumericColumnType(type: string): boolean {
   return type === 'int' || type === 'long' || type === 'short' || type === 'byte'
       || type === 'float' || type === 'double' || type === 'decimal';
 }
 
-/** Tarih/saat kolon tipleri — önizlemede tarih formatlama ve grafik kategori eksenleri için. */
+/** Date/time column types — for date formatting and chart category axes in the preview. */
 function isDateColumnType(type: string): boolean {
   return type === 'datetime' || type === 'dateonly' || type === 'timeonly';
 }
 
 /**
- * Metadata-driven rapor tasarımcısı: model seç → kolon/filtre/gruplama/aggregate/sıralama
- * tanımla → grafik tipi seç → kaydet. Sürüklenebilir bir tasarımcı değil, form tabanlıdır
- * (görev kapsamı: "Drag&drop ileride; şimdilik form tabanlı yeterli").
+ * Metadata-driven report designer: pick a model → define columns/filters/grouping/aggregates/sorting
+ * → pick a chart type → save. Not a drag-and-drop designer, it is form based
+ * (task scope: "Drag&drop later; form based is enough for now").
  *
- * Güvenlik: alan/operatör/aggregate/sıralama seçenekleri burada zaten whitelist'ten
- * (model kolonları + sabit listeler) üretilir; backend ReportingManager aynı whitelist'i
- * sunucu tarafında yeniden doğrular.
+ * Security: field/operator/aggregate/sort options are already generated here from a whitelist
+ * (model columns + fixed lists); the backend ReportingManager revalidates the same whitelist
+ * on the server side.
  */
 @Component({
     selector: 'app-report-build',
@@ -82,7 +82,7 @@ function isDateColumnType(type: string): boolean {
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ReportBuildComponent implements OnInit {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -147,17 +147,17 @@ export class ReportBuildComponent implements OnInit {
       this.applyModel(modelName, null);
     });
 
-    // Canlı Önizleme yalnızca form GERÇEKTEN değiştiğinde yeniden hesaplanır — sayfadaki
-    // ilgisiz tıklamalar `form.valueChanges`'i tetiklemediği için grafik gereksiz yeniden
-    // render olmaz (bkz. plan: "Canlı Önizleme her tıklamada yeniden oluşuyor" hatası).
-    // Yazarken (rapor adı, filtre değeri) her tuşta grafik baştan çizilmesin diye 300 ms
-    // beklenir; önizlemeyi etkilemeyen alanların değişimi refreshPreview'da elenir.
+    // Live Preview is recomputed only when the form REALLY changes — since unrelated
+    // clicks on the page don't trigger `form.valueChanges`, the chart doesn't re-render
+    // needlessly (see plan: the "Live Preview is rebuilt on every click" bug).
+    // While typing (report name, filter value) we wait 300 ms so the chart isn't redrawn on every
+    // keystroke; changes to fields that don't affect the preview are filtered out in refreshPreview.
     this.form.valueChanges.pipe(debounceTime(300), takeUntilDestroyed(this.destroyRef), markDirty(this.cdr))
       .subscribe(() => this.refreshPreview());
     this.refreshPreview();
   }
 
-  // ── Form alanları getter'ları ───────────────────────────────────────────
+  // ── Form field getters ──────────────────────────────────────────────────
 
   get f() {
     return this.form.controls;
@@ -184,9 +184,9 @@ export class ReportBuildComponent implements OnInit {
   }
 
   /**
-   * Sıralama alanı seçenekleri: gruplama/aggregate varsa çıkış şeması
-   * (grupla­ma alanları + aggregate alias'ları); yoksa seçilen/tüm kolonlar.
-   * ReportingManager.BuildProjection ile simetrik olmalıdır.
+   * Sort field options: if there is grouping/aggregation, the output schema
+   * (grouping fields + aggregate aliases); otherwise the selected/all columns.
+   * Must stay symmetric with ReportingManager.BuildProjection.
    */
   get outputFieldOptions(): string[] {
     const groupByFields = this.checkedColumnNames(this.groupByArray);
@@ -203,7 +203,7 @@ export class ReportBuildComponent implements OnInit {
     return selected.length > 0 ? selected : this.availableColumns.map(c => c.columnName);
   }
 
-  /** Sıralama listesinde gösterilen başlık — kolon etiketi ya da "Toplam Net Tutar". */
+  /** Header shown in the sort list — the column label or "Toplam Net Tutar" (Total net amount). */
   fieldLabel(field: string): string {
     return reportColumnLabel(
       field, this.availableColumns, this.aggregatesArray.value as ReportAggregate[],
@@ -215,45 +215,45 @@ export class ReportBuildComponent implements OnInit {
     return !!col && isNumericColumnType(col.dataType);
   }
 
-  // ── Grafik tipi seçici ───────────────────────────────────────────────────
+  // ── Chart type picker ────────────────────────────────────────────────────
 
   selectChartType(value: ChartType): void {
     this.form.get('chartType')!.setValue(value);
   }
 
-  /** Donut/pasta/radyal/KPI gibi tipler tek aggregate bekler — birden çoksa kullanıcıyı uyar. */
+  /** Types like donut/pie/radial/KPI expect a single aggregate — warn the user if there are several. */
   get showSingleAggregateWarning(): boolean {
     const chartType = this.form.value.chartType as ChartType;
     return SINGLE_AGGREGATE_CHART_TYPES.includes(chartType) && this.aggregatesArray.length > 1;
   }
 
   /**
-   * Builder'daki seçimlerden (groupBy/aggregate/selectedColumns) sentetik bir önizleme
-   * sonucu üretir — `/Report/run`'a gitmez, seçili grafik tipinin anında nasıl görüneceğini
-   * gösterir. Gerçek veri değildir.
+   * Produces a synthetic preview result from the builder's selections (groupBy/aggregate/selectedColumns)
+   * — it doesn't call `/Report/run`, it shows how the selected chart type will look right away.
+   * It is not real data.
    *
-   * Signal olarak tutulur ve yalnızca `form.valueChanges`'ten (yani gerçek bir form
-   * değişikliğinden) güncellenir — bir getter olsaydı her change detection turunda (sayfadaki
-   * HERHANGİ bir tıklamada) yeni dizi/nesne referansları üretip `app-chart`'ı gereksiz yere
-   * yeniden render ettirirdi.
+   * Kept as a signal and updated only from `form.valueChanges` (i.e. a real form
+   * change) — if it were a getter, every change detection round (ANY click on the
+   * page) would produce new array/object references and needlessly re-render
+   * `app-chart`.
    */
   readonly previewResult = signal<ReportRunResult>({ columns: [], rows: [] });
 
-  /** Örnek tabloda "üstü çizili" (devre dışı) işaretlenmiş satırların indeksleri — yalnızca görsel, sentetik veriye uygulanır. */
+  /** Indexes of rows marked "strike-through" (disabled) in the sample table — visual only, applied to synthetic data. */
   readonly struckPreviewRows = signal<Set<number>>(new Set());
 
-  /** Son önizlemenin imzası — aynı sonucu yeniden yayınlayıp grafiği boşuna çizdirmemek için. */
+  /** Signature of the last preview — to avoid republishing the same result and redrawing the chart for nothing. */
   private previewSignature = '';
 
   private refreshPreview(): void {
     const next = this.buildPreviewResult();
-    // Önizleme yalnız gruplama/aggregate/kolon seçimi ve modelden etkilenir; ad, açıklama,
-    // filtre ya da sıralama değişince sonuç aynıdır ve app-chart'ın yeniden çizilmesi gereksizdir.
+    // The preview is affected only by grouping/aggregate/column selection and the model; when the name, description,
+    // filter or sort changes the result is the same and redrawing app-chart is unnecessary.
     const signature = JSON.stringify(next);
     if (signature === this.previewSignature) return;
     this.previewSignature = signature;
     this.previewResult.set(next);
-    // Veri şekli değişmiş olabilir (model/kolon değişti) — eski satır indeksleri geçersiz olur.
+    // The data shape may have changed (model/columns changed) — old row indexes become invalid.
     this.struckPreviewRows.set(new Set());
   }
 
@@ -287,10 +287,10 @@ export class ReportBuildComponent implements OnInit {
 
     if (columns.length === 0) return { columns: [], rows: [] };
 
-    // Başlıklar çalıştırılan raporla aynı görünsün (orada sunucu üretir).
+    // Make headers look the same as in the executed report (there the server generates them).
     columns = columns.map(col => ({ ...col, label: this.fieldLabel(col.name) }));
 
-    // İlk kolon sayısalsa grafik kategori ekseni bulamaz — sentetik bir kategori kolonu ekle.
+    // If the first column is numeric the chart can't find a category axis — add a synthetic category column.
     const categoryLabel = this.languageService.t('report.build.previewCategory');
     if (isNumericColumnType(columns[0].type)) {
       columns = [{ name: categoryLabel, type: 'string' }, ...columns];
@@ -319,7 +319,7 @@ export class ReportBuildComponent implements OnInit {
     return this.availableColumns.find(c => c.columnName === columnName)?.dataType ?? 'string';
   }
 
-  // ── Filtre satırları ─────────────────────────────────────────────────────
+  // ── Filter rows ──────────────────────────────────────────────────────────
 
   addFilter(): void {
     this.filtersArray.push(this.newFilterGroup());
@@ -337,7 +337,7 @@ export class ReportBuildComponent implements OnInit {
     });
   }
 
-  // ── Aggregate satırları ──────────────────────────────────────────────────
+  // ── Aggregate rows ───────────────────────────────────────────────────────
 
   addAggregate(): void {
     this.aggregatesArray.push(this.newAggregateGroup());
@@ -354,7 +354,7 @@ export class ReportBuildComponent implements OnInit {
     });
   }
 
-  // ── Sıralama satırları ───────────────────────────────────────────────────
+  // ── Sort rows ────────────────────────────────────────────────────────────
 
   addSort(): void {
     this.sortByArray.push(this.newSortGroup());
@@ -371,7 +371,7 @@ export class ReportBuildComponent implements OnInit {
     });
   }
 
-  // ── Model değişimi → kolon checkbox'larını yeniden kur ──────────────────
+  // ── Model change → rebuild column checkboxes ────────────────────────────
 
   private applyModel(modelName: string, existing: ReportDefinition | null): void {
     const model = this.models.find(m => m.typeName === modelName);
@@ -401,7 +401,7 @@ export class ReportBuildComponent implements OnInit {
       .map(c => c.columnName);
   }
 
-  // ── Düzenleme modu: mevcut raporu yükle ──────────────────────────────────
+  // ── Edit mode: load the existing report ──────────────────────────────────
 
   private maybeLoadExisting(): void {
     const idParam = this.route.snapshot.paramMap.get('id');
@@ -434,18 +434,18 @@ export class ReportBuildComponent implements OnInit {
     this.applyModel(report.modelName, report);
   }
 
-  // ── Kaydet ───────────────────────────────────────────────────────────────
+  // ── Save ─────────────────────────────────────────────────────────────────
 
   /**
-   * Aggregate fonksiyonlarını doğrular (COUNT dışındakiler bir alan gerektirir).
-   * Geçersizse hata mesajını döndürür; geçerliyse null.
+   * Validates the aggregate functions (all except COUNT require a field).
+   * Returns the error message if invalid; null if valid.
    */
   private validateAggregates(aggregates: ReportAggregate[]): string | null {
     const invalidAggregate = aggregates.find(a => a.function !== 'COUNT' && !a.field);
     return invalidAggregate ? this.languageService.t('report.build.aggregateFieldRequired') : null;
   }
 
-  /** Form değerlerinden backend'e gönderilecek rapor tanımı DTO'sunu kurar — kaydet ve SQL önizle ortak yolu. */
+  /** Builds the report definition DTO to send to the backend from form values — shared path for save and SQL preview. */
   private buildPayload(): Partial<ReportDefinition> {
     return {
       id: this.editingId ?? 0,
@@ -476,9 +476,9 @@ export class ReportBuildComponent implements OnInit {
     }
 
     this.saving = true;
-    // define() DataResponseModel<number>, update() ResponseModel döner; bu ekran
-    // ID'yi kullanmadığı için ortak taban tipe daraltılır (aksi halde birleşim
-    // tipi .pipe() çözümlemesini bozar).
+    // define() returns DataResponseModel<number>, update() returns ResponseModel; since this
+    // screen doesn't use the ID it is narrowed to the common base type (otherwise the union
+    // type breaks .pipe() resolution).
     const request: Observable<ResponseModel> = this.editingId
       ? this.reportService.update(payload as ReportDefinition)
       : this.reportService.define(payload);
@@ -499,13 +499,13 @@ export class ReportBuildComponent implements OnInit {
     });
   }
 
-  // ── SQL Önizleme ─────────────────────────────────────────────────────────
+  // ── SQL preview ──────────────────────────────────────────────────────────
 
   readonly sqlPreview = signal('');
   readonly sqlPreviewLoading = signal(false);
   readonly sqlPreviewError = signal<string | null>(null);
 
-  /** Mevcut form seçimleriyle backend'den üretilecek SQL'i çeker — çalıştırmaz, yalnızca gösterir. */
+  /** Fetches the SQL the backend would generate for the current form selections — doesn't run it, only shows it. */
   previewSql(): void {
     this.sqlPreviewError.set(null);
 

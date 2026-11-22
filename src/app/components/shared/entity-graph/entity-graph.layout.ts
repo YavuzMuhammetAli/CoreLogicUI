@@ -1,15 +1,15 @@
 import { EntityGraph, EntityGraphEdge } from '../../../models/relationship.model';
 
 /**
- * Entity graph yerleşim hesabı — SAF geometri, Angular'a bağımlı değildir.
+ * Entity graph layout computation — PURE geometry, no dependency on Angular.
  *
- * Component'ten ayrı tutulmasının nedeni test edilebilirlik: kırpılma/taşma gibi
- * geometri hataları ancak TestBed kurmadan çalıştırılabilen saf bir fonksiyonla
- * yakalanabilir. (Projede aynı ayrım model-data.util.ts, staged-tree.util.ts ve
- * chart-mapping.ts'te de uygulanır.)
+ * It is kept separate from the component for testability: geometry bugs like
+ * clipping/overflow can only be caught with a pure function that runs without
+ * setting up TestBed. (The project applies the same split in model-data.util.ts,
+ * staged-tree.util.ts and chart-mapping.ts.)
  */
 
-/** SVG içinde konumlandırılmış düğüm. */
+/** A node positioned inside the SVG. */
 export interface LayoutNode {
   modelName: string;
   depth: number;
@@ -21,7 +21,7 @@ export interface LayoutNode {
   height: number;
 }
 
-/** SVG içinde çizilecek kenar. */
+/** An edge to draw inside the SVG. */
 export interface LayoutEdge {
   key: string;
   path: string;
@@ -30,9 +30,9 @@ export interface LayoutEdge {
   label: string;
   isLegacy: boolean;
   required: boolean;
-  /** Kaynak ve hedef aynı düğüm — kendine dönen ilmek olarak çizilir. */
+  /** Source and target are the same node — drawn as a self-loop. */
   isSelf: boolean;
-  /** Kenarın (etiketi dahil) kapladığı sınırlar — viewBox hesabında kullanılır. */
+  /** Bounds occupied by the edge (label included) — used in the viewBox computation. */
   minX: number;
   minY: number;
   maxX: number;
@@ -45,26 +45,26 @@ export interface GraphLayout {
   viewBox: string;
 }
 
-// ── Yerleşim sabitleri ──────────────────────────────────────────────────────
+// ── Layout constants ──────────────────────────────────────────────────────
 const NODE_WIDTH = 150;
 const NODE_HEIGHT = 46;
 const COLUMN_GAP = 90;
 const ROW_GAP = 26;
 const PADDING = 20;
 
-/** Kendine dönen ilmeğin düğüm üstünde kapladığı yükseklik. */
+/** Height the self-loop occupies above the node. */
 const SELF_LOOP_HEIGHT = 22;
-/** Etiketin çizgiden yukarıdaki boşluğu. */
+/** Gap between the label and the line above it. */
 const LABEL_OFFSET = 3;
-/** Etiket metninin yaklaşık yüksekliği (sınır hesabı için). */
+/** Approximate height of the label text (for the bounds computation). */
 const LABEL_HEIGHT = 12;
 
-/** Boş graf için kullanılan viewBox. */
+/** viewBox used for an empty graph. */
 const EMPTY_VIEW_BOX = '0 0 100 60';
 
 /**
- * Grafı SVG koordinatlarına yerleştirir: düğümler derinliğe göre sütunlara
- * dizilir (kök en solda), kenarlar bezier eğrisiyle bağlanır.
+ * Lays the graph out in SVG coordinates: nodes are arranged into columns by
+ * depth (root leftmost), edges are connected with bezier curves.
  */
 export function layoutGraph(graph: EntityGraph | null): GraphLayout {
   const nodes = layoutNodes(graph);
@@ -78,7 +78,7 @@ export function layoutGraph(graph: EntityGraph | null): GraphLayout {
 function layoutNodes(graph: EntityGraph | null): LayoutNode[] {
   if (!graph || graph.nodes.length === 0) return [];
 
-  // Derinlik → o derinlikteki düğüm adları (sütun içi satır sırasını belirler)
+  // Depth → node names at that depth (determines the row order within a column)
   const byDepth = new Map<number, string[]>();
   for (const node of graph.nodes) {
     const column = byDepth.get(node.depth) ?? [];
@@ -122,7 +122,7 @@ function layoutEdges(graph: EntityGraph, nodes: LayoutNode[]): LayoutEdge[] {
 
 function buildEdge(
   edge: EntityGraphEdge, source: LayoutNode, target: LayoutNode, index: number): LayoutEdge {
-  // Kaynak sağ kenar ortası → hedef sol kenar ortası
+  // Source right-edge midpoint → target left-edge midpoint
   const x1 = source.x + source.width;
   const y1 = source.y + source.height / 2;
   const x2 = target.x;
@@ -147,7 +147,7 @@ function buildEdge(
 }
 
 function buildSelfLoop(edge: EntityGraphEdge, node: LayoutNode, index: number): LayoutEdge {
-  // Düğümün ÜSTÜNDE küçük bir ilmek — negatif y'ye taşabilir, viewBox bunu kapsar.
+  // A small loop ABOVE the node — may overflow into negative y; the viewBox covers it.
   const x1 = node.x + node.width * 0.3;
   const x2 = node.x + node.width * 0.7;
   const y = node.y;
@@ -175,8 +175,8 @@ function buildLabel(edge: EntityGraphEdge): string {
 }
 
 /**
- * İçeriği saran viewBox. Sol/üst köşe SABİT DEĞİLDİR: kendine dönen ilmek ve
- * etiketi negatif koordinatlara taşar; köşe "0 0" bırakılırsa kırpılır.
+ * viewBox enclosing the content. The top/left corner is NOT FIXED: the self-loop and
+ * its label overflow into negative coordinates; if the corner stays "0 0" they get clipped.
  */
 function computeViewBox(nodes: LayoutNode[], edges: LayoutEdge[]): string {
   const minX = Math.min(...nodes.map(n => n.x), ...edges.map(e => e.minX));

@@ -26,10 +26,10 @@ import {
 } from '../../../utils/cron-builder';
 import { IconComponent } from '../../shared/icon/icon.component';
 
-/** Kuyrukta/süren yedek varken geçmişin yoklanma aralığı. */
+/** History polling interval while a backup is queued/running. */
 const HISTORY_POLL_MS = 3000;
 
-/** Sıklık seçimine göre hangi alanların gösterileceği — şablon bunu okur. */
+/** Which fields to show for the selected frequency — the template reads this. */
 interface FieldVisibility {
   minute: boolean;
   time: boolean;
@@ -41,10 +41,10 @@ interface FieldVisibility {
 }
 
 /**
- * Yedekleme sekmesi — zamanlama kurucusu, durum özeti ve yedek geçmişi.
+ * Backup tab — schedule builder, status summary and backup history.
  *
- * Zamanlama mantığının tamamı `utils/cron-builder.ts` içinde saf fonksiyonlarda
- * durur ve orada test edilir; burada yalnızca form durumu ve HTTP çağrıları var.
+ * All scheduling logic lives in pure functions in `utils/cron-builder.ts`
+ * and is tested there; here there is only form state and HTTP calls.
  */
 @Component({
     selector: 'app-backup-settings-tab',
@@ -57,7 +57,7 @@ export class BackupSettingsTabComponent implements OnInit {
   private readonly parameterService = inject(ParameterService);
   private readonly languageService = inject(LanguageService);
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
-  /** Kapanışta süren bir istek yanıt verince yeni yoklama zinciri başlamasın. */
+  /** After closing, a pending request's response must not start a new polling chain. */
   private destroyed = false;
 
   constructor() {
@@ -69,9 +69,9 @@ export class BackupSettingsTabComponent implements OnInit {
 
   readonly frequencies = CRON_FREQUENCIES;
   readonly hourIntervals = HOUR_INTERVALS;
-  /** 1-31 — "ayın günü" seçicisi. */
+  /** 1-31 — the "day of month" picker. */
   readonly monthDays = Array.from({ length: 31 }, (_, i) => i + 1);
-  /** 0 = Pazar … 6 = Cumartesi (Date.getDay() ile aynı sıra). */
+  /** 0 = Sunday … 6 = Saturday (same order as Date.getDay()). */
   readonly weekDays = [0, 1, 2, 3, 4, 5, 6];
 
   readonly loading = signal(true);
@@ -91,16 +91,16 @@ export class BackupSettingsTabComponent implements OnInit {
 
   readonly runConfirmOpen = signal(false);
 
-  /** Geri yükleme diyaloğunun yedeği (onay adımı) ve sayfa açılışında süren geri yükleme. */
+  /** Backup for the restore dialog (confirm step) and a restore already running when the page opens. */
   readonly restoreTarget = signal<BackupHistoryItem | null>(null);
   readonly activeRestore = signal<TenantRestore | null>(null);
-  /** İndirme bağlantısı istenen yedek — düğmesi kilitlenir. */
+  /** Backup whose download link was requested — its button is locked. */
   readonly downloadingId = signal<number | null>(null);
 
-  /** Kuyrukta ya da sürmekte olan yedek var mı — varsa yeni yedek istenmez, geçmiş yoklanır. */
+  /** Whether a backup is queued or running — if so no new backup is requested and the history is polled. */
   readonly hasActiveBackup = computed(() => this.history().some(isBackupActive));
 
-  /** Seçime göre üretilen cron ifadesi — kaydedilen değer budur. */
+  /** Cron expression generated from the selection — this is the saved value. */
   readonly cronExpression = computed(() => buildCron(this.spec()));
 
   readonly cronValid = computed(() => isValidCron(this.cronExpression()));
@@ -112,7 +112,7 @@ export class BackupSettingsTabComponent implements OnInit {
     return Number.isInteger(days) && days >= 0 && days <= 3650;
   });
 
-  /** Sıradaki 5 çalışma — kullanıcı kaydetmeden önce ne olacağını görür. */
+  /** The next 5 runs — the user sees what will happen before saving. */
   readonly nextRuns = computed(() => {
     if (!this.cronValid()) return [];
     return nextOccurrences(this.cronExpression(), new Date(), 5)
@@ -135,7 +135,7 @@ export class BackupSettingsTabComponent implements OnInit {
   ngOnInit(): void {
     this.load();
 
-    // Sayfa geri yükleme sürerken açıldıysa (yenileme, başka sekme) ilerleme doğrudan gösterilir.
+    // If the page opened while a restore is running (reload, another tab) progress is shown directly.
     this.parameterService.getActiveRestore().subscribe({
       next: res => { if (res.success && res.data) this.activeRestore.set(res.data); },
       error: () => {}
@@ -143,8 +143,8 @@ export class BackupSettingsTabComponent implements OnInit {
   }
 
   /**
-   * Yedeği indirir: sunucudan kısa ömürlü imzalı bağlantı alınır ve tarayıcı onu doğrudan açar.
-   * Dosya gigabaytlarca olabileceği için blob olarak belleğe alınmaz.
+   * Downloads the backup: a short-lived signed link is obtained from the server and the browser opens it directly.
+   * The file can be gigabytes, so it is not loaded into memory as a blob.
    */
   download(item: BackupHistoryItem): void {
     this.downloadingId.set(item.id);
@@ -181,7 +181,7 @@ export class BackupSettingsTabComponent implements OnInit {
     this.loadHistory();
   }
 
-  /** Geri yüklenemeyen yedeğin gerekçesi (sunucunun kısa kodu → metin). */
+  /** Reason a backup cannot be restored (server's short code → text). */
   restoreBlockedText(item: BackupHistoryItem): string {
     return item.restoreBlockedReason
       ? this.languageService.t(`parameter.backup.restoreBlocked.${item.restoreBlockedReason}`)
@@ -215,8 +215,8 @@ export class BackupSettingsTabComponent implements OnInit {
     this.retentionDays.set(schedule.retentionDays ?? 30);
     this.spec.set(parseCron(schedule.cronExpression));
 
-    // Hiç kaydedilmemiş zamanlamada saat dilimini tarayıcıdan al — kullanıcı
-    // "her gün 03:00" derken kendi saatini kastediyor, UTC'yi değil.
+    // For a never-saved schedule take the time zone from the browser — when the user
+    // says "every day 03:00" they mean their own time, not UTC.
     this.timeZoneId.set(schedule.timeZoneId || detectTimeZone());
   }
 
@@ -226,14 +226,14 @@ export class BackupSettingsTabComponent implements OnInit {
         this.history.set(res.success ? (res.data ?? []) : []);
         this.schedulePoll();
       },
-      // Geçmiş yüklenemezse zamanlama formu yine kullanılabilir kalmalı.
+      // If the history fails to load, the schedule form must still be usable.
       error: () => this.history.set([])
     });
   }
 
   /**
-   * Yedek artık arka planda alındığından ekran sonucu kendisi izler: kuyrukta/süren satır
-   * kaldıkça geçmiş birkaç saniyede bir yeniden okunur, hepsi bitince durur.
+   * Since backups now run in the background, the screen tracks the result itself: while a queued/running
+   * row remains the history is re-read every few seconds, and it stops when all are finished.
    */
   private schedulePoll(): void {
     this.stopPolling();
@@ -253,8 +253,8 @@ export class BackupSettingsTabComponent implements OnInit {
 
   onFrequencyChange(frequency: CronFrequency): void {
     const current = this.spec();
-    // 'custom'a geçerken mevcut seçimin cron karşılığı taşınır ki kullanıcı
-    // sıfırdan yazmak zorunda kalmasın.
+    // When switching to 'custom' the cron equivalent of the current selection is carried over so the user
+    // does not have to write it from scratch.
     const raw = frequency === 'custom' ? buildCron(current) : current.raw;
     this.spec.set({ ...current, frequency, raw });
   }
@@ -263,7 +263,7 @@ export class BackupSettingsTabComponent implements OnInit {
     this.spec.set({ ...this.spec(), ...patch });
   }
 
-  /** `<input type="time">` değeri ("HH:mm") — iki yönlü dönüşüm. */
+  /** `<input type="time">` value ("HH:mm") — two-way conversion. */
   get timeValue(): string {
     const s = this.spec();
     return `${this.pad(s.hour)}:${this.pad(s.minute)}`;
@@ -299,8 +299,8 @@ export class BackupSettingsTabComponent implements OnInit {
       next: res => {
         if (res.success) {
           this.formSuccess.set(res.message);
-          // Kaydettikten sonra sunucunun hesapladığı NextDueAt'i geri oku —
-          // önizleme ile gerçek vade arasında fark kalmasın.
+          // After saving, read back the NextDueAt computed by the server —
+          // so there is no gap between the preview and the actual due time.
           this.parameterService.getBackupSchedule().subscribe({
             next: fresh => { if (fresh.success) this.status.set(fresh.data); }
           });
@@ -346,9 +346,9 @@ export class BackupSettingsTabComponent implements OnInit {
     });
   }
 
-  // ── Görüntüleme yardımcıları ──────────────────────────────────────────────
+  // ── Display helpers ───────────────────────────────────────────────────────
 
-  /** ISO tarih metnini aktif dile göre biçimler; boşsa tire döner. */
+  /** Formats an ISO date string for the active language; returns a dash if empty. */
   formatInstant(value: string | null | undefined): string {
     if (!value) return '—';
     const date = new Date(value);
@@ -360,7 +360,7 @@ export class BackupSettingsTabComponent implements OnInit {
     return `${formatDate(date, lang)} ${this.pad(date.getHours())}:${this.pad(date.getMinutes())}`;
   }
 
-  /** Bayt değerini okunur birime çevirir (yedek dosyaları GB mertebesine çıkabilir). */
+  /** Converts a byte value to a readable unit (backup files can reach the GB range). */
   formatSize(bytes: number): string {
     if (!bytes) return '—';
 
@@ -376,7 +376,7 @@ export class BackupSettingsTabComponent implements OnInit {
     return `${formatNumber(rounded, this.languageService.lang())} ${units[unit]}`;
   }
 
-  /** Bilinmeyen tür/durum kodları ham hâliyle gösterilir (anahtar uydurma yok). */
+  /** Unknown type/status codes are shown raw (no made-up keys). */
   typeLabel(type: string): string {
     const key = `parameter.backup.type.${type}`;
     const label = this.languageService.t(key);
@@ -399,9 +399,9 @@ export class BackupSettingsTabComponent implements OnInit {
     }
   }
 
-  /** Haftanın gününü aktif dilde yazar — ayrı çeviri anahtarı tutmaya gerek yok. */
+  /** Writes the weekday in the active language — no need to keep separate translation keys. */
   weekDayLabel(day: number): string {
-    // 2026-08-02 Pazar; gün eklenerek 0=Pazar sırası korunur.
+    // 2026-08-02 is a Sunday; adding days keeps the 0=Sunday order.
     const reference = new Date(2026, 7, 2 + day);
     return reference.toLocaleDateString(
       this.languageService.lang() === 'en' ? 'en-US' : 'tr-TR', { weekday: 'long' });

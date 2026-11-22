@@ -1,15 +1,15 @@
 /* ──────────────────────────────────────────────────────────────────────────
-   Profil Sayfası — user-profile.component.scss
-   Token-tabanlı tasarım; Bootstrap kullanılmaz.
+   Profile page — user-profile.component.scss
+   Token-based design; Bootstrap is not used.
    ────────────────────────────────────────────────────────────────────────── */
 
-/* Genişlik kısıtı YOK — içerik .page-content'in tamamını kaplar.
-   Yatay/üst padding de .page-content'ten gelir; burada yalnızca alt nefes payı var. */
+/* NO width constraint — the content fills the whole .page-content.
+   Horizontal/top padding also comes from .page-content; only bottom breathing room here. */
 .profile-page {
   padding-bottom: var(--space-6);
 }
 
-/* Yükleme */
+/* Loading */
 .profile-loading {
   display: flex;
   align-items: center;
@@ -19,10 +19,10 @@
   font-size: var(--text-sm);
 }
 
-/* ── İki-sütun düzen ── */
+/* ── Two-column layout ── */
 .profile-layout {
   display: grid;
-  /* minmax(0, 1fr): tam genişlikte uzun içerik grid'i taşırmasın */
+  /* minmax(0, 1fr): keep long content at full width from overflowing the grid */
   grid-template-columns: 260px minmax(0, 1fr);
   gap: var(--space-6);
   align-items: start;
@@ -32,21 +32,21 @@
   }
 }
 
-/* Sol sütun */
+/* Left column */
 .profile-side {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
 }
 
-/* Sağ sütun */
+/* Right column */
 .profile-main {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
 }
 
-/* ── Avatar paneli ── */
+/* ── Avatar panel ── */
 .avatar-panel {
   text-align: center;
 }
@@ -132,7 +132,7 @@
   justify-content: center;
 }
 
-/* ── Hesap bilgileri listesi ── */
+/* ── Account details list ── */
 .info-list {
   margin: 0;
   display: flex;
@@ -165,19 +165,19 @@
   font-size: var(--text-xs);
 }
 
-/* ── Form yardımcıları ── */
+/* ── Form helpers ── */
 
-/* Ad-soyad ve TC-doğum tarihi yan yana: global .field-row (styles.scss) — yerel kopya
-   541–768px arasında iki sütunda kalıp uzun etiketle input'u taşırıyordu. */
+/* First/last name and national ID/birth date side by side: global .field-row (styles.scss) — the local copy
+   stayed two-column between 541–768px and overflowed the input with long labels. */
 
-/* Form alt buton satırı */
+/* Form bottom button row */
 .form-footer {
   display: flex;
   justify-content: flex-end;
   padding-top: var(--space-2);
 }
 
-/* panel-head-title (panel-head içinde kullanılan başlık) */
+/* panel-head-title (title used inside panel-head) */
 .panel-head-title {
   font-size: var(--text-base);
   font-weight: 600;

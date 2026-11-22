@@ -1,6 +1,6 @@
 import { Translations } from './translations.model';
 
-/** register-company.component — yeni şirket kayıt sihirbazı metinleri. */
+/** register-company.component — new company sign-up wizard texts. */
 export const REGISTER_COMPANY_I18N: Translations = {
   // Genel
   'regco.title': { tr: 'Yeni Şirket Oluştur', en: 'Create New Company' },
@@ -11,13 +11,13 @@ export const REGISTER_COMPANY_I18N: Translations = {
   'regco.start': { tr: 'Kurulumu Başlat', en: 'Start Setup' },
   'regco.stepLabel': { tr: 'Adım {{current}} / {{total}}', en: 'Step {{current}} of {{total}}' },
 
-  // Adım başlıkları
+  // Step titles
   'regco.step1': { tr: 'Şirket Bilgileri', en: 'Company Info' },
   'regco.step2': { tr: 'Yönetici Bilgileri', en: 'Admin Info' },
   'regco.step3': { tr: 'Kurulum', en: 'Setup' },
   'regco.step4': { tr: 'Tamamlandı', en: 'Done' },
 
-  // Adım 1 — Şirket bilgileri
+  // Step 1 — Company info
   'regco.companyName': { tr: 'Şirket Adı', en: 'Company Name' },
   'regco.companyNamePlaceholder': { tr: 'Örn. Acme Teknoloji A.Ş.', en: 'e.g. Acme Technologies Inc.' },
   'regco.companyNameRequired': { tr: 'Şirket adı zorunludur.', en: 'Company name is required.' },
@@ -27,14 +27,14 @@ export const REGISTER_COMPANY_I18N: Translations = {
   'regco.companyCodeRequired': { tr: 'Şirket kodu zorunludur.', en: 'Company code is required.' },
   'regco.companyCodeInvalid': { tr: 'Kod 2-20 karakter olmalı, yalnızca harf ve rakam içerebilir.', en: 'Code must be 2-20 characters, letters and digits only.' },
 
-  // Adım 2 — Yönetici bilgileri
+  // Step 2 — Administrator info
   'regco.adminName': { tr: 'Ad', en: 'First Name' },
   'regco.adminNameRequired': { tr: 'Ad zorunludur.', en: 'First name is required.' },
   'regco.adminSurname': { tr: 'Soyad', en: 'Last Name' },
   'regco.adminSurnameRequired': { tr: 'Soyad zorunludur.', en: 'Last name is required.' },
   'regco.adminInfoHint': { tr: 'Bu kullanıcı şirketinizin ilk yöneticisi (admin) olacak.', en: 'This user will be your company\'s first administrator.' },
 
-  // Adım 3 — Kurulum (adım adları backend ProvisionLog.StepName ile eşleşir)
+  // Step 3 — Provisioning (step names match the backend ProvisionLog.StepName)
   'regco.provisioning': { tr: 'Şirketiniz kuruluyor…', en: 'Setting up your company…' },
   'regco.provisioningHint': { tr: 'Bu işlem genellikle birkaç saniye sürer.', en: 'This usually takes a few seconds.' },
   'regco.step.ValidateAndReserve': { tr: 'Kayıt doğrulanıyor', en: 'Validating registration' },
@@ -45,7 +45,7 @@ export const REGISTER_COMPANY_I18N: Translations = {
   'regco.step.CreateMasterUser': { tr: 'Giriş kaydı oluşturuluyor', en: 'Creating sign-in record' },
   'regco.step.Activate': { tr: 'Şirket etkinleştiriliyor', en: 'Activating company' },
 
-  // Adım 4 — Tamamlandı / hata
+  // Step 4 — Completed / error
   'regco.done': { tr: 'Kurulum tamamlandı!', en: 'Setup complete!' },
   'regco.doneHint': { tr: 'Çalışma alanınıza yönlendiriliyorsunuz…', en: 'Redirecting to your workspace…' },
   'regco.doneManualLogin': { tr: 'Kurulum tamamlandı. Giriş ekranından e-posta ve şifrenizle giriş yapabilirsiniz.', en: 'Setup is complete. You can sign in with your email and password.' },

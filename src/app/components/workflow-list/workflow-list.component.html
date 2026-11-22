@@ -9,7 +9,7 @@
       <app-icon name="delete" size="16" />
       {{ 'workflow.list.deleted' | t }}
     </a>
-    <!-- İçe aktar: gizli dosya seçici, etiket düğme gibi görünür (klavyeyle de açılır). -->
+    <!-- Import: hidden file picker, the label looks like a button (opens with the keyboard too). -->
     <label class="btn btn-secondary btn-sm wf-import" [class.wf-import--busy]="importing">
       <app-icon name="download" size="16" />
       {{ 'workflow.package.import' | t }}
@@ -65,7 +65,7 @@
           </thead>
           <tbody>
             @for (workflow of workflows; track workflow.id) {
-              <!-- Satır tasarımcıyı açar: taslak düzenlenir, yayındaki/arşivdeki salt okunur görünür. -->
+              <!-- The row opens the designer: a draft is edited, published/archived ones are shown read-only. -->
               <tr class="clickable-row"
                   [routerLink]="['/workflows', workflow.id, 'edit']"
                   role="link"
@@ -77,7 +77,7 @@
                   }
                 </td>
                 <td>
-                  <!-- Satırın kendi bağlantısı ikinci gezinme yapıp sürümler yerine tasarımcıya götürmesin. -->
+                  <!-- The row's own link must not navigate a second time and go to the designer instead of versions. -->
                   <a [routerLink]="['/workflows/versions', workflow.code]" class="wf-code-link"
                      (click)="$event.stopPropagation()">
                     <code class="wf-code">{{ workflow.code }}</code>
@@ -92,7 +92,7 @@
                 </td>
                 <td>{{ versionLabel(workflow) }}</td>
                 <td>{{ workflow.runningInstanceCount || '—' }}</td>
-                <!-- Yeni Sürüm ve Dışa aktar tasarımcının başlığında (görüntüleme modunda da). -->
+                <!-- New version and Export live in the designer header (in view mode as well). -->
                 <td class="td-actions" (click)="$event.stopPropagation()">
                   @if (workflow.status === 'Draft') {
                     <button type="button" class="btn btn-secondary btn-sm"

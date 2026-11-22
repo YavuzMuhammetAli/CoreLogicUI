@@ -20,25 +20,25 @@ const doc: FormLayout = {
 const plan = resolveFormLayout(doc, columns);
 
 describe('form-layout.invalid', () => {
-  it('ilk geçersiz alan çizim sırasıyla bulunur — sekme ve bölümüyle', () => {
+  it('finds the first invalid field in render order — with its tab and section', () => {
     expect(firstInvalidLocation(plan, new Set(['C', 'B']))).toEqual({ tabId: 't2', sectionId: 's2', column: 'B' });
     expect(firstInvalidLocation(plan, new Set(['C']))).toEqual({ tabId: 't2', sectionId: 's3', column: 'C' });
   });
 
-  it('sona eklenen alan da bulunur', () => {
+  it('also finds a field appended at the end', () => {
     expect(firstInvalidLocation(plan, new Set(['D']))?.tabId).toBe('t1');
   });
 
-  it('geçersiz alan yoksa null', () => {
+  it('null when there is no invalid field', () => {
     expect(firstInvalidLocation(plan, new Set())).toBeNull();
     expect(firstInvalidLocation(plan, new Set(['Yok']))).toBeNull();
   });
 
-  it('sekme başına hata sayısı', () => {
+  it('error count per tab', () => {
     expect([...invalidCountByTab(plan, new Set(['A', 'B', 'C']))]).toEqual([['t1', 1], ['t2', 2]]);
   });
 
-  it('kolonları içeren sekmeler plan sırasıyla, bölümler küme olarak', () => {
+  it('tabs containing the columns in plan order, sections as a set', () => {
     expect(tabsWithColumns(plan, new Set(['C', 'A']))).toEqual(['t1', 't2']);
     expect([...sectionsWithColumns(plan, new Set(['C']))]).toEqual(['s3']);
   });

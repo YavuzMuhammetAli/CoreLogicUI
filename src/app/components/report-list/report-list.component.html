@@ -42,7 +42,7 @@
           <tbody>
             @for (report of reports; track report.id) {
               <tr>
-                <!-- Ad da açar: telefonda sağdaki "Görüntüle" yatay kaydırma gerektiriyor -->
+                <!-- The name opens it too: on phones the "Görüntüle" (View) button on the right needs horizontal scrolling -->
                 <td><a class="row-link" [routerLink]="['/reports', report.id]">{{ report.name }}</a></td>
                 <td><span class="badge badge-meta">{{ report.modelName | modelLabel }}</span></td>
                 <td>{{ report.chartType }}</td>

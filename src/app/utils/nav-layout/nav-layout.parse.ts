@@ -2,8 +2,8 @@ import { NavFolder, NavLayout, NavLink, NavNode } from './nav-layout.model';
 import { isNavStructural, validateNavLayoutText } from './nav-layout.validate';
 
 /**
- * Sunucudan gelen navigasyon metnini tipli belgeye çevirir; okunamıyor ya da yapısal hata
- * varsa null — kenar çubuğu otomatik menüye düşer. Bilinmeyen alanlar atılır.
+ * Converts the navigation text from the server into a typed document; null if it is unreadable or has
+ * a structural error — the sidebar falls back to the automatic menu. Unknown fields are dropped.
  */
 export function parseNavLayout(json: string | null | undefined): NavLayout | null {
   if (!json) return null;
@@ -12,8 +12,8 @@ export function parseNavLayout(json: string | null | undefined): NavLayout | nul
 }
 
 /**
- * Belgeyi sunucunun normalize ettiği biçimle aynı metne çevirir (sabit anahtar sırası, boş
- * isteğe bağlı alanlar atlanır). Tasarımcı "kaydedilmemiş değişiklik var mı" sorusunu bununla cevaplar.
+ * Serializes the document to the same text the server normalizes to (fixed key order, empty
+ * optional fields omitted). The designer uses this to answer "are there unsaved changes".
  */
 export function serializeNavLayout(layout: NavLayout): string {
   return JSON.stringify(normalizeNavLayout(layout));
@@ -29,7 +29,7 @@ export function normalizeNavLayout(layout: NavLayout): NavLayout {
 
 function normalizeNode(node: NavNode): NavNode {
   if (node.kind !== 'folder') return normalizeLink(node);
-  // Anahtar sırası sunucuyla aynı: kind, id, label, icon?, collapsed?, children.
+  // Key order matches the server: kind, id, label, icon?, collapsed?, children.
   const head: { kind: 'folder'; id: string; label: string; icon?: string; collapsed?: boolean } = {
     kind: 'folder', id: node.id, label: node.label ?? ''
   };

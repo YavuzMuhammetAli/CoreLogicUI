@@ -27,7 +27,7 @@ function ev(eventType: string, stepKey: string, data?: object, createdAt = '2026
 }
 
 describe('workflow-step-history', () => {
-  it('yalnız yoldaki adımlar döner; anahtar küçük harfli, ad korunur', () => {
+  it('returns only steps on the path; key lowercased, name preserved', () => {
     const history = buildStepHistory(graph, { status: 'Running', timeline: [], tasks: [] },
       { nodes: { mudur: 'current' }, edges: [] });
 
@@ -36,7 +36,7 @@ describe('workflow-step-history', () => {
     expect(history['mudur'].key).toBe('Mudur');
   });
 
-  it('turlar sırayla: önceki red kararı + şimdi rol havuzunda bekleyen', () => {
+  it('rounds in order: the earlier rejection + now waiting in the role pool', () => {
     const history = buildStepHistory(graph, {
       status: 'Running', timeline: [],
       tasks: [
@@ -54,7 +54,7 @@ describe('workflow-step-history', () => {
     expect(lastDecision(history['mudur'])?.by).toBe('Ayşe Kaya');
   });
 
-  it('paralel dallar adıyla; sistem kapattıysa kim null; ad yoksa #id', () => {
+  it('parallel branches by name; who is null if the system closed it; #id if no name', () => {
     const history = buildStepHistory(graph, {
       status: 'Running', timeline: [],
       tasks: [
@@ -71,7 +71,7 @@ describe('workflow-step-history', () => {
     expect(waitingNames(history['onaylar'])).toEqual(['Can']);
   });
 
-  it('otomatik adımlar olaylardan: koşul yolu, alanlar, bekleme vadesi ve ateşlenme', () => {
+  it('automatic steps from events: condition path, fields, timer due date and firing', () => {
     const history = buildStepHistory(graph, {
       status: 'Completed', completedAt: '2026-10-22T08:00:00',
       tasks: [],
@@ -90,7 +90,7 @@ describe('workflow-step-history', () => {
     expect(history['son'].entries).toEqual([{ kind: 'ended', outcome: 'completed', at: '2026-10-22T08:00:00' }]);
   });
 
-  it('varsayılan yol null etiket; hatadaki adım sürecin hata metnini taşır', () => {
+  it('default path has a null label; the failed step carries the instance error text', () => {
     const history = buildStepHistory(graph, {
       status: 'Running', errorMessage: 'Koşul hesaplanamadı', tasks: [],
       timeline: [ev('ConditionEvaluated', 'tutar', { port: 'default', caseKey: null })]

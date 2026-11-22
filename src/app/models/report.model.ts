@@ -1,12 +1,12 @@
 /**
- * Metadata-driven rapor modelleri — backend Entities.DTOs.Reporting.* ile eşleşir.
- * Bir rapor kod değil, bu yapıdaki bir metadata kaydıdır.
+ * Metadata-driven report models — match the backend Entities.DTOs.Reporting.*.
+ * A report is not code but a metadata record in this structure.
  */
 
 /**
- * ReportDefinition'da kullanılabilecek grafik tipleri — ApexCharts ile eşlenir.
- * Backend'de bu alan serbest string (NVARCHAR(50), whitelist yok) — burada listelenenler
- * yalnızca frontend'in çizebildiği zorunlu set; yeni tip eklemek backend değişikliği gerektirmez.
+ * Chart types usable in ReportDefinition — mapped to ApexCharts.
+ * On the backend this field is a free string (NVARCHAR(50), no whitelist) — the ones listed here
+ * are only the mandatory set the frontend can draw; adding a new type needs no backend change.
  */
 export type ChartType =
   | 'table'
@@ -19,10 +19,10 @@ export type ChartType =
   | 'radialBar'
   | 'kpi';
 
-/** Backend whitelist'iyle birebir eşleşmeli (ReportingManager.AllowedOperators). */
+/** Must match the backend whitelist one to one (ReportingManager.AllowedOperators). */
 export type ReportOperator = 'eq' | 'ne' | 'gt' | 'ge' | 'lt' | 'le' | 'contains' | 'startswith';
 
-/** Backend whitelist'iyle birebir eşleşmeli (ReportingManager.AllowedAggregateFunctions). */
+/** Must match the backend whitelist one to one (ReportingManager.AllowedAggregateFunctions). */
 export type AggregateFunction = 'SUM' | 'COUNT' | 'AVG' | 'MIN' | 'MAX';
 
 export type SortDirection = 'ASC' | 'DESC';
@@ -43,7 +43,7 @@ export interface ReportSort {
   direction: SortDirection;
 }
 
-/** ReportDefinitionDto ile eşleşir — define/update gönderilir, list/run'dan dönen şekil. */
+/** Matches ReportDefinitionDto — sent to define/update, the shape returned from list/run. */
 export interface ReportDefinition {
   id: number;
   name: string;
@@ -57,37 +57,37 @@ export interface ReportDefinition {
 }
 
 export interface ReportColumnInfo {
-  /** Satır anahtarı: kolon adı ya da aggregate alias'ı (`SUM_NetAmount`, `COUNT_All`). */
+  /** Row key: column name or aggregate alias (`SUM_NetAmount`, `COUNT_All`). */
   name: string;
-  /** form-build CSHARP_TYPE_MAP anahtarları: string|int|float|decimal|datetime|boolean */
+  /** form-build CSHARP_TYPE_MAP keys: string|int|float|decimal|datetime|boolean */
   type: string;
   /**
-   * Başlık: kolonun şema etiketi ya da "Toplam Net Tutar" / "Kayıt sayısı" (sunucuda,
-   * istek diliyle üretilir; Excel/PDF de bunu kullanır). Boşsa `name` gösterilir.
+   * Header: the column's schema label or "Toplam Net Tutar" / "Kayıt sayısı" (produced on the server
+   * in the request language; Excel/PDF use it too). If empty, `name` is shown.
    */
   label?: string | null;
 }
 
 /**
- * ReportRunResultDto ile eşleşir — /Report/run yanıtı.
+ * Matches ReportRunResultDto — the /Report/run response.
  *
- * Sayfalama alanları OPSİYONELDİR: sunucu bunları her zaman gönderir, ancak aynı yapı
- * rapor oluşturucudaki sentetik önizleme ve grafik bileşeni için de kullanılır — oralarda
- * sunucu metadata'sı yoktur ve olması da gerekmez.
+ * The paging fields are OPTIONAL: the server always sends them, but the same structure is
+ * also used for the synthetic preview in the report builder and the chart component — there
+ * is no server metadata there, and none is needed.
  */
 export interface ReportRunResult {
   columns: ReportColumnInfo[];
   rows: Record<string, unknown>[];
 
-  /** Filtre/gruplama sonrası TOPLAM satır sayısı (sayfalamadan bağımsız). */
+  /** TOTAL row count after filtering/grouping (independent of paging). */
   total?: number;
-  /** 1-tabanlı sayfa no. */
+  /** 1-based page number. */
   page?: number;
-  /** Bu yanıttaki satır üst sınırı; sayfalama istenmediyse uygulanan güvenlik tavanı. */
+  /** Row cap in this response; the applied safety cap when no paging was requested. */
   pageSize?: number;
   /**
-   * Sayfalama istenmediği hâlde sonuç sunucu tavanına (5000) takılıp kırpıldıysa true.
-   * Kullanıcıya "tam veri için dışa aktarın" uyarısı gösterilir.
+   * true if no paging was requested but the result hit the server cap (5000) and was truncated.
+   * The user is shown an "export for the full data" warning.
    */
   truncated?: boolean;
 }

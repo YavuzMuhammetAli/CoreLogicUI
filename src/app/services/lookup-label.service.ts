@@ -4,18 +4,18 @@ import { catchError, map, tap } from 'rxjs/operators';
 import { PublishedModelService } from './published-model.service';
 
 /**
- * Liste/tablo hücrelerinde lookup FK id'lerini etikete çevirir.
+ * Turns lookup FK ids into labels in list/table cells.
  *
- * NEDEN AYRI SERVİS: dropdown artık tembel yükleniyor, yani hedef tablonun TAM listesi
- * hiçbir yerde tutulmuyor. Hücrelerde etiket gösterebilmek için görünen sayfadaki
- * benzersiz id'ler toplanıp kolon başına TEK `?ids=` isteğiyle çözülür — maliyet sayfa
- * boyutuyla sınırlıdır. Kullanıcısı model-detail (alt model sekmelerindeki tablolar);
- * önbellek bileşen ömründen bağımsız kalsın diye servis olarak durur.
+ * WHY A SEPARATE SERVICE: the dropdown is now lazy-loaded, so the FULL list of the target table
+ * is not kept anywhere. To show labels in cells, the unique ids on the visible page are
+ * collected and resolved with ONE `?ids=` request per column — the cost is bounded by the page
+ * size. Its consumer is model-detail (the tables in the sub-model tabs); it is a service
+ * so the cache outlives the component.
  *
- * Önbellek anahtarı `hedefTablo|etiketKolonu` çiftidir: aynı tabloya farklı etiket
- * kolonuyla bakan iki kolon birbirinin etiketini kullanamaz. (Kaldırılan
- * RecordMetadataService.lookupOptions$ yalnız tablo adına göre anahtarlıyor ve bu
- * yüzden yanlış etiket paylaşabiliyordu.)
+ * The cache key is the `targetTable|labelColumn` pair: two columns that look at the same table
+ * with different label columns cannot use each other's labels. (The removed
+ * RecordMetadataService.lookupOptions$ keyed by table name only and could therefore
+ * share the wrong label.)
  */
 @Injectable({ providedIn: 'root' })
 export class LookupLabelService {
@@ -39,8 +39,8 @@ export class LookupLabelService {
   }
 
   /**
-   * Verilen id'lerden önbellekte OLMAYANLARI tek istekte çözer.
-   * Hepsi zaten önbellekteyse hiç istek atmaz.
+   * Resolves the given ids that are NOT in the cache, in one request.
+   * If all are already cached, no request is sent.
    */
   ensure(target: string, displayColumn: string | null | undefined, ids: number[]): Observable<void> {
     const bucket = this.bucket(target, displayColumn);
@@ -60,12 +60,12 @@ export class LookupLabelService {
     );
   }
 
-  /** Önbellekteki etiket; çözülmemişse null (çağıran ham id'ye düşer). */
+  /** Cached label; null if unresolved (the caller falls back to the raw id). */
   label(target: string, displayColumn: string | null | undefined, id: number): string | null {
     return this.bucket(target, displayColumn).get(id) ?? null;
   }
 
-  /** Hedef tabloya kayıt eklendiğinde/güncellendiğinde etiketler bayatlayabilir. */
+  /** Labels may go stale when a record is added/updated in the target table. */
   invalidate(target: string): void {
     for (const k of [...this.cache.keys()]) {
       if (k.startsWith(`${target}|`)) this.cache.delete(k);

@@ -2,7 +2,7 @@ import { FormBuilder, FormGroup, ValidatorFn, Validators } from '@angular/forms'
 import { RecordField, WorkflowForm, WorkflowFormField } from '../../../models/workflow.model';
 import { inputTypeFor } from '../../model-data/model-data.util';
 
-/** Çözülmüş görev şeması — dizi alanları ve allowReject her zaman dolu. */
+/** Parsed task schema — array fields and allowReject are always set. */
 export interface TaskSchema extends WorkflowForm {
   fields: WorkflowFormField[];
   recordFields: RecordField[];
@@ -10,17 +10,17 @@ export interface TaskSchema extends WorkflowForm {
 }
 
 /**
- * Görev şeması yardımcıları — SAF. Görev detayındaki karar formu ve kayıt
- * ekranındaki adım eylem diyaloğu aynı şemayı aynı kurallarla yorumlar.
+ * Task schema helpers — PURE. The decision form on the task detail and the step action
+ * dialog on the record screen interpret the same schema with the same rules.
  *
- * Şema TANIMDAN değil GÖREVDEN (`formSchemaJson`) okunur: görev açıldığı andaki
- * formu gösterir, tanım o sırada yeni bir sürüme geçmiş olabilir.
+ * The schema is read from the TASK (`formSchemaJson`), not the DEFINITION: it shows the form as it
+ * was when the task was opened; the definition may have moved to a new version since.
  */
 
 /**
- * Görevin şema kopyasını çözer. Bozuk/boş JSON'da boş şema döner — bozuk şema
- * formu kilitlememeli, yalnızca açıklama alanıyla devam edilir. Eski kopyalarda
- * `allowReject` yoktur: true sayılır (her onay adımının örtük bir red yolu vardı).
+ * Parses the task's schema copy. Returns an empty schema for broken/empty JSON — a broken schema
+ * must not lock the form; it continues with just the comment field. Older copies have no
+ * `allowReject`: it counts as true (every approval step had an implicit reject path).
  */
 export function parseTaskSchema(json: string | null | undefined): TaskSchema {
   const empty: TaskSchema = { fields: [], recordFields: [], allowReject: true };
@@ -38,12 +38,12 @@ export function parseTaskSchema(json: string | null | undefined): TaskSchema {
   }
 }
 
-/** Serbest alanın başlangıç değeri — onay kutusu false, diğerleri boş. */
+/** Initial value of a free field — false for a checkbox, empty for the others. */
 export function defaultValueFor(field: WorkflowFormField): unknown {
   return inputTypeFor(field.dataType) === 'checkbox' ? false : '';
 }
 
-/** Serbest alanlar + açıklama için form grubu. */
+/** Form group for the free fields + comment. */
 export function buildTaskForm(fb: FormBuilder, fields: WorkflowFormField[]): FormGroup {
   const controls: Record<string, unknown> = { comment: [''] };
 
@@ -58,7 +58,7 @@ export function buildTaskForm(fb: FormBuilder, fields: WorkflowFormField[]): For
   return fb.group(controls);
 }
 
-/** Formdan `{ comment, formDataJson }` — alan yoksa formDataJson null (sunucu boş şemada doğrulamaz). */
+/** `{ comment, formDataJson }` from the form — formDataJson is null if there are no fields (the server doesn't validate an empty schema). */
 export function readTaskForm(
   form: FormGroup, fields: WorkflowFormField[]
 ): { comment: string | null; formDataJson: string | null } {

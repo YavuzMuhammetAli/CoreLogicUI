@@ -6,7 +6,7 @@
 </div>
 
 @if (isNew) {
-  <!-- ── Yeni rol oluşturma ── -->
+  <!-- ── Create new role ── -->
   <div class="panel">
     <div class="panel-head">
       <h2>{{ 'role.detail.newTitle' | t }}</h2>
@@ -51,7 +51,7 @@
     </div>
   </div>
 } @else {
-  <!-- ── Mevcut rol düzenleme ── -->
+  <!-- ── Edit existing role ── -->
 
   @if (roleLoading()) {
     <div class="panel">
@@ -89,7 +89,7 @@
 
       <div class="panel-body">
 
-        <!-- ── Rol Adı / Sil ── -->
+        <!-- ── Role name / Delete ── -->
         <section class="section-block" aria-labelledby="rename-section-title">
           <h3 id="rename-section-title" class="section-title">{{ 'role.detail.renameSectionTitle' | t }}</h3>
 
@@ -126,7 +126,7 @@
 
         <hr class="section-divider">
 
-        <!-- ── Açılış Sayfası ── -->
+        <!-- ── Landing page ── -->
         <section class="section-block" aria-labelledby="landing-page-section-title">
           <h3 id="landing-page-section-title" class="section-title">{{ 'role.detail.landingSectionTitle' | t }}</h3>
           <p class="field-help">{{ 'role.detail.landingHelp' | t }}</p>
@@ -155,7 +155,7 @@
 
         <hr class="section-divider">
 
-        <!-- ── Sekme çubuğu: Kullanıcılar / İzin Verilen Modeller ── -->
+        <!-- ── Tab bar: Users / Permitted models ── -->
         <div class="tab-bar" role="tablist" [attr.aria-label]="'role.detail.tabsAriaLabel' | t">
           <button
             class="tab-btn"
@@ -183,7 +183,7 @@
           </button>
         </div>
 
-        <!-- ── Sekme: Kullanıcılar ── -->
+        <!-- ── Tab: Users ── -->
         @if (activeTab() === 'users') {
           <div class="tab-panel" role="tabpanel" [attr.aria-label]="'role.detail.membersPanelLabel' | t">
 
@@ -267,7 +267,7 @@
           </div>
         }
 
-        <!-- ── Sekme: İzin Verilen Modeller ── -->
+        <!-- ── Tab: Permitted models ── -->
         @if (activeTab() === 'models') {
           <div class="tab-panel" role="tabpanel" [attr.aria-label]="'role.detail.permittedModelsPanelLabel' | t">
 
@@ -289,7 +289,7 @@
 
             @if (!permLoading() && !permError() && permRows().length > 0) {
 
-              <!-- Model listesi (master) -->
+              <!-- Model list (master) -->
               @if (!selectedPermRow()) {
 
                 <div class="search-box">
@@ -359,7 +359,7 @@
                 }
               }
 
-              <!-- İzin detay paneli -->
+              <!-- Permission detail panel -->
               @if (selectedPermRow(); as row) {
                 <div class="model-perm-detail">
                   <button class="btn btn-ghost btn-sm" type="button" (click)="clearModelPerm()">
@@ -434,7 +434,7 @@
   }
 }
 
-<!-- Rol silme onayı — native confirm() yerine tasarım sistemine uygun diyalog -->
+<!-- Role delete confirmation — a design-system dialog instead of native confirm() -->
 <app-confirm-dialog
   [open]="deleteConfirmOpen()"
   [title]="'role.detail.deleteConfirmTitle' | t"

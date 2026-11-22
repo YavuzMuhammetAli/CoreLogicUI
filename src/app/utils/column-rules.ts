@@ -1,15 +1,15 @@
 import { isFileType, joinFileGroups, kbToMb, mbToKb, parseFileGroups } from './file-size';
 import { parseExpression, usesSequence } from './auto-value/expression';
 
-/** Sayısal (Min/Max kurallı) tipler. */
+/** Numeric types (with Min/Max rules). */
 export const NUMERIC_COLUMN_TYPES = new Set(['int', 'long', 'short', 'byte', 'decimal', 'double', 'float']);
 
-/** Uzunluk ve regex kurallı tipler: `string` (250 karakter) ve çok satırlı `text`. */
+/** Types with length and regex rules: `string` (250 characters) and multi-line `text`. */
 export function isTextColumn(dataType: string | null | undefined): boolean {
   return dataType === 'string' || dataType === 'text';
 }
 
-/** Şema ekranındaki sütun formunun kural alanları (model-node sütun FormGroup'u). */
+/** Rule fields of the column form on the schema screen (model-node column FormGroup). */
 export interface ColumnRuleValue {
   dataType: string;
   minLength?: number | null;
@@ -21,24 +21,24 @@ export interface ColumnRuleValue {
   enumValues?: string | null;
   lookupTargetTable?: string | null;
   lookupDisplayColumn?: string | null;
-  /** Yalnız formda: image/file boyut sınırı (MB). Saklanan değer `maxLength` (KB). */
+  /** Form only: image/file size limit (MB). The stored value is `maxLength` (KB). */
   maxFileSizeMb?: number | null;
-  /** Otomatik değer kuralı — '' kural yok (bkz. utils/auto-value). */
+  /** Auto-value rule — '' means no rule (see utils/auto-value). */
   autoValueTrigger?: string | null;
   autoValueExpression?: string | null;
   isReadOnly?: boolean | null;
 }
 
 /**
- * Sütunun kurallarını tipine göre ayıklar; kaydetmeden hemen önce çağrılır.
+ * Filters the column's rules by its type; called right before saving.
  *
- * Form, tip değişince eski tipin kurallarını tutmaya devam eder. Temizlenmezse
- * `maxLength` gibi paylaşılan bir alan anlam değiştirirdi: string'ten dosyaya
- * çevrilen sütunun "100 karakter"i sessizce "100 KB" dosya sınırı olurdu.
+ * When the type changes the form keeps holding the old type's rules. If not cleared,
+ * a shared field such as `maxLength` would change meaning: the "100 characters" of a column
+ * changed from string to file would silently become a "100 KB" file limit.
  *
- * image/file'da `maxLength` = MB girişinden türetilen KB. MB alanı değişmediyse
- * saklı KB aynen korunur — MB'nin 2 ondalığa yuvarlanması (1000 KB → 0,98 MB →
- * 1004 KB) kayıtlı değeri kaydırmasın.
+ * For image/file, `maxLength` = KB derived from the MB input. If the MB field did not change
+ * the stored KB is kept as is — so rounding MB to 2 decimals (1000 KB → 0.98 MB →
+ * 1004 KB) does not shift the saved value.
  */
 export function normalizeColumnRules<T extends ColumnRuleValue>(v: T): T & Required<ColumnRuleValue> {
   const isString = isTextColumn(v.dataType);
@@ -71,9 +71,9 @@ export function normalizeColumnRules<T extends ColumnRuleValue>(v: T): T & Requi
 }
 
 /**
- * Otomatik değer kuralını ayıklar: kural yoksa formül/salt okunur temizlenir (gizli bir
- * formül sessizce saklanmasın); dosya kolonları formül hedefi olamaz. `save` tetiği ve
- * SEQ() her zaman salt okunurdur — değeri kullanıcı değil sistem belirler.
+ * Filters the auto-value rule: without a rule the formula/read-only flag are cleared (so a hidden
+ * formula is not silently stored); file columns cannot be formula targets. The `save` trigger and
+ * SEQ() are always read-only — the system, not the user, determines the value.
  */
 function normalizeAutoValue(v: ColumnRuleValue, isFile: boolean) {
   const trigger = isFile ? '' : (v.autoValueTrigger ?? '').trim();
@@ -90,39 +90,39 @@ function expressionUsesSequence(expression: string): boolean {
   try {
     return !!expression && usesSequence(parseExpression(expression));
   } catch {
-    return false;                     // hatalı formül zaten kaydedilmeden reddedilir
+    return false;                     // an invalid formula is rejected before saving anyway
   }
 }
 
-/** Kolonun kuralını tek metne indirger — kayıtlı haliyle karşılaştırıp değişeni bulmak için. */
+/** Reduces the column's rule to a single string — to compare with the saved one and find changes. */
 export function autoValueKey(c: Pick<ColumnRuleValue, 'autoValueTrigger' | 'autoValueExpression' | 'isReadOnly'>): string {
   const trigger = (c.autoValueTrigger ?? '').trim();
   return trigger ? `${trigger}|${(c.autoValueExpression ?? '').trim()}|${!!c.isReadOnly}` : '';
 }
 
-// ── Kayıtlı kolonun meta verisi (updateMemberMetadata) ─────────────────────────
+// ── Metadata of a saved column (updateMemberMetadata) ─────────────────────────
 
-/** Zorunluluğu yalnız çalışma anında denetlenen tipler — derlenen C# tipi değişmez. */
+/** Types whose required-ness is only checked at runtime — the compiled C# type does not change. */
 const REQUIRED_RUNTIME_ONLY_TYPES = new Set(['string', 'text', 'enum', 'file', 'image']);
 
 /**
- * Zorunluluk derlenen C# tipini değiştirir mi? Değer tiplerinde evet (`int` ⇄ `int?`).
- * Backend `CoreLogicTypeMap.RequiredAffectsClrType`'ın ikizi.
+ * Does required-ness change the compiled C# type? Yes for value types (`int` ⇄ `int?`).
+ * Twin of backend `CoreLogicTypeMap.RequiredAffectsClrType`.
  */
 export function requiredAffectsClrType(dataType: string): boolean {
   return !REQUIRED_RUNTIME_ONLY_TYPES.has(dataType);
 }
 
 /**
- * Kayıtlı bir kolonun zorunluluğu şu an değiştirilebilir mi? Yayınlanmış modelde değer
- * tipinin zorunluluğu değişirse sonraki yayın NULL değerli satırları okuyamaz hâle getirir —
- * sunucu da reddeder; arayüz kutuyu önceden kilitler.
+ * Can a saved column's required-ness be changed right now? On a published model, changing the
+ * required-ness of a value type makes rows with NULL values unreadable after the next publish —
+ * the server rejects it too; the UI locks the checkbox up front.
  */
 export function requiredChangeAllowed(dataType: string, modelPublished: boolean): boolean {
   return !modelPublished || !requiredAffectsClrType(dataType);
 }
 
-/** POST /Published/updateMemberMetadata gövdesi — TAM değiştirme (boş kural kaldırılır). */
+/** POST /Published/updateMemberMetadata body — FULL replacement (an empty rule is removed). */
 export interface MemberMetadataUpdate {
   typeName: string;
   memberName: string;
@@ -139,10 +139,10 @@ export interface MemberMetadataUpdate {
   lookupDisplayColumn: string | null;
 }
 
-/** Meta verinin karşılaştırılabilir hâli (ad/tip hariç). */
+/** Comparable form of the metadata (excluding name/type). */
 type MemberMetadata = Omit<MemberMetadataUpdate, 'typeName' | 'memberName'>;
 
-/** Kaydetmeye hazır (normalizeColumnRules'tan geçmiş) form sütunu. */
+/** A form column ready to save (passed through normalizeColumnRules). */
 export interface MetadataColumn extends ColumnRuleValue {
   columnName: string;
   isNullable: boolean;
@@ -154,23 +154,23 @@ const text = (v: string | null | undefined): string | null => (v ?? '').trim() |
 const num = (v: number | null | undefined): number | null => (v === undefined || v === null || Number.isNaN(v) ? null : v);
 
 /**
- * `enumValues` alanının tipe göre değeri: enum seçenekleri ya da dosyanın izinli tür grupları
- * (bkz. utils/file-size). Taslakta tip değişince kalan eski değer sunucuya gitmesin.
+ * Value of the `enumValues` field by type: enum options or the file's allowed type groups
+ * (see utils/file-size). So an old value left over after a type change in a draft is not sent to the server.
  */
 function valueListOf(dataType: string, value: string | null | undefined): string | null {
   if (dataType === 'enum') return enumKey(value);
   return dataType === 'file' ? (joinFileGroups(parseFileGroups(value)) || null) : null;
 }
 
-/** "a | b ||a" → "a|b": backend NormalizeEnumValues ile aynı (sıra korunur, yinelenen atılır). */
+/** "a | b ||a" → "a|b": same as backend NormalizeEnumValues (order kept, duplicates dropped). */
 function enumKey(v: string | null | undefined): string | null {
   const values = [...new Set((v ?? '').split('|').map(s => s.trim()).filter(Boolean))];
   return values.length ? values.join('|') : null;
 }
 
 /**
- * Tipe göre ayıklanmış meta veri — backend UpdateMemberMetadata'nın sakladığıyla aynı şekil;
- * böylece kayıtlı şemadan ve formdan üretilen anahtarlar değişiklik yoksa birebir eşleşir.
+ * Metadata filtered by type — the same shape backend UpdateMemberMetadata stores;
+ * so keys built from the saved schema and from the form match exactly when nothing changed.
  */
 function memberMetadata(
   dataType: string,
@@ -197,7 +197,7 @@ function memberMetadata(
   };
 }
 
-/** Formdaki sütundan istek gövdesi. */
+/** Request body from the form column. */
 export function toMemberMetadataUpdate(typeName: string, c: MetadataColumn): MemberMetadataUpdate {
   return {
     typeName,
@@ -206,12 +206,12 @@ export function toMemberMetadataUpdate(typeName: string, c: MetadataColumn): Mem
   };
 }
 
-/** Formdaki sütunun meta veri anahtarı — kayıtlı hâliyle karşılaştırıp değişeni bulmak için. */
+/** Metadata key of the form column — to compare with the saved one and find changes. */
 export function metadataKey(c: MetadataColumn): string {
   return JSON.stringify(memberMetadata(c.dataType, { ...c, isRequired: !c.isNullable }));
 }
 
-/** Sunucudan okunan kolonun meta veri anahtarı (getSchema satırı). */
+/** Metadata key of a column read from the server (a getSchema row). */
 export function schemaMetadataKey(c: {
   dataType: string; isRequired: boolean; label?: string | null; description?: string | null;
   minLength?: number | null; maxLength?: number | null; min?: number | null; max?: number | null;

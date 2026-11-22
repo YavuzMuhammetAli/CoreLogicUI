@@ -16,7 +16,7 @@ const v1: WorkflowGraph = {
 };
 
 describe('workflow-diff', () => {
-  it('eklenen, silinen, değişen adım ve kenarlar; konum fark sayılmaz', () => {
+  it('added, removed, changed steps and edges; position is not a difference', () => {
     const v2: WorkflowGraph = {
       startStep: 'mudur',
       steps: [
@@ -37,7 +37,7 @@ describe('workflow-diff', () => {
     expect(diffOverlay(diff).nodes).toEqual({ finans: 'added', mudur: 'changed', son: 'changed' });
   });
 
-  it('yalnız taşınan düğüm fark değildir', () => {
+  it('a merely moved node is not a difference', () => {
     const moved: WorkflowGraph = { ...v1, steps: v1.steps.map(s => ({ ...s, x: 999, y: 999 })) };
     expect(hasDifferences(diffGraphs(v1, moved))).toBeFalse();
   });
@@ -49,7 +49,7 @@ describe('workflow-package', () => {
     triggerConditionJson: null, isEnabled: true, definitionJson: JSON.stringify(v1)
   };
 
-  it('dışa → içe aktarım gidiş-dönüş', () => {
+  it('export → import round trip', () => {
     const text = serializePackage(toPackage(definition, new Date('2026-10-19T00:00:00Z')));
     const parsed = parsePackage(text);
     expect(parsed.ok).toBeTrue();
@@ -57,7 +57,7 @@ describe('workflow-package', () => {
     expect(JSON.parse(text).format).toBe(WORKFLOW_PACKAGE_FORMAT);
   });
 
-  it('bozuk / başka biçim / yeni sürüm / eksik alan / bozuk şema reddedilir', () => {
+  it('rejects corrupt / foreign format / newer version / missing field / corrupt definition', () => {
     const good = toPackage(definition);
     expect(parsePackage('{bozuk')).toEqual({ ok: false, error: 'json' });
     expect(parsePackage(JSON.stringify({ ...good, format: 'baska' }))).toEqual({ ok: false, error: 'format' });
@@ -67,17 +67,17 @@ describe('workflow-package', () => {
       .toEqual({ ok: false, error: 'definition' });
   });
 
-  it('kod çakışırsa sonek alır; dosya adı güvenli', () => {
+  it('gets a suffix on code collision; file name is safe', () => {
     expect(freeCode('satinalma', ['diger'])).toBe('satinalma');
     expect(freeCode('satinalma', ['SATINALMA', 'satinalma_2'])).toBe('satinalma_3');
     expect(freeCode('satinalma_2', ['satinalma_2'])).toBe('satinalma_3');
     expect(freeCode('akis_1792434933557', ['akis_1792434933557'])).toBe('akis_1792434933557_2');
-    expect(packageFileName('a b/c')).toBe('akis-a_b_c.json');
+    expect(packageFileName('a b/c')).toBe('workflow-a_b_c.json');
   });
 });
 
 describe('workflow-templates', () => {
-  it('her şablon kendi içinde tutarlı: başlangıç var, tüm hedefler tanımlı adım', () => {
+  it('every template is self-consistent: has a start, all targets are defined steps', () => {
     for (const template of WORKFLOW_TEMPLATES) {
       const graph = template.build(key => key);
       const keys = new Set(graph.steps.map(s => s.key));

@@ -10,7 +10,7 @@ const lookup: SummaryLookup = {
 };
 
 describe('workflow-node-types', () => {
-  it('her türün kendi etiketi ve ikonu var', () => {
+  it('every kind has its own label and icon', () => {
     expect(new Set(NODE_KINDS.map(k => k.kind)).size).toBe(NODE_KINDS.length);
     expect(NODE_KINDS.every(k => k.labelKey && k.icon)).toBeTrue();
     expect(nodeKindInfo('task').type).toBe('approval');
@@ -19,7 +19,7 @@ describe('workflow-node-types', () => {
     expect(isNodeKind('subprocess')).toBeFalse();
   });
 
-  it('var olan adımın türünü tanır: reddi kapalı onay = görev', () => {
+  it('recognizes the kind of an existing step: approval with reject disabled = task', () => {
     const base: WorkflowStep = { key: 'a', type: 'approval', name: 'A' };
     expect(nodeKindOf(base)).toBe('approval');
     expect(nodeKindOf({ ...base, form: { fields: [], allowReject: false } })).toBe('task');
@@ -27,7 +27,7 @@ describe('workflow-node-types', () => {
     expect(nodeKindOf({ ...base, type: 'parallel' })).toBe('parallel');
   });
 
-  it('görev yalnız tamamlanma çıkışı verir (red portu yok)', () => {
+  it('a task only has a completion exit (no reject port)', () => {
     const task = createStep('task', { key: 'is', name: 'İş', completeLabel: 'Tamamla' });
 
     expect(nodeKindOf(task)).toBe('task');
@@ -35,7 +35,7 @@ describe('workflow-node-types', () => {
     expect(exitsOf(task).filter(e => e.enabled).map(e => e.port)).toEqual(['approve']);
   });
 
-  it('paralel adım iki dalla ve "hepsi" kuralıyla başlar', () => {
+  it('a parallel step starts with two branches and the "all" rule', () => {
     const step = createStep('parallel', { key: 'p', name: 'P', branchNames: ['Finans', 'Hukuk'] });
 
     expect(step.mode).toBe('all');
@@ -43,37 +43,37 @@ describe('workflow-node-types', () => {
     expect(exitsOf(step).map(e => e.port)).toEqual(['complete', 'anyReject']);
   });
 
-  it('yeni onay adımında rol seçilmemiş atama bırakılır (sorun olarak görünsün)', () => {
+  it('a new approval step gets an assignment with no role selected (so it shows as an issue)', () => {
     const step = createStep('approval', { key: 'a', name: 'A' });
     expect(step.assignment).toEqual({ mode: 'role', roleId: null });
     expect(assignmentText(step.assignment, lookup)).toBe('—');
   });
 });
 
-describe('koşul ve bitiş türleri', () => {
-  it('yeni koşul bir durum ve boş varsayılan yolla başlar', () => {
+describe('condition and end kinds', () => {
+  it('a new condition starts with one case and an empty default path', () => {
     const step = createStep('condition', { key: 'k', name: 'K', caseLabel: 'Evet' });
     expect(nodeKindOf(step)).toBe('condition');
     expect(step.cases?.map(c => c.label)).toEqual(['Evet']);
     expect(step.defaultTo).toBeNull();
-    expect(exitsOf(step).map(e => e.port)).toEqual(['case:durum1', 'default']);
+    expect(exitsOf(step).map(e => e.port)).toEqual(['case:case1', 'default']);
   });
 
-  it('bitiş rengi sonuca göre', () => {
+  it('end colour depends on the outcome', () => {
     const end = createStep('end', { key: 'son', name: 'Son' });
     expect(nodeTone(end)).toBe('success');
     expect(nodeTone({ ...end, outcome: 'rejected' })).toBe('danger');
     expect(nodeKindInfo('condition').automatic).toBeTrue();
   });
 
-  it('özet: koşulda durum sayısı, bitişte sonuç', () => {
+  it('summary: case count for a condition, outcome for an end', () => {
     expect(stepSummary(createStep('condition', { key: 'k', name: 'K' }), lookup)).toBe('workflow.node.caseCount:{"n":1}');
     expect(stepSummary(createStep('end', { key: 's', name: 'S' }), lookup)).toBe('workflow.node.endCompleted');
   });
 });
 
 describe('workflow-step-summary', () => {
-  it('atama metni: rol, kullanıcı, kaydı oluşturan, eksik', () => {
+  it('assignment text: role, user, record creator, missing', () => {
     expect(assignmentText({ mode: 'role', roleId: 3 }, lookup)).toBe('Müdür');
     expect(assignmentText({ mode: 'user', userId: 7 }, lookup)).toBe('Ayşe Yılmaz');
     expect(assignmentText({ mode: 'user', userId: 99 }, lookup)).toBe('—');
@@ -81,12 +81,12 @@ describe('workflow-step-summary', () => {
     expect(assignmentText(null, lookup)).toBe('—');
   });
 
-  it('paralel adımda dal sayısı', () => {
+  it('branch count for a parallel step', () => {
     const step = createStep('parallel', { key: 'p', name: 'P' });
     expect(assignmentSummary(step, lookup)).toBe('workflow.build.branchCount:{"n":2}');
   });
 
-  it('kart özeti süre sınırını ekler', () => {
+  it('card summary adds the time limit', () => {
     const step: WorkflowStep = {
       key: 'a', type: 'approval', name: 'A',
       assignment: { mode: 'role', roleId: 3 }, sla: { dueHours: 48, onTimeout: 'escalate' }

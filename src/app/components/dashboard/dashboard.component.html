@@ -17,8 +17,8 @@
 @if (!loading() && !loadError() && dashboard()) {
   @if (widgetViews().length > 0) {
     <div class="widget-grid">
-      <!-- track $index: aynı raporu gösteren iki widget aynı dashboard'da olabilir;
-           reportDefinitionId ile izlemek yinelenen anahtar hatası verirdi. -->
+      <!-- track $index: two widgets showing the same report can be on the same dashboard;
+           tracking by reportDefinitionId would cause a duplicate key error. -->
       @for (item of widgetViews(); track $index) {
         <div
           class="panel widget"
@@ -39,9 +39,9 @@
                 <p>{{ 'dashboard.view.noRows' | t }}</p>
               </div>
             } @else if (item.result.widget.chartType !== 'table') {
-              <!-- Ekran dışındaki grafik görünür olana kadar kurulmaz: her ApexCharts örneği
-                   SVG çizimi + ResizeObserver demek; uzun dashboard'da hepsi açılışta çiziliyordu.
-                   Grafik kodu (ApexCharts) da ayrı parça olarak boşta önceden indirilir. -->
+              <!-- An off-screen chart is not built until it becomes visible: every ApexCharts instance
+                   means SVG rendering + a ResizeObserver; on a long dashboard all of them rendered at startup.
+                   The chart code (ApexCharts) is also prefetched as a separate chunk while idle. -->
               @defer (on viewport; prefetch on idle) {
                 <app-chart
                   [chartType]="item.result.widget.chartType"

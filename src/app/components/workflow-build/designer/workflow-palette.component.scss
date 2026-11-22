@@ -62,7 +62,7 @@
   color: var(--muted);
 }
 
-// Dar ekranda palet tuvalin üstünde yatay bir şerit olur.
+// On narrow screens the palette becomes a horizontal strip above the canvas.
 @media (max-width: 1024px) {
   .palette {
     flex-direction: row;

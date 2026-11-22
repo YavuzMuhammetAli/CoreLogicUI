@@ -1,6 +1,6 @@
 import { registerTranslations } from '../index';
 import { PARAMETER_I18N } from '../parameter.i18n';
 
-// Yan etkili modül: içe aktaran parça yüklenince sözlük eklenir (bkz. i18n/index.ts).
-// Kullananlar: Parametreler ekranı ve sekmeleri.
+// Side-effect module: the dictionary is added when the importing chunk loads (see i18n/index.ts).
+// Used by: the Parameters screen and its tabs.
 registerTranslations(PARAMETER_I18N);

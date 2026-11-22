@@ -3,7 +3,7 @@
   display: inline-flex;
 }
 
-/* ---- Zil butonu + rozet ---- */
+/* ---- Bell button + badge ---- */
 .bell-btn {
   position: relative;
 }
@@ -21,12 +21,12 @@
   color: #fff;
   font: 600 11px / 18px var(--font-body);
   text-align: center;
-  // Rozet topbar zemininden ayrışsın (açık/koyu temada).
+  // The badge must stand out from the topbar background (in light/dark theme).
   box-shadow: 0 0 0 2px var(--surface);
   pointer-events: none;
 }
 
-/* ---- Açılır panel (profil dropdown'uyla aynı yüzey) ---- */
+/* ---- Dropdown panel (same surface as the profile dropdown) ---- */
 .bell-panel {
   position: absolute;
   top: calc(100% + var(--space-2));
@@ -176,7 +176,7 @@
   &:hover { text-decoration: underline; }
 }
 
-/* Dar ekranda panel ekranın sağ kenarına hizalanır, taşmaz. */
+/* On narrow screens the panel aligns to the right edge of the screen and doesn't overflow. */
 @media (max-width: 768px) {
   .bell-panel {
     position: fixed;

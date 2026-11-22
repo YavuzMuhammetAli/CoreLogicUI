@@ -24,10 +24,10 @@ import {
 } from '../models/parameter.model';
 
 /**
- * Tenant parametreleri — yalnızca admin (backend `[Authorize(Roles = "admin")]`).
+ * Tenant parameters — admin only (backend `[Authorize(Roles = "admin")]`).
  *
- * Tenant istemciden GÖNDERİLMEZ: tüm uçlar çağıran admin'in JWT'sindeki ambient
- * tenant'ında çalışır; başka bir şirketin yedeği/aboneliği görülemez.
+ * The tenant is NOT sent by the client: every endpoint runs in the ambient tenant of the
+ * calling admin's JWT; another company's backups/subscription cannot be seen.
  */
 @Injectable({ providedIn: 'root' })
 export class ParameterService {
@@ -36,77 +36,77 @@ export class ParameterService {
 
   // ── Yedekleme ────────────────────────────────────────────────────────────
 
-  /** Kayıtlı zamanlama; hiç tanımlanmadıysa kapalı/boş form döner (hata değil). */
+  /** Saved schedule; if none was ever defined, returns a disabled/empty form (not an error). */
   getBackupSchedule(): Observable<DataResponseModel<BackupSchedule>> {
     return this.http.get<DataResponseModel<BackupSchedule>>(`${this.baseUrl}/backup/schedule`);
   }
 
-  /** Zamanlamayı kaydeder; cron geçersizse backend reddeder. */
+  /** Saves the schedule; the backend rejects an invalid cron. */
   saveBackupSchedule(body: BackupSchedule): Observable<ResponseModel> {
     return this.http.put<ResponseModel>(`${this.baseUrl}/backup/schedule`, body);
   }
 
-  /** Bu tenant'ın yedek geçmişi (en yeni önce, en fazla 50 satır). */
+  /** Backup history of this tenant (newest first, at most 50 rows). */
   getBackupHistory(): Observable<ListResponseModel<BackupHistoryItem>> {
     return this.http.get<ListResponseModel<BackupHistoryItem>>(`${this.baseUrl}/backup/history`);
   }
 
   /**
-   * Yedeği kuyruğa alır ve hemen döner (yedeğin kimliği). Yedek arka planda alınır;
-   * ilerleme geçmişte Queued → Running → Completed olarak izlenir.
+   * Queues a backup and returns immediately (the backup's ID). The backup runs in the background;
+   * progress is tracked in the history as Queued → Running → Completed.
    */
   runBackupNow(): Observable<DataResponseModel<number>> {
     return this.http.post<DataResponseModel<number>>(`${this.baseUrl}/backup/run`, null);
   }
 
   /**
-   * Yedeği indirmek için kısa ömürlü bağlantı. Dosya gigabaytlarca olabileceğinden blob olarak
-   * belleğe alınmaz: tarayıcı bağlantıyı doğrudan açar, yetki URL'deki imzalı token'dadır.
+   * Short-lived link to download a backup. The file can be gigabytes, so it is not loaded into
+   * memory as a blob: the browser opens the link directly, authorization is in the signed token in the URL.
    */
   getBackupDownloadLink(backupId: number): Observable<DataResponseModel<BackupDownloadLink>> {
     return this.http.post<DataResponseModel<BackupDownloadLink>>(`${this.baseUrl}/backup/${backupId}/download-link`, null);
   }
 
-  /** İndirme bağlantısının tam adresi (API kökü + sunucunun verdiği göreli yol). */
+  /** Full address of the download link (API root + the relative path the server returned). */
   backupDownloadUrl(link: BackupDownloadLink): string {
     return `${environment.apiBaseUrl}/${link.url}`;
   }
 
-  /** Yedeği geri yüklemeyi kuyruğa alır — şirket kodu yeniden yazılır, parola istenir. */
+  /** Queues a backup restore — the company code is retyped and the password is required. */
   restoreBackup(backupId: number, body: RestoreBackupRequest): Observable<DataResponseModel<number>> {
     return this.http.post<DataResponseModel<number>>(`${this.baseUrl}/backup/${backupId}/restore`, body);
   }
 
-  /** Geri yükleme durumu — bakım sırasında ve oturum geçersizken de yanıt verir. */
+  /** Restore status — also answers during maintenance and while the session is invalid. */
   getRestore(restoreId: number): Observable<DataResponseModel<TenantRestore>> {
     return this.http.get<DataResponseModel<TenantRestore>>(`${this.baseUrl}/backup/restore/${restoreId}`);
   }
 
-  /** Süren geri yükleme (yoksa data null) — sayfa yenilense de ilerleme gösterilsin. */
+  /** The running restore (data null if none) — so progress shows even after a page reload. */
   getActiveRestore(): Observable<DataResponseModel<TenantRestore | null>> {
     return this.http.get<DataResponseModel<TenantRestore | null>>(`${this.baseUrl}/backup/restore/active`);
   }
 
   // ── E-posta ──────────────────────────────────────────────────────────────
 
-  /** SMTP ayarları; parola gerçek değeriyle değil maskeli döner. */
+  /** SMTP settings; the password is returned masked, not with its real value. */
   getMailSetting(): Observable<DataResponseModel<MailSetting>> {
     return this.http.get<DataResponseModel<MailSetting>>(`${this.baseUrl}/mail`);
   }
 
-  /** Ayarları kaydeder. Parola maskeli gönderilirse mevcut parola korunur. */
+  /** Saves the settings. If the password is sent masked, the existing password is kept. */
   saveMailSetting(body: MailSetting): Observable<ResponseModel> {
     return this.http.put<ResponseModel>(`${this.baseUrl}/mail`, body);
   }
 
-  /** Kayıtlı ayarlarla deneme maili gönderir; SMTP hatası mesajda döner. */
+  /** Sends a test mail with the saved settings; an SMTP error is returned in the message. */
   sendTestMail(to: string): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/mail/test`, { to });
   }
 
-  // ── Bildirim şablonları ──────────────────────────────────────────────────
+  // ── Notification templates ───────────────────────────────────────────────
 
-  /** Tür listesi; her tür için özel şablon kayıtlı mı. */
+  /** Kind list; whether a custom template is saved for each kind. */
   listNotificationTemplates(
     lang: NotificationLanguage
   ): Observable<ListResponseModel<NotificationTemplateSummary>> {
@@ -114,7 +114,7 @@ export class ParameterService {
       `${this.baseUrl}/mail/templates`, { params: { lang } });
   }
 
-  /** Etkin şablon + gömülü varsayılan + kullanılabilir yer tutucular. */
+  /** Effective template + embedded default + available placeholders. */
   getNotificationTemplate(
     kind: NotificationTemplateKind,
     lang: NotificationLanguage
@@ -123,7 +123,7 @@ export class ParameterService {
       `${this.baseUrl}/mail/templates/${kind}`, { params: { lang } });
   }
 
-  /** Özel şablonu kaydeder; bilinmeyen yer tutucu içerirse backend reddeder. */
+  /** Saves the custom template; the backend rejects it if it contains an unknown placeholder. */
   saveNotificationTemplate(
     kind: NotificationTemplateKind,
     lang: NotificationLanguage,
@@ -133,7 +133,7 @@ export class ParameterService {
       `${this.baseUrl}/mail/templates/${kind}`, body, { params: { lang } });
   }
 
-  /** Özel şablonu siler — tür gömülü varsayılana döner. */
+  /** Deletes the custom template — the kind falls back to the embedded default. */
   resetNotificationTemplate(
     kind: NotificationTemplateKind,
     lang: NotificationLanguage
@@ -143,8 +143,8 @@ export class ParameterService {
   }
 
   /**
-   * Kaydedilmemiş şablonu örnek veriyle render eder. Render sunucuda yapılır ki
-   * önizleme ile gerçek gönderim aynı motordan geçsin.
+   * Renders an unsaved template with sample data. Rendering happens on the server so that
+   * the preview and the real send go through the same engine.
    */
   previewNotificationTemplate(
     kind: NotificationTemplateKind,
@@ -155,7 +155,7 @@ export class ParameterService {
       `${this.baseUrl}/mail/templates/${kind}/preview`, body, { params: { lang } });
   }
 
-  /** Şablonu örnek veriyle gerçekten gönderir; SMTP hatası mesajda döner. */
+  /** Actually sends the template with sample data; an SMTP error is returned in the message. */
   sendNotificationTemplateTest(
     kind: NotificationTemplateKind,
     lang: NotificationLanguage,
@@ -167,20 +167,20 @@ export class ParameterService {
 
   // ── Abonelik ─────────────────────────────────────────────────────────────
 
-  /** Satın alınabilir planlar; tenant'ın mevcut planı `isCurrent` ile işaretli. */
+  /** Purchasable plans; the tenant's current plan is marked with `isCurrent`. */
   getPlans(): Observable<ListResponseModel<TenantPlan>> {
     return this.http.get<ListResponseModel<TenantPlan>>(`${this.baseUrl}/subscription/plans`);
   }
 
-  /** Tenant'ın yürürlükteki aboneliği; yoksa success=false döner. */
+  /** The tenant's current subscription; returns success=false if there is none. */
   getCurrentSubscription(): Observable<DataResponseModel<TenantSubscription>> {
     return this.http.get<DataResponseModel<TenantSubscription>>(
       `${this.baseUrl}/subscription/current`);
   }
 
   /**
-   * Planı satın alır. Ödeme şu an stub sağlayıcıdan geçer (her zaman başarılı);
-   * abonelik satırı gerçek olarak yazılır. Stripe geldiğinde bu uç değişmez.
+   * Purchases the plan. Payment currently goes through a stub provider (always succeeds);
+   * the subscription row is written for real. This endpoint will not change when Stripe arrives.
    */
   purchasePlan(body: PurchasePlanRequest): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/subscription/purchase`, body);

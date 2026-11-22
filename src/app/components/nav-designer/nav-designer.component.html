@@ -69,7 +69,7 @@
     }
 
     <div class="nav-designer" [class.nav-designer--narrow]="narrow()">
-      <!-- ─── Palet ─────────────────────────────────────────────────────── -->
+      <!-- ─── Palette ───────────────────────────────────────────────────── -->
       <aside class="panel palette" [attr.aria-label]="'design.nav.palette' | t">
         <div class="palette-group">
           <span class="eyebrow">{{ 'design.nav.paletteStructure' | t }}</span>
@@ -141,7 +141,7 @@
         <p class="field-help">{{ 'design.nav.paletteHelp' | t }}</p>
       </aside>
 
-      <!-- ─── Ağaç (kenar çubuğu görünümünde) ─────────────────────────────── -->
+      <!-- ─── Tree (in sidebar view) ──────────────────────────────────────── -->
       <section class="tree-wrap" [attr.aria-label]="'design.nav.tree' | t">
         @if (preview()) {
           <div class="sidebar-frame">
@@ -211,7 +211,7 @@
         }
       </section>
 
-      <!-- ─── Özellikler ─────────────────────────────────────────────────── -->
+      <!-- ─── Properties ─────────────────────────────────────────────────── -->
       <aside class="panel inspector" [attr.aria-label]="'design.nav.inspector' | t">
         @if (selected(); as node) {
           <div class="inspector-head">
@@ -311,7 +311,7 @@
       </aside>
     </div>
 
-    <!-- ─── Sorunlar ──────────────────────────────────────────────────────── -->
+    <!-- ─── Issues ────────────────────────────────────────────────────────── -->
     <section class="panel issues">
       <button type="button" class="issues-head" (click)="issuesOpen.set(!issuesOpen())" [attr.aria-expanded]="issuesOpen()">
         <span class="eyebrow">{{ 'screen.designer.issues' | t }}</span>

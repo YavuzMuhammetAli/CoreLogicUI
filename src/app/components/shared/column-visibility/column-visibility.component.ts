@@ -4,20 +4,20 @@ import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { closeOnOutsidePointer } from '../../../utils/outside-pointer';
 import { IconComponent } from '../icon/icon.component';
 
-/** Popover'da listelenecek tek bir kolon */
+/** A single column listed in the popover */
 export interface ColumnVisibilityItem {
   name: string;
-  /** true ise onay kutusu işaretli+pasif gösterilir, gizlenemez (örn. zorunlu form alanı) */
+  /** If true the checkbox is shown checked+disabled and cannot be hidden (e.g. a required form field) */
   required: boolean;
 }
 
 /**
- * Admin'in model bazında hangi kolonların görüneceğini ayarladığı açılır kutu.
- * layout.component.ts'teki profil dropdown deseniyle aynı dış-tıklama/Esc davranışını izler.
+ * Popover where the admin sets which columns are visible per model.
+ * Follows the same outside-click/Esc behaviour as the profile dropdown pattern in layout.component.ts.
  *
- * Kullanım: parent, o anki ETKİN görünür kolon adlarını `visible` ile geçirir (ayar yoksa
- * tüm kolon adları). Kaydet'e basıldığında `save` ile seçili kolon adları (schema sırasıyla)
- * emit edilir; parent bunu backend'e yazar.
+ * Usage: the parent passes the currently EFFECTIVE visible column names via `visible` (all column
+ * names if there is no setting). When Save is pressed, the selected column names (in schema order)
+ * are emitted via `save`; the parent writes them to the backend.
  */
 @Component({
     selector: 'app-column-visibility',
@@ -35,7 +35,7 @@ export class ColumnVisibilityComponent implements OnChanges {
 
   readonly open = signal(false);
 
-  /** Popover içindeki taslak seçim — Kaydet'e basılana kadar dışa yansımaz */
+  /** Draft selection inside the popover — not reflected outside until Save is pressed */
   draft = new Set<string>();
 
   @ViewChild('wrapRef') wrapRef?: ElementRef<HTMLElement>;
@@ -45,8 +45,8 @@ export class ColumnVisibilityComponent implements OnChanges {
   }
 
   ngOnChanges(): void {
-    // Popover açıkken parent'tan gelen güncellemeler taslağı ezmesin
-    // (örn. kaydet sonrası input değişimi); sadece kapalıyken senkronla.
+    // Updates from the parent must not overwrite the draft while the popover is open
+    // (e.g. an input change after save); sync only while closed.
     if (!this.open()) {
       this.draft = new Set(this.visible);
     }
@@ -72,8 +72,8 @@ export class ColumnVisibilityComponent implements OnChanges {
     }
   }
 
-  /** En az bir kolon seçili olmadan kaydetmeye izin verme — aksi halde "ayar yok" ile
-   * "tüm kolonlar açıkça gizlendi" durumu backend'de ayırt edilemez hale gelir. */
+  /** Don't allow saving without at least one selected column — otherwise "no setting" and
+   * "all columns explicitly hidden" become indistinguishable on the backend. */
   get canSave(): boolean {
     return this.draft.size > 0;
   }

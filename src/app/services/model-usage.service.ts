@@ -6,11 +6,11 @@ import { ReportDefinition } from '../models/report.model';
 import { DashboardDefinition } from '../models/dashboard.model';
 
 /**
- * Bir modelin uygulama içinde nerelerde kullanıldığını özetler.
- * Şimdilik raporlar ve dashboardlar kapsanıyor; ileride yeni bir özellik
- * (örn. otomasyon, bildirim kuralı) modele referans verirse buraya yeni bir
- * kaynak eklenmesi yeterlidir — model silme akışı bu serviste tek noktadan
- * besleniyor.
+ * Summarizes where a model is used within the application.
+ * Currently reports and dashboards are covered; if a new feature later
+ * (e.g. automation, notification rule) references a model, it is enough to add a new
+ * source here — the model deletion flow is fed from this service
+ * as a single point.
  */
 export interface ModelUsage {
   reports: ReportDefinition[];
@@ -26,8 +26,8 @@ export class ModelUsageService {
   ) {}
 
   /**
-   * Verilen model (typeName) hangi raporlarda ve dashboardlarda kullanılıyor.
-   * Dashboard bağlantısı dolaylıdır: widget.reportDefinitionId → rapor → modelName.
+   * Which reports and dashboards use the given model (typeName).
+   * The dashboard link is indirect: widget.reportDefinitionId → report → modelName.
    */
   getUsage(typeName: string): Observable<ModelUsage> {
     return forkJoin([this.reportService.list(), this.dashboardService.list()]).pipe(

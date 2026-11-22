@@ -2,11 +2,11 @@ import { EntityGraph, EntityGraphEdge, EntityGraphNode } from '../../../models/r
 import { layoutGraph } from './entity-graph.layout';
 
 /**
- * Yerleşim geometrisinin testleri.
+ * Tests for the layout geometry.
  *
- * Bu hesap component'ten AYRI tutulduğu için TestBed olmadan çalıştırılabilir —
- * asıl kazanç bu: kırpılma/taşma gibi hatalar ancak saf fonksiyon test
- * edilebildiğinde yakalanabiliyor.
+ * Because this computation is kept SEPARATE from the component it can run without TestBed —
+ * that's the real gain: bugs like clipping/overflow can only be caught when the pure
+ * function is testable.
  */
 describe('layoutGraph', () => {
 
@@ -38,20 +38,20 @@ describe('layoutGraph', () => {
     edges
   });
 
-  /** viewBox "minX minY width height" — sayısal olarak ayrıştırır. */
+  /** viewBox "minX minY width height" — parses it numerically. */
   const parseViewBox = (viewBox: string) => {
     const [minX, minY, width, height] = viewBox.split(' ').map(Number);
     return { minX, minY, width, height, maxX: minX + width, maxY: minY + height };
   };
 
-  it('boş graf için çizim üretmez', () => {
+  it('produces no drawing for an empty graph', () => {
     const result = layoutGraph(null);
 
     expect(result.nodes).toEqual([]);
     expect(result.edges).toEqual([]);
   });
 
-  it('düğümleri derinliğe göre sütunlara dizer', () => {
+  it('arranges nodes into columns by depth', () => {
     const result = layoutGraph(graph([
       node({ modelName: 'Customer', depth: 0 }),
       node({ modelName: 'Order', depth: 1, isRoot: false }),
@@ -62,11 +62,11 @@ describe('layoutGraph', () => {
 
     expect(customer.x).toBeLessThan(order.x);
     expect(order.x).toBeLessThan(line.x);
-    // Aynı derinlikte olmadıkları için hepsi ilk satırdadır.
+    // Since they are not at the same depth, all are in the first row.
     expect(customer.y).toBe(order.y);
   });
 
-  it('aynı derinlikteki düğümleri alt alta yerleştirir', () => {
+  it('stacks nodes at the same depth vertically', () => {
     const result = layoutGraph(graph([
       node({ modelName: 'Order', depth: 1, isRoot: false }),
       node({ modelName: 'Invoice', depth: 1, isRoot: false })
@@ -78,11 +78,11 @@ describe('layoutGraph', () => {
     expect(invoice.y).toBeGreaterThan(order.y);
   });
 
-  it('kendine dönen ilmeği ve etiketini viewBox İÇİNDE tutar', () => {
-    // REGRESYON: ilmek düğümün ÜSTÜNE çizilir ve negatif y'ye taşar. viewBox'ın
-    // sol/üst köşesi "0 0" sabitlendiğinde kök modeldeki SelfReference ilişkisi
-    // ekranın üstünden kırpılıyordu. Self Reference seçildiğinde hedef otomatik
-    // olarak modelin kendisi olduğu için bu en olası senaryodur.
+  it('keeps the self-loop and its label INSIDE the viewBox', () => {
+    // REGRESSION: the loop is drawn ABOVE the node and overflows into negative y. When the
+    // viewBox's top/left corner was fixed at "0 0", a SelfReference relationship on the root model
+    // was clipped off the top of the screen. Since choosing Self Reference automatically makes
+    // the target the model itself, this is the most likely scenario.
     const result = layoutGraph(graph(
       [node({ modelName: 'Category', depth: 0 })],
       [edge({ sourceModel: 'Category', targetModel: 'Category', relationshipType: 'SelfReference' })]
@@ -92,14 +92,14 @@ describe('layoutGraph', () => {
     const box = parseViewBox(result.viewBox);
 
     expect(loop.isSelf).toBeTrue();
-    // İlmeğin etiketi düğümün üstündedir ve negatif koordinata düşer.
+    // The loop's label is above the node and falls at a negative coordinate.
     expect(loop.labelY).toBeLessThan(0);
-    // viewBox bunu kapsamalıdır.
+    // The viewBox must contain it.
     expect(box.minY).toBeLessThanOrEqual(loop.minY);
     expect(box.minX).toBeLessThanOrEqual(loop.minX);
   });
 
-  it('viewBox tüm düğümleri kapsar', () => {
+  it('the viewBox contains all nodes', () => {
     const result = layoutGraph(graph([
       node({ modelName: 'Customer', depth: 0 }),
       node({ modelName: 'Order', depth: 1, isRoot: false })
@@ -115,7 +115,7 @@ describe('layoutGraph', () => {
     }
   });
 
-  it('grafta bulunmayan modele giden kenarı atlar', () => {
+  it('skips an edge to a model not in the graph', () => {
     const result = layoutGraph(graph(
       [node({ modelName: 'Customer', depth: 0 })],
       [edge({ sourceModel: 'Customer', targetModel: 'Bilinmeyen' })]
@@ -124,7 +124,7 @@ describe('layoutGraph', () => {
     expect(result.edges).toEqual([]);
   });
 
-  it('kenar etiketi olarak property adını kullanır', () => {
+  it('uses the property name as the edge label', () => {
     const result = layoutGraph(graph(
       [
         node({ modelName: 'Customer', depth: 0 }),

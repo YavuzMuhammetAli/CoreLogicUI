@@ -26,7 +26,7 @@ import {
 } from './inspector-form';
 import { IconComponent } from '../../shared/icon/icon.component';
 
-/** Seçili kenarın panelde gösterilen hali. */
+/** The selected edge as shown in the panel. */
 interface EdgeView {
   step: WorkflowStep;
   port: ExitPort;
@@ -35,13 +35,13 @@ interface EdgeView {
 }
 
 /**
- * Tasarımcının sağ özellik paneli — seçili adımın HIZLI alanları.
+ * The designer's right-hand inspector panel — QUICK fields of the selected step.
  *
- * Panel tasarım belgesini doğrudan düzenler (store bileşen kapsamlı, tasarım
- * ekranından gelir). Her alan değişikliği saf bir dönüşümle yazılır; aynı alana
- * art arda yazmak tek geri al adımında birleşir (`inspector:{alan}:{adım}`).
- * Tüm ayarlar (form alanları, dallar, SLA politikası, düğme metinleri) adım
- * pop-up'ındadır; panel onu "Tüm ayarlar…" ile açar. Telefonda panel gösterilmez.
+ * The panel edits the design document directly (the store is component-scoped, provided by the
+ * design screen). Every field change is written through a pure transformation; consecutive writes
+ * to the same field merge into a single undo step (`inspector:{field}:{step}`).
+ * All settings (form fields, branches, SLA policy, button texts) are in the step
+ * pop-up; the panel opens it via "Tüm ayarlar…" (All settings…). The panel is not shown on phones.
  */
 @Component({
     selector: 'app-workflow-inspector',
@@ -56,15 +56,15 @@ export class WorkflowInspectorComponent {
 
   readonly roles = input<Role[]>([]);
   readonly users = input<AppUser[]>([]);
-  /** Seçili adımın doğrulama sorunları. */
+  /** Validation issues of the selected step. */
   readonly issues = input<IssueRow[]>([]);
 
-  /** Tüm ayarlar (adım pop-up'ı). */
+  /** All settings (step pop-up). */
   readonly openSettings = output<string>();
   readonly makeStart = output<string>();
   readonly duplicate = output<void>();
   readonly remove = output<void>();
-  /** Akışın tetikleyicisini düzenle (Tetikleyici sekmesine geçer). */
+  /** Edit the flow's trigger (switches to the Trigger tab). */
   readonly openTrigger = output<void>();
 
   readonly assignmentModes = ASSIGNMENT_MODE_OPTIONS;
@@ -72,7 +72,7 @@ export class WorkflowInspectorComponent {
 
   readonly readonly = this.store.readonly;
 
-  /** Tek adım seçiliyken o adım; aksi halde null. */
+  /** The step when a single step is selected; otherwise null. */
   readonly node = computed<WorkflowStep | null>(() => {
     const selection = this.store.selection();
     if (selection.edge || selection.nodes.length !== 1) return null;
@@ -112,7 +112,7 @@ export class WorkflowInspectorComponent {
       : null;
   });
 
-  /** Seçim yokken gösterilen akış özeti: tetik, koşul sayısı, etkinlik, başlangıç. */
+  /** Flow summary shown when nothing is selected: trigger, condition count, enabled state, start. */
   readonly flow = computed(() => {
     const doc = this.store.doc();
     const start = doc.graph.steps.find(step => sameKey(step.key, doc.graph.startStep));
@@ -129,7 +129,7 @@ export class WorkflowInspectorComponent {
     return selection.edge ? 0 : selection.nodes.length;
   });
 
-  /** Hedef seçicileri: adımlar (seçili adım hariç), ad + anahtar. */
+  /** Target pickers: steps (excluding the selected step), name + key. */
   readonly targets = computed(() => {
     const own = this.node()?.key ?? this.edge()?.step.key ?? '';
     return this.store.graph().steps
@@ -137,7 +137,7 @@ export class WorkflowInspectorComponent {
       .map(step => ({ key: step.key, label: step.name ? `${step.name} (${step.key})` : step.key }));
   });
 
-  /** Paralel adımın dalları: ad + atama özeti (düzenleme pop-up'ta). */
+  /** Branches of the parallel step: name + assignment summary (edited in the pop-up). */
   readonly branches = computed(() => {
     const step = this.node();
     if (step?.type !== 'parallel') return [];
@@ -149,7 +149,7 @@ export class WorkflowInspectorComponent {
     }));
   });
 
-  /** Son reddedilen anahtar girişinin sorunu; adım değişince temizlenir. */
+  /** Problem of the last rejected key input; cleared when the step changes. */
   readonly keyError = signal<KeyProblem | null>(null);
 
   private readonly lookup = computed<SummaryLookup>(() => {
@@ -170,7 +170,7 @@ export class WorkflowInspectorComponent {
     });
   }
 
-  // ── Alanlar ───────────────────────────────────────────────────────────────
+  // ── Fields ───────────────────────────────────────────────────────────────
 
   private apply(field: string, transform: (step: WorkflowStep) => WorkflowStep): void {
     const step = this.node();
@@ -229,9 +229,9 @@ export class WorkflowInspectorComponent {
   }
 
   /**
-   * Anahtar odak kaybında (ya da Enter'da) uygulanır — yazarken her harfte
-   * yeniden adlandırmak bağlantıları ve seçimi her tuşta taşırdı. Geçersiz
-   * anahtar uygulanmaz, alanın altında nedeni yazılır.
+   * The key is applied on blur (or Enter) — renaming on every typed letter
+   * would move connections and the selection on each keystroke. An invalid
+   * key is not applied; the reason is shown below the field.
    */
   commitKey(event: Event): void {
     const step = this.node();
@@ -252,12 +252,12 @@ export class WorkflowInspectorComponent {
     this.store.selection.set(selectNodes([value]));
   }
 
-  // ── Etiketler ─────────────────────────────────────────────────────────────
+  // ── Labels ─────────────────────────────────────────────────────────────
 
   /**
-   * Çıkışın metni: görevin olumlu çıkışı "Tamamlanınca", onayınki "Onaylanınca";
-   * koşulda durumun etiketi ya da "Hiçbiri eşleşmezse". Tür, çıkışın SAHİBİ
-   * adımdan okunur — kenar seçiliyken seçili düğüm yoktur.
+   * Text of the exit: a task's positive exit is "Tamamlanınca" (When completed), an approval's "Onaylanınca" (When approved);
+   * in a condition the case's label or "Hiçbiri eşleşmezse" (If none matches). The type is read from the step
+   * that OWNS the exit — while an edge is selected there is no selected node.
    */
   exitLabel(step: WorkflowStep, port: ExitPort): string {
     const t = (key: string) => this.languageService.t(key);
@@ -270,7 +270,7 @@ export class WorkflowInspectorComponent {
     return t(`workflow.inspector.exit.${port}`);
   }
 
-  /** Boş hedef seçeneği: onay/red'de terminal, koşul yolunda "— Seçin —" (eksik bağlantı). */
+  /** Empty target option: terminal for approve/reject, "— Seçin —" (Select) on a condition path (missing connection). */
   terminalKey(kind: ExitKind): string {
     switch (kind) {
       case 'approve': return 'workflow.build.terminalCompleted';
@@ -279,7 +279,7 @@ export class WorkflowInspectorComponent {
     }
   }
 
-  /** Bekleme özeti ("2 gün", "Bitis tarihine kadar"). */
+  /** Wait summary ("2 gün", "Bitis tarihine kadar" — "2 days", "until Bitis"). */
   timerText(step: WorkflowStep): string {
     return timerSummary(step, {
       roleName: () => null,
@@ -288,7 +288,7 @@ export class WorkflowInspectorComponent {
     });
   }
 
-  /** Alan güncelle satırının panel özeti: "= Onaylandı", "formül", "temizlenir". */
+  /** Panel summary of a field update row: "= Onaylandı", "formül", "temizlenir" (value, formula, cleared). */
   setSummary(set: WorkflowSetField): string {
     switch (set.mode) {
       case 'clear':   return this.languageService.t('workflow.action.modeClear');
@@ -297,7 +297,7 @@ export class WorkflowInspectorComponent {
     }
   }
 
-  /** Bildirim alıcısının adı (rol/kişi listesinden). */
+  /** Name of the notification recipient (from the role/user list). */
   recipientLabel(recipient: WorkflowRecipient): string {
     if (recipient.kind === 'stepAssignees') {
       const step = this.store.graph().steps.find(s => sameKey(s.key, recipient.stepKey));
@@ -312,7 +312,7 @@ export class WorkflowInspectorComponent {
     });
   }
 
-  /** Koşul durumunun panel özeti: satır sayısı ya da formül. */
+  /** Panel summary of a condition case: row count or formula. */
   caseSummary(item: NonNullable<WorkflowStep['cases']>[number]): string {
     return item.expression != null
       ? this.languageService.t('workflow.case.summaryFormula')

@@ -1,9 +1,9 @@
 /**
- * Fotoğrafı olmayan kullanıcının avatarında gösterilen baş harfler.
+ * Initials shown in the avatar of a user without a photo.
  *
- * Topbar ve profil ekranı aynı kuralı kullanır — eskiden profil "TK" gösterirken
- * topbar boş bir daire gösteriyordu. Büyük harf Türkçe kurala göre yapılır
- * (ismail → İ): ad bir isimdir, arayüz diline bağlı değildir.
+ * The topbar and the profile screen use the same rule — previously the profile showed "TK" while
+ * the topbar showed an empty circle. Uppercasing follows Turkish rules
+ * (ismail → İ): a name is a name, it does not depend on the UI language.
  */
 export function userInitials(
   firstName: string | null | undefined,
@@ -15,8 +15,8 @@ export function userInitials(
 }
 
 /**
- * Tek parça tam addan baş harfler (JWT'deki ad claim'i ayrı ad/soyad taşımaz):
- * ilk ve son kelimenin ilk harfi, tek kelimeyse onun ilk harfi.
+ * Initials from a single full-name string (the name claim in the JWT has no separate first/last name):
+ * first letter of the first and last words, or of the single word if there is only one.
  */
 export function initialsFromFullName(
   fullName: string | null | undefined,

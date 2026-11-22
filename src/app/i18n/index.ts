@@ -18,16 +18,16 @@ import { NOTIFICATION_I18N } from './notification.i18n';
 import { SCREEN_I18N } from './screen.i18n';
 
 /**
- * Ana pakete giren çeviri sözlüklerinin birleşimi. Yeni bir ekran çevrildiğinde
- * burada bir `*.i18n.ts` import'u eklenir ve spread edilir — anahtarlar tüm
- * dosyalarda benzersiz olmalıdır (namespace öneki bunu garanti eder, örn. 'login.*').
+ * Union of the translation dictionaries that go into the main bundle. When a new screen is translated,
+ * a `*.i18n.ts` import is added here and spread — keys must be unique across all
+ * files (the namespace prefix guarantees this, e.g. 'login.*').
  *
- * YALNIZ TEK BİR LAZY EKRANIN kullandığı büyük sözlükler burada DEĞİL, o ekranın
- * parçasıyla iner (`i18n/lazy/*`, bkz. registerTranslations): `help.*` (tip/kural kılavuzu —
- * yalnız şema ekranı) ve `parameter.*` (yalnız Parametreler). İkisi ana paketin yaklaşık
- * 100 KB'ıydı. `design.*` (Tasarım sayfası + tasarımcılar) da aynı yoldan iner. Bir anahtarı başka bir ekranda da kullanmak gerekirse sözlüğü buraya geri
- * almak gerekir — yoksa o ekranda ham anahtar görünür. Testler tüm sözlükleri
- * `all-translations.ts` üzerinden denetler.
+ * Large dictionaries used by ONLY ONE LAZY SCREEN are NOT here; they load with that screen's
+ * chunk (`i18n/lazy/*`, see registerTranslations): `help.*` (type/rule guide —
+ * schema screen only) and `parameter.*` (Parametreler (Parameters) only). The two were about
+ * 100 KB of the main bundle. `design.*` (Design page + designers) loads the same way too. If a key is also needed on another screen, the dictionary must be moved back
+ * here — otherwise the raw key shows on that screen. Tests check all dictionaries
+ * through `all-translations.ts`.
  */
 export const TRANSLATIONS: Translations = {
   ...COMMON_I18N,
@@ -50,8 +50,8 @@ export const TRANSLATIONS: Translations = {
 };
 
 /**
- * Lazy bir parçanın sözlüğünü çalışma anındaki sözlüğe ekler. `i18n/lazy/*` modülleri
- * bunu modül yüklenirken (bileşen oluşmadan önce) çağırır; tekrar çağrı zararsızdır.
+ * Adds a lazy chunk's dictionary to the runtime dictionary. `i18n/lazy/*` modules
+ * call it while the module loads (before the component is created); calling it again is harmless.
  */
 export function registerTranslations(dictionary: Translations): void {
   Object.assign(TRANSLATIONS, dictionary);

@@ -1,11 +1,11 @@
 /**
- * Model ilişkileri (G1) — backend Entities.DTOs.Relationship* karşılıkları.
+ * Model relationships (G1) — counterparts of the backend Entities.DTOs.Relationship*.
  *
- * Bu ÜÇÜNCÜ ve bağımsız bir FK mekanizmasıdır; mevcut alt-model ağacı
- * (parentTableName) ve `lookup` kolon tipi aynen çalışmaya devam eder.
+ * This is a THIRD, independent FK mechanism; the existing sub-model tree
+ * (parentTableName) and the `lookup` column type keep working as they are.
  */
 
-/** Backend Core.Entities.Concrete.RelationshipType enum'ı ile birebir eşleşir. */
+/** Matches the backend Core.Entities.Concrete.RelationshipType enum one to one. */
 export enum RelationshipType {
   OneToOne = 1,
   OneToMany = 2,
@@ -14,7 +14,7 @@ export enum RelationshipType {
   SelfReference = 5
 }
 
-/** UI dropdown'ında gösterilecek ilişki tipi seçenekleri (etiketler i18n anahtarıdır). */
+/** Relationship type options shown in the UI dropdown (labels are i18n keys). */
 export const RELATIONSHIP_TYPE_OPTIONS: { value: RelationshipType; labelKey: string }[] = [
   { value: RelationshipType.OneToOne,      labelKey: 'relationship.type.oneToOne' },
   { value: RelationshipType.OneToMany,     labelKey: 'relationship.type.oneToMany' },
@@ -23,12 +23,12 @@ export const RELATIONSHIP_TYPE_OPTIONS: { value: RelationshipType; labelKey: str
   { value: RelationshipType.SelfReference, labelKey: 'relationship.type.selfReference' }
 ];
 
-/** Ters property'nin ZORUNLU olduğu tipler (backend ile aynı kural). */
+/** Types for which the inverse property is MANDATORY (same rule as the backend). */
 export function requiresInverse(type: RelationshipType): boolean {
   return type === RelationshipType.OneToMany || type === RelationshipType.ManyToMany;
 }
 
-/** Backend'den dönen ilişki tanımı. */
+/** Relationship definition returned by the backend. */
 export interface RelationshipDefinition {
   relationshipId: string;
   sourceModel: string;
@@ -36,13 +36,13 @@ export interface RelationshipDefinition {
   relationshipType: RelationshipType;
   propertyName: string;
   inverseProperty?: string | null;
-  /** Çözülmüş FK kolon adı (boş bırakılmışsa backend türetir). */
+  /** Resolved FK column name (derived by the backend if left empty). */
   foreignKeyName?: string | null;
-  /** Çözülmüş join tablo adı — yalnızca ManyToMany. */
+  /** Resolved join table name — ManyToMany only. */
   joinTableName?: string | null;
   cascadeDelete: boolean;
   required: boolean;
-  /** Graph'ta hesaplanan derinlik — istemci göndermez. */
+  /** Depth computed in the graph — not sent by the client. */
   depth: number;
   order: number;
   displayName?: string | null;
@@ -50,7 +50,7 @@ export interface RelationshipDefinition {
   updatedAt: string;
 }
 
-/** İlişki oluşturma/güncelleme gövdesi. */
+/** Relationship create/update body. */
 export interface RelationshipUpsert {
   targetModel: string;
   relationshipType: RelationshipType;
@@ -64,7 +64,7 @@ export interface RelationshipUpsert {
   displayName?: string | null;
 }
 
-/** Tek bir doğrulama bulgusu. */
+/** A single validation finding. */
 export interface ValidationIssue {
   code: string;
   message: string;
@@ -73,7 +73,7 @@ export interface ValidationIssue {
   path?: string | null;
 }
 
-/** Graph doğrulama sonucu. */
+/** Graph validation result. */
 export interface RelationshipValidationResult {
   isValid: boolean;
   maxDepth: number;
@@ -82,18 +82,18 @@ export interface RelationshipValidationResult {
   warnings: ValidationIssue[];
 }
 
-/** Görselleştirme için graph düğümü. */
+/** Graph node for visualization. */
 export interface EntityGraphNode {
   modelName: string;
   depth: number;
   isRoot: boolean;
   isPublished: boolean;
-  /** Derinlik sınırını aşıyor — UI kırmızı gösterir. */
+  /** Exceeds the depth limit — the UI shows it in red. */
   exceedsMaxDepth: boolean;
   columnCount: number;
 }
 
-/** Görselleştirme için graph kenarı. */
+/** Graph edge for visualization. */
 export interface EntityGraphEdge {
   relationshipId: string;
   sourceModel: string;
@@ -114,13 +114,13 @@ export interface EntityGraph {
   edges: EntityGraphEdge[];
 }
 
-/** Önizlemede gösterilen, model başına üretilecek C# kodu. */
+/** C# code to be generated per model, shown in the preview. */
 export interface GeneratedModelPreview {
   modelName: string;
   generatedCode: string;
 }
 
-/** Publish önizlemesi — assembly'e yazılmadan üretilecek her şey. */
+/** Publish preview — everything that will be generated, without writing to the assembly. */
 export interface PublishPreview {
   rootModel: string;
   publishBatch: string[];

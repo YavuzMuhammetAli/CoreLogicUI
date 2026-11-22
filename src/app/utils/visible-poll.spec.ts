@@ -2,7 +2,7 @@ import { fakeAsync, tick } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { MAX_BACKOFF_MS, startVisiblePoll } from './visible-poll';
 
-/** Görünürlüğü elle değiştirilebilen sahte belge. */
+/** Fake document whose visibility can be changed manually. */
 function fakeDocument() {
   const listeners: (() => void)[] = [];
   const doc = {
@@ -16,7 +16,7 @@ function fakeDocument() {
 }
 
 describe('startVisiblePoll', () => {
-  it('hemen ve sonra aralıkla çalışır', fakeAsync(() => {
+  it('runs immediately and then at the interval', fakeAsync(() => {
     const doc = fakeDocument();
     let calls = 0;
     const poll = startVisiblePoll(() => { calls++; return of(1); }, 1000, doc as unknown as Document);
@@ -27,7 +27,7 @@ describe('startVisiblePoll', () => {
     poll.stop();
   }));
 
-  it('sekme gizliyken durur, görünür olunca hemen tazeler', fakeAsync(() => {
+  it('stops while the tab is hidden, refreshes immediately when visible', fakeAsync(() => {
     const doc = fakeDocument();
     let calls = 0;
     const poll = startVisiblePoll(() => { calls++; return of(1); }, 1000, doc as unknown as Document);
@@ -41,7 +41,7 @@ describe('startVisiblePoll', () => {
     poll.stop();
   }));
 
-  it('hatada aralığı katlar, başarıda düzeltir', fakeAsync(() => {
+  it('doubles the interval on error, resets it on success', fakeAsync(() => {
     const doc = fakeDocument();
     let fail = true;
     let calls = 0;
@@ -49,18 +49,18 @@ describe('startVisiblePoll', () => {
       1000, doc as unknown as Document);
 
     tick(1999);
-    expect(calls).toBe(1);          // ilk hata: sonraki 2 sn sonra
+    expect(calls).toBe(1);          // first error: next one after 2 s
     tick(1);
-    expect(calls).toBe(2);          // ikinci hata: sonraki 4 sn sonra
+    expect(calls).toBe(2);          // second error: next one after 4 s
     fail = false;
     tick(4000);
-    expect(calls).toBe(3);          // başarı: aralık yeniden 1 sn
+    expect(calls).toBe(3);          // success: interval back to 1 s
     tick(1000);
     expect(calls).toBe(4);
     poll.stop();
   }));
 
-  it('geri çekilme üst sınırı aşmaz ve stop dinleyiciyi kaldırır', fakeAsync(() => {
+  it('backoff does not exceed the cap and stop removes the listener', fakeAsync(() => {
     const doc = fakeDocument();
     let calls = 0;
     const poll = startVisiblePoll(() => { calls++; return throwError(() => new Error('x')); },

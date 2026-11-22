@@ -1,11 +1,11 @@
 <!--
-  Kimlikler görev ID'siyle öneklenir: kayıt detayında birden çok görev formu
-  aynı sayfada durabilir ve label/for eşleşmesi karışmamalı.
+  Ids are prefixed with the task ID: several task forms can sit on the same
+  record detail page and the label/for pairing must not get mixed up.
 -->
 @let prefix = 'wf-' + task().id + '-';
 
 <div class="panel">
-  <!-- Başlık yuvaları: kayıt detayı üstüne etiket, sağa görev künyesi yerleştirir. -->
+  <!-- Header slots: the record detail places a label on top and the task info on the right. -->
   <div class="panel-head">
     <div class="decision-title">
       <ng-content select="[decisionEyebrow]" />
@@ -70,7 +70,7 @@
     }
   </div>
 
-  <!-- Karar çubuğu — panelin altında, kenardan ayrık ve üst çizgiyle ayrılmış. -->
+  <!-- Decision bar — at the bottom of the panel, inset from the edge and separated by a top border. -->
   @if (!isClosed) {
     <div class="decision-actions">
       @if (schema.allowReject) {

@@ -4,14 +4,14 @@ import { AutoValuePlan, AutoValueRule, EMPTY_PLAN, computeAutoValues, AutoValueP
 import { DateValue, clientNow } from './expression';
 
 /**
- * Otomatik değer kurallarını bir kayıt formuna bağlar (model-detail üst formu ve
- * alt kayıt pop-up'ı ortak kullanır).
+ * Binds auto-value rules to a record form (shared by the model-detail top form and
+ * the sub-record pop-up).
  *
- * - Salt okunur kural hedefleri `disable` edilir. Kaydeden taraf `getRawValue()`
- *   kullanmalıdır, yoksa bu alanlar payload'dan düşer.
- * - Hesaplanan değer `emitEvent: false` ile yazılır: kendi `valueChanges`
- *   dinleyicimizi yeniden tetikleyip döngü kurmaz.
- * - Form yeniden kurulduğunda eski bağ `stop()` ile bırakılıp yenisi kurulmalıdır.
+ * - Read-only rule targets are `disable`d. The saving side must use `getRawValue()`,
+ *   otherwise these fields drop out of the payload.
+ * - The computed value is written with `emitEvent: false`: it does not re-trigger our own
+ *   `valueChanges` listener and create a loop.
+ * - When the form is rebuilt, release the old binding with `stop()` and create a new one.
  */
 export class AutoValueFormBinding {
   private sub?: Subscription;
@@ -29,7 +29,7 @@ export class AutoValueFormBinding {
     return new AutoValueFormBinding(form, EMPTY_PLAN, false);
   }
 
-  /** Salt okunurları kilitler, açılış kurallarını uygular ve değişiklikleri dinlemeye başlar. */
+  /** Locks read-only fields, applies on-open rules and starts listening for changes. */
   start(): this {
     for (const rule of this.plan.rules) {
       if (rule.readOnly) this.form.get(rule.column)?.disable({ emitEvent: false });
@@ -48,7 +48,7 @@ export class AutoValueFormBinding {
     this.sub = undefined;
   }
 
-  /** Kaydetmeden hemen önce çağrılır. */
+  /** Called right before saving. */
   runSave(): void {
     this.run('save');
     this.last = this.form.getRawValue();
@@ -62,7 +62,7 @@ export class AutoValueFormBinding {
     return !!this.plan.byColumn.get(column)?.readOnly;
   }
 
-  /** Numarası kayıtta verilecek alan (SEQ) — "Kaydedince atanır" ipucu için. */
+  /** A field whose number is assigned on save (SEQ) — for the "Kaydedince atanır" (assigned on save) hint. */
   isPending(column: string): boolean {
     return this.pendingColumns.has(column);
   }

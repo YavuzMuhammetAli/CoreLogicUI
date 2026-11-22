@@ -3,14 +3,14 @@ import { IconComponent } from '../icon/icon.component';
 import { peekModelIconPath, resolveModelIconPath } from './model-icon-catalog';
 
 /**
- * ModelIconComponent — yayınlanmış modelin ikonu (PublishedTable.Icon, admin yayınlarken seçer).
+ * ModelIconComponent — the icon of a published model (PublishedTable.Icon, chosen by the admin when publishing).
  *
- * Ad katalogdan (model-icons.manifest.json) gelir; path'i kendi kategorisinin lazy parçasından
- * yüklenir. Ad boşsa, katalogda yoksa ya da parça henüz gelmediyse varsayılan `table` çizilir —
- * bugünkü görünüm, boş kutu yok.
+ * The name comes from the catalog (model-icons.manifest.json); its path is loaded from its category's
+ * lazy chunk. If the name is empty, not in the catalog, or the chunk hasn't arrived yet, the default `table`
+ * is drawn — the current look, never an empty box.
  *
- * Kullanım:  <app-model-icon [icon]="model.icon" size="16" />
- *            <app-model-icon [icon]="t.icon" [filled]="rla.isActive" />   (filled yalnız varsayılan ikonda)
+ * Usage:     <app-model-icon [icon]="model.icon" size="16" />
+ *            <app-model-icon [icon]="t.icon" [filled]="rla.isActive" />   (filled only applies to the default icon)
  */
 @Component({
     selector: 'app-model-icon',
@@ -39,7 +39,7 @@ export class ModelIconComponent {
     effect(() => {
       const name = this.icon();
       const cached = peekModelIconPath(name);
-      // Önbellekteyse senkron yaz; değilse varsayılan çizilir, parça gelince değişir.
+      // If cached, write synchronously; otherwise the default is drawn and swapped when the chunk arrives.
       this.path.set(cached);
       if (cached || !name) return;
       resolveModelIconPath(name).then(d => {

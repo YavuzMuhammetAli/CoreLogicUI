@@ -31,7 +31,7 @@
 }
 
 <div class="ai-layout">
-  <!-- ── Sohbet listesi ──────────────────────────────────────────────────── -->
+  <!-- ── Conversation list ──────────────────────────────────────────────── -->
   <aside class="panel ai-side" [attr.aria-label]="'ai.conversationsAria' | t">
     <div class="panel-head">
       <h3>{{ 'ai.conversations' | t }}</h3>
@@ -66,7 +66,7 @@
     </div>
   </aside>
 
-  <!-- ── Mesaj akışı ─────────────────────────────────────────────────────── -->
+  <!-- ── Message stream ──────────────────────────────────────────────────── -->
   <section class="panel ai-main" [attr.aria-label]="'ai.chatAria' | t">
     <div class="panel-body ai-messages" role="log" aria-live="polite">
       @if (messages().length === 0 && !isStreaming()) {
@@ -114,8 +114,8 @@
           @if (streamingText()) {
             <p class="ai-message-text">{{ streamingText() }}</p>
           }
-          <!-- Faz + geçen süre: model metin yazmadan önce tool çağırabilir; bekleyiş görünür olsun.
-               Süre her saniye değiştiği için ekran okuyucuya duyurulmaz (aria-hidden). -->
+          <!-- Phase + elapsed time: the model may call tools before writing text; keep the wait visible.
+               The time changes every second, so it is not announced to screen readers (aria-hidden). -->
           <p class="ai-progress">
             <span class="spinner" aria-hidden="true"></span>
             @if (streamStatus()) {
@@ -154,7 +154,7 @@
     </div>
   </section>
 
-  <!-- ── Öneriler ────────────────────────────────────────────────────────── -->
+  <!-- ── Proposals ───────────────────────────────────────────────────────── -->
   <aside class="panel ai-side" [attr.aria-label]="'ai.proposalsAria' | t">
     <div class="panel-head">
       <h3>{{ 'ai.proposals' | t }}</h3>

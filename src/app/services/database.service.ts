@@ -10,17 +10,17 @@ export class DatabaseService {
 
   constructor(private http: HttpClient) {}
 
-  /** Veritabanını (ve temel şemayı) sıfırdan oluşturur */
+  /** Creates the database (and the base schema) from scratch */
   createDatabase(): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/createdatabase`, {});
   }
 
-  /** Yayınlanan dinamik tipler için SQL tabloları oluşturur */
+  /** Creates the SQL tables for published dynamic types */
   createTable(): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/createtable`, {});
   }
 
-  /** Veritabanı bağlantısını ve şemasını kontrol eder */
+  /** Checks the database connection and schema */
   checkDatabase(): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/checkdatabase`, {});
   }

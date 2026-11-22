@@ -3,10 +3,10 @@ import {
 } from '../../../models/workflow.model';
 
 /**
- * Bildirim düzenleyicisinin saf yardımcıları. Her biri adımın KOPYASINI döner.
+ * Pure helpers of the notification editor. Each returns a COPY of the step.
  *
- * Kanal listesi sunucuda "boş = yapılandırılmış hepsi" demektir; düzenleyicide
- * iki onay kutusu olarak görünür, ikisi de işaretliyse liste boş yazılır.
+ * On the server the channel list means "empty = all configured"; in the editor it
+ * appears as two checkboxes, and if both are checked the list is written empty.
  */
 
 export function notifyOf(step: WorkflowStep): WorkflowNotifyConfig {
@@ -23,7 +23,7 @@ function sameRecipient(a: WorkflowRecipient, b: WorkflowRecipient): boolean {
     && (a.stepKey ?? '').toLowerCase() === (b.stepKey ?? '').toLowerCase();
 }
 
-/** Aynı alıcı ikinci kez eklenmez. */
+/** The same recipient is not added twice. */
 export function addRecipient(step: WorkflowStep, recipient: WorkflowRecipient): WorkflowStep {
   const recipients = notifyOf(step).recipients;
   if (recipients.some(r => sameRecipient(r, recipient))) return step;
@@ -34,20 +34,20 @@ export function removeRecipient(step: WorkflowStep, index: number): WorkflowStep
   return patchNotify(step, { recipients: notifyOf(step).recipients.filter((_, i) => i !== index) });
 }
 
-/** Kanal işaretli mi — boş liste hepsi demek. */
+/** Is the channel checked — an empty list means all. */
 export function channelChecked(step: WorkflowStep, channel: WorkflowNotifyChannel): boolean {
   const channels = notifyOf(step).channels ?? [];
   return channels.length === 0 || channels.includes(channel);
 }
 
-/** Kanal aç/kapa; hepsi açıksa liste boşalır, son açık kanal kapatılamaz. */
+/** Toggles a channel; if all are on the list empties, the last enabled channel cannot be turned off. */
 export function toggleChannel(step: WorkflowStep, channel: WorkflowNotifyChannel, on: boolean): WorkflowStep {
   const checked = NOTIFY_CHANNELS.filter(c => c === channel ? on : channelChecked(step, c));
   if (checked.length === 0) return step;
   return patchNotify(step, { channels: checked.length === NOTIFY_CHANNELS.length ? [] : checked });
 }
 
-/** Kullanılabilir yer tutucular: kayıt alanları + sabitler. */
+/** Available placeholders: record fields + constants. */
 export function placeholderNames(columns: ReadonlyArray<string>): string[] {
   return [...columns.map(column => `record.${column}`), ...NOTIFY_FIXED_PLACEHOLDERS];
 }
@@ -55,9 +55,9 @@ export function placeholderNames(columns: ReadonlyArray<string>): string[] {
 const TOKEN = /\{\{\s*([A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)?)\s*\}\}/g;
 
 /**
- * Şablondaki tanınmayan yer tutucular — sunucu yayında reddeder
- * (WorkflowTemplateRenderer.IsKnown ile aynı kural). Kolon listesi boşsa
- * (model seçilmemiş) kayıt alanları denetlenmez.
+ * Unrecognised placeholders in the template — the server rejects them on publish
+ * (same rule as WorkflowTemplateRenderer.IsKnown). If the column list is empty
+ * (no model selected) record fields are not checked.
  */
 export function unknownPlaceholders(text: string | null | undefined, columns: ReadonlyArray<string>): string[] {
   const known = new Set(NOTIFY_FIXED_PLACEHOLDERS.map(n => n.toLowerCase()));
@@ -74,7 +74,7 @@ export function unknownPlaceholders(text: string | null | undefined, columns: Re
   return unknown;
 }
 
-/** Yer tutucuyu imleç konumuna (yoksa sona) ekler; yeni metin ve imlecin yeni yeri. */
+/** Inserts the placeholder at the caret position (or at the end); returns the new text and the new caret position. */
 export function insertPlaceholder(
   text: string, name: string, caret: number | null
 ): { text: string; caret: number } {

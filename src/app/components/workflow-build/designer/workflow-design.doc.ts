@@ -7,16 +7,16 @@ import {
 } from '../../../models/workflow.model';
 
 /**
- * Tasarım belgesi — akış tasarım ekranının TEK doğruluk kaynağı.
+ * Design document — the SINGLE source of truth of the flow design screen.
  *
- * Önceden kaynak ekranın Reactive Forms ağacıydı ve kayıtta `buildGraph()` her
- * adımı formdan YENİDEN kuruyordu. Formda karşılığı olmayan her şey kaybolurdu:
- * form alanının `maxLength`'i, paralel dalın formu, `entityStatusMap`'teki bitiş
- * etiketleri, tanımın tanımadığımız üst düzey alanları. Belge ham adım nesnelerini
- * olduğu gibi taşır; yalnız düzenlenen adım değişir.
+ * Previously the source was the screen's Reactive Forms tree and on save `buildGraph()`
+ * REBUILT every step from the form. Anything without a counterpart in the form was lost:
+ * the form field's `maxLength`, the parallel branch's form, the end labels in
+ * `entityStatusMap`, top-level fields of the definition we don't know. The document carries the raw
+ * step objects as they are; only the edited step changes.
  *
- * Belge değişmezdir (immutable): her komut yeni bir belge döner. Geri al/yinele
- * bu sayede bir anlık görüntü yığınından ibarettir.
+ * The document is immutable: every command returns a new document. Undo/redo
+ * is therefore just a stack of snapshots.
  */
 export interface WorkflowDesignMeta {
   name: string;
@@ -28,18 +28,18 @@ export interface WorkflowDesignMeta {
 
 export interface WorkflowDesignDoc {
   meta: WorkflowDesignMeta;
-  /** Tetikleme koşulları (hepsi VE ile bağlı). */
+  /** Trigger conditions (all joined with AND). */
   conditions: WorkflowCondition[];
   graph: WorkflowGraph;
   /**
-   * `definitionJson`'ın bizim yönetmediğimiz üst düzey alanları. Kayıtta AYNEN
-   * geri yazılır — başka bir istemcinin (ör. ileride tasarımcı yerleşimi, AI)
-   * eklediği alan bu ekranda kaydedince silinmesin.
+   * Top-level fields of `definitionJson` we don't manage. Written back UNCHANGED
+   * on save — so a field added by another client (e.g. a future designer layout, AI)
+   * is not deleted when saving on this screen.
    */
   extras: Record<string, unknown>;
 }
 
-/** Yeni akışın başlangıç belgesi — tasarım ekranının eski varsayılanlarıyla aynı. */
+/** Initial document of a new flow — same as the design screen's old defaults. */
 export function emptyDoc(): WorkflowDesignDoc {
   return {
     meta: { name: '', code: '', modelName: '', triggerEvent: 'onCreate', isEnabled: true },
@@ -49,10 +49,10 @@ export function emptyDoc(): WorkflowDesignDoc {
   };
 }
 
-/** Grafiğin bizim yönettiğimiz üst düzey alanları; geri kalanı `extras`'a gider. */
+/** Top-level graph fields we manage; the rest goes to `extras`. */
 const GRAPH_KEYS = new Set(['startStep', 'steps', 'entityStatusMap']);
 
-/** Sunucudaki tanımdan belge kurar. Bozuk `definitionJson` boş grafik verir. */
+/** Builds a document from the server definition. A broken `definitionJson` yields an empty graph. */
 export function docFromDefinition(definition: WorkflowDefinition): WorkflowDesignDoc {
   const raw = parseRawGraph(definition.definitionJson);
 
@@ -82,8 +82,8 @@ export function docFromDefinition(definition: WorkflowDefinition): WorkflowDesig
 }
 
 /**
- * Belgeden kayıt isteğini kurar. Grafik yeniden ÜRETİLMEZ, olduğu gibi
- * serileştirilir — düzenlenmeyen adımlar sunucuya geldikleri gibi gider.
+ * Builds the save request from the document. The graph is NOT regenerated, it is
+ * serialised as is — unedited steps go to the server exactly as they came.
  */
 export function docToPayload(doc: WorkflowDesignDoc, id: number | null): Partial<WorkflowDefinition> {
   return {
@@ -103,14 +103,14 @@ export function docToPayload(doc: WorkflowDesignDoc, id: number | null): Partial
   };
 }
 
-/** Kaydedilmemiş değişiklik denetimi için kararlı metin. */
+/** Stable text for the unsaved-changes check. */
 export function serializeDoc(doc: WorkflowDesignDoc): string {
   return JSON.stringify(doc);
 }
 
 /**
- * Konumdan bağımsız anahtar: düğüm sürüklemek doğrulama sonucunu değiştirmez,
- * bu yüzden canlı doğrulama yalnız bu anahtar değişince yeniden istenir.
+ * Position-independent key: dragging a node does not change the validation result,
+ * so live validation is only re-requested when this key changes.
  */
 export function semanticKey(doc: WorkflowDesignDoc): string {
   return JSON.stringify(doc, (key, value) => (key === 'x' || key === 'y') ? undefined : value);

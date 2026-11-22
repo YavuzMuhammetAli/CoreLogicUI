@@ -5,14 +5,14 @@ import { DeletedListComponent } from '../shared/deleted-list/deleted-list.compon
 import { DeletedItem, DeletedListSource } from '../shared/deleted-list/deleted-list.model';
 
 /**
- * Daha önce en az bir kez yayınlanmış olup pasiflenmiş (silinmiş) modelleri listeler.
- * /models sayfasından "Sil" ile pasiflenen yayınlanmış modeller burada görünür ve
- * Geri Yükle ile tekrar aktif hale getirilebilir (tablo ağacı + ModelDefinition sürümleri
- * aktif edilir, derlenmiş tip yeniden derlenir). Hiç yayınlanmamış taslaklar bu listeye
- * girmez — onlar için /drafts/deleted kullanılır.
+ * Lists models that were published at least once and have been deactivated (deleted).
+ * Published models deactivated with "Sil" (Delete) on the /models page appear here and
+ * can be reactivated with Geri Yükle (Restore) (the table tree + ModelDefinition versions
+ * are activated, the compiled type is recompiled). Never-published drafts do not land
+ * in this list — /drafts/deleted is used for those.
  *
- * Listeleme/hata/geri yükleme akışı DeletedListComponent'tedir; burada yalnızca
- * bu ekrana özel veri kaynağı tanımlanır.
+ * The list/error/restore flow lives in DeletedListComponent; only the data source
+ * specific to this screen is defined here.
  */
 @Component({
     selector: 'app-deleted-models',

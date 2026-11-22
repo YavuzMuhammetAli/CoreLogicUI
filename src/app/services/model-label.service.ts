@@ -2,14 +2,14 @@ import { Injectable, inject, signal, untracked } from '@angular/core';
 import { RecordMetadataService } from './record-metadata.service';
 
 /**
- * Model tablo adı (`SatinalmaTalebi`) → kullanıcının tanıdığı etiket ("Satınalma Talebi").
+ * Model table name (`SatinalmaTalebi`) → the label the user recognizes ("Satınalma Talebi").
  *
- * Yalnız model ADI taşıyan ekranlar (akış listeleri, süreçler, görevler, rapor rozetleri)
- * için; model listesini zaten çeken ekranlar etiketi doğrudan `model.label`'dan okur.
- * Liste `RecordMetadataService.models$()` önbelleğinden gelir — ek HTTP isteği yok.
+ * Only for screens that carry just the model NAME (workflow lists, instances, tasks, report
+ * badges); screens that already fetch the model list read the label directly from `model.label`.
+ * The list comes from the `RecordMetadataService.models$()` cache — no extra HTTP request.
  *
- * Etiket yoksa, model silinmişse ya da kullanıcı modeli göremiyorsa (admin olmayanda
- * `/models` yalnız Read izinlileri döner) tablo adı gösterilir.
+ * If there is no label, the model was deleted or the user cannot see the model (for non-admins
+ * `/models` returns only models with Read permission), the table name is shown.
  */
 @Injectable({ providedIn: 'root' })
 export class ModelLabelService {
@@ -19,7 +19,7 @@ export class ModelLabelService {
   private requested = false;
 
   constructor() {
-    // Etiket değişebilir (şema düzenlemesi, yeni yayın): sonraki okumada yeniden yüklenir.
+    // The label may change (schema edit, new publish): it is reloaded on the next read.
     this.metadata.modelsInvalidated$?.subscribe(() => { this.requested = false; });
   }
 
@@ -33,8 +33,8 @@ export class ModelLabelService {
     if (this.requested) return;
     this.requested = true;
 
-    // Şablon çalışırken çağrılır; önbellek doluysa abonelik SENKRON döner ve sinyal
-    // yazımı şablon tüketicisinin içinde kalırdı (NG0600). untracked onu dışarı alır.
+    // Called while the template runs; if the cache is filled the subscription returns SYNCHRONOUSLY and the
+    // signal write would happen inside the template consumer (NG0600). untracked moves it outside.
     untracked(() => {
       this.metadata.models$().subscribe(models => {
         const next = new Map<string, string>();

@@ -1,8 +1,8 @@
-/** Tek bir çeviri anahtarının TR/EN metin çifti. */
+/** TR/EN text pair of a single translation key. */
 export interface TranslationEntry {
   tr: string;
   en: string;
 }
 
-/** Anahtar → TR/EN metin çifti sözlüğü. Her özellik dosyası bu şekli üretir. */
+/** Key → TR/EN text pair dictionary. Every feature file produces this shape. */
 export type Translations = Record<string, TranslationEntry>;

@@ -13,11 +13,11 @@ const EXACT: IsActiveMatchOptions = { paths: 'exact', queryParams: 'ignored', fr
 const SUBSET: IsActiveMatchOptions = { paths: 'subset', queryParams: 'ignored', fragment: 'ignored', matrixParams: 'ignored' };
 
 /**
- * Tasarlanmış kenar çubuğu menüsü — admin'in Tasarım sayfasında kurduğu, kullanıcının rolüne düşen
- * navigasyon (çözümlenmiş ağaç: `resolveNav`). Tek seviye klasörler açılır/kapanır; kullanıcının
- * seçimi tarayıcıda hatırlanır, etkin sayfayı içeren klasör kendiliğinden açılır.
+ * Designed sidebar menu — the navigation the admin built on the Design page that applies to the user's
+ * role (resolved tree: `resolveNav`). Single-level folders expand/collapse; the user's
+ * choice is remembered in the browser, and the folder containing the active page opens automatically.
  *
- * `preview` kipinde (tasarımcı önizlemesi) bağlantılar gezinmez — kap `inert`'tir.
+ * In `preview` mode (designer preview) links do not navigate — the container is `inert`.
  */
 @Component({
     selector: 'app-sidebar-nav',
@@ -30,7 +30,7 @@ export class SidebarNavComponent {
   private readonly router = inject(Router);
 
   readonly nodes = input.required<readonly ResolvedNavNode[]>();
-  /** Klasör aç/kapa hafızasının anahtarı — farklı tasarımlarda aynı klasör kimliği olabilir. */
+  /** Key of the folder open/closed memory — different designs may have the same folder id. */
   readonly layoutId = input<number | null>(null);
   readonly pendingTaskCount = input(0);
   readonly preview = input(false);
@@ -38,9 +38,9 @@ export class SidebarNavComponent {
   readonly exact = EXACT;
   readonly subset = SUBSET;
 
-  /** Kullanıcının elle açtığı/kapattığı klasörler (kimlik → açık mı). */
+  /** Folders the user opened/closed manually (id → open?). */
   private readonly toggled = signal<Record<string, boolean>>({});
-  /** Etkin sayfayı içeren klasörler — her gezinmede yeniden hesaplanır. */
+  /** Folders containing the active page — recomputed on every navigation. */
   private readonly activeFolders = signal<ReadonlySet<string>>(new Set());
 
   readonly openState = computed(() => {
@@ -55,7 +55,7 @@ export class SidebarNavComponent {
   });
 
   constructor() {
-    // Tasarım değişince hafızayı o tasarımın kaydından yükle.
+    // When the design changes, load the memory from that design's record.
     effect(() => {
       const key = this.storageKey();
       untracked(() => this.toggled.set(key ? readState(key) : {}));
@@ -77,7 +77,7 @@ export class SidebarNavComponent {
   toggle(folder: ResolvedNavFolder): void {
     const next = { ...this.toggled(), [folder.id]: !this.isOpen(folder) };
     this.toggled.set(next);
-    // Kullanıcı etkin klasörü kapatabilsin: otomatik açma bir sonraki gezinmeye kadar susar.
+    // So the user can close the active folder: auto-open stays quiet until the next navigation.
     if (this.activeFolders().has(folder.id)) {
       const active = new Set(this.activeFolders());
       active.delete(folder.id);
@@ -107,7 +107,7 @@ export class SidebarNavComponent {
   }
 }
 
-// Kullanıcı başına küçük bir kolaylık — tarayıcı deposu yoksa/engelliyse menü yine çalışır.
+// A small per-user convenience — if browser storage is missing/blocked the menu still works.
 function readState(key: string): Record<string, boolean> {
   try {
     const raw = localStorage.getItem(key);
@@ -122,6 +122,6 @@ function writeState(key: string, state: Record<string, boolean>): void {
   try {
     localStorage.setItem(key, JSON.stringify(state));
   } catch {
-    // Özel pencere / kota — hatırlanmaz, sorun değil.
+    // Private window / quota — not remembered, no problem.
   }
 }

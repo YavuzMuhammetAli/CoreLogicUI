@@ -1,9 +1,9 @@
-// Vade hücresinde tarih ve "gecikmiş" rozeti yan yana dursun.
+// Keep the date and the "overdue" badge side by side in the due-date cell.
 .data-table td .badge {
   margin-left: var(--space-2);
 }
 
-/* ── Telefon: kart listesi (≤640) ───────────────────────────────────────────── */
+/* ── Phone: card list (≤640) ────────────────────────────────────────────────── */
 
 .task-cards {
   display: none;

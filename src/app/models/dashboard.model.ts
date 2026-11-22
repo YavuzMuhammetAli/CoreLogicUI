@@ -1,6 +1,6 @@
 import { ChartType, ReportRunResult } from './report.model';
 
-/** DashboardWidgetDto ile eşleşir — bir rapora + grid konumuna işaret eder. */
+/** Matches DashboardWidgetDto — points to a report + a grid position. */
 export interface DashboardWidget {
   reportDefinitionId: number;
   chartType: ChartType;
@@ -10,22 +10,22 @@ export interface DashboardWidget {
   h: number;
 }
 
-/** DashboardDefinitionDto ile eşleşir — define gönderilir. */
+/** Matches DashboardDefinitionDto — sent to define. */
 export interface DashboardDefinition {
   id: number;
   name: string;
   widgets: DashboardWidget[];
-  /** Admin tarafından "navigasyonda göster" işaretlenmiş mi? Yalnızca admin set edebilir (backend zorunlu kılar). */
+  /** Has the admin marked it "show in navigation"? Only an admin can set it (enforced by the backend). */
   showInNav?: boolean;
 }
 
-/** DashboardWidgetResultDto ile eşleşir — yetkisiz/silinmiş rapor widget listesinde yer almaz. */
+/** Matches DashboardWidgetResultDto — an unauthorized/deleted report is not in the widget list. */
 export interface DashboardWidgetResult {
   widget: DashboardWidget;
   result: ReportRunResult | null;
 }
 
-/** DashboardRunResultDto ile eşleşir — /Dashboard/get yanıtı. */
+/** Matches DashboardRunResultDto — the /Dashboard/get response. */
 export interface DashboardRunResult {
   id: number;
   name: string;

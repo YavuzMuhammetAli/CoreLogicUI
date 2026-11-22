@@ -14,12 +14,12 @@ import { markDirty } from '../../utils/change-detection';
 import { IconComponent } from '../shared/icon/icon.component';
 
 /**
- * İş akışı tanım listesi.
+ * Workflow definition list.
  *
- * Yapı report-list'in aynısı: .page-header + .data-table + empty-state.
- * Satıra tıklamak tasarımcıyı açar (taslak düzenlenir, yayındaki salt okunur);
- * Yeni Sürüm ve Dışa aktar orada, listede yalnız satır içi hızlı işlemler kalır.
- * Silme onayı için native confirm() değil shared/confirm-dialog kullanılır.
+ * Same structure as report-list: .page-header + .data-table + empty-state.
+ * Clicking a row opens the designer (a draft is edited, a published one is read-only);
+ * New version and Export are there, the list keeps only inline quick actions.
+ * The delete confirmation uses shared/confirm-dialog, not native confirm().
  */
 @Component({
     selector: 'app-workflow-list',
@@ -40,13 +40,13 @@ export class WorkflowListComponent implements OnInit {
   loading = false;
   loadError: string | null = null;
 
-  /** Satır bazlı işlem kilidi — aynı akışa iki kez tıklanmasın. */
+  /** Per-row action lock — so the same workflow isn't clicked twice. */
   busyId: number | null = null;
 
-  /** confirm-dialog'u açan bekleyen silme isteği. */
+  /** Pending delete request that opens confirm-dialog. */
   pendingDelete: WorkflowDefinition | null = null;
 
-  /** Plan kotası — okunamazsa şerit gösterilmez. */
+  /** Plan quota — the strip isn't shown if it can't be read. */
   usage: WorkflowUsage | null = null;
   importing = false;
 
@@ -66,14 +66,14 @@ export class WorkflowListComponent implements OnInit {
     });
   }
 
-  /** "3 / 5" ya da sınırsızsa yalnız kullanım. */
+  /** "3 / 5", or just the usage if unlimited. */
   quotaText(used: number, limit: number | null | undefined): string {
     return limit == null ? String(used) : `${used} / ${limit}`;
   }
 
-  // ── Durdur / sürdür ───────────────────────────────────────────────────────
+  // ── Pause / resume ────────────────────────────────────────────────────────
 
-  /** Yayındaki akışın tetiğini durdurur ya da sürdürür; açık süreçler etkilenmez. */
+  /** Pauses or resumes the trigger of a published workflow; open processes aren't affected. */
   toggleEnabled(workflow: WorkflowDefinition): void {
     this.busyId = workflow.id;
     this.workflowService.setEnabled(workflow.id, !workflow.isEnabled).pipe(markDirty(this.cdr)).subscribe({
@@ -93,12 +93,12 @@ export class WorkflowListComponent implements OnInit {
     });
   }
 
-  // ── İçe aktarım ───────────────────────────────────────────────────────────
+  // ── Import ────────────────────────────────────────────────────────────────
 
   /**
-   * Paket her zaman yeni bir TASLAK olarak eklenir; kod çakışırsa sonek alır.
-   * Rol/kişi atamaları hedef şirkette geçersiz olabilir — tasarımcı bunları
-   * sorun olarak gösterir.
+   * A package is always added as a new DRAFT; if the code collides it gets a suffix.
+   * Role/person assignments may be invalid in the target company — the designer shows
+   * them as issues.
    */
   onImportFile(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -134,7 +134,7 @@ export class WorkflowListComponent implements OnInit {
     });
   }
 
-  /** Arşiv dahil tüm kodlar — içe aktarılan akış mevcut bir kodun üstüne yazılmasın. */
+  /** All codes including archived — so an imported workflow doesn't overwrite an existing code. */
   private allCodes: string[] = [];
 
   load(): void {
@@ -147,16 +147,16 @@ export class WorkflowListComponent implements OnInit {
         if (res.success) {
           const all = res.data ?? [];
 
-          // Taslağın hangi sürüm olacağını göstermek için Code başına en yüksek
-          // yayın numarası — arşiv satırları gizlenmeden ÖNCE hesaplanır.
+          // The highest publish number per Code, to show which version the draft will become
+          // — computed BEFORE archived rows are hidden.
           this.allCodes = [...new Set(all.map(w => w.code))];
           this.maxVersionByCode = new Map();
           for (const w of all) {
             this.maxVersionByCode.set(w.code, Math.max(this.maxVersionByCode.get(w.code) ?? 0, w.version));
           }
 
-          // Arşivlenmiş sürümler listede tutulmaz; her yayında liste büyürdü.
-          // Geçmiş /workflows/versions/:code ekranında.
+          // Archived versions aren't kept in the list; it would grow with every publish.
+          // History is on the /workflows/versions/:code screen.
           this.workflows = all.filter(w => w.status !== 'Archived');
         } else {
           this.loadError = res.message ?? this.languageService.t('workflow.list.loadFailed');
@@ -189,10 +189,10 @@ export class WorkflowListComponent implements OnInit {
     });
   }
 
-  /** Code başına en yüksek yayın numarası (arşiv dahil). */
+  /** Highest publish number per Code (archived included). */
   private maxVersionByCode = new Map<string, number>();
 
-  /** Sürüm sütunu: yayınlanmışta "v2", yeni sürüm taslağında "v3 taslak". */
+  /** Version column: "v2" when published, "v3 taslak" (v3 draft) for a new version draft. */
   versionLabel(workflow: WorkflowDefinition): string {
     if (workflow.version > 0) return 'v' + workflow.version;
 
@@ -232,12 +232,12 @@ export class WorkflowListComponent implements OnInit {
     });
   }
 
-  /** Silme onayı metnindeki {name} yer tutucusunu doldurur. */
+  /** Fills the {name} placeholder in the delete confirmation text. */
   get deleteMessage(): string {
     return this.languageService.t('workflow.list.deleteConfirm', { name: this.pendingDelete?.name ?? '' });
   }
 
-  /** Durum rozetinin renk sınıfı. */
+  /** Color class of the status badge. */
   statusClass(status: string): string {
     switch (status) {
       case 'Published': return 'badge-success';

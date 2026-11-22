@@ -1,13 +1,13 @@
 import { Translations } from './translations.model';
 
 /**
- * Topbar bildirim zili çevirileri.
+ * Topbar notification bell translations.
  *
- * Kapsanan bileşenler:
+ * Covered components:
  *   components/shared/notification-bell → notification.*
  *
- * `notification.kind.*` anahtarları backend `WorkflowNotifyKinds` değerleriyle
- * birebir eşleşir; bilinmeyen tür `notification.kind.default`'a düşer.
+ * The `notification.kind.*` keys match the backend `WorkflowNotifyKinds` values
+ * one to one; an unknown kind falls back to `notification.kind.default`.
  */
 export const NOTIFICATION_I18N: Translations = {
   'notification.title': { tr: 'Bildirimler', en: 'Notifications' },
@@ -42,7 +42,7 @@ export const NOTIFICATION_I18N: Translations = {
     tr: 'Süreç reddedildi: {name}',
     en: 'Process was rejected: {name}'
   },
-  // Bildirim düğümü: başlık düğümün konusu (akış tasarımcısında yazılır).
+  // Notification node: the title is the node's subject (written in the workflow designer).
   'notification.kind.StepNotification': { tr: '{name}', en: '{name}' },
   'notification.kind.default': { tr: '{name}', en: '{name}' }
 };

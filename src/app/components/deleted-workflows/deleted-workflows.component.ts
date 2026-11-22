@@ -1,14 +1,15 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { map } from 'rxjs';
+import { LanguageService } from '../../services/language.service';
 import { WorkflowService } from '../../services/workflow.service';
 import { DeletedListComponent } from '../shared/deleted-list/deleted-list.component';
 import { DeletedItem, DeletedListSource } from '../shared/deleted-list/deleted-list.model';
 
 /**
- * Pasiflenmiş (silinmiş) iş akışı tanımlarını listeler.
+ * Lists deactivated (deleted) workflow definitions.
  *
- * Listeleme/hata/geri yükleme akışı DeletedListComponent'tedir; burada yalnızca
- * bu ekrana özel veri kaynağı tanımlanır (deleted-reports ile aynı desen).
+ * The list/error/restore flow lives in DeletedListComponent; only the data source
+ * specific to this screen is defined here (same pattern as deleted-reports).
  */
 @Component({
     selector: 'app-deleted-workflows',
@@ -18,6 +19,7 @@ import { DeletedItem, DeletedListSource } from '../shared/deleted-list/deleted-l
 })
 export class DeletedWorkflowsComponent {
   private readonly workflowService = inject(WorkflowService);
+  private readonly languageService = inject(LanguageService);
 
   readonly source: DeletedListSource = {
     i18nPrefix: 'deleted.workflows',
@@ -31,9 +33,9 @@ export class DeletedWorkflowsComponent {
           id: w.id,
           title: w.name,
           description: w.code,
-          // Hedef model ve sürüm rozetleri: aynı adlı iki akış varsa hangisi
-          // olduğunu ayırt etmeye yarar.
-          badges: [w.modelName, w.version > 0 ? `v${w.version}` : 'taslak'],
+          // Target model and version badges: if two workflows share a name, they help
+          // tell which one is which.
+          badges: [w.modelName, w.version > 0 ? `v${w.version}` : this.languageService.t('workflow.status.Draft')],
           restoreKey: w.id
         }))
       }))

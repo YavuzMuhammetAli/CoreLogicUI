@@ -1,12 +1,12 @@
 /**
- * Şirket kaydı / tenant provisioning modelleri — backend Entities.DTOs
- * (CompanyRegisterDto, ProvisionStatusDto) ile bire bir eşleşir.
+ * Company sign-up / tenant provisioning models — match the backend Entities.DTOs
+ * (CompanyRegisterDto, ProvisionStatusDto) one to one.
  */
 
-/** POST /Auth/register-company isteği. */
+/** POST /Auth/register-company request. */
 export interface CompanyRegisterDto {
   companyName: string;
-  /** Küçük harfe normalize edilir; ^[a-z0-9]{2,20}$ — DB adının kaynağı, değişmez. */
+  /** Normalized to lower case; ^[a-z0-9]{2,20}$ — source of the DB name, immutable. */
   companyCode: string;
   adminName: string;
   adminSurname: string;
@@ -14,33 +14,33 @@ export interface CompanyRegisterDto {
   password: string;
 }
 
-/** POST /Auth/register-company yanıtı. Doğrulama açıksa kurulum henüz başlamamıştır. */
+/** POST /Auth/register-company response. If verification is enabled, provisioning has not started yet. */
 export interface CompanyRegistrationResult {
   verificationRequired: boolean;
-  /** Yalnız doğrulama kapalıyken (geliştirme) dolu. */
+  /** Filled only when verification is disabled (development). */
   provisionId: string | null;
 }
 
-/** Tek kurulum adımı — ProvisionLog satırının UI izdüşümü. */
+/** A single provisioning step — the UI projection of a ProvisionLog row. */
 export interface ProvisionStep {
-  /** Backend adım sabiti (örn. "CreateDatabase") — i18n anahtarına eşlenir. */
+  /** Backend step constant (e.g. "CreateDatabase") — mapped to an i18n key. */
   stepName: string;
   status: 'Started' | 'Completed' | 'Failed';
   durationMs: number | null;
   error: string | null;
 }
 
-/** GET /Auth/provision-status/{id} yanıtındaki data alanı. */
+/** The data field of the GET /Auth/provision-status/{id} response. */
 export interface ProvisionStatus {
   provisionId: string;
   status: 'Running' | 'Completed' | 'Failed' | 'RolledBack';
   steps: ProvisionStep[];
   error: string | null;
-  /** Yalnızca Completed + ~10 dk penceresinde true — oturum startProvisionSession ile açılır. */
+  /** true only for Completed + within a ~10 min window — the session is opened with startProvisionSession. */
   autoLoginAvailable: boolean;
 }
 
-/** Kurulum sırasında UI'da gösterilen adımların sabit sırası (backend adım adları). */
+/** Fixed order of the steps shown in the UI during provisioning (backend step names). */
 export const PROVISION_STEP_ORDER: readonly string[] = [
   'ValidateAndReserve',
   'CreateDatabase',

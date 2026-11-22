@@ -19,7 +19,7 @@ function docWith(...keys: string[]): WorkflowDesignDoc {
 }
 
 describe('workflow-selection', () => {
-  it('selectNodes anahtarları büyük/küçük harf duyarsız tekilleştirir ve kenarı bırakır', () => {
+  it('selectNodes dedupes keys case-insensitively and drops the edge', () => {
     const selection = selectNodes(['a', 'A', 'b']);
 
     expect(selection.nodes).toEqual(['a', 'b']);
@@ -27,29 +27,29 @@ describe('workflow-selection', () => {
     expect(isNodeSelected(selection, 'B')).toBeTrue();
   });
 
-  it('kenar seçimi düğüm seçimini temizler (Delete neyi sileceğini bilsin)', () => {
+  it('selecting an edge clears the node selection (so Delete knows what to delete)', () => {
     const selection = selectEdge({ from: 'a', port: 'approve' });
     expect(selection.nodes).toEqual([]);
     expect(selection.edge).toEqual({ from: 'a', port: 'approve' });
   });
 
   describe('clickNode', () => {
-    it('ek tuşsuz tıklama yalnız o düğümü seçer', () => {
+    it('a plain click selects only that node', () => {
       expect(clickNode(selectNodes(['a', 'b']), 'c', false).nodes).toEqual(['c']);
     });
 
-    it('zaten seçili düğüme ek tuşsuz tıklamak çoklu seçimi korur (birlikte sürükleme)', () => {
+    it('a plain click on an already selected node keeps the multi-selection (drag together)', () => {
       const selection = selectNodes(['a', 'b']);
       expect(clickNode(selection, 'b', false)).toBe(selection);
     });
 
-    it('ek tuşla tıklama düğümü ekler ya da çıkarır', () => {
+    it('a modifier click adds or removes the node', () => {
       const added = clickNode(selectNodes(['a']), 'b', true);
       expect(added.nodes).toEqual(['a', 'b']);
       expect(clickNode(added, 'A', true).nodes).toEqual(['b']);
     });
 
-    it('kenar seçiliyken düğüme tıklamak kenarı bırakır', () => {
+    it('clicking a node while an edge is selected drops the edge', () => {
       const selection = clickNode(selectEdge({ from: 'a', port: 'reject' }), 'b', true);
       expect(selection.edge).toBeNull();
       expect(selection.nodes).toEqual(['b']);
@@ -57,14 +57,14 @@ describe('workflow-selection', () => {
   });
 
   describe('pruneSelection', () => {
-    it('belgede olmayan düğümleri ve kaynağı silinmiş kenarı atar', () => {
+    it('drops nodes not in the document and an edge whose source was deleted', () => {
       const doc = docWith('a');
 
       expect(pruneSelection(selectNodes(['a', 'b']), doc).nodes).toEqual(['a']);
       expect(pruneSelection(selectEdge({ from: 'b', port: 'approve' }), doc).edge).toBeNull();
     });
 
-    it('değişiklik yoksa aynı nesneyi döner', () => {
+    it('returns the same object when nothing changes', () => {
       const doc = docWith('a', 'b');
       const nodes = selectNodes(['A']);
       const edge = selectEdge({ from: 'b', port: 'approve' });

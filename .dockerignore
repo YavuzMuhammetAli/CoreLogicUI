@@ -1,4 +1,4 @@
-# Sunucuda Docker içinde `npm ci` + `ng build` ile yeniden üretilir.
+# Regenerated on the server inside Docker with `npm ci` + `ng build`.
 node_modules/
 dist/
 .angular/

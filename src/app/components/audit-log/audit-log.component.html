@@ -1,9 +1,9 @@
-<!-- Sayfa başlığı -->
+<!-- Page header -->
 <div class="page-header">
   <span class="eyebrow">{{ 'audit.title' | t }}</span>
 </div>
 
-<!-- Filtreler -->
+<!-- Filters -->
 <div class="panel">
   <div class="panel-head">
     <h2>{{ 'audit.filterTitle' | t }}</h2>
@@ -61,12 +61,12 @@
     </div>
   </div>
 
-  <!-- Hata -->
+  <!-- Error -->
   @if (loadError()) {
     <div class="alert alert-danger" style="margin: var(--space-4) var(--space-5)" role="alert">{{ loadError() }}</div>
   }
 
-  <!-- Yükleniyor -->
+  <!-- Loading -->
   @if (loading()) {
     <div class="empty-state">
       <span class="spinner" style="width: 32px; height: 32px;" [attr.aria-label]="'common.loading' | t"></span>
@@ -74,7 +74,7 @@
     </div>
   }
 
-  <!-- Boş -->
+  <!-- Empty -->
   @if (!loading() && !loadError() && total() === 0) {
     <div class="empty-state">
       <app-icon class="empty-icon" name="fact_check" size="40" />
@@ -83,7 +83,7 @@
     </div>
   }
 
-  <!-- Tablo -->
+  <!-- Table -->
   @if (!loading() && !loadError() && total() > 0) {
     <div class="table-wrapper">
       <table class="data-table" [attr.aria-label]="'audit.tableAriaLabel' | t">
@@ -143,7 +143,7 @@
       </table>
     </div>
     <div class="table-footer">
-      <!-- Kayıt aralığı -->
+      <!-- Record range -->
       <span class="eyebrow">
         @if (total() > 0) {
           {{ 'audit.recordCount' | t:{ start: pageRangeStart(), end: pageRangeEnd(), total: total() } }}
@@ -152,7 +152,7 @@
         }
       </span>
 
-      <!-- Sayfa numarası butonları (tek sayfa ise gizle) -->
+      <!-- Page number buttons (hidden when there is a single page) -->
       @if (totalPages() > 1) {
         <nav class="pagination" [attr.aria-label]="'audit.paginationAriaLabel' | t">
           <button class="page-btn" type="button" (click)="prevPage()"
@@ -186,7 +186,7 @@
         </nav>
       }
 
-      <!-- Sayfa başına kayıt seçici -->
+      <!-- Records-per-page selector -->
       <div class="page-size-selector">
         <label class="sr-only" for="pageSizeSelect">{{ 'audit.pageSizeAriaLabel' | t }}</label>
         <select id="pageSizeSelect"

@@ -1,4 +1,4 @@
-import '../../i18n/lazy/design'; // design.* sözlüğü bu parçayla iner
+import '../../i18n/lazy/design'; // the design.* dictionary loads with this chunk
 import {
   ChangeDetectionStrategy, Component, DestroyRef, HostListener, computed, inject, signal
 } from '@angular/core';
@@ -45,24 +45,24 @@ const EMPTY_LIST: ListLayout = { schemaVersion: 1, columns: [] };
 type PreviewFrame = 'desktop' | 'tablet' | 'phone';
 const PREVIEW_WIDTH: Record<PreviewFrame, number | null> = { desktop: null, tablet: 720, phone: 390 };
 
-/** Sunucunun yazma sonucu ya da hata gövdesi. */
+/** The server's write result or the error body. */
 type SaveOutcome = { ok: true; data: ScreenLayoutSaveResultDto; message: string } | { ok: false };
 
 /**
- * Ekran Tasarımı — /build/:typeName/screen (admin).
+ * Screen Design — /build/:typeName/screen (admin).
  *
- * Admin, yayınlanmış bir modelin kayıt formunu (sekme/bölüm/12 kolonluk ızgara) ve liste
- * kolonlarını görsel olarak düzenler. Yaşam döngüsü taslak + yayın: Kaydet taslağı yazar,
- * kullanıcılar yalnız yayındakini görür; "Yayınla" sunucuda modelin GÜNCEL şemasına karşı
- * yeniden doğrulanır.
+ * The admin visually edits a published model's record form (tab/section/12-column grid) and list
+ * columns. Lifecycle is draft + publish: Save writes the draft,
+ * users see only the published one; "Yayınla" (Publish) is re-validated on the server against
+ * the model's CURRENT schema.
  *
- * Form ve liste ayrı belgelerdir (iki depo, iki kilit damgası); ikisi de sayfada canlıdır,
- * görünüm geçişi düzenlemeyi kaybettirmez. Tasarımcı yalnız sunumu değiştirir — etiket ve
- * kurallar şema ekranındadır.
+ * Form and list are separate documents (two stores, two lock stamps); both are live on the page,
+ * switching views does not lose edits. The designer changes only presentation — labels and
+ * rules are on the schema screen.
  *
- * Her görünümün bir VARSAYILAN tasarımı ve rollere atanmış adlandırılmış varyantları olabilir
- * (migrasyon 026). Kullanıcıya hangisinin düşeceğini sunucu seçer: öncelik sırasında rolü eşleşen
- * ilk yayınlanmış varyant, yoksa varsayılan. Depo, seçili tasarımın belgesini tutar (`?layout=ID`).
+ * Each view can have a DEFAULT design and named variants assigned to roles
+ * (migration 026). The server picks which one a user gets: in priority order, the first published
+ * variant with a matching role, otherwise the default. The store holds the selected design's document (`?layout=ID`).
  */
 @Component({
     selector: 'app-screen-designer',
@@ -94,21 +94,21 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
   readonly conflict = signal(false);
   readonly busy = signal<'save' | 'publish' | 'discard' | 'reset' | 'variant' | null>(null);
 
-  /** Sunucudaki tüm tasarımlar (iki görünüm, varsayılan + varyantlar). */
+  /** All designs on the server (both views, default + variants). */
   readonly layouts = signal<ScreenLayoutViewStateDto[]>([]);
   readonly roles = signal<Role[]>([]);
-  /** Görünüm başına seçili tasarım; null = varsayılan. */
+  /** Selected design per view; null = default. */
   readonly formLayoutId = signal<number | null>(null);
   readonly listLayoutId = signal<number | null>(null);
-  /** Varsayılan satırı olmayan görünümün tohumu için eski "Kolonlar" ayarı. */
+  /** Legacy "Kolonlar" (Columns) setting, used to seed a view that has no default row. */
   private legacyDetail: string[] = [];
   private legacyList: string[] = [];
-  /** İlk yüklemede `?layout=` ile istenen tasarım. */
+  /** The design requested via `?layout=` on first load. */
   private requestedLayoutId: number | null = null;
 
   readonly formStore = new LayoutDesignerStore<FormLayout>(EMPTY_FORM, serializeLayout);
   readonly listStore = new LayoutDesignerStore<ListLayout>(EMPTY_LIST, serializeLayout);
-  /** Sunucudaki satırların durumu (yayın sürümü, var mı). */
+  /** State of the server rows (published version, whether it exists). */
   readonly formState = signal<ScreenLayoutViewStateDto | null>(null);
   readonly listState = signal<ScreenLayoutViewStateDto | null>(null);
 
@@ -124,9 +124,9 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
   readonly confirmReset = signal(false);
   readonly confirmLeave = signal(false);
   private resolveLeave: ((leave: boolean) => void) | null = null;
-  /** Kirliyken başka tasarıma geçiş isteği — onay bekler. */
+  /** Request to switch to another design while dirty — awaits confirmation. */
   readonly pendingSwitch = signal<{ id: number | null } | null>(null);
-  /** Varyant diyaloğu: yeni tasarım ya da seçili varyantın ayarları. */
+  /** Variant dialog: a new design or the selected variant's settings. */
   readonly variantDialog = signal<'create' | 'edit' | null>(null);
   readonly copyCurrent = signal(true);
 
@@ -144,13 +144,13 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
   readonly anyDirty = computed(() => this.formStore.dirty() || this.listStore.dirty());
 
   readonly currentLayoutId = computed(() => this.view() === 'form' ? this.formLayoutId() : this.listLayoutId());
-  /** Seçili tasarım rollere atanmış bir varyant mı (varsayılan değil). */
+  /** Whether the selected design is a variant assigned to roles (not the default). */
   readonly isVariant = computed(() => this.currentLayoutId() !== null);
-  /** Görünümün varyantları, öncelik sırasıyla. */
+  /** The view's variants, in priority order. */
   readonly currentVariants = computed(() => this.variantsOf(this.view()));
   readonly variantIndex = computed(() => this.currentVariants().findIndex(v => v.id === this.currentLayoutId()));
 
-  /** Sunucuda henüz satır yok: ilk taslak bugünkü görünümden tohumlandı, kaydedilmedi. */
+  /** No row on the server yet: the first draft was seeded from the current view, not saved. */
   readonly notSaved = computed(() => !this.currentState()?.exists);
   readonly hasUnpublished = computed(() =>
     this.currentStore().dirty() || !!this.currentState()?.hasUnpublishedChanges || this.notSaved());
@@ -170,7 +170,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
       this.view.set(params.get('view') === 'list' ? 'list' : 'form');
     });
 
-    // Telefon: sürükle-bırak yerine yapı listesi (iş akışı tasarımcısıyla aynı eşik).
+    // Phone: a structure list instead of drag and drop (same threshold as the workflow designer).
     const query = window.matchMedia('(max-width: 768px)');
     const sync = () => this.narrow.set(query.matches);
     sync();
@@ -178,11 +178,11 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     destroyRef.onDestroy(() => query.removeEventListener('change', sync));
   }
 
-  // ─── Yükleme ───────────────────────────────────────────────────────────────
+  // ─── Loading ───────────────────────────────────────────────────────────────
 
   /**
-   * Model, kurallar, sunucu durumu ve eski "Kolonlar" ayarları birlikte okunur. Kolonlar ve
-   * kurallar önbellekten DEĞİL taze alınır: admin şema ekranından yeni dönmüş olabilir.
+   * Model, rules, server state and the legacy "Kolonlar" (Columns) settings are read together. Columns and
+   * rules are fetched fresh, NOT from the cache: the admin may have just come back from the schema screen.
    */
   private load(): void {
     const typeName = this.typeName();
@@ -218,7 +218,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
         this.legacyDetail = detail?.success ? detail.data?.visibleColumns ?? [] : [];
         this.legacyList = list?.success ? list.data?.visibleColumns ?? [] : [];
 
-        // `?layout=` (kayıt ekranındaki "Ekranı tasarla" baktığı tasarımı açar); varsayılansa seçim boş kalır.
+        // `?layout=` (the record screen's "Ekranı tasarla" (Design screen) opens the design it shows); if it is the default, the selection stays empty.
         const requested = this.layouts().find(l => l.id === this.requestedLayoutId);
         this.requestedLayoutId = null;
         if (requested) this.view.set(requested.viewType);
@@ -235,7 +235,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     });
   }
 
-  /** Kayıtlı taslak varsa o; yoksa (ya da okunamıyorsa) bugünkü görünümden ilk taslak. */
+  /** The saved draft if there is one; otherwise (or if unreadable) the first draft from the current view. */
   private applyFormState(state: ScreenLayoutViewStateDto | null, legacyVisible: string[]): void {
     this.formState.set(state);
     const doc = parseFormLayout(state?.draftJson)
@@ -250,7 +250,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     this.listStore.load(doc, state?.exists ? state.lastModifiedOn : null);
   }
 
-  /** Görünümün seçili tasarımını depoya yükler; seçili varyant artık yoksa varsayılana döner. */
+  /** Loads the view's selected design into the store; if the selected variant no longer exists, falls back to the default. */
   private applyView(view: ScreenViewType): void {
     const selected = this.selectedSignal(view);
     let row = selected() === null
@@ -264,7 +264,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     else this.applyListState(row, this.legacyList);
   }
 
-  /** Tasarımların sunucu durumunu yeniden okur, tek görünümü yeniden yükler (taslağı at / sil sonrası). */
+  /** Re-reads the designs' server state and reloads a single view (after discarding / deleting the draft). */
   private async reloadView(view: ScreenViewType): Promise<void> {
     const state = await firstValueFrom(this.screenLayouts.getState(this.typeName()));
     this.layouts.set(state.data?.layouts ?? []);
@@ -288,19 +288,19 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     });
   }
 
-  // ─── Görünüm ───────────────────────────────────────────────────────────────
+  // ─── View ──────────────────────────────────────────────────────────────────
 
   setView(view: ScreenViewType): void {
     if (view === this.view()) return;
-    // Adres çubuğu da güncellenir: yenileme ve paylaşılan bağlantı aynı görünümü açsın.
+    // The address bar is updated too: a reload or a shared link should open the same view.
     this.view.set(view);
     this.preview.set(false);
     this.syncUrl();
   }
 
-  // ─── Tasarımlar (varsayılan + rollere özel) ────────────────────────────────
+  // ─── Designs (default + role-specific) ────────────────────────────────────
 
-  /** Seçici değişti: '' = varsayılan. Kirliyse önce onay. */
+  /** The picker changed: '' = default. If dirty, confirm first. */
   onSelectLayout(value: string): void {
     const id = value ? Number(value) : null;
     if (id === this.currentLayoutId()) return;
@@ -344,8 +344,8 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
   }
 
   /**
-   * Yeni varyant. "Mevcut tasarımdan kopyala" seçiliyse depodaki belge (kaydedilmemiş değişiklikler
-   * dahil) yeni tasarıma gider — "farklı kaydet" gibi; eski tasarım kaydedilmiş hâlinde kalır.
+   * New variant. If "Mevcut tasarımdan kopyala" (Copy from current design) is selected, the store's document (unsaved changes
+   * included) goes to the new design — like "save as"; the old design stays in its saved state.
    */
   private async createVariant(settings: DesignSettings): Promise<void> {
     const view = this.view();
@@ -379,7 +379,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     this.notification.success(res.message);
   }
 
-  /** Seçili varyantın önceliğini bir kaydırır (eşleşen ilk varyant kazanır). */
+  /** Shifts the selected variant's priority by one (the first matching variant wins). */
   async moveVariant(delta: -1 | 1): Promise<void> {
     const list = this.currentVariants();
     const index = this.variantIndex();
@@ -438,9 +438,9 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     this.currentStore().redo();
   }
 
-  // ─── Kaydet / yayınla ──────────────────────────────────────────────────────
+  // ─── Save / publish ────────────────────────────────────────────────────────
 
-  /** Kirli (ya da hiç kaydedilmemiş) görünümleri sırayla kaydeder. */
+  /** Saves dirty (or never saved) views in order. */
   async save(): Promise<void> {
     if (this.busy() || !this.moduleInstalled()) return;
     this.busy.set('save');
@@ -473,7 +473,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
         exists: true, publishedVersion: outcome.data.publishedVersion,
         hasUnpublishedChanges: outcome.data.hasUnpublishedChanges, lastModifiedOn: outcome.data.lastModifiedOn
       });
-      // Bu oturumdaki kayıt ekranları yeni düzeni hemen okusun.
+      // Record screens in this session should read the new layout immediately.
       this.metadata.invalidateLayout(this.typeName());
       this.notification.success(outcome.message);
     } finally {
@@ -513,7 +513,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
         return;
       }
       this.metadata.invalidateLayout(this.typeName());
-      // Silinen varyantın yerine varsayılan açılır.
+      // The default opens in place of the deleted variant.
       this.selectedSignal(view).set(null);
       await this.reloadView(view);
       this.syncUrl();
@@ -534,7 +534,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
       : await this.saveWith(this.listStore, view);
     if (!outcome.ok) return outcome;
     this.patchState(view, {
-      // İlk kayıtta varsayılan satır oluşur; kimliği listeye girsin.
+      // On first save the default row is created; its id should enter the list.
       ...(outcome.data.layoutId ? { id: outcome.data.layoutId } : {}),
       exists: true, hasUnpublishedChanges: outcome.data.hasUnpublishedChanges,
       lastModifiedOn: outcome.data.lastModifiedOn, publishedVersion: outcome.data.publishedVersion
@@ -542,7 +542,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     return outcome;
   }
 
-  /** Taslağı yazar; başarıda gönderilen belge kaydedilmiş sayılır. */
+  /** Writes the draft; on success the sent document counts as saved. */
   private async saveWith<T extends FormLayout | ListLayout>(store: LayoutDesignerStore<T>, view: ScreenViewType): Promise<SaveOutcome> {
     const sent = store.doc();
     const outcome = await this.write(this.screenLayouts.saveDraft({
@@ -564,8 +564,8 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
   }
 
   /**
-   * Yazma isteği: başarıda veri + mesaj; hatada mesaj gösterilir. Çakışmada (başka bir admin
-   * aynı taslağı kaydetti) bant açılır — kullanıcı yeniden yükleyip değişikliğini tekrar yapar.
+   * Write request: on success data + message; on error the message is shown. On conflict (another admin
+   * saved the same draft) the banner opens — the user reloads and redoes their change.
    */
   private async write(request: ReturnType<ScreenLayoutService['saveDraft']>): Promise<SaveOutcome> {
     let res: DataResponseModel<ScreenLayoutSaveResultDto> | null;
@@ -580,7 +580,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     return { ok: false };
   }
 
-  /** Seçili tasarımın durumunu ve tasarım listesindeki satırını birlikte günceller. */
+  /** Updates the selected design's state and its row in the design list together. */
   private patchState(view: ScreenViewType, patch: Partial<ScreenLayoutViewStateDto>): void {
     const target = view === 'form' ? this.formState : this.listState;
     const current = target() ?? {
@@ -597,12 +597,12 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     return view === 'form' ? this.formStore : this.listStore;
   }
 
-  /** Çakışma bandındaki "Yeniden yükle": sunucudaki taslak açılır, bu ekrandaki değişiklik atılır. */
+  /** "Yeniden yükle" (Reload) in the conflict banner: the server's draft opens, changes on this screen are discarded. */
   reloadAfterConflict(): void {
     this.load();
   }
 
-  // ─── Sorun paneli ──────────────────────────────────────────────────────────
+  // ─── Issue panel ───────────────────────────────────────────────────────────
 
   issueText(issue: LayoutIssue): string {
     const column = issue.column ? this.labelOf(issue.column) : '';
@@ -613,7 +613,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     return this.columns().find(c => c.columnName === column)?.label?.trim() || column;
   }
 
-  /** Sorunu tuvalde seçer (hedef öğe/bölüm/sekme ya da kolonun alanı). */
+  /** Selects the issue on the canvas (the target item/section/tab or the column's field). */
   pickIssue(issue: LayoutIssue): void {
     if (this.view() === 'list') {
       if (issue.column) this.listStore.selection.set(issue.column);
@@ -629,7 +629,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     }
   }
 
-  /** Tek tıkla düzeltilebilen sorunlar. */
+  /** Issues fixable with a single click. */
   canFix(issue: LayoutIssue): boolean {
     return (issue.code === 'unknownColumn' || issue.code === 'requiredHidden' || issue.code === 'unplacedColumn') && !!issue.column;
   }
@@ -645,7 +645,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
       this.formStore.dispatch('', d => removeColumnEverywhere(d, column));
       return;
     }
-    // Gizli zorunlu / yerleştirilmemiş kolon: ilk bölümün sonuna yerleşir.
+    // Hidden required / unplaced column: placed at the end of the first section.
     this.formStore.dispatch('', d => {
       const section = d.tabs[0]?.sections[0];
       if (!section) return d;
@@ -653,7 +653,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     });
   }
 
-  // ─── Klavye ────────────────────────────────────────────────────────────────
+  // ─── Keyboard ──────────────────────────────────────────────────────────────
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
@@ -661,7 +661,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
       || this.variantDialog() || this.loading()) return;
     const command = screenCommandFor(event);
     if (!command) return;
-    // Yazı alanında yalnız Ctrl+S yakalanır; geri al/yinele alanın kendi geçmişine kalır.
+    // In a text field only Ctrl+S is captured; undo/redo stays with the field's own history.
     if (isTypingTarget(event.target) && command !== 'save') return;
     if (this.preview() && command !== 'save') return;
 
@@ -675,7 +675,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     event.preventDefault();
   }
 
-  /** Seçime uygulanan kısayol; uygulanacak bir şey yoksa false (tarayıcıya bırakılır). */
+  /** Shortcut applied to the selection; false if there is nothing to apply (left to the browser). */
   private applySelectionCommand(command: string): boolean {
     if (this.view() === 'list') {
       const column = this.listStore.selection();
@@ -717,7 +717,7 @@ export class ScreenDesignerComponent implements HasUnsavedChanges {
     return false;
   }
 
-  // ─── Ayrılma ───────────────────────────────────────────────────────────────
+  // ─── Leaving ───────────────────────────────────────────────────────────────
 
   canLeave(): boolean | Promise<boolean> {
     if (!this.anyDirty()) return true;

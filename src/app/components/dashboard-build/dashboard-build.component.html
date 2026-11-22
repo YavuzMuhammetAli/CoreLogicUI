@@ -76,8 +76,8 @@
               <p>{{ 'dashboard.build.layoutEmpty' | t }}</p>
             </div>
           } @else {
-            <!-- Dar ekran: tuval yerine sıralı liste + not (12 kolonluk sürükle-bırak
-                 telefonda kullanılamıyor; sütun hesabı 12'ye göre yapılıyor). -->
+            <!-- Narrow screen: an ordered list + note instead of the canvas (12-column drag-and-drop
+                 is unusable on phones; column math is based on 12). -->
             <div class="layout-mobile">
               <div class="alert alert-info" role="note">{{ 'dashboard.build.mobileLayoutNotice' | t }}</div>
               <ol class="layout-mobile-list">

@@ -19,7 +19,7 @@ import { formatDateTime } from '../../../utils/locale-format';
 import { placeTooltip } from './tooltip-position';
 import { IconComponent } from '../icon/icon.component';
 
-/** İpucundaki bir satır — karar, bekleyen ya da otomatik adımın sonucu. */
+/** A line in the tooltip — a decision, a pending step, or an automatic step's result. */
 interface TipLine {
   label: string;
   tone: 'success' | 'danger' | 'warn' | 'meta';
@@ -40,17 +40,17 @@ interface TipView {
   lines: TipLine[];
 }
 
-/** Rol havuzunda en fazla bu kadar üye adı yazılır, gerisi "+N kişi". */
+/** At most this many member names are listed for a role pool, the rest as "+N kişi" (+N people). */
 const MAX_PEOPLE = 8;
 
 /**
- * "Akışı görüntüle" — kaydın sürecini YALNIZ ilerlediği yere kadar çizer.
+ * "Akışı görüntüle" (View workflow) — draws the record's process ONLY as far as it has progressed.
  *
- * Simülasyon ve yöneticinin süreç ekranı tüm şemayı gösterip ulaşılmayanı
- * soluklaştırır; burada ulaşılmayan adım hiç çizilmez (`pathOnly`). Düğümün
- * üstüne gelince (dokunmatikte dokununca) kim onayladı / kimin onayı bekleniyor
- * kartı açılır. Adlar sunucudan gelir — sıradan kullanıcı /User ve /Role
- * uçlarını çağıramaz. Görme yetkisi sunucuda (IWorkflowAccessPolicy).
+ * The simulation and the admin's process screen show the whole diagram and fade what
+ * wasn't reached; here an unreached step isn't drawn at all (`pathOnly`). Hovering over a node
+ * (tapping on touch) opens a card showing who approved / whose approval is awaited.
+ * Names come from the server — a regular user can't call the /User and /Role
+ * endpoints. View permission is enforced on the server (IWorkflowAccessPolicy).
  */
 @Component({
     selector: 'app-workflow-view-dialog',
@@ -60,7 +60,7 @@ const MAX_PEOPLE = 8;
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WorkflowViewDialogComponent {
-  /** Gösterilecek süreç; null → diyalog kapalı. */
+  /** Process to show; null → dialog closed. */
   readonly instanceId = input<number | null>(null);
   readonly closed = output<void>();
 
@@ -93,10 +93,10 @@ export class WorkflowViewDialogComponent {
     return this.cardMeta(this.graph(), this.history());
   });
 
-  // ── İpucu ─────────────────────────────────────────────────────────────────
-  /** Fareyle üstünde durulan düğüm. */
+  // ── Tooltip ─────────────────────────────────────────────────────────────────
+  /** Node currently hovered by the mouse. */
   readonly hovered = signal<string | null>(null);
-  /** Dokunuş / tıklamayla sabitlenen düğüm — fare ayrılınca da açık kalır. */
+  /** Node pinned by tap / click — stays open even when the mouse leaves. */
   readonly pinned = signal<string | null>(null);
   readonly selected = computed(() => { const key = this.pinned(); return key ? [key] : []; });
   private readonly tipKey = computed(() => this.hovered() ?? this.pinned());
@@ -108,7 +108,7 @@ export class WorkflowViewDialogComponent {
     const step = key ? graph?.steps.find(s => s.key.toLowerCase() === key) : undefined;
     return history && step ? this.describe(history, nodeKindOf(step) === 'task', nodeKindInfo(nodeKindOf(step)).labelKey) : null;
   });
-  /** null → ölçülüyor (görünmez çizilir, sonra yerine konur). */
+  /** null → being measured (drawn invisible, then placed). */
   readonly tipPos = signal<{ top: number; left: number } | null>(null);
 
   constructor() {
@@ -117,7 +117,7 @@ export class WorkflowViewDialogComponent {
       untracked(() => (id ? this.load(id) : this.reset()));
     });
 
-    // İpucu her değişimde önce görünmez çizilir, ölçülüp düğümün yanına konur.
+    // On every change the tooltip is first drawn invisible, measured, and placed next to the node.
     effect(() => {
       this.tip();
       untracked(() => {
@@ -162,7 +162,7 @@ export class WorkflowViewDialogComponent {
     this.closed.emit();
   }
 
-  /** Esc önce sabitlenmiş ipucunu, sonra diyaloğu kapatır. */
+  /** Esc closes the pinned tooltip first, then the dialog. */
   @HostListener('document:keydown.escape')
   onEscape(): void {
     if (this.instanceId() === null) return;
@@ -174,12 +174,12 @@ export class WorkflowViewDialogComponent {
     this.hovered.set(key);
   }
 
-  /** Salt-okunur tuvalde dokunuş/tık seçimi = ipucunu sabitle; zemine dokunmak kapatır. */
+  /** On the read-only canvas a tap/click selection = pin the tooltip; tapping the background closes it. */
   onSelection(selection: CanvasSelection): void {
     this.pinned.set(selection.nodes[0] ?? null);
   }
 
-  /** Kaydırma/yakınlaştırma: ipucu düğümden kopmasın diye kapanır. */
+  /** Pan/zoom: the tooltip closes so it doesn't detach from the node. */
   onCameraChange(): void {
     if (this.hovered() || this.pinned()) {
       this.hovered.set(null);
@@ -198,7 +198,7 @@ export class WorkflowViewDialogComponent {
     this.tipPos.set({ top, left });
   }
 
-  // ── Görünüm ───────────────────────────────────────────────────────────────
+  // ── View ───────────────────────────────────────────────────────────────
 
   get startedLine(): string {
     const instance = this.instance();
@@ -219,7 +219,7 @@ export class WorkflowViewDialogComponent {
     }
   }
 
-  /** Kart alt satırı: geçilen insan adımında son karar ve kim; bekleyende kim. */
+  /** Card subline: for a passed human step the last decision and by whom; for a pending one, who. */
   private cardMeta(graph: WorkflowGraph | null, history: Record<string, StepHistory>): Record<string, CanvasNodeMeta> {
     const t = (key: string, params?: Record<string, string | number>) => this.languageService.t(key, params);
     const meta: Record<string, CanvasNodeMeta> = {};
@@ -361,8 +361,8 @@ export class WorkflowViewDialogComponent {
   }
 
   /**
-   * Sunucu zamanları UTC yazılır ama saat dilimi işareti olmadan döner (SQL
-   * datetime2) — işaretsiz değer UTC sayılır, aksi halde saatler kayardı.
+   * Server times are written in UTC but come back without a time zone marker (SQL
+   * datetime2) — an unmarked value is treated as UTC, otherwise the times would shift.
    */
   private when(value: string): string {
     const hasZone = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(value);

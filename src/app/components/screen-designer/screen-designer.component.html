@@ -37,7 +37,7 @@
     }
   </div>
 
-  <!-- Tam ekranda uygulamanın bildirim bandı katmanın altında kalır; aynısı burada. -->
+  <!-- In full screen the app's notification banner stays below the layer; the same one is shown here. -->
   @if (fullscreen() && notification.current(); as message) {
     <div class="alert alert-{{ message.type }} fullscreen-toast" role="status">{{ message.message }}</div>
   }
@@ -76,7 +76,7 @@
         </button>
       </div>
 
-      <!-- Tasarım seçici: varsayılan + rollere özel tasarımlar (öncelik sırasıyla) -->
+      <!-- Design picker: default + role-specific designs (in priority order) -->
       <div class="layout-picker">
         <label class="sr-only" for="layout-select">{{ 'screen.variant.select' | t }}</label>
         <select id="layout-select" class="input layout-select" [disabled]="!!busy()"
@@ -176,7 +176,7 @@
         [narrow]="narrow()" />
     }
 
-    <!-- Sorunlar: yayını engelleyenler (hata) ve bilgi notları (uyarı) -->
+    <!-- Issues: those blocking publish (error) and informational notes (warning) -->
     <section class="panel issues">
       <button type="button" class="issues-head" (click)="issuesOpen.set(!issuesOpen())" [attr.aria-expanded]="issuesOpen()">
         <span class="eyebrow">{{ 'screen.designer.issues' | t }}</span>

@@ -2,20 +2,20 @@ import { ChangeDetectionStrategy, Component, booleanAttribute, computed, input, 
 import { ICONS, ICONS_FILLED, IconName } from './icons.generated';
 
 /**
- * IconComponent — uygulamadaki TEK ikon kaynağı (Material Symbols Outlined, satır içi SVG).
+ * IconComponent — the ONLY icon source in the app (Material Symbols Outlined, inline SVG).
  *
- * Font değil SVG: pakete yalnız kullanılan ikonlar girer, font indirme/titreme yok, çevrimdışı
- * çalışır, renk `currentColor`'dan gelir. Adlar https://fonts.google.com/icons ile birebir aynıdır.
- * Yeni ikon: adı `icons.manifest.json`'a ekle → `npm run icons`. Ad derlemede denetlenir
- * (`IconName`, strictTemplates) — yanlış ad build'i düşürür.
+ * SVG, not a font: only the icons in use go into the bundle, no font download/flicker, works
+ * offline, colour comes from `currentColor`. Names are identical to https://fonts.google.com/icons.
+ * New icon: add the name to `icons.manifest.json` → `npm run icons`. The name is checked at compile time
+ * (`IconName`, strictTemplates) — a wrong name breaks the build.
  *
- * Kullanım:
+ * Usage:
  *   <button class="btn btn-primary"><app-icon name="add" size="16" />{{ 'common.add' | t }}</button>
- *   <app-icon name="dashboard" [filled]="rla.isActive" />        → aktif menü öğesi dolu çizilir
- *   <app-icon name="warning" [label]="'…' | t" />               → anlam taşıyan tek başına ikon
+ *   <app-icon name="dashboard" [filled]="rla.isActive" />        → the active menu item is drawn filled
+ *   <app-icon name="warning" [label]="'…' | t" />               → a standalone icon that carries meaning
  *
- * Erişilebilirlik: `label` yoksa ikon süstür (`aria-hidden`); yalnız ikonlu düğmede metni
- * düğmenin `aria-label` + `title`'ına yaz, ikona değil.
+ * Accessibility: without `label` the icon is decorative (`aria-hidden`); on an icon-only button write
+ * the text into the button's `aria-label` + `title`, not the icon's.
  */
 @Component({
   selector: 'app-icon',
@@ -35,11 +35,11 @@ import { ICONS, ICONS_FILLED, IconName } from './icons.generated';
 })
 export class IconComponent {
   name = input.required<IconName>();
-  /** Piksel; düğmede 14–16, menüde 18, boş durumda 40. */
+  /** Pixels; 14–16 in buttons, 18 in menus, 40 in empty states. */
   size = input(18, { transform: numberAttribute });
-  /** Dolu (FILL=1) varyant; manifest'te dolu varyantı olmayan ikonda çizgisel kalır. */
+  /** Filled (FILL=1) variant; icons without a filled variant in the manifest stay outlined. */
   filled = input(false, { transform: booleanAttribute });
-  /** Verilirse ikon `role="img"` ile okunur; verilmezse ekran okuyucudan gizlenir. */
+  /** If given, the icon is read with `role="img"`; otherwise it is hidden from screen readers. */
   label = input<string | null>(null);
 
   readonly d = computed(() => (this.filled() && ICONS_FILLED[this.name()]) || ICONS[this.name()]);

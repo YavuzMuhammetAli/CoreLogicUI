@@ -1,21 +1,21 @@
 /**
- * Otomatik değer kuralları — planlama (doğrulama + bağımlılık sırası) ve hesaplama.
+ * Auto-value rules — planning (validation + dependency order) and computation.
  *
- * Bir kolonun en fazla bir kuralı vardır:
- *   create — form ilk açıldığında (yalnız YENİ kayıt)
- *   change — formülde geçen bir alan değişince (+ yeni kayıtta açılışta)
- *   save   — kaydedilirken
+ * A column has at most one rule:
+ *   create — when the form first opens (NEW records only)
+ *   change — when a field used in the formula changes (+ on open for a new record)
+ *   save   — while saving
  *
- * Sunucu (`AutoValueApplier`) aynı tabloyu uygular ve ESAS KAYNAKTIR; buradaki hesap
- * kullanıcıya anında geri bildirim içindir. Kimin ne zaman yazdığı:
+ * The server (`AutoValueApplier`) applies the same table and is the SOURCE OF TRUTH; the computation
+ * here is for instant feedback to the user. Who writes when:
  *
- *   tetik   | yeni kayıt                          | güncelleme
- *   create  | salt okunursa hep, değilse boşsa    | dokunulmaz
- *   change  | salt okunursa hep, değilse boşsa    | salt okunursa yeniden hesaplanır
- *   save    | hesaplanır                          | hesaplanır
+ *   trigger | new record                          | update
+ *   create  | always if read-only, else if empty  | untouched
+ *   change  | always if read-only, else if empty  | recomputed if read-only
+ *   save    | computed                            | computed
  *
- * `save` ve SEQ() kullanan kurallar her zaman salt okunurdur: ilkinin değeri kayıtta
- * zaten ezilir, ikincisinin numarasını yalnız sunucu bilir.
+ * Rules using `save` or SEQ() are always read-only: the former's value is overwritten on save
+ * anyway, and only the server knows the latter's number.
  */
 
 import {
@@ -27,7 +27,7 @@ import {
 export type AutoValueTrigger = 'create' | 'change' | 'save';
 export const AUTO_VALUE_TRIGGERS: readonly AutoValueTrigger[] = ['create', 'change', 'save'];
 
-/** Planlamaya giren kolon — şema DTO'sundan ya da tasarımcı formundan. */
+/** A column entering planning — from the schema DTO or the designer form. */
 export interface AutoValueColumn {
   name: string;
   dataType: string;
@@ -41,10 +41,10 @@ export interface AutoValueRule {
   dataType: string;
   trigger: AutoValueTrigger;
   expression: string;
-  /** Etkin salt okunurluk (save / SEQ ⇒ her zaman true). */
+  /** Effective read-only flag (save / SEQ ⇒ always true). */
   readOnly: boolean;
   ast: ExprNode;
-  /** Formülde geçen kolonlar — gerçek (şemadaki) adlarıyla. */
+  /** Columns used in the formula — with their real (schema) names. */
   refs: string[];
   usesSequence: boolean;
 }
@@ -56,24 +56,24 @@ export type RuleIssueCode =
 export interface RuleIssue {
   column: string;
   code: RuleIssueCode;
-  /** parse: ExpressionError kodu · unknownField/sequenceRef: alan adı · cycle: A → B → A */
+  /** parse: ExpressionError code · unknownField/sequenceRef: field name · cycle: A → B → A */
   detail: string;
-  /** parse hatasının formüldeki konumu (yoksa -1). */
+  /** Position of the parse error in the formula (-1 if none). */
   pos: number;
-  /** parse hatasında sorunlu parça (bilinmeyen fonksiyon adı, beklenmeyen karakter…). */
+  /** The offending fragment of a parse error (unknown function name, unexpected character…). */
   arg: string;
 }
 
 export interface AutoValuePlan {
-  /** Hatasız kurallar, bağımlılık sırasında (önce bağımlı olunan). */
+  /** Error-free rules in dependency order (dependencies first). */
   rules: AutoValueRule[];
   byColumn: Map<string, AutoValueRule>;
   issues: RuleIssue[];
-  /** Kolon adı → veri tipi (formül alanlarını tiplemek için). */
+  /** Column name → data type (to type the formula fields). */
   types: Map<string, string>;
 }
 
-/** Formülün hedefi olamayacak tipler. */
+/** Types that cannot be a formula target. */
 const NON_TARGET_TYPES = new Set(['image', 'file']);
 const INT_TYPES = new Set(['int', 'long', 'short', 'byte', 'lookup']);
 const REAL_TYPES = new Set(['decimal', 'double', 'float']);
@@ -81,8 +81,8 @@ const REAL_TYPES = new Set(['decimal', 'double', 'float']);
 export const EMPTY_PLAN: AutoValuePlan = { rules: [], byColumn: new Map(), issues: [], types: new Map() };
 
 /**
- * Kolonların kurallarını doğrular ve bağımlılık sırasına dizer. Hatalı kurallar
- * `issues`'a düşer ve plandan çıkarılır (formu kilitlemez, yalnız çalışmaz).
+ * Validates the columns' rules and orders them by dependency. Invalid rules
+ * go to `issues` and are removed from the plan (they don't lock the form, they just don't run).
  */
 export function buildAutoValuePlan(columns: readonly AutoValueColumn[]): AutoValuePlan {
   const types = new Map<string, string>();
@@ -137,14 +137,14 @@ export function buildAutoValuePlan(columns: readonly AutoValueColumn[]): AutoVal
     });
   }
 
-  // SEQ kolonuna bağımlı kural: numara kayıt anında (sunucuda, en son) verilir,
-  // bağımlısı onu hiçbir zaman göremez.
+  // A rule depending on a SEQ column: the number is assigned at save time (on the server, last),
+  // so its dependant can never see it.
   for (const rule of [...candidates.values()]) {
     const seqRef = rule.refs.find(r => candidates.get(r)?.usesSequence && r !== rule.column);
     if (seqRef) { issue(rule.column, 'sequenceRef', seqRef); candidates.delete(rule.column); }
   }
 
-  // Topolojik sıra + döngü tespiti (DFS). Döngüdeki kurallar plandan çıkar.
+  // Topological order + cycle detection (DFS). Rules in a cycle are removed from the plan.
   const ordered: AutoValueRule[] = [];
   const state = new Map<string, 'visiting' | 'done'>();
   const inCycle = new Set<string>();
@@ -176,12 +176,12 @@ function normalizeTrigger(t: string | null | undefined): AutoValueTrigger | null
   return (AUTO_VALUE_TRIGGERS as readonly string[]).includes(v) ? v as AutoValueTrigger : null;
 }
 
-// ─── Değer dönüşümleri ──────────────────────────────────────────────────────
+// ─── Value conversions ──────────────────────────────────────────────────────
 
-/** Form/kayıt değerini kolon tipine göre formül değerine çevirir. Boş → null. */
+/** Converts a form/record value into a formula value by column type. Empty → null. */
 export function toTypedValue(raw: unknown, dataType: string): Value {
   if (raw === undefined || raw === null || raw === '') return null;
-  // Dosya içeriği istemcide base64, sunucuda byte[] — aynı değeri üretemezler; formülde boş sayılır.
+  // File content is base64 on the client and byte[] on the server — they can't produce the same value; treated as empty in formulas.
   if (NON_TARGET_TYPES.has(dataType)) return null;
   if (INT_TYPES.has(dataType) || REAL_TYPES.has(dataType)) {
     if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null;
@@ -201,9 +201,9 @@ export function toTypedValue(raw: unknown, dataType: string): Value {
 }
 
 /**
- * Formül sonucunu hedef kolonun KANONİK değerine çevirir — sunucu da aynı değeri yazar.
- * Tam sayılar yuvarlanır, ondalıklar 10 haneye indirilir, tarihler ISO metne döner.
- * Çevrilemeyen sonuç (ör. sayı kolonuna "abc") null olur.
+ * Converts a formula result into the target column's CANONICAL value — the server writes the same value.
+ * Integers are rounded, decimals are cut to 10 digits, dates become ISO text.
+ * A result that cannot be converted (e.g. "abc" into a number column) becomes null.
  */
 export function coerceToColumn(v: Value, dataType: string): string | number | boolean | null {
   if (v === null) return null;
@@ -232,10 +232,10 @@ export function coerceToColumn(v: Value, dataType: string): string | number | bo
 function zero(n: number): number { return n === 0 ? 0 : n; }
 
 /**
- * Tek bir kuralı verilen alan değerleriyle hesaplar ve kanonik değer döndürür.
- * Formül alan kullanıyor ve bunların HEPSİ boşsa sonuç boştur — boş bir formda
- * "Net Gelir = 0" gibi yanıltıcı değerler belirmesin diye.
- * Çalışma hatası (sıfıra bölme vb.) → null. `sequencePending` yukarı fırlatılır.
+ * Evaluates a single rule with the given field values and returns the canonical value.
+ * If the formula uses fields and ALL of them are empty the result is empty — so misleading values
+ * like "Net Gelir = 0" (net income) don't appear on an empty form.
+ * Runtime error (division by zero etc.) → null. `sequencePending` is rethrown.
  */
 export function evaluateRule(
   rule: AutoValueRule,
@@ -261,31 +261,31 @@ export function evaluateRule(
   }
 }
 
-// ─── İstemci aşamaları ──────────────────────────────────────────────────────
+// ─── Client phases ──────────────────────────────────────────────────────────
 
 export type AutoValuePhase = 'open' | 'change' | 'save';
 
 export interface ComputeOptions {
   phase: AutoValuePhase;
   isNew: boolean;
-  /** `change` aşamasında kullanıcının değiştirdiği kolonlar. */
+  /** Columns the user changed, in the `change` phase. */
   changed?: Iterable<string>;
   now: DateValue;
 }
 
 export interface ComputeResult {
-  /** Kolon → forma yazılacak değer (yalnız değişenler). */
+  /** Column → value to write into the form (changed ones only). */
   patch: Record<string, unknown>;
-  /** Numarası kayıtta verilecek (SEQ) kolonlar. */
+  /** Columns whose number is assigned on save (SEQ). */
   pending: string[];
 }
 
 /**
- * Bir aşamada çalışması gereken kuralları uygular.
+ * Applies the rules that must run in a phase.
  *
- *   open   (yeni kayıt) create + change → hedef boşsa ya da salt okunursa
- *   change  change → formülündeki bir alan (zincirleme dahil) değiştiyse
- *   save    save + salt okunur change
+ *   open   (new record) create + change → if the target is empty or read-only
+ *   change  change → if a field in its formula changed (including chained)
+ *   save    save + read-only change
  */
 export function computeAutoValues(
   plan: AutoValuePlan,
@@ -305,7 +305,7 @@ export function computeAutoValues(
     try {
       value = evaluateRule(rule, typed, opts.now);
     } catch {
-      pending.push(rule.column);            // SEQ — sunucu verecek
+      pending.push(rule.column);            // SEQ — the server will assign it
       continue;
     }
 
@@ -313,7 +313,7 @@ export function computeAutoValues(
     if (!sameFormValue(current[rule.column], formValue)) {
       current[rule.column] = formValue;
       patch[rule.column] = formValue;
-      dirty.add(rule.column);               // zincir: buna bağlı kurallar da yeniden hesaplanır
+      dirty.add(rule.column);               // chain: rules depending on this are recomputed too
     }
   }
   return { patch, pending };

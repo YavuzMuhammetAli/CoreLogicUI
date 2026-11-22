@@ -1,18 +1,18 @@
-// Material Symbols Outlined ikon kaydını üretir (wght 500 — 14–16 px düğmelerde 400 fazla ince kalıyor).
+// Generates the Material Symbols Outlined icon registry (wght 500 — 400 is too thin on 14–16 px buttons).
 //
 //   npm run icons
 //
-// Okur : src/app/components/shared/icon/icons.manifest.json  ({ outlined: [...], filled: [...] })
-// Yazar: src/app/components/shared/icon/icons.generated.ts
+// Reads : src/app/components/shared/icon/icons.manifest.json  ({ outlined: [...], filled: [...] })
+// Writes: src/app/components/shared/icon/icons.generated.ts
 //
-// Ayrıca (dosya varsa) model ikonu kataloğu — admin'in yayınlarken seçtiği ikonlar:
-// Okur : src/app/components/shared/model-icon/model-icons.manifest.json
-//        ({ categories: [{ key, icons: { ad: "tr anahtar kelimeler" } }] })
-// Yazar: src/app/components/shared/model-icon/model-icons.generated.ts (dizin) + paths/{kategori}.generated.ts (lazy parçalar)
+// Also (if the file exists) the model icon catalog — the icons the admin picks when publishing:
+// Reads : src/app/components/shared/model-icon/model-icons.manifest.json
+//        ({ categories: [{ key, icons: { name: "tr keywords" } }] })
+// Writes: src/app/components/shared/model-icon/model-icons.generated.ts (index) + paths/{category}.generated.ts (lazy chunks)
 //
-// SVG'ler sabit sürümden CDN'den çekilir; paket devDependency DEĞİL (23 bin dosya, Docker `npm ci`'ı
-// yavaşlatırdı). Üretilen dosya commit'lenir — build bu script'e ve ağa bağımlı değildir.
-// Yeni ikon: adı manifest'e ekle (https://fonts.google.com/icons adıyla aynı), script'i koş.
+// SVGs are fetched from the CDN at a pinned version; the package is NOT a devDependency (23k files, it would
+// slow down Docker `npm ci`). The generated file is committed — the build does not depend on this script or the network.
+// New icon: add its name to the manifest (same as the name on https://fonts.google.com/icons), run the script.
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,9 +27,9 @@ const manifest = JSON.parse(await readFile(resolve(dir, 'icons.manifest.json'), 
 const outlined = [...new Set(manifest.outlined)].sort();
 const filled = [...new Set(manifest.filled)].sort();
 const unknownFilled = filled.filter(n => !outlined.includes(n));
-if (unknownFilled.length) fail(`"filled" listesindeki ad "outlined"da yok: ${unknownFilled.join(', ')}`);
+if (unknownFilled.length) fail(`name in the "filled" list is missing from "outlined": ${unknownFilled.join(', ')}`);
 
-// CDN'e aynı anda en fazla bu kadar istek (yüzlerce ikonda hız sınırına takılmasın).
+// At most this many concurrent requests to the CDN (so hundreds of icons don't hit the rate limit).
 const CONCURRENCY = 16;
 let active = 0;
 const waiting = [];
@@ -41,10 +41,10 @@ async function limited(fn) {
 
 async function path(file) {
   const res = await limited(() => fetch(`${BASE}/${file}.svg`));
-  if (!res.ok) fail(`${file}.svg alınamadı (${res.status}) — ad Material Symbols'ta var mı?`);
+  if (!res.ok) fail(`could not fetch ${file}.svg (${res.status}) — does the name exist in Material Symbols?`);
   const svg = await res.text();
   const ds = [...svg.matchAll(/\sd="([^"]+)"/g)].map(m => m[1]);
-  if (!ds.length) fail(`${file}.svg içinde path yok`);
+  if (!ds.length) fail(`no path in ${file}.svg`);
   return ds.join('');
 }
 
@@ -58,7 +58,7 @@ const entries = async (names, suffix) =>
     .map(([n, d]) => `  ${/^[a-z_]\w*$/.test(n) ? n : `'${n}'`}: '${d}',`)
     .join('\n');
 
-const out = `// OTOMATİK ÜRETİLDİ — elle düzenleme. Kaynak: icons.manifest.json, komut: \`npm run icons\`.
+const out = `// AUTO-GENERATED — do not edit by hand. Source: icons.manifest.json, command: \`npm run icons\`.
 // Material Symbols Outlined (wght 500, opsz 48) · @material-symbols/svg-500@${VERSION} · Apache-2.0
 // viewBox "0 -960 960 960"
 
@@ -68,23 +68,23 @@ ${await entries(outlined, '')}
 
 export type IconName = keyof typeof ICONS;
 
-/** Dolu (FILL=1) varyantı — yalnız manifest'te "filled" olarak işaretlenenler. */
+/** Filled (FILL=1) variant — only icons marked "filled" in the manifest. */
 export const ICONS_FILLED: Partial<Record<IconName, string>> = {
 ${await entries(filled, '-fill')}
 };
 `;
 
 await writeFile(resolve(dir, 'icons.generated.ts'), out);
-console.log(`generate-icons: ${outlined.length} ikon, ${filled.length} dolu varyant yazıldı.`);
+console.log(`generate-icons: wrote ${outlined.length} icons, ${filled.length} filled variants.`);
 
-// ── Model ikonu kataloğu ───────────────────────────────────────────────────────────
+// ── Model icon catalog ─────────────────────────────────────────────────────────────
 const modelDir = resolve(root, 'src/app/components/shared/model-icon');
 const modelManifestPath = resolve(modelDir, 'model-icons.manifest.json');
 if (await access(modelManifestPath).then(() => true, () => false)) {
   const { categories } = JSON.parse(await readFile(modelManifestPath, 'utf8'));
   const names = categories.flatMap(c => Object.keys(c.icons));
   const dup = names.filter((n, i) => names.indexOf(n) !== i);
-  if (dup.length) fail(`model ikonu birden çok kategoride: ${[...new Set(dup)].join(', ')}`);
+  if (dup.length) fail(`model icon in more than one category: ${[...new Set(dup)].join(', ')}`);
 
   const quote = s => `'${s.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
   const cats = categories.map(c => [
@@ -93,14 +93,14 @@ if (await access(modelManifestPath).then(() => true, () => false)) {
     '  ] },'
   ].join('\n')).join('\n');
 
-  // Path'ler kategori başına ayrı parçada: model kartı yalnız kendi kategorisini (~5 KB gzip) indirir,
-  // 250+ ikonun tamamı (~70 KB gzip) yalnız seçici açılınca iner.
-  const header = `// OTOMATİK ÜRETİLDİ — elle düzenleme. Kaynak: model-icons.manifest.json, komut: \`npm run icons\`.
+  // Paths are in a separate chunk per category: a model card downloads only its own category (~5 KB gzip),
+  // all 250+ icons (~70 KB gzip) load only when the picker opens.
+  const header = `// AUTO-GENERATED — do not edit by hand. Source: model-icons.manifest.json, command: \`npm run icons\`.
 // Material Symbols Outlined (wght 500, opsz 48) · @material-symbols/svg-500@${VERSION} · Apache-2.0`;
   await mkdir(resolve(modelDir, 'paths'), { recursive: true });
   for (const c of categories) {
     await writeFile(resolve(modelDir, 'paths', `${c.key}.generated.ts`), `${header}
-// viewBox "0 -960 960 960". Yalnız model-icons.generated.ts → MODEL_ICON_PATH_LOADERS dinamik import eder.
+// viewBox "0 -960 960 960". Dynamically imported only by model-icons.generated.ts → MODEL_ICON_PATH_LOADERS.
 
 export const PATHS: Readonly<Record<string, string>> = {
 ${await entries(Object.keys(c.icons).sort(), '')}
@@ -112,7 +112,7 @@ ${await entries(Object.keys(c.icons).sort(), '')}
   const loaders = categories.map(c => `  ${quote(c.key)}: () => import('./paths/${c.key}.generated').then(m => m.PATHS),`).join('\n');
 
   await writeFile(resolve(modelDir, 'model-icons.generated.ts'), `${header}
-// Katalog dizini (ad, anahtar kelime, kategori) — path YOK; path'ler kategori başına lazy parçada.
+// Catalog index (name, keywords, category) — NO paths; paths live in lazy per-category chunks.
 
 export interface ModelIconEntry { readonly name: string; readonly keywords: string; }
 export interface ModelIconCategory { readonly key: string; readonly icons: readonly ModelIconEntry[]; }
@@ -121,15 +121,15 @@ export const MODEL_ICON_CATEGORIES: readonly ModelIconCategory[] = [
 ${cats}
 ];
 
-/** İkon adı → kategori anahtarı. */
+/** Icon name → category key. */
 export const MODEL_ICON_CATEGORY_OF: Readonly<Record<string, string>> = {
 ${categoryOf}
 };
 
-/** Kategori anahtarı → o kategorinin path'lerini yükleyen dinamik import. */
+/** Category key → dynamic import that loads that category's paths. */
 export const MODEL_ICON_PATH_LOADERS: Readonly<Record<string, () => Promise<Readonly<Record<string, string>>>>> = {
 ${loaders}
 };
 `);
-  console.log(`generate-icons: ${names.length} model ikonu, ${categories.length} kategori yazıldı.`);
+  console.log(`generate-icons: wrote ${names.length} model icons, ${categories.length} categories.`);
 }

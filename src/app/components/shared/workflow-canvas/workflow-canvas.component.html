@@ -34,18 +34,18 @@
       {{ 'workflow.canvas.fit' | t }}
     </button>
 
-    <!-- Kullanan ekranın kendi araçları (tasarımcı: tam ekran, tam ekranda simülasyon). -->
+    <!-- The host screen's own tools (designer: full screen, simulation in full screen). -->
     <ng-content select="[canvasTools]" />
   </div>
 </div>
 
 <!--
-  Viewport kamerayı taşır, dünya ise içeriği. Kaydırma `overflow: auto` ile
-  DEĞİL transform ile yapılıyor: scrollLeft/scrollTop ile transform aynı anda
-  haritalamaya karışır ve kaydırılabilir alan ölçekle büyümez.
+  The viewport carries the camera, the world carries the content. Panning is done with transform,
+  NOT `overflow: auto`: scrollLeft/scrollTop and transform would both take part in
+  the mapping, and the scrollable area doesn't grow with the scale.
 -->
-<!-- tabindex: klavye kısayolları tuval odaktayken de çalışsın; aria-label
-     ekran okuyucuya tuvalin ne olduğunu söyler. -->
+<!-- tabindex: so keyboard shortcuts work while the canvas has focus too; aria-label
+     tells the screen reader what the canvas is. -->
 <div class="canvas-viewport"
      #viewport
      tabindex="0"
@@ -61,7 +61,7 @@
      (dragover)="onDragOver($event)"
      (drop)="onDrop($event)">
 
-  <!-- Boş tuval de çizilir: ilk adım paletten buraya sürüklenebilsin. -->
+  <!-- An empty canvas is drawn too: so the first step can be dragged here from the palette. -->
   @if (nodes().length === 0) {
     <p class="canvas-empty">{{ 'workflow.canvas.empty' | t }}</p>
   }
@@ -71,8 +71,8 @@
        [style.width.px]="canvasSize().width"
        [style.height.px]="canvasSize().height">
 
-    <!-- Kenarlar SVG'de, düğümler DOM'da: düğümler tıklanabilir/sürüklenebilir
-         olmalı ve HTML elemanları bunu SVG'den çok daha az kodla veriyor. -->
+    <!-- Edges in SVG, nodes in the DOM: nodes must be clickable/draggable
+         and HTML elements provide that with far less code than SVG. -->
     <svg class="canvas-edges"
          [attr.width]="canvasSize().width"
          [attr.height]="canvasSize().height"
@@ -88,7 +88,7 @@
         </marker>
       </defs>
 
-      <!-- Başlangıç hapından başlangıç adımına inen çizgi. -->
+      <!-- Line descending from the start pill to the start step. -->
       @if (start(); as s) {
         <path class="canvas-start-link" [attr.d]="s.path" vector-effect="non-scaling-stroke"
               marker-end="url(#wfc-arrow)" />
@@ -99,7 +99,7 @@
            [class.canvas-edge--neutral]="edge.port === 'neutral'"
            [class.canvas-edge--taken]="isEdgeTaken(edge)"
            [class.canvas-edge--selected]="isEdgeSelected(edge)">
-          <!-- non-scaling-stroke: uzaklaşınca çizgi kaybolmasın, yaklaşınca kalınlaşmasın. -->
+          <!-- non-scaling-stroke: the line shouldn't vanish when zoomed out or thicken when zoomed in. -->
           <path [attr.d]="edge.geometry.path"
                 vector-effect="non-scaling-stroke"
                 [attr.marker-end]="edge.isRejection ? 'url(#wfc-arrow-reject)' : 'url(#wfc-arrow)'" />
@@ -110,27 +110,27 @@
         </g>
       }
 
-      <!-- Akışın bittiği çıkışlar: kısa çizgi + uç işareti (BPMN bitiş olayı gibi). -->
+      <!-- Exits where the flow ends: a short line + end marker (like a BPMN end event). -->
       @for (stub of stubs(); track stub.key) {
         <g class="canvas-stub" [class.canvas-stub--reject]="stub.kind === 'reject'"
            [class.canvas-stub--neutral]="stub.kind === 'neutral'"
            [class.canvas-stub--taken]="isStubTaken(stub)">
           <line [attr.x1]="stub.x" [attr.y1]="stub.y1" [attr.x2]="stub.x" [attr.y2]="stub.y2"
                 vector-effect="non-scaling-stroke" />
-          <!-- Düzenlenebilirken uç işaretinin yerini "+" düğmesi alır (aynı renk). -->
+          <!-- When editable, a "+" button replaces the end marker (same colour). -->
           @if (locked()) {
             <circle [attr.cx]="stub.x" [attr.cy]="stub.y2 + 5" r="5" />
           }
         </g>
       }
 
-      <!-- Sürüklenirken imci takip eden geçici çizgi. -->
+      <!-- Temporary line following the cursor while dragging. -->
       @if (pendingPath(); as path) {
         <path class="canvas-edge-pending" [attr.d]="path" vector-effect="non-scaling-stroke" />
       }
     </svg>
 
-    <!-- Başlangıç hapı: akışın nereden başladığı şemada görünsün. -->
+    <!-- Start pill: shows on the diagram where the flow starts. -->
     @if (start(); as s) {
       <div class="canvas-start"
            [style.left.px]="s.x" [style.top.px]="s.y"
@@ -140,7 +140,7 @@
       </div>
     }
 
-    <!-- Bağlantısız çıkışın ucu: tıklayınca bağlı yeni adım eklenir. -->
+    <!-- Tip of an unconnected exit: clicking it adds a new connected step. -->
     @if (!locked()) {
       @for (stub of stubs(); track stub.key) {
         <button type="button" class="canvas-stub-add"
@@ -174,7 +174,7 @@
            (pointerleave)="onNodePointerLeave($event)"
            (dblclick)="onNodeDoubleClick(node)">
 
-        <!-- Yükseklik sabit (model = DOM); uzun ad kesilir, tamamı ipucunda. -->
+        <!-- Fixed height (model = DOM); a long name is truncated, the full name is in the tooltip. -->
         <div class="canvas-node-title" [title]="node.label + ' · ' + node.key">{{ node.label }}</div>
         @if (metaOf(node); as meta) {
           <div class="canvas-node-meta" [title]="meta.kindLabel + ' · ' + meta.summary">
@@ -200,10 +200,10 @@
         }
 
         <!--
-          Çıkış portları adımın kendi çıkışlarından gelir (tip kataloğu).
-          Yeşil olumlu, kırmızı red yolunu bağlar; porttan sürükleyip hedef
-          düğümde bırakmak bağlantıyı kurar. Kapalı çıkışın (red kapalı adım)
-          portu yoktur.
+          Exit ports come from the step's own exits (type catalog).
+          Green connects the positive path, red the reject path; dragging from a port and
+          dropping on a target node creates the connection. A disabled exit (step with reject
+          turned off) has no port.
         -->
         @if (!locked()) {
           @for (port of node.ports; track port.port) {
@@ -219,7 +219,7 @@
       </div>
     }
 
-    <!-- Çerçeve (lasso) seçimi — dünya koordinatında, kamerayla birlikte ölçeklenir. -->
+    <!-- Frame (lasso) selection — in world coordinates, scales together with the camera. -->
     @if (lasso(); as rect) {
       <div class="canvas-lasso"
            [style.left.px]="rect.x" [style.top.px]="rect.y"
@@ -228,8 +228,8 @@
   </div>
 </div>
 
-<!-- Sağ tık menüsü: viewport'un KARDEŞİ (transform'lu atanın içinde fixed
-     konumlama ekrana göre değil ataya göre olurdu). -->
+<!-- Context menu: a SIBLING of the viewport (inside a transformed ancestor, fixed
+     positioning would be relative to the ancestor, not the screen). -->
 @if (menu(); as m) {
   <div class="canvas-menu" #menu role="menu" [style.left.px]="m.x" [style.top.px]="m.y"
        (keydown.escape)="closeMenu()">

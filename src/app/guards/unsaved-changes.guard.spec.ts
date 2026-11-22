@@ -8,13 +8,13 @@ describe('unsavedChangesGuard', () => {
   const run = (component: HasUnsavedChanges | null) =>
     unsavedChangesGuard(component as HasUnsavedChanges, route, state, state);
 
-  it('ekranın cevabını aynen döner', async () => {
+  it('returns the screen\'s answer as is', async () => {
     expect(run({ canLeave: () => true })).toBeTrue();
     expect(run({ canLeave: () => false })).toBeFalse();
     expect(await run({ canLeave: () => Promise.resolve(false) })).toBeFalse();
   });
 
-  it('sözleşmeyi uygulamayan ya da kapanmış bileşende ayrılmayı engellemez', () => {
+  it('does not block leaving on a component that does not implement the contract or is destroyed', () => {
     expect(run(null)).toBeTrue();
     expect(run({} as HasUnsavedChanges)).toBeTrue();
   });

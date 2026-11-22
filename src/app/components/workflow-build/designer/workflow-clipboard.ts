@@ -3,21 +3,21 @@ import { mapRefs, sameKey } from '../../../utils/workflow/workflow-exits';
 import { WorkflowDesignDoc } from './workflow-design.doc';
 
 /**
- * Tasarımcı panosu — kopyala / yapıştır / çoğalt. SAF.
+ * Designer clipboard — copy / paste / duplicate. PURE.
  *
- * Pano sayfa içindedir (sistem panosu değil): adım nesnesi, metin olarak
- * başka uygulamaya yapıştırılacak bir şey değil.
+ * The clipboard is in-page (not the system clipboard): a step object is not
+ * something to paste as text into another application.
  */
 export interface DesignClipboard {
   steps: WorkflowStep[];
-  /** Kopyalanan adımların durum etiketleri (entityStatusMap girdileri). */
+  /** Status labels of the copied steps (entityStatusMap entries). */
   labels: Record<string, string>;
 }
 
-/** Yapıştırılan kopyaların konum kayması (px) — kopya aslının üstüne binmesin. */
+/** Position offset (px) of pasted copies — so a copy does not sit on top of its original. */
 export const PASTE_OFFSET = 40;
 
-/** Seçili adımları panoya alır (derin kopya — belge sonradan değişse de pano etkilenmez). */
+/** Puts the selected steps on the clipboard (deep copy — later document changes do not affect it). */
 export function copySteps(doc: WorkflowDesignDoc, keys: string[]): DesignClipboard | null {
   const steps = doc.graph.steps.filter(step => keys.some(key => sameKey(key, step.key)));
   if (steps.length === 0) return null;
@@ -32,14 +32,14 @@ export function copySteps(doc: WorkflowDesignDoc, keys: string[]): DesignClipboa
 }
 
 /**
- * Panodaki adımları yeni anahtarlarla belgeye ekler.
+ * Adds the clipboard steps to the document with new keys.
  *
- * - Anahtar çakışmazsa aynen, çakışırsa `{anahtar}_2`, `_3`… alır.
- * - Kopyalanan adımlar ARASINDAKİ bağlantılar yeni anahtarlara taşınır; dışarıya
- *   giden bağlantılar kopyalanmaz (terminale düşer) — aksi halde kopya, aslının
- *   bağlı olduğu adımlara gizlice bağlanırdı.
- * - Konumu olan kopya sağ-alta kayar; konumsuz olan otomatik yerleşimde kalır.
- * - Başlangıç adımı değişmez (boşsa ilk kopya olur).
+ * - A key that does not collide is kept, otherwise it gets `{key}_2`, `_3`….
+ * - Connections BETWEEN the copied steps are moved to the new keys; outgoing
+ *   connections are not copied (they fall to the terminal) — otherwise the copy would
+ *   silently connect to the steps its original was connected to.
+ * - A copy with a position shifts down-right; one without stays in auto layout.
+ * - The start step does not change (if empty, the first copy becomes it).
  */
 export function pasteSteps(
   doc: WorkflowDesignDoc, clipboard: DesignClipboard, offset = PASTE_OFFSET
@@ -84,8 +84,8 @@ export function pasteSteps(
 }
 
 /**
- * Çakışmayan anahtar: kendisi, değilse `_2`, `_3`… Zaten numaralı bir kopya
- * yeniden çoğaltılırsa numara kökten devam eder (`onay_2` → `onay_3`, `onay_2_2` değil).
+ * Non-colliding key: itself, otherwise `_2`, `_3`… If an already numbered copy
+ * is duplicated again, numbering continues from the root (`onay_2` → `onay_3`, not `onay_2_2`).
  */
 function freeKey(key: string, taken: Set<string>): string {
   if (!taken.has(key.toLowerCase())) return key;

@@ -9,12 +9,12 @@ import {
 } from './cron-builder';
 
 /**
- * Zamanlama mantığının testleri.
+ * Tests for the scheduling logic.
  *
- * Bu hesap component'ten AYRI tutulduğu için TestBed olmadan çalıştırılabilir.
- * Asıl kazanç round-trip garantisi: kullanıcının kurduğu zamanlama kaydedilip
- * geri yüklendiğinde AYNI forma dönmeli — dönmezse ekran sessizce "Özel"e
- * düşer ve kullanıcı seçimini kaybeder.
+ * Since this computation is kept SEPARATE from the component, it runs without TestBed.
+ * The real win is the round-trip guarantee: a schedule the user builds must come back
+ * to the SAME form after saving and reloading — otherwise the screen silently falls back to "Özel" (Custom)
+ * and the user loses their selection.
  */
 describe('cron-builder', () => {
 
@@ -25,40 +25,40 @@ describe('cron-builder', () => {
 
   describe('buildCron', () => {
 
-    it('saatte bir: dakikayı sabitler, saati serbest bırakır', () => {
+    it('hourly: fixes the minute, leaves the hour free', () => {
       expect(buildCron(spec({ frequency: 'hourly', minute: 30 }))).toBe('30 * * * *');
     });
 
-    it('N saatte bir: saat alanına adım yazar', () => {
+    it('every N hours: writes a step into the hour field', () => {
       expect(buildCron(spec({ frequency: 'everyNHours', minute: 0, hourInterval: 8 })))
         .toBe('0 */8 * * *');
     });
 
-    it('her gün: saat ve dakikayı sabitler', () => {
+    it('daily: fixes the hour and minute', () => {
       expect(buildCron(spec({ frequency: 'daily', minute: 15, hour: 3 }))).toBe('15 3 * * *');
     });
 
-    it('N günde bir: ayın günü alanına adım yazar', () => {
+    it('every N days: writes a step into the day-of-month field', () => {
       expect(buildCron(spec({ frequency: 'everyNDays', minute: 0, hour: 4, dayInterval: 2 })))
         .toBe('0 4 */2 * *');
     });
 
-    it('haftada bir: haftanın gününü sabitler', () => {
+    it('weekly: fixes the day of week', () => {
       expect(buildCron(spec({ frequency: 'weekly', minute: 0, hour: 3, dayOfWeek: 1 })))
         .toBe('0 3 * * 1');
     });
 
-    it('ayda bir: ayın gününü sabitler', () => {
-      // Kullanıcının istediği örnek: her ayın 1'inde saat 12:00.
+    it('monthly: fixes the day of month', () => {
+      // The example the user asked for: on the 1st of every month at 12:00.
       expect(buildCron(spec({ frequency: 'monthly', minute: 0, hour: 12, dayOfMonth: 1 })))
         .toBe('0 12 1 * *');
     });
 
-    it('özel: ham ifadeyi kırpar ve olduğu gibi kullanır', () => {
+    it('custom: trims the raw expression and uses it as is', () => {
       expect(buildCron(spec({ frequency: 'custom', raw: '  5 1 * * 3  ' }))).toBe('5 1 * * 3');
     });
 
-    it('aralık dışı değerleri sınırlara çeker', () => {
+    it('clamps out-of-range values to the bounds', () => {
       expect(buildCron(spec({ frequency: 'daily', minute: 99, hour: -4 }))).toBe('59 0 * * *');
       expect(buildCron(spec({ frequency: 'monthly', minute: 0, hour: 0, dayOfMonth: 45 })))
         .toBe('0 0 31 * *');
@@ -67,28 +67,28 @@ describe('cron-builder', () => {
 
   describe('parseCron', () => {
 
-    it('boş ifadede varsayılana döner', () => {
+    it('returns the default for an empty expression', () => {
       expect(parseCron('').frequency).toBe('daily');
       expect(parseCron(null).frequency).toBe('daily');
     });
 
-    it('pazar için 7 gösterimini 0 ile eşitler', () => {
+    it('maps the 7 notation for Sunday to 0', () => {
       const parsed = parseCron('0 3 * * 7');
       expect(parsed.frequency).toBe('weekly');
       expect(parsed.dayOfWeek).toBe(0);
     });
 
-    it('tanınmayan ama geçerli ifadeyi özel moda düşürür ve ham hâlini korur', () => {
+    it('falls back to custom mode for an unrecognized but valid expression, keeping it raw', () => {
       const parsed = parseCron('0 6,18 * * *');
       expect(parsed.frequency).toBe('custom');
       expect(parsed.raw).toBe('0 6,18 * * *');
     });
 
-    it('alan sayısı yanlışsa özel moda düşer', () => {
+    it('falls back to custom mode when the field count is wrong', () => {
       expect(parseCron('0 3 * *').frequency).toBe('custom');
     });
 
-    it('ay alanı kısıtlıysa özel moda düşer (bu altkümede üretilmez)', () => {
+    it('falls back to custom mode when the month field is restricted (not produced by this subset)', () => {
       expect(parseCron('0 3 1 6 *').frequency).toBe('custom');
     });
   });
@@ -106,7 +106,7 @@ describe('cron-builder', () => {
     ];
 
     cases.forEach(original => {
-      it(`${original.frequency} seçimi kaydedilip geri yüklendiğinde korunur`, () => {
+      it(`${original.frequency} selection survives save and reload`, () => {
         const expression = buildCron(original);
         const reparsed = parseCron(expression);
 
@@ -118,12 +118,12 @@ describe('cron-builder', () => {
 
   describe('isValidCron', () => {
 
-    it('geçerli ifadeleri kabul eder', () => {
+    it('accepts valid expressions', () => {
       ['0 3 * * *', '*/15 * * * *', '0 9-17/4 * * 1-5', '0 12 1 * *']
         .forEach(expr => expect(isValidCron(expr)).withContext(expr).toBe(true));
     });
 
-    it('geçersiz ifadeleri reddeder', () => {
+    it('rejects invalid expressions', () => {
       ['', '0 3 * *', '0 99 * * *', 'abc 3 * * *', '0 17-9 * * *', '0 3 * * * *']
         .forEach(expr => expect(isValidCron(expr)).withContext(expr).toBe(false));
     });
@@ -131,7 +131,7 @@ describe('cron-builder', () => {
 
   describe('nextOccurrences', () => {
 
-    // 5 Ağustos 2026, Çarşamba 10:17 — tüm beklentiler bu ana göre.
+    // 5 August 2026, Wednesday 10:17 — all expectations are relative to this moment.
     const from = new Date(2026, 7, 5, 10, 17);
 
     const asText = (dates: Date[]): string[] =>
@@ -140,58 +140,58 @@ describe('cron-builder', () => {
 
     const pad = (n: number): string => String(n).padStart(2, '0');
 
-    it('her gün 03:00', () => {
+    it('daily at 03:00', () => {
       expect(asText(nextOccurrences('0 3 * * *', from, 2)))
         .toEqual(['2026-08-06 03:00', '2026-08-07 03:00']);
     });
 
-    it('8 saatte bir', () => {
+    it('every 8 hours', () => {
       expect(asText(nextOccurrences('0 */8 * * *', from, 3)))
         .toEqual(['2026-08-05 16:00', '2026-08-06 00:00', '2026-08-06 08:00']);
     });
 
-    it('her ayın 1\'inde 12:00', () => {
+    it('on the 1st of every month at 12:00', () => {
       expect(asText(nextOccurrences('0 12 1 * *', from, 2)))
         .toEqual(['2026-09-01 12:00', '2026-10-01 12:00']);
     });
 
-    it('haftada bir pazartesi', () => {
+    it('weekly on Monday', () => {
       expect(asText(nextOccurrences('0 3 * * 1', from, 2)))
         .toEqual(['2026-08-10 03:00', '2026-08-17 03:00']);
     });
 
-    it('ayın 31\'i seçildiğinde kısa ayları atlar', () => {
+    it('skips short months when the 31st is selected', () => {
       expect(asText(nextOccurrences('0 2 31 * *', from, 3)))
         .toEqual(['2026-08-31 02:00', '2026-10-31 02:00', '2026-12-31 02:00']);
     });
 
-    it('29 Şubat yalnızca artık yılda düşer', () => {
+    it('29 February only occurs in leap years', () => {
       expect(asText(nextOccurrences('0 0 29 2 *', from, 2)))
         .toEqual(['2028-02-29 00:00', '2032-02-29 00:00']);
     });
 
-    it('şu anki dakikayı tekrar döndürmez', () => {
+    it('does not return the current minute again', () => {
       const exact = new Date(2026, 7, 5, 3, 0);
       expect(asText(nextOccurrences('0 3 * * *', exact, 1))).toEqual(['2026-08-06 03:00']);
     });
 
-    it('geçersiz ifadede boş dizi döner', () => {
+    it('returns an empty array for an invalid expression', () => {
       expect(nextOccurrences('bozuk', from, 3)).toEqual([]);
     });
   });
 
   describe('isShortMonthRisk', () => {
 
-    it('ayın 29-31\'i seçildiğinde uyarır', () => {
+    it('warns when the 29th-31st is selected', () => {
       [29, 30, 31].forEach(day =>
         expect(isShortMonthRisk(spec({ frequency: 'monthly', dayOfMonth: day }))).toBe(true));
     });
 
-    it('ayın 28 ve öncesinde uyarmaz', () => {
+    it('does not warn for the 28th or earlier', () => {
       expect(isShortMonthRisk(spec({ frequency: 'monthly', dayOfMonth: 28 }))).toBe(false);
     });
 
-    it('aylık olmayan sıklıkta uyarmaz', () => {
+    it('does not warn for a non-monthly frequency', () => {
       expect(isShortMonthRisk(spec({ frequency: 'daily', dayOfMonth: 31 }))).toBe(false);
     });
   });

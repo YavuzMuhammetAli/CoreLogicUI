@@ -1,14 +1,14 @@
 /**
- * Navigasyon (kenar çubuğu) tasarımı belgesi — schemaVersion 1.
+ * Navigation (sidebar) design document — schemaVersion 1.
  *
- * Admin olmayan kullanıcıların menüsü: kökte tek seviye klasörler ve bağlantılar. Belge sunucuda
- * `NavigationLayoutValidator` ile doğrulanıp normalize edilir; kurallar `nav-layout.validate.ts`
- * ile BİREBİR aynıdır (ortak vektörler: `nav-layout.vectors.json`).
+ * The menu for non-admin users: single-level folders and links at the root. On the server the document is
+ * validated and normalized by `NavigationLayoutValidator`; the rules are IDENTICAL to
+ * `nav-layout.validate.ts` (shared vectors: `nav-layout.vectors.json`).
  */
 
 export const NAV_SCHEMA_VERSION = 1;
 
-/** Menüye konabilen uygulama sayfaları. */
+/** App pages that can be put in the menu. */
 export type NavPage = 'tasks' | 'reports' | 'dashboards' | 'profile';
 export const NAV_PAGES: readonly NavPage[] = ['tasks', 'reports', 'dashboards', 'profile'];
 
@@ -16,7 +16,7 @@ export interface NavModelLink {
   readonly kind: 'model';
   readonly id: string;
   readonly typeName: string;
-  /** Boşsa modelin etiketi kullanılır. */
+  /** If empty, the model's label is used. */
   readonly label?: string;
 }
 
@@ -24,7 +24,7 @@ export interface NavDashboardLink {
   readonly kind: 'dashboard';
   readonly id: string;
   readonly dashboardId: number;
-  /** Tasarım anında dashboard adından kopyalanır. */
+  /** Copied from the dashboard name at design time. */
   readonly label: string;
 }
 
@@ -39,17 +39,17 @@ export interface NavPageLink {
   readonly kind: 'page';
   readonly id: string;
   readonly page: NavPage;
-  /** Boşsa sayfanın çeviri anahtarındaki ad. */
+  /** If empty, the name from the page's translation key. */
   readonly label?: string;
 }
 
 export interface NavUrlLink {
   readonly kind: 'url';
   readonly id: string;
-  /** Yalnız http(s) — `javascript:` vb. iki tarafta da reddedilir. */
+  /** http(s) only — `javascript:` etc. are rejected on both sides. */
   readonly url: string;
   readonly label: string;
-  /** Model ikon kataloğundan ad. */
+  /** A name from the model icon catalog. */
   readonly icon?: string;
 }
 
@@ -60,11 +60,11 @@ export interface NavFolder {
   readonly kind: 'folder';
   readonly id: string;
   readonly label: string;
-  /** Model ikon kataloğundan ad (ör. `folder`, `badge`). */
+  /** A name from the model icon catalog (e.g. `folder`, `badge`). */
   readonly icon?: string;
-  /** Kullanıcının menüsünde kapalı başlasın. */
+  /** Starts collapsed in the user's menu. */
   readonly collapsed?: boolean;
-  /** Tek seviye: klasör içinde klasör yapısal hatadır. */
+  /** Single level: a folder inside a folder is a structural error. */
   readonly children: readonly NavLink[];
 }
 
@@ -72,7 +72,7 @@ export type NavNode = NavFolder | NavLink;
 
 export interface NavLayout {
   readonly schemaVersion: 1;
-  /** Tasarıma yerleştirilmemiş, kullanıcının görebildiği modeller sona "Diğer modeller" klasöründe eklenir. */
+  /** Models visible to the user but not placed in the design are appended at the end in a "Diğer modeller" (Other models) folder. */
   readonly appendUnplaced: boolean;
   readonly items: readonly NavNode[];
 }
@@ -86,12 +86,12 @@ export const NAV_LIMITS = {
 } as const;
 
 export type NavIssueCode =
-  // Yapısal — her zaman hata
+  // Structural — always an error
   | 'unreadable' | 'tooLarge' | 'limit' | 'badId' | 'duplicateId' | 'badKind' | 'textTooLong'
   | 'badUrl' | 'badIcon' | 'badPage' | 'badTarget' | 'nestedFolder'
-  // Anlamsal — taslakta uyarı, yayında hata
+  // Semantic — warning in draft, error on publish
   | 'emptyLabel' | 'unknownModel' | 'unknownTarget' | 'duplicateModel'
-  // Bilgi
+  // Info
   | 'emptyFolder';
 
 export type NavIssueSeverity = 'error' | 'warning';
@@ -103,7 +103,7 @@ export interface NavIssue {
   readonly targetId?: string;
 }
 
-/** Doğrulamanın dış bilgisi; null küme o denetimi atlar. */
+/** External facts for validation; a null set skips that check. */
 export interface NavFacts {
   readonly models: ReadonlySet<string> | null;
   readonly dashboards: ReadonlySet<number> | null;

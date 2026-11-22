@@ -4,20 +4,20 @@ import { LanguageService } from '../services/language.service';
 import { TranslatePipe } from './translate.pipe';
 
 /**
- * OnPush + impure TranslatePipe etkileşiminin regresyon testi.
+ * Regression test of the OnPush + impure TranslatePipe interaction.
  *
- * NEDEN KRİTİK: Uygulamanın tamamı OnPush'a geçirildi. OnPush bir component'i yalnızca
- * girdi referansı, şablon olayı, okuduğu bir signal ya da markForCheck() ile kontrol eder.
- * Dil değişimi bunların hiçbiri gibi görünür — ancak TranslatePipe.transform içinde
- * LanguageService.lang() signal'i okunur ve bu okuma şablon değerlendirmesi sırasında
- * gerçekleştiği için component'i signal'in tüketicisi olarak kaydeder. Dil değişince
- * component kirlenir ve impure pipe yeniden çalışır.
+ * WHY IT IS CRITICAL: the whole app was switched to OnPush. OnPush checks a component only on
+ * an input reference, a template event, a signal it reads, or markForCheck().
+ * A language change looks like none of these — but inside TranslatePipe.transform the
+ * LanguageService.lang() signal is read, and since that read happens during template evaluation
+ * it registers the component as a consumer of the signal. When the language changes
+ * the component becomes dirty and the impure pipe runs again.
  *
- * Bu test o zincirin kopmadığını doğrular. Kırılırsa: dil butonuna basıldığında
- * ekranlardaki metinler eski dilde KALIR (sessiz, fark edilmesi güç bir regresyon).
+ * This test verifies that chain is not broken. If it breaks: when the language button is pressed,
+ * texts on screens STAY in the old language (a silent regression that is hard to notice).
  *
- * Pipe'ı `pure: true` yapmak bu testi düşürür: pure pipe girdi ('demo.key') değişmediği
- * için önbelleğe takılır ve eski metni döndürür.
+ * Making the pipe `pure: true` fails this test: a pure pipe gets stuck in its cache because the
+ * input ('demo.key') does not change, and returns the old text.
  */
 @Component({
     imports: [TranslatePipe],
@@ -60,7 +60,7 @@ describe('TranslatePipe + OnPush', () => {
     expect(after).toBe('Models');
   });
 
-  it('geri donusta de calisir (en -> tr)', () => {
+  it('also works when switching back (en -> tr)', () => {
     language.toggle();
     fixture.detectChanges();
     language.toggle();

@@ -5,7 +5,7 @@ interface Doc { readonly value: string }
 const serialize = (d: Doc) => JSON.stringify(d);
 
 describe('LayoutDesignerStore', () => {
-  it('yüklenen belge kirli değildir; değişince kirlenir, geri alınca temizlenir', () => {
+  it('a loaded document is not dirty; it gets dirty on change and clean again on undo', () => {
     const store = new LayoutDesignerStore<Doc>({ value: 'a' }, serialize);
     store.load({ value: 'b' }, '2026-10-20T10:00:00');
     expect(store.dirty()).toBeFalse();
@@ -22,7 +22,7 @@ describe('LayoutDesignerStore', () => {
     expect(store.doc().value).toBe('c');
   });
 
-  it('aynı sebeple ardışık değişiklikler tek geri al adımıdır', () => {
+  it('consecutive changes with the same reason are a single undo step', () => {
     const store = new LayoutDesignerStore<Doc>({ value: '' }, serialize);
     store.dispatch('inspector:title:t1', () => ({ value: 'A' }), 1000);
     store.dispatch('inspector:title:t1', () => ({ value: 'Ab' }), 1200);
@@ -30,17 +30,17 @@ describe('LayoutDesignerStore', () => {
     expect(store.doc().value).toBe('');
   });
 
-  it('kayıt, istek gönderilirken kullanılan belgeyi kaydedilmiş sayar', () => {
+  it('save treats the document used when sending the request as saved', () => {
     const store = new LayoutDesignerStore<Doc>({ value: 'a' }, serialize);
     store.dispatch('', () => ({ value: 'b' }), 1000);
     const sent = store.doc();
-    store.dispatch('', () => ({ value: 'c' }), 2000);   // istek sürerken düzenleme
+    store.dispatch('', () => ({ value: 'c' }), 2000);   // edit while the request is in flight
     store.markSaved(sent, 'damga');
     expect(store.dirty()).toBeTrue();
     expect(store.lastModifiedOn()).toBe('damga');
   });
 
-  it('yükleme seçimi temizler', () => {
+  it('loading clears the selection', () => {
     const store = new LayoutDesignerStore<Doc>({ value: 'a' }, serialize);
     store.selection.set('f1');
     store.load({ value: 'a' }, null);

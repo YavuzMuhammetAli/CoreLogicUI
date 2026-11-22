@@ -24,7 +24,7 @@ const GRAPH = {
 };
 
 describe('workflow-design.doc', () => {
-  it('tanımdan belge kurar', () => {
+  it('builds a document from the definition', () => {
     const doc = docFromDefinition(definition(JSON.stringify(GRAPH),
       '[{"field":"Tutar","operator":"gt","value":"0"}]'));
 
@@ -37,8 +37,8 @@ describe('workflow-design.doc', () => {
     expect(doc.extras).toEqual({ designer: { start: { x: 10, y: 0 } } });
   });
 
-  it('gidiş-dönüş kayıpsızdır: konum, bilinmeyen alanlar, maxLength, bitiş etiketi', () => {
-    // Eski buildGraph her kayıtta bunların hepsini siliyordu.
+  it('round trip is lossless: position, unknown fields, maxLength, end label', () => {
+    // The old buildGraph deleted all of these on every save.
     const doc = docFromDefinition(definition(JSON.stringify(GRAPH)));
     const payload = docToPayload(doc, 7);
 
@@ -47,7 +47,7 @@ describe('workflow-design.doc', () => {
     expect(payload.triggerConditionJson).toBeNull();
   });
 
-  it('koşullar varsa JSON olarak gider', () => {
+  it('conditions are sent as JSON when present', () => {
     const doc = docFromDefinition(definition(JSON.stringify(GRAPH),
       '[{"field":"Tutar","operator":"gt","value":"0"}]'));
 
@@ -56,14 +56,14 @@ describe('workflow-design.doc', () => {
     expect(docToPayload(doc, null).id).toBe(0);
   });
 
-  it('bozuk tanım boş grafik verir, istisna fırlatmaz', () => {
+  it('a broken definition yields an empty graph, does not throw', () => {
     const doc = docFromDefinition(definition('{bozuk'));
 
     expect(doc.graph).toEqual({ startStep: '', steps: [], entityStatusMap: {} });
     expect(doc.extras).toEqual({});
   });
 
-  it('konumdan bağımsız anahtar sürüklemeyle değişmez, içerikle değişir', () => {
+  it('the position-independent key does not change on drag, changes with content', () => {
     const doc = docFromDefinition(definition(JSON.stringify(GRAPH)));
     const moved = {
       ...doc,
@@ -79,7 +79,7 @@ describe('workflow-design.doc', () => {
     expect(semanticKey(renamed)).not.toBe(semanticKey(doc));
   });
 
-  it('yeni akışın varsayılanları eski tasarım ekranıyla aynı', () => {
+  it('a new flow\'s defaults match the old design screen', () => {
     expect(emptyDoc().meta.triggerEvent).toBe('onCreate');
     expect(emptyDoc().meta.isEnabled).toBeTrue();
   });

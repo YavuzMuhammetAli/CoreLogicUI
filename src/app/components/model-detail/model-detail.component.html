@@ -2,13 +2,13 @@
 <div class="detail-breadcrumb">
   <a [routerLink]="['/models']" class="bc-link">{{ 'model.detail.breadcrumbModels' | t }}</a>
   <span class="bc-sep">/</span>
-  <!-- Meta gelene kadar boşluk: önce tablo adı yazıp etikete "sıçramasın" -->
+  <!-- Placeholder until meta arrives: so it does not show the table name first and then "jump" to the label -->
   <a [routerLink]="['/models', typeName]" class="bc-link">@if (!model && loadingRecord) { &nbsp; } @else { {{ modelTitle }} }</a>
   <span class="bc-sep">/</span>
   <span class="bc-current">@if (isNew) { {{ 'model.detail.breadcrumbNew' | t }} } @else { {{ 'model.detail.breadcrumbDetail' | t }} }</span>
 </div>
 
-<!-- ─── Yükleniyor / Hata ──────────────────────────────────────────────────── -->
+<!-- ─── Loading / Error ────────────────────────────────────────────────────── -->
 @if (loadingRecord) {
   <div class="detail-loading">
     <span class="spinner" style="width:32px;height:32px" [attr.aria-label]="'model.detail.loadingAria' | t"></span>
@@ -20,10 +20,10 @@
   <div class="alert alert-danger" role="alert">{{ recordError }}</div>
 }
 
-<!-- ─── Ana içerik ─────────────────────────────────────────────────────────── -->
+<!-- ─── Main content ───────────────────────────────────────────────────────── -->
 @if (!loadingRecord && !recordError && (record || isNew)) {
 
-  <!-- ══ ÜST PANEL ═════════════════════════════════════════════════════════ -->
+  <!-- ══ TOP PANEL ═════════════════════════════════════════════════════════ -->
   <div class="panel record-panel">
     <div class="panel-head record-panel-head">
       <div>
@@ -32,10 +32,10 @@
         </h1>
       </div>
 
-      <!-- Sağ üst aksiyonlar: Kolonlar (admin) + Listeye Dön + Kaydet -->
+      <!-- Top-right actions: Columns (admin) + Back to list + Save -->
       <div class="panel-actions">
         @if (permission.isAdmin()) {
-          <!-- Yayınlanmış ekran tasarımı "Kolonlar" ayarının yerini alır: tek doğruluk kaynağı. -->
+          <!-- A published screen design replaces the "Kolonlar" (Columns) setting: single source of truth. -->
           <a class="btn btn-ghost btn-sm" [routerLink]="['/build', typeName, 'screen']" [queryParams]="designQuery(typeName, 'form')"
              [attr.aria-label]="'screen.designScreenAria' | t"><app-icon name="dashboard_customize" size="14" />{{ 'screen.designScreen' | t }}</a>
           @if (!formLayout) {
@@ -52,7 +52,7 @@
           {{ 'model.detail.backToList' | t }}
         </a>
 
-        <!-- Onay sürecindeki kaydı yalnız admin silebilir (sunucu da reddediyor). -->
+        <!-- Only admin can delete a record in an approval process (the server rejects it too). -->
         @if (!isNew && permission.can(typeName, 'delete') && !recordLockedForUser) {
           <button
             type="button"
@@ -104,8 +104,8 @@
           }
         }
 
-        <!-- Akışı görüntüle: kaydın en yeni süreci, yalnız ilerlediği yere kadar.
-             Yalnız sunucunun bu kullanıcıya gösterdiği süreç varsa çıkar. -->
+        <!-- View workflow: the record's newest process, only up to where it has progressed.
+             Shown only if the server shows a process to this user. -->
         @if (latestInstanceId) {
           <button type="button" class="btn btn-secondary btn-sm" (click)="openWorkflowView(latestInstanceId)">
             <app-icon name="account_tree" size="14" />
@@ -113,7 +113,7 @@
           </button>
         }
 
-        <!-- "{Akış} Başlat": kaydeder (gerekiyorsa) ve akışı başlatır. -->
+        <!-- "{Akış} Başlat" (Start {workflow}): saves (if needed) and starts the workflow. -->
         @for (workflow of startableWorkflows; track workflow.code) {
           <button
             type="button"
@@ -125,7 +125,7 @@
           </button>
         }
 
-        <!-- Sırası gelen kişinin adım butonları — Kaydet'in yanında, adımın adıyla. -->
+        <!-- Step buttons of the person whose turn it is — next to Save, named after the step. -->
         @for (task of myStepTasks; track task.taskId) {
           @if (task.canReject) {
             <button
@@ -154,13 +154,13 @@
       </div>
     </div>
 
-    <!-- ── Form (her zaman düzenlenebilir) ──────────────────────────────── -->
+    <!-- ── Form (always editable) ─────────────────────────────────────────── -->
     @if (editForm) {
       <div class="panel-body">
         @if (wfState?.running; as running) {
           <div class="workflow-strip" [class.workflow-strip--locked]="wfState?.isLocked" role="status">
             <span class="badge badge-warn">{{ 'workflow.record.inProcess' | t }}</span>
-            <!-- Gecikme eskiden yalnız adım düğmesinin title'ındaydı — dokunmatikte görünmüyordu -->
+            <!-- The delay used to be only in the step button's title — invisible on touch devices -->
             @if (hasOverdueStep) {
               <span class="badge badge-danger">{{ 'task.list.overdue' | t }}</span>
             }
@@ -204,14 +204,14 @@
             [autoValues]="autoValuesBinding"
             [designLink]="designLink" />
 
-          <!-- Kaydet yalnızca sağ üstte; buradaki mükerrer buton kaldırıldı.
-               <form> üzerindeki (ngSubmit) korunur — Enter ile kaydetme çalışır. -->
+          <!-- Save is only at the top right; the duplicate button here was removed.
+               (ngSubmit) on the <form> is kept — saving with Enter works. -->
         </form>
       </div>
     }
   </div>
 
-  <!-- ══ ALT PANEL: İlişkili Alt Modeller ══ -->
+  <!-- ══ BOTTOM PANEL: Related sub-models ══ -->
   @if (loadingChildren) {
     <div class="children-loading">
       <span class="spinner" aria-hidden="true"></span>
@@ -222,7 +222,7 @@
   @if (!loadingChildren && childModelNames.length > 0) {
     <div class="children-panel panel">
 
-        <!-- Yeni kayıt modunda bilgi notu -->
+        <!-- Info note in new record mode -->
         @if (isNew) {
           <div class="alert alert-info" role="status" style="margin:var(--space-4) var(--space-4) 0">
             <app-icon name="info" size="14" />
@@ -230,10 +230,10 @@
           </div>
         }
 
-        <!-- Kısmi kayıt hatası uyarısı (toplu kayıt sonrası) -->
+        <!-- Partial save error warning (after bulk save) -->
         @if (childSaveErrors.length > 0) {
           <div class="alert alert-danger" role="alert" style="margin:var(--space-4) var(--space-4) 0">
-            <!-- Global .alert flex olduğu için içerik tek bir kapsayıcıda dikey akmalı -->
+            <!-- Since the global .alert is flex, the content must flow vertically in a single container -->
             <div class="partial-save-error">
               <strong>{{ 'model.detail.partialSaveErrorTitle' | t }}</strong>
               <ul>
@@ -246,7 +246,7 @@
           </div>
         }
 
-        <!-- Sekme çubuğu -->
+        <!-- Tab bar -->
         <div class="tab-bar" role="tablist" [attr.aria-label]="'model.detail.subModelsTablistAria' | t">
           @for (name of childModelNames; track name) {
             <button
@@ -263,7 +263,7 @@
           }
         </div>
 
-        <!-- Her sekme paneli -->
+        <!-- Each tab panel -->
         @for (name of childModelNames; track name) {
           @if (activeTab === name) {
             @let state = tabState(name);
@@ -271,7 +271,7 @@
             @if (state) {
               <div class="tab-panel" role="tabpanel" [attr.aria-label]="'model.detail.tabPanelAria' | t:{ name: label }">
 
-                <!-- Araç çubuğu: arama + ekle butonu -->
+                <!-- Toolbar: search + add button -->
                 <div class="tab-toolbar">
                   <div class="search-box">
                     <app-icon name="search" size="14" class="search-icon" />
@@ -322,7 +322,7 @@
                   </div>
                 </div>
 
-                <!-- Toplu silmede silinemeyenlerin özeti — satırlar seçili kalır -->
+                <!-- Summary of rows that could not be deleted in bulk delete — rows stay selected -->
                 @if (state.bulkErrors.length > 0) {
                   <div class="alert alert-danger" role="alert" style="margin:var(--space-3) var(--space-4)">
                     <div class="partial-save-error">
@@ -336,9 +336,9 @@
                   </div>
                 }
 
-                <!-- ── Bekleyen (kaydedilmemiş / hatalı) satırlar ─────────────
-                     Kaydetme hatasında bu liste TEMİZLENMEZ; kullanıcı düzeltip
-                     tekrar "Kaydet" der. Kaydedilenler sunucu tablosuna geçer. -->
+                <!-- ── Pending (unsaved / failed) rows ───────────────────────
+                     This list is NOT CLEARED on a save error; the user fixes it and
+                     presses "Kaydet" (Save) again. Saved ones move to the server table. -->
                 @if (state.staged.length > 0) {
                   <div class="staged-block">
                     <div class="staged-head">
@@ -421,7 +421,7 @@
                   </div>
                 }
 
-                <!-- ── Hata / Yükleniyor / Boş ────────────────────────────── -->
+                <!-- ── Error / Loading / Empty ────────────────────────────── -->
                 @if (state.error) {
                   <div class="alert alert-danger" style="margin:var(--space-3) var(--space-4)" role="alert">{{ state.error }}</div>
                 }
@@ -444,7 +444,7 @@
                   </div>
                 }
 
-                <!-- ── Veri Tablosu ─────────────────────────────────────────── -->
+                <!-- ── Data table ───────────────────────────────────────────── -->
                 @if (!state.loading && getDisplayRows(state).length > 0) {
                   <div class="tab-table-wrapper">
                     <table class="data-table" [attr.aria-label]="'model.detail.tabPanelAria' | t:{ name: label }">
@@ -555,7 +555,7 @@
                   </div>
                 }
 
-                <!-- Arama sonuç yok -->
+                <!-- No search results -->
                 @if (!state.loading && state.rows.length > 0 && getDisplayRows(state).length === 0) {
                   <div class="empty-state" style="padding:var(--space-6)">
                     <p>{{ 'model.detail.noSearchResult' | t:{ term: state.searchTerm } }}</p>
@@ -571,9 +571,9 @@
     }
   }
 
-<!-- ══ ALT MODEL KAYIT POP-UP'I ═══════════════════════════════════════════════
-     Kayıt ve tüm alt ağacı burada bellekte kurulur; hiçbir seviye "önce üstünü
-     kaydet" zorunluluğu taşımaz. Ağaç ancak üstteki "Kaydet" ile gönderilir. -->
+<!-- ══ SUB-MODEL RECORD POP-UP ════════════════════════════════════════════════
+     The record and its whole subtree are built here in memory; no level requires
+     "save the parent first". The tree is sent only with the "Kaydet" (Save) above. -->
 @if (dialogOpen && dialogNode) {
   <app-record-form-dialog
     [node]="dialogNode"
@@ -584,14 +584,14 @@
     (cancelled)="closeRecordDialog()" />
 }
 
-<!-- ══ AKIŞI GÖRÜNTÜLE (yalnız ilerlenen yol + kim onayladı / bekliyor) ══════
-     Tuval (workflow-canvas) kayıt açılışında inmesin: diyalog ilk açılışta yüklenir,
-     sonra yerinde kalır (when koşulu bir kez doğru olunca blok yüklü kalır). -->
+<!-- ══ VIEW WORKFLOW (only the path taken + who approved / is pending) ═══════
+     The canvas (workflow-canvas) must not load when the record opens: the dialog loads on first open,
+     then stays in place (once the when condition is true the block stays loaded). -->
 @defer (when viewInstanceId !== null) {
   <app-workflow-view-dialog [instanceId]="viewInstanceId" (closed)="closeWorkflowView()" />
 }
 
-<!-- ══ ADIM EYLEM DİYALOĞU (ek karar alanları / red açıklaması) ══════════════ -->
+<!-- ══ STEP ACTION DIALOG (extra decision fields / rejection note) ═══════════ -->
 <app-task-action-dialog
   [open]="!!actionDialog"
   [decision]="actionDialog?.decision ?? 'approve'"
@@ -603,7 +603,7 @@
   (confirmed)="onActionConfirmed($event)"
   (cancelled)="closeActionDialog()" />
 
-<!-- ══ TOPLU SİLME / KALDIRMA ONAYI ═══════════════════════════════════════════ -->
+<!-- ══ BULK DELETE / REMOVE CONFIRMATION ═════════════════════════════════════ -->
 <app-confirm-dialog
   [open]="!!bulkState"
   [title]="bulkTitle"
@@ -612,7 +612,7 @@
   (confirmed)="confirmBulk()"
   (cancelled)="cancelBulk()" />
 
-<!-- Kayıt silme onayı — native confirm() yerine tasarım sistemine uygun diyalog -->
+<!-- Record delete confirmation — a design-system dialog instead of native confirm() -->
 <app-confirm-dialog
   [open]="deleteRecordConfirmOpen"
   [title]="'model.detail.deleteConfirmTitle' | t"

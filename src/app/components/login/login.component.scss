@@ -1,6 +1,6 @@
 .login-page {
   min-height: 100vh;
-  /* Görünen alan: mobilde 100vh adres çubuğunu da sayar, kart aşağı kayardı */
+  /* Visible area: on mobile 100vh includes the address bar, the card shifted down */
   min-height: 100dvh;
   display: grid;
   place-items: center;
@@ -56,7 +56,7 @@
   margin-top: var(--space-2);
 }
 
-// ── Yeni şirket kaydı bölümü ────────────────────────────────────────────────
+// ── New company sign-up section ─────────────────────────────────────────────
 
 .login-divider {
   display: flex;

@@ -2,22 +2,22 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 
-import { DatabaseProccessComponent } from './database-proccess.component';
+import { DatabaseProcessComponent } from './database-process.component';
 
-describe('DatabaseProccessComponent', () => {
-  let component: DatabaseProccessComponent;
-  let fixture: ComponentFixture<DatabaseProccessComponent>;
+describe('DatabaseProcessComponent', () => {
+  let component: DatabaseProcessComponent;
+  let fixture: ComponentFixture<DatabaseProcessComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DatabaseProccessComponent],
-      // Bilesenler servisleri uzerinden HttpClient'a baglidir; app.config.ts'teki
-      // provideHttpClient TestBed'de otomatik gelmez.
+      imports: [DatabaseProcessComponent],
+      // Components depend on HttpClient through their services; provideHttpClient from
+      // app.config.ts is not provided automatically in TestBed.
       providers: [provideHttpClient(), provideHttpClientTesting()]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(DatabaseProccessComponent);
+    fixture = TestBed.createComponent(DatabaseProcessComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

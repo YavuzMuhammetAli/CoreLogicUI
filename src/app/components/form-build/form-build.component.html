@@ -1,4 +1,4 @@
-<!-- ─── Liste ekranı: yayınlanmış modeller + yeni tablo oluştur ────────────── -->
+<!-- ─── List screen: published models + create new table ───────────────────── -->
 <div class="page-header">
   <span class="eyebrow">{{ 'formBuild.title' | t }}</span>
   <a [routerLink]="['/build', 'new']" class="btn btn-primary">
@@ -7,7 +7,7 @@
   </a>
 </div>
 
-<!-- Yükleniyor -->
+<!-- Loading -->
 @if (loadingModels) {
   <div class="panel">
     <div class="empty-state">
@@ -16,12 +16,12 @@
   </div>
 }
 
-<!-- Hata -->
+<!-- Error -->
 @if (listError) {
   <div class="alert alert-danger" role="alert">{{ listError }}</div>
 }
 
-<!-- Pasifleştirme hatası -->
+<!-- Deactivation error -->
 @if (deleteError) {
   <div class="alert alert-danger" role="alert">{{ deleteError }}</div>
 }
@@ -60,7 +60,7 @@
 
           </a>
 
-          <!-- Silme — düzenleme linkinden ayrı, nested <a> olmasın diye dışarıda -->
+          <!-- Delete — kept outside, separate from the edit link, to avoid a nested <a> -->
           <div class="model-card-actions">
             <a class="btn btn-ghost btn-sm" [routerLink]="['/build', model.typeName, 'screen']"
                [attr.aria-label]="'screen.designScreenAria' | t"><app-icon name="dashboard_customize" size="14" />{{ 'screen.designScreen' | t }}</a>
@@ -92,7 +92,7 @@
       (confirmed)="onConfirmDelete()"
       (cancelled)="onCancelDelete()" />
   } @else {
-    <!-- Henüz model yok -->
+    <!-- No models yet -->
     <div class="panel">
       <div class="empty-state">
         <app-icon class="empty-icon" name="folder_open" size="40" />

@@ -2,13 +2,13 @@
   display: block;
   padding: var(--space-6);
 
-  /* Dar ekranda boşluğu .page-content zaten veriyor — çift boşluk içeriği daraltıyordu */
+  /* On narrow screens .page-content already provides the spacing — double spacing squeezed the content */
   @media (max-width: 768px) {
     padding: 0;
   }
 }
 
-/* Yükleniyor satırı */
+/* Loading row */
 .loading-row {
   display: flex;
   align-items: center;
@@ -16,7 +16,7 @@
   margin-bottom: var(--space-4);
 }
 
-/* İşlem kartları grup wrapper */
+/* Wrapper for the action card group */
 .action-group {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -24,7 +24,7 @@
   margin-top: var(--space-4);
 }
 
-/* Tek işlem kartı */
+/* Single action card */
 .action-card {
   display: flex;
   flex-direction: column;
@@ -48,7 +48,7 @@
   color: var(--fg-2);
 }
 
-/* Dar ekranlar için tek sütun */
+/* Single column on narrow screens */
 @media (max-width: 768px) {
   .action-group {
     grid-template-columns: 1fr;

@@ -1,9 +1,9 @@
 import { Translations } from './translations.model';
 
 /**
- * model-list / model-data / model-detail / model-node / table-detail
- * ekranlarına özel statik metinler. `common.i18n.ts`'de zaten tanımlı genel anahtarlar
- * (kaydet, vazgeç, sil, düzenle, ekle, yeni, ara, aktif/pasif vb.) burada tekrar tanımlanmaz.
+ * Static texts specific to the model-list / model-data / model-detail / model-node / table-detail
+ * screens. General keys already defined in `common.i18n.ts`
+ * (save, cancel, delete, edit, add, new, search, active/inactive etc.) are not redefined here.
  */
 export const MODEL_I18N: Translations = {
   // ── model-list.component.html / .ts ─────────────────────────────────────────
@@ -66,7 +66,7 @@ export const MODEL_I18N: Translations = {
   'model.data.assemblyNotLoaded': { tr: 'Model backend\'de yüklü değil. "Tablo Oluştur"dan yeniden yayınlayın.', en: 'The model is not loaded on the backend. Re-publish it from "Create Table".' },
   'model.data.loadFailed': { tr: 'Veriler yüklenemedi.', en: 'Data could not be loaded.' },
 
-  // Satır seçimi + toplu silme (liste ekranı)
+  // Row selection + bulk delete (list screen)
   'model.data.selectAllAria': { tr: 'Tüm satırları seç', en: 'Select all rows' },
   'model.data.selectRowAria': { tr: 'Satırı seç', en: 'Select row' },
   'model.data.bulkDelete': { tr: 'Seçilenleri Sil ({count})', en: 'Delete Selected ({count})' },
@@ -95,7 +95,7 @@ export const MODEL_I18N: Translations = {
   'model.detail.fieldDescriptionAria': { tr: 'Alan açıklaması: {description}', en: 'Field description: {description}' },
   'model.detail.selectOption': { tr: 'Seçin...', en: 'Select...' },
 
-  // ── Lookup seçim kutusu (tembel yüklemeli combobox) ───────────────────────
+  // ── Lookup picker (lazy-loading combobox) ─────────────────────────────────
   'model.lookup.placeholder': { tr: 'Aramak için yazın...', en: 'Type to search...' },
   'model.lookup.ariaLabel': { tr: 'Kayıt seçin', en: 'Select a record' },
   'model.lookup.clear': { tr: 'Seçimi temizle', en: 'Clear selection' },
@@ -106,8 +106,8 @@ export const MODEL_I18N: Translations = {
   'model.detail.download': { tr: 'İndir', en: 'Download' },
   'model.detail.fieldRequired': { tr: '{label} zorunludur.', en: '{label} is required.' },
 
-  // Şema kurallarından türetilen istemci doğrulaması — hatalar sunucuya gitmeden görünür.
-  // 'pattern' hatasında önce kolonun kendi "Regex Mesajı" denenir, bu metin yedektir.
+  // Client validation derived from the schema rules — errors show before reaching the server.
+  // On a 'pattern' error the column's own "Regex Mesajı" (Regex message) is tried first; this text is the fallback.
   'model.detail.fieldPattern': { tr: '{label} geçerli biçimde değil.', en: '{label} is not in a valid format.' },
   'model.detail.fieldMinLength': { tr: '{label} en az {min} karakter olmalıdır.', en: '{label} must be at least {min} characters.' },
   'model.detail.fieldMaxLength': { tr: '{label} en fazla {max} karakter olabilir.', en: '{label} can be at most {max} characters.' },
@@ -119,8 +119,8 @@ export const MODEL_I18N: Translations = {
   },
   'model.detail.childrenLoading': { tr: 'İlişkili modeller yükleniyor...', en: 'Loading related models...' },
   'model.detail.newRecordInfoNote': { tr: 'Alt kayıtları şimdi ekleyebilirsiniz. <strong>Tümünü Kaydet</strong> butonuna bastığınızda ana kayıt ile birlikte kaydedilecek.', en: 'You can add sub-records now. When you press <strong>Save All</strong>, they will be saved together with the main record.' },
-  // Kaydetme "hepsi ya da hiçbiri": ağacın tamamı tek transaction'da yazılır.
-  // Bir alan bile geçersizse HİÇBİR kayıt oluşmaz ve tüm hatalar birden döner.
+  // Saving is "all or nothing": the whole tree is written in a single transaction.
+  // If even one field is invalid NO record is created and all errors are returned at once.
   'model.detail.partialSaveErrorTitle': {
     tr: 'Hiçbir kayıt oluşturulmadı — düzeltilmesi gereken alanlar:',
     en: 'No records were created — fields that need fixing:'
@@ -174,7 +174,7 @@ export const MODEL_I18N: Translations = {
   'model.detail.stagedTitle': { tr: 'Kaydedilmeyi bekleyenler', en: 'Waiting to be saved' },
   'model.detail.stagedSubCount': { tr: '+{count} alt kayıt', en: '+{count} sub-records' },
 
-  // Satır seçimi + toplu silme (alt model sekmesi)
+  // Row selection + bulk delete (sub-model tab)
   'model.detail.selectAllAria': { tr: 'Tüm satırları seç', en: 'Select all rows' },
   'model.detail.selectRowAria': { tr: 'Satırı seç', en: 'Select row' },
   'model.detail.editRowAria': { tr: 'Kaydı düzenle', en: 'Edit record' },
@@ -186,9 +186,9 @@ export const MODEL_I18N: Translations = {
   'model.detail.bulkRemoveStagedTitle': { tr: 'Bekleyen satırları kaldır', en: 'Remove staged rows' },
   'model.detail.bulkRemoveStagedMessage': { tr: '{count} bekleyen satır kaldırılacak. Emin misiniz?', en: '{count} staged row(s) will be removed. Are you sure?' },
 
-  // ── record-form-dialog.component (iç içe kayıt pop-up'ı) ────────────────────
-  // Kayıt ve tüm alt ağacı bellekte kurulur; hiçbir seviye "önce üstünü kaydet"
-  // zorunluluğu taşımaz — ağaç ancak ana modelde "Kaydet"e basılınca gönderilir.
+  // ── record-form-dialog.component (nested record pop-up) ──────────────────────
+  // The record and its whole subtree are built in memory; no level carries a "save the parent first"
+  // requirement — the tree is sent only when "Kaydet" (Save) is pressed on the main model.
   'record.dialogNewTitle': { tr: 'Yeni {name}', en: 'New {name}' },
   'record.dialogEditTitle': { tr: '{name} düzenle', en: 'Edit {name}' },
   'record.dialogSubtitle': {
@@ -210,7 +210,7 @@ export const MODEL_I18N: Translations = {
   'record.noChildRows': { tr: 'Henüz alt kayıt eklenmedi.', en: 'No sub-records added yet.' },
   'record.colState': { tr: 'Durum', en: 'State' },
 
-  // Alt kayıt tablosu: satır seçimi + toplu silme (her derinlikte aynı)
+  // Child record table: row selection + bulk delete (same at every depth)
   'record.selectAllAria': { tr: 'Tüm satırları seç', en: 'Select all rows' },
   'record.selectRowAria': { tr: 'Satırı seç', en: 'Select row' },
   'record.editRowAria': { tr: 'Kaydı düzenle', en: 'Edit record' },
@@ -249,7 +249,7 @@ export const MODEL_I18N: Translations = {
   'model.node.modelLabelLabel': { tr: 'Model Etiketi', en: 'Model Label' },
   'model.node.modelLabelPlaceholder': { tr: 'Örn: Sipariş Kalemi', en: 'e.g. Order Item' },
 
-  // ── Model/alan adı doğrulaması (utils/identifier.ts) ──────────────────────────
+  // ── Model/field name validation (utils/identifier.ts) ────────────────────────
   'identifier.error.required': { tr: 'Ad zorunludur.', en: 'Name is required.' },
   'identifier.error.maxLength': { tr: 'Ad en fazla {max} karakter olabilir.', en: 'The name can be at most {max} characters.' },
   'identifier.error.pattern': {
@@ -433,7 +433,7 @@ export const MODEL_I18N: Translations = {
   'table.detail.ruleNone': { tr: '—', en: '—' },
   'table.detail.ruleAutoValue': { tr: 'ƒx {trigger}', en: 'ƒx {trigger}' },
 
-  // ── Otomatik değer (sütun popup'ı) — bkz. utils/auto-value ─────────────────
+  // ── Auto value (column popup) — see utils/auto-value ───────────────────────
   'table.detail.autoValue.title': { tr: 'Otomatik Değer', en: 'Automatic Value' },
   'table.detail.autoValue.help': {
     tr: 'Alan bir formülle kendiliğinden doldurulur. Alanlar [Ad], metinler \'tırnak\' içinde yazılır. İşlemler: + - * / %, & (metin birleştirme), = != < <= > >=, AND OR NOT. Fonksiyonlar: IF, COALESCE, MIN, MAX, ROUND, ABS, CONCAT, UPPER, LOWER, TRIM, LEFT, RIGHT, LEN, TODAY, NOW, FORMAT_DATE, ADD_DAYS, SEQ. Boş alan hesapta 0 sayılır. Sunucu kaydederken aynı formülü yeniden hesaplar.',
@@ -507,11 +507,11 @@ export const MODEL_I18N: Translations = {
   'table.detail.autoValue.parse.argCount': { tr: '{arg} için argüman sayısı hatalı', en: 'Wrong number of arguments for {arg}' },
   'table.detail.autoValue.parse.bareIdentifier': { tr: 'Alan adları köşeli parantezle yazılır: [{arg}]', en: 'Write field names in brackets: [{arg}]' },
 
-  // ── Otomatik değer (kayıt formları) ────────────────────────────────────────
+  // ── Auto value (record forms) ──────────────────────────────────────────────
   'model.detail.autoValue.badgeAria': { tr: 'Otomatik değer: {expression}', en: 'Automatic value: {expression}' },
   'model.detail.autoValue.pending': { tr: 'Kaydedince atanır', en: 'Assigned on save' },
 
-  // ── Model ikonu (yayınlarken seçilir; shared/model-icon) ────────────────────
+  // ── Model icon (chosen on publish; shared/model-icon) ──────────────────────
   'model.icon.pickTitle': { tr: 'Model ikonu', en: 'Model icon' },
   'model.icon.publishTitle': { tr: 'Yayınla — model ikonunu seç', en: 'Publish — choose the model icon' },
   'model.icon.publishHint': {

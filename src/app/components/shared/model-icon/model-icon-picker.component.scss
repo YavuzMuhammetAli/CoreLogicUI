@@ -11,7 +11,7 @@
   z-index: 1000;
 }
 
-/* Izgara kendi içinde kayar; başlık, arama ve düğmeler sabit kalır. */
+/* The grid scrolls within itself; the header, search and buttons stay fixed. */
 .dialog-panel {
   display: flex;
   flex-direction: column;
@@ -97,7 +97,7 @@
   color: var(--muted);
 }
 
-/* .panel-actions global kuralı .panel-head içine yuvalı — diyalogda padding'i bileşen verir (bkz. confirm-dialog). */
+/* The global .panel-actions rule is nested inside .panel-head — in a dialog the component provides the padding (see confirm-dialog). */
 .dialog-panel .panel-actions {
   display: flex;
   justify-content: flex-end;

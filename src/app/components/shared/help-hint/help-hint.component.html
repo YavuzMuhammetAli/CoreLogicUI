@@ -1,5 +1,5 @@
-<!-- Baloncuk çoğu yerde bir <label> içinde durur; tıklama etiketin kontrolünü
-     etkinleştirmesin (onay kutusunu ters çevirmesin) diye olay durdurulur. -->
+<!-- The bubble usually sits inside a <label>; the event is stopped so the click doesn't
+     activate the label's control (doesn't toggle the checkbox). -->
 <span
   #bubble
   class="info-bubble"
@@ -12,8 +12,8 @@
   (blur)="hide()"
   (click)="$event.preventDefault(); $event.stopPropagation(); onTap()">
   {{ glyph() }}
-  <!-- `position: fixed` — kırpan kapsayıcılardan kaçar; konum TS'te hesaplanıp
-       viewport'a kelepçelenir (bkz. HelpHintComponent doküman yorumu). -->
+  <!-- `position: fixed` — escapes clipping containers; the position is computed in TS and
+       clamped to the viewport (see the HelpHintComponent doc comment). -->
   <span
     #tip
     class="info-bubble__tip"

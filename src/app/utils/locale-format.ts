@@ -1,15 +1,15 @@
 import { Lang } from '../services/language.service';
 
 /**
- * Aktif arayüz diline göre sayı/tarih biçimlendirme.
+ * Number/date formatting according to the active UI language.
  *
- * Neden gerekli: biçimlendiriciler projede üç ayrı dosyada `'tr-TR'` sabitiyle
- * kuruluyordu (chart-mapping, chart.component, report-viewer). Uygulama TR/EN
- * arasında geçiş yaptığı için EN modunda sayılar ve tarihler yine Türkçe
- * biçimde görünüyordu (1.234,56 ve "1 Ağu 2026").
+ * Why it is needed: formatters were built with a hard-coded `'tr-TR'` in three separate
+ * files (chart-mapping, chart.component, report-viewer). Since the app switches between
+ * TR/EN, numbers and dates still appeared in Turkish format in EN mode
+ * (1.234,56 and "1 Ağu 2026").
  *
- * `Intl.*Format` kurulumu pahalıdır; örnekler dil başına bir kez üretilip
- * saklanır (grafik formatter'ları her veri noktası için çağrılır).
+ * Building an `Intl.*Format` is expensive; instances are created once per language and
+ * cached (chart formatters are called for every data point).
  */
 
 const LOCALES: Record<Lang, string> = { tr: 'tr-TR', en: 'en-US' };
@@ -45,7 +45,7 @@ export function formatDate(value: Date, lang: Lang): string {
 
 const dateTimeFormatters = new Map<Lang, Intl.DateTimeFormat>();
 
-/** Tarih + saat (bekleme vadesi gibi saatin önemli olduğu yerler). */
+/** Date + time (where the time matters, e.g. a timer's due date). */
 export function formatDateTime(value: Date, lang: Lang): string {
   let formatter = dateTimeFormatters.get(lang);
   if (!formatter) {

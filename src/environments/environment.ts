@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  // Üretimle aynı yol: oturum çerezi Path=/api ve SameSite=Strict, ayrı origin'de çalışmaz.
-  // ng serve bunu proxy.conf.json ile backend'e iletir.
+  // Same path as production: the session cookie is Path=/api and SameSite=Strict, it does not work on a separate origin.
+  // ng serve forwards this to the backend via proxy.conf.json.
   apiBaseUrl: '/api'
 };

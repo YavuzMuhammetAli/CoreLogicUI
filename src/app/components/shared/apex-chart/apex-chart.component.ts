@@ -2,11 +2,11 @@ import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, NgZone, eff
 import type ApexCharts from 'apexcharts';
 
 /**
- * ApexCharts'ın ince sarmalayıcısı. ng-apexcharts kullanılmaz: Angular 21+ destekleyen sürümleri
- * gömülü ürünlerde ticari lisans (OEM) ister. Aynı şart apexcharts 5.1+ için de geçerli olduğundan
- * package.json'da 4.7.0 (MIT) tam sürüm sabittir, yükseltilmez.
+ * Thin wrapper around ApexCharts. ng-apexcharts is not used: its versions supporting Angular 21+
+ * require a commercial (OEM) license for embedded products. The same condition applies to apexcharts 5.1+,
+ * so package.json pins the exact version 4.7.0 (MIT); do not upgrade.
  *
- * Kütüphane ilk grafikte yüklenir ve kendi parçasında kalır.
+ * The library loads with the first chart and stays in its own chunk.
  */
 @Component({
   selector: 'app-apex-chart',
@@ -21,13 +21,13 @@ export class ApexChartComponent {
   private readonly zone = inject(NgZone);
   private chart: ApexCharts | null = null;
 
-  /** Kütüphane yüklenirken gelen yeni seçenek ya da yok edilme eski çizimi iptal eder. */
+  /** A new option arriving or destruction while the library loads cancels the stale render. */
   private drawId = 0;
 
   constructor() {
     effect(() => {
       const options = this.options();
-      // Grafiğin animasyon ve fare olayları change detection tetiklemesin.
+      // The chart's animation and mouse events must not trigger change detection.
       this.zone.runOutsideAngular(() => void this.draw(options));
     });
 

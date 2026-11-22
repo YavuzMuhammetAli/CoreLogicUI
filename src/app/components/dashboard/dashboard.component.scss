@@ -2,19 +2,19 @@
   display: block;
 }
 
-/* Kayıtlı widget x/y/w/h, 12 kolonluk grid üzerinde gerçek grid-column/row span'ı ile uygulanır
-   (dashboard-build canvas'ındaki yerleşimle birebir). Satırlar minmax ile büyüyebilir:
-   grafik/KPI içeriği tasarım yüksekliğine sığmazsa kart kaydırma yerine büyüyerek tam gösterir. */
+/* Saved widget x/y/w/h are applied on the 12-column grid as real grid-column/row spans
+   (identical to the layout on the dashboard-build canvas). Rows can grow via minmax:
+   if chart/KPI content doesn't fit the design height, the card grows instead of scrolling to show it fully. */
 .widget-grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   grid-auto-rows: minmax(64px, auto);
   gap: var(--space-6);
 
-  /* Dar ekranda kayıtlı 12 kolonluk konumlar uygulanmaz (satır içi stil — bu yüzden
-     !important): widget'lar tasarım sırasıyla (bkz. load) akar.
-     ≤900 (yatay telefon/tablet): iki sütun, geniş widget (w > 6) tam satır.
-     ≤768 (dikey telefon): grafik ve tablolar tam satır, KPI'lar yan yana ikişer. */
+  /* On narrow screens the saved 12-column positions are not applied (inline style — hence
+     !important): widgets flow in design order (see load).
+     ≤900 (landscape phone/tablet): two columns, wide widgets (w > 6) take a full row.
+     ≤768 (portrait phone): charts and tables take a full row, KPIs side by side in pairs. */
   @media (max-width: 900px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-4);
@@ -34,7 +34,7 @@
       grid-column: 1 / -1 !important;
     }
 
-    /* Tablo widget'ının satır içi max-height'ı telefonda ~160px'lik bir kutu bırakıyordu */
+    /* The table widget's inline max-height left a ~160px box on phones */
     .widget {
       max-height: none !important;
     }
@@ -45,7 +45,7 @@
   }
 }
 
-/* Her widget grid'e girişte sırayla (stagger) belirir */
+/* Each widget appears one after another (stagger) as it enters the grid */
 .widget {
   display: flex;
   flex-direction: column;
@@ -54,7 +54,7 @@
   min-width: 0;
   overflow: hidden;
 
-  /* KPI kartı içeriği kadar: 4 KPI × 220px, ilk grafiğe ulaşmadan ekranlarca kaydırma demekti */
+  /* KPI card sized to content: 4 KPIs × 220px meant screens of scrolling before reaching the first chart */
   &.widget--kpi {
     min-height: auto;
   }
@@ -78,8 +78,8 @@
   margin: 0;
 }
 
-/* Kaydırma yok — grafik/KPI içeriği kartı büyüterek tam görünür.
-   Yalnızca tablo widget'ındaki .table-scroll kendi içinde kayar. */
+/* No scrolling — chart/KPI content is fully visible by growing the card.
+   Only the .table-scroll in the table widget scrolls internally. */
 .widget-body {
   flex: 1;
   display: flex;
@@ -93,7 +93,7 @@
   min-width: 0;
 }
 
-/* @defer yer tutucusu — grafik gelince kart boyu zıplamasın */
+/* @defer placeholder — so the card height doesn't jump when the chart arrives */
 .widget-placeholder {
   flex: 1;
   min-height: 160px;

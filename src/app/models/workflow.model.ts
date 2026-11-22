@@ -1,22 +1,22 @@
 /**
- * İş akışı (workflow) domain tipleri — backend Entities.DTOs.Workflow* ile birebir.
+ * Workflow domain types — one to one with the backend Entities.DTOs.Workflow*.
  *
- * DefinitionJson ve TriggerConditionJson sunucuda HAM STRING olarak taşınır; adım
- * grafiğinin şekli Faz 3/4'te genişleyeceği için DTO'yu her seferinde değiştirmek
- * gerekmesin diye. İstemci tarafında da aynı tercih: `WorkflowDefinition` string
- * tutar, tipli okuma yalnızca `parseDefinition()` içinde yapılır.
+ * DefinitionJson and TriggerConditionJson are carried as RAW STRINGS on the server, so that
+ * the DTO does not have to change every time the shape of the step graph grows in
+ * Phase 3/4. The same choice on the client: `WorkflowDefinition` holds a string,
+ * typed reading is done only inside `parseDefinition()`.
  */
 
 // ── Sabitler ────────────────────────────────────────────────────────────────
 
-/** Tanımın yaşam döngüsü — backend WorkflowDefinitionStatus ile aynı. */
+/** Definition lifecycle — same as the backend WorkflowDefinitionStatus. */
 export type WorkflowStatus = 'Draft' | 'Published' | 'Archived';
 
-/** Süreç durumu — backend WorkflowInstanceStatus ile aynı. */
+/** Instance status — same as the backend WorkflowInstanceStatus. */
 export type WorkflowInstanceStatus =
   | 'Running' | 'Completed' | 'Rejected' | 'Cancelled' | 'Failed';
 
-/** Görev durumu — backend WorkflowTaskStatus ile aynı. */
+/** Task status — same as the backend WorkflowTaskStatus. */
 export type WorkflowTaskStatus =
   | 'Pending' | 'Completed' | 'Rejected' | 'Skipped' | 'Expired' | 'Cancelled';
 
@@ -27,15 +27,15 @@ export type WorkflowAssignmentMode = 'user' | 'role' | 'creator';
 export type WorkflowTimeoutPolicy = 'escalate' | 'autoApprove' | 'autoReject';
 
 /**
- * Terminal adım anahtarları. Gerçek adım değil, akışın nereye düştüğünü anlatan
- * sözde hedeflerdir — backend WorkflowTerminals ile aynı.
+ * Terminal step keys. Not real steps but pseudo targets describing where the
+ * workflow ended up — same as the backend WorkflowTerminals.
  */
 export const WORKFLOW_TERMINAL_COMPLETED = '__completed';
 export const WORKFLOW_TERMINAL_REJECTED = '__rejected';
 
 /**
- * Açılır listelerde kullanılan seçenek tabloları.
- * `labelKey` şablonda `| t` ile çözülür — report-build'deki OPERATORS deseniyle aynı.
+ * Option tables used in dropdowns.
+ * `labelKey` is resolved in the template with `| t` — same as the OPERATORS pattern in report-build.
  */
 export const TRIGGER_EVENT_OPTIONS: ReadonlyArray<{ value: WorkflowTriggerEvent; labelKey: string }> = [
   { value: 'onCreate', labelKey: 'workflow.trigger.onCreate' },
@@ -55,7 +55,7 @@ export const TIMEOUT_POLICY_OPTIONS: ReadonlyArray<{ value: WorkflowTimeoutPolic
   { value: 'autoReject',  labelKey: 'workflow.timeout.autoReject' }
 ];
 
-/** Tetikleme koşulu operatörleri — rapor filtresiyle AYNI küme (bilinçli). */
+/** Trigger condition operators — the SAME set as the report filter (deliberately). */
 export const WORKFLOW_OPERATORS: ReadonlyArray<{ value: string; labelKey: string }> = [
   { value: 'eq',         labelKey: 'report.operator.eq' },
   { value: 'ne',         labelKey: 'report.operator.ne' },
@@ -67,7 +67,7 @@ export const WORKFLOW_OPERATORS: ReadonlyArray<{ value: string; labelKey: string
   { value: 'startswith', labelKey: 'report.operator.startswith' }
 ];
 
-// ── Sunucu DTO'ları ─────────────────────────────────────────────────────────
+// ── Server DTOs ─────────────────────────────────────────────────────────────
 
 export interface WorkflowDefinition {
   id: number;
@@ -82,22 +82,22 @@ export interface WorkflowDefinition {
   isEnabled: boolean;
   createdOn: string;
   /**
-   * Satırın son yazılma damgası. Düzenleme bu sürümle başlar ve güncellemede
-   * `expectedLastModifiedOn` olarak geri gönderilir (iyimser kilit). Metin olarak
-   * saklanır — tarihe çevirmek hassasiyeti milisaniyeye düşürür.
+   * The row's last write stamp. Editing starts with this version and it is sent back as
+   * `expectedLastModifiedOn` on update (optimistic lock). Kept as text —
+   * converting it to a date would reduce the precision to milliseconds.
    */
   lastModifiedOn?: string;
-  /** Güncelleme isteğinde: istemcinin düzenlemeye başladığı sürüm. Boşsa denetim yok. */
+  /** In an update request: the version the client started editing from. No check if empty. */
   expectedLastModifiedOn?: string | null;
   runningInstanceCount: number;
 }
 
-/** error: yayını engeller (taslak yine kaydedilir) · warning: yalnız dikkat çeker. */
+/** error: blocks publishing (the draft is still saved) · warning: only draws attention. */
 export type WorkflowIssueSeverity = 'error' | 'warning';
 
 /**
- * Yapılandırılmış doğrulama bulgusu. `code` çeviri anahtarıdır
- * (`workflow.issue.{code}`); `message` sunucunun Türkçe yedek metni.
+ * Structured validation finding. `code` is the translation key
+ * (`workflow.issue.{code}`); `message` is the server's Turkish fallback text.
  */
 export interface WorkflowIssue {
   code: string;
@@ -113,9 +113,9 @@ export interface WorkflowIssue {
 
 export interface WorkflowValidationResult {
   isValid: boolean;
-  /** Hataların düz metni (eski sözleşme). */
+  /** Plain text of the errors (old contract). */
   errors: string[];
-  /** Hatalar + uyarılar, düğüme/porta bağlanabilir biçimde. */
+  /** Errors + warnings, in a form that can be attached to a node/port. */
   issues?: WorkflowIssue[];
 }
 
@@ -133,18 +133,18 @@ export interface WorkflowInstance {
   definitionId: number;
   definitionVersion: number;
   definitionName: string;
-  /** Akışın sürümler arası sabit kodu. */
+  /** The workflow's code, stable across versions. */
   definitionCode?: string;
-  /** Sürecin BAŞLADIĞI sürümün tanımı — yalnız tekil okumada dolu (şema bununla çizilir). */
+  /** Definition of the version the instance STARTED on — filled only on single reads (the diagram is drawn from it). */
   definitionJson?: string | null;
-  /** Olay (incident): süreç bir otomatik adımda hata verip bekliyor. */
+  /** Incident: the instance failed at an automatic step and is waiting. */
   hasIncident?: boolean;
   entityType: string;
   entityId: number;
   status: WorkflowInstanceStatus;
   currentStepKey?: string | null;
   startedBy?: number | null;
-  /** Başlatanın görünen adı — yalnız tekil okumada dolu. */
+  /** Display name of the starter — filled only on single reads. */
   startedByName?: string | null;
   startedAt: string;
   completedAt?: string | null;
@@ -172,21 +172,21 @@ export interface WorkflowTask {
   comment?: string | null;
   completedBy?: number | null;
   completedAt?: string | null;
-  // Görünen adlar — yalnız süreç detayında (WorkflowInstance/get) dolu; sıradan
-  // kullanıcı /User ve /Role uçlarını çağıramaz.
+  // Display names — filled only in instance detail (WorkflowInstance/get); a regular
+  // user cannot call the /User and /Role endpoints.
   assignedUserName?: string | null;
   completedByName?: string | null;
-  /** Role atanmış, hâlâ bekleyen görevde rolün aktif üyeleri (kimin onayı bekleniyor). */
+  /** For a role-assigned task still pending, the role's active members (whose approval is awaited). */
   candidates?: string[] | null;
   createdOn: string;
   entityType: string;
   entityId: number;
   workflowName: string;
-  /** Gecikme sunucuda hesaplanır — istemci saati yanlış olabilir. */
+  /** The delay is computed on the server — the client clock may be wrong. */
   isOverdue: boolean;
 }
 
-/** Süreç listesi filtresi (admin, GET /WorkflowInstance/list sayfalı mod). */
+/** Instance list filter (admin, GET /WorkflowInstance/list paged mode). */
 export interface WorkflowInstanceQuery {
   status?: WorkflowInstanceStatus | '';
   incident?: boolean;
@@ -196,11 +196,11 @@ export interface WorkflowInstanceQuery {
   pageSize: number;
 }
 
-/** Olay günlüğü zincir doğrulama sonucu. */
+/** Event log chain verification result. */
 export interface WorkflowChain {
   isValid: boolean;
   eventCount: number;
-  /** İlk bozuk satırın ID'si; zincir sağlamsa null. */
+  /** ID of the first corrupted row; null if the chain is intact. */
   brokenAtEventId?: number | null;
   reason?: string | null;
 }
@@ -217,22 +217,22 @@ export interface CompleteTaskRequest {
   comment?: string | null;
   formDataJson?: string | null;
   /**
-   * Adımın KAYIT alanlarına yazılacak değerler (kolon → değer JSON nesnesi).
-   * Yalnız onayda ve yalnız adımın kolonları yazılır; onayla aynı transaction'da.
+   * Values to write to the step's RECORD fields (column → value JSON object).
+   * Only on approval and only the step's columns are written; in the same transaction as the approval.
    */
   recordValuesJson?: string | null;
 }
 
-/** Görevlinin adım alanlarını, adımı ilerletmeden kaydetmesi. */
+/** The assignee saving the step fields without advancing the step. */
 export interface SaveTaskRecordRequest {
   entityType: string;
   entityId: number;
   recordValuesJson: string;
 }
 
-// ── Kayıt ekranının süreç durumu (GET /WorkflowInstance/recordState) ─────────
+// ── Instance state of the record screen (GET /WorkflowInstance/recordState) ───
 
-/** Elle başlatılabilen akış — kayıt ekranındaki "{Akış} Başlat" butonu. */
+/** A manually startable workflow — the "{Akış} Başlat" (Start {workflow}) button on the record screen. */
 export interface StartableWorkflow {
   code: string;
   name: string;
@@ -243,7 +243,7 @@ export interface RecordField {
   isRequired: boolean;
 }
 
-/** Kullanıcının kayıttaki bekleyen görevi — Kaydet'in yanındaki adım butonu. */
+/** The user's pending task on the record — the step button next to Kaydet (Save). */
 export interface MyRecordTask {
   taskId: number;
   stepKey: string;
@@ -253,7 +253,7 @@ export interface MyRecordTask {
   rejectLabel?: string | null;
   canReject: boolean;
   recordFields: RecordField[];
-  /** Serbest karar alanları var mı — varsa buton önce diyalog açar. */
+  /** Are there free decision fields — if so, the button opens a dialog first. */
   hasExtraFields: boolean;
   formSchemaJson?: string | null;
   dueAt?: string | null;
@@ -265,26 +265,26 @@ export interface RunningWorkflow {
   definitionName: string;
   currentStepKey?: string | null;
   currentStepName?: string | null;
-  /** Süreç bir üst kayıtta koşuyor (alt satır ekranı). */
+  /** The instance runs on a parent record (child row screen). */
   onParentRecord: boolean;
 }
 
 export interface RecordWorkflowState {
-  /** Kayıt form tabanlı bir akışın içinde — alanlar kilitli. */
+  /** The record is inside a form-based workflow — fields are locked. */
   isLocked: boolean;
-  /** Kullanıcı kilidi aşabilir (admin). */
+  /** The user can override the lock (admin). */
   canBypass: boolean;
-  /** Kilitli ve kullanıcı hiçbir alanı düzenleyemiyor. */
+  /** Locked and the user cannot edit any field. */
   lockedForMe: boolean;
   running?: RunningWorkflow | null;
-  /** Kilitliyken kullanıcının düzenleyebildiği kolonlar. */
+  /** Columns the user can edit while locked. */
   editableColumns: string[];
   myTasks: MyRecordTask[];
-  /** Koşan süreç varken boş. */
+  /** Empty while an instance is running. */
   startable: StartableWorkflow[];
 }
 
-// ── Tanım grafiği (DefinitionJson'ın tipli hali) ─────────────────────────────
+// ── Definition graph (typed form of DefinitionJson) ──────────────────────────
 
 export interface WorkflowAssignment {
   mode: WorkflowAssignmentMode;
@@ -299,9 +299,9 @@ export interface WorkflowSla {
 }
 
 /**
- * Form alanı. `dataType` sözlüğü model kolonlarıyla AYNIDIR (CoreLogicTypeMap) —
- * görev ekranının mevcut dinamik form üreticisini (inputTypeFor / validatorsFor /
- * sanitizePayload) hiç değiştirmeden kullanabilmesinin şartı budur.
+ * Form field. The `dataType` vocabulary is THE SAME as the model columns (CoreLogicTypeMap) —
+ * this is the condition for the task screen to use the existing dynamic form generator
+ * (inputTypeFor / validatorsFor / sanitizePayload) without any change.
  */
 export interface WorkflowFormField {
   name: string;
@@ -313,46 +313,46 @@ export interface WorkflowFormField {
 }
 
 /**
- * Adım formu. Görev açılırken görevin `formSchemaJson`'ına KOPYALANIR; eski
- * kopyalarda yeni alanlar yoktur (allowReject yoksa true sayılır).
+ * Step form. COPIED into the task's `formSchemaJson` when the task is opened; old
+ * copies lack the new fields (a missing allowReject counts as true).
  */
 export interface WorkflowForm {
-  /** Serbest karar alanları — değerleri kayda DEĞİL, süreç bağlamına yazılır. */
+  /** Free decision fields — their values are written to the instance context, NOT the record. */
   fields: WorkflowFormField[];
-  /** Görevlinin bu adımda dolduracağı KAYIT kolonları (akış sürerken kayıt kilitli). */
+  /** RECORD columns the assignee fills in at this step (the record is locked while the workflow runs). */
   recordFields?: RecordField[];
-  /** İlerletme butonunun metni; boşsa adım adı. */
+  /** Text of the advance button; the step name if empty. */
   approveLabel?: string | null;
-  /** Red butonunun metni; boşsa "Reddet". */
+  /** Text of the reject button; "Reddet" (Reject) if empty. */
   rejectLabel?: string | null;
-  /** Bu adımda reddetmeye izin var mı; yoksa true. */
+  /** Whether rejection is allowed at this step; true if missing. */
   allowReject?: boolean;
 }
 
 export type WorkflowStepType = 'approval' | 'parallel' | 'condition' | 'end' | 'action' | 'notify' | 'timer';
 
-/** Bekleme modu — backend WorkflowTimerModes ile aynı. */
+/** Wait mode — same as the backend WorkflowTimerModes. */
 export type WorkflowTimerMode = 'duration' | 'untilField';
 export type WorkflowTimerUnit = 'minutes' | 'hours' | 'days';
 
-/** Bekleme düğümünün ayarları. */
+/** Settings of the Wait node. */
 export interface WorkflowTimerConfig {
   mode?: WorkflowTimerMode | null;
-  /** Süre miktarı (duration). */
+  /** Duration amount (duration). */
   amount?: number | null;
   unit?: WorkflowTimerUnit | null;
-  /** Tarih alanı (untilField) — İstanbul saatiyle; yalnız tarihse gece yarısı. */
+  /** Date field (untilField) — in Istanbul time; midnight if date only. */
   field?: string | null;
-  /** Tarihe eklenecek saat; negatif = önce. */
+  /** Hours to add to the date; negative = before. */
   offsetHours?: number | null;
-  /** Tarih boşsa: beklemeden devam ya da olay. */
+  /** If the date is empty: continue without waiting, or raise an incident. */
   onMissing?: 'continue' | 'incident' | null;
 }
 
-/** Bekleme en fazla bu kadar gün sürebilir (backend MaxDuration). */
+/** A wait can last at most this many days (backend MaxDuration). */
 export const TIMER_MAX_DAYS = 366;
 
-/** Plan kotası (GET /Workflow/usage) — limit null ise sınırsız. */
+/** Plan quota (GET /Workflow/usage) — unlimited if limit is null. */
 export interface WorkflowUsage {
   entitled: boolean;
   definitionLimit?: number | null;
@@ -363,40 +363,40 @@ export interface WorkflowUsage {
   periodEnd: string;
 }
 
-/** Tenant'ın kullanabildiği akış özellikleri (GET /Workflow/capabilities). */
+/** Workflow features available to the tenant (GET /Workflow/capabilities). */
 export interface WorkflowCapabilities {
-  /** Bekleme düğümü — migrasyon 022. */
+  /** Wait node — migration 022. */
   timers: boolean;
 }
 
-/** Alan güncelle satırının değer kaynağı — backend WorkflowSetModes ile aynı. */
+/** Value source of an Update field row — same as the backend WorkflowSetModes. */
 export type WorkflowSetMode = 'value' | 'formula' | 'clear';
 
-/** Alan güncelle düğümünün tek satırı. */
+/** A single row of the Update field node. */
 export interface WorkflowSetField {
   column: string;
   mode?: WorkflowSetMode | null;
-  /** Sabit değer (metin) ya da formül; clear'da yok. */
+  /** Constant value (text) or formula; absent for clear. */
   value?: string | null;
 }
 
-/** Bildirim alıcısı türü — backend WorkflowRecipientKinds ile aynı. */
+/** Notification recipient kind — same as the backend WorkflowRecipientKinds. */
 export type WorkflowRecipientKind = 'creator' | 'starter' | 'role' | 'user' | 'stepAssignees';
 
 export interface WorkflowRecipient {
   kind: WorkflowRecipientKind;
-  /** role → rol, user → kullanıcı kimliği. */
+  /** role → role, user → user ID. */
   id?: number | null;
-  /** stepAssignees → adım anahtarı. */
+  /** stepAssignees → step key. */
   stepKey?: string | null;
 }
 
-/** Bildirim kanalı (backend IWorkflowNotificationChannel.Name). */
+/** Notification channel (backend IWorkflowNotificationChannel.Name). */
 export type WorkflowNotifyChannel = 'inapp' | 'email';
 
 export const NOTIFY_CHANNELS: ReadonlyArray<WorkflowNotifyChannel> = ['inapp', 'email'];
 
-/** Bildirim düğümünün ayarları; kanal listesi boşsa yapılandırılmış hepsi. */
+/** Settings of the Notification node; if the channel list is empty, all configured ones. */
 export interface WorkflowNotifyConfig {
   recipients: WorkflowRecipient[];
   channels?: WorkflowNotifyChannel[];
@@ -404,21 +404,21 @@ export interface WorkflowNotifyConfig {
   body?: string | null;
 }
 
-/** Bildirim şablonunun sabit yer tutucuları (kayıt alanları `record.{Kolon}`). */
+/** Fixed placeholders of the notification template (record fields are `record.{Column}`). */
 export const NOTIFY_FIXED_PLACEHOLDERS: ReadonlyArray<string> = ['workflow.name', 'step.name', 'instance.id', 'link'];
 
 export const NOTIFY_SUBJECT_MAX = 200;
 export const NOTIFY_BODY_MAX = 2000;
 
-/** Koşul durumundaki satırların birleşimi. */
+/** How the rows of a condition case are combined. */
 export type WorkflowCaseMatch = 'all' | 'any';
 
-/** Bitiş düğümünün sonucu. */
+/** Result of the End node. */
 export type WorkflowEndOutcome = 'completed' | 'rejected';
 
 /**
- * Koşul düğümünün bir durumu: satırlar (hepsi/herhangi biri) ya da formül
- * (otomatik değer dili, sonucu doğru/yanlış). Sırayla denenir, ilk eşleşen kazanır.
+ * A case of the condition node: rows (all/any) or a formula
+ * (auto value language, result true/false). Tried in order, the first match wins.
  */
 export interface WorkflowCase {
   key: string;
@@ -429,7 +429,7 @@ export interface WorkflowCase {
   to?: string | null;
 }
 
-/** Koşul satırı operatörleri: tetik operatörleri + boş/dolu denetimi (backend WorkflowCaseOperators). */
+/** Condition row operators: trigger operators + empty/non-empty checks (backend WorkflowCaseOperators). */
 export const CASE_OPERATORS: ReadonlyArray<{ value: string; labelKey: string }> = [
   { value: 'eq',         labelKey: 'report.operator.eq' },
   { value: 'ne',         labelKey: 'report.operator.ne' },
@@ -443,10 +443,10 @@ export const CASE_OPERATORS: ReadonlyArray<{ value: string; labelKey: string }> 
   { value: 'notempty',   labelKey: 'workflow.case.operator.notempty' }
 ];
 
-/** Değer girilmeyen operatörler. */
+/** Operators that take no value. */
 export const VALUELESS_OPERATORS: ReadonlySet<string> = new Set(['isempty', 'notempty']);
 
-/** Paralel adımda ilerleme kuralı — backend WorkflowJoinModes ile aynı. */
+/** Advance rule of a parallel step — same as the backend WorkflowJoinModes. */
 export type WorkflowJoinMode = 'all' | 'any';
 
 export const JOIN_MODE_OPTIONS: ReadonlyArray<{ value: WorkflowJoinMode; labelKey: string }> = [
@@ -454,7 +454,7 @@ export const JOIN_MODE_OPTIONS: ReadonlyArray<{ value: WorkflowJoinMode; labelKe
   { value: 'any', labelKey: 'workflow.join.any' }
 ];
 
-/** Paralel adımın tek bir dalı; kendi ataması, süresi ve formu vardır. */
+/** A single branch of a parallel step; it has its own assignment, duration and form. */
 export interface WorkflowBranch {
   key: string;
   name: string;
@@ -473,37 +473,37 @@ export interface WorkflowStep {
   onApprove?: string | null;
   onReject?: string | null;
 
-  // ── Yalnızca type = parallel ──────────────────────────────────────────────
+  // ── Only type = parallel ──────────────────────────────────────────────────
   branches?: WorkflowBranch[];
   mode?: WorkflowJoinMode | null;
   onComplete?: string | null;
   onAnyReject?: string | null;
-  // ── Yalnızca type = condition ─────────────────────────────────────────────
+  // ── Only type = condition ─────────────────────────────────────────────────
   cases?: WorkflowCase[];
-  /** Hiçbir durum eşleşmezse gidilecek adım (zorunlu). */
+  /** Step to go to if no case matches (required). */
   defaultTo?: string | null;
-  // ── Yalnızca type = end ───────────────────────────────────────────────────
+  // ── Only type = end ───────────────────────────────────────────────────────
   outcome?: WorkflowEndOutcome | null;
-  // ── Yalnızca type = action / notify ───────────────────────────────────────
-  /** Alan güncelle: yazılacak alanlar, sırayla. */
+  // ── Only type = action / notify ───────────────────────────────────────────
+  /** Update field: the fields to write, in order. */
   sets?: WorkflowSetField[];
-  /** Bildirim gönder: alıcılar, kanallar, şablon. */
+  /** Send notification: recipients, channels, template. */
   notify?: WorkflowNotifyConfig | null;
-  /** Otomatik eylemden sonra gidilecek adım (zorunlu). */
+  /** Step to go to after the automatic action (required). */
   next?: string | null;
-  /** Bekleme ayarları (type = timer). */
+  /** Wait settings (type = timer). */
   timer?: WorkflowTimerConfig | null;
 
   /**
-   * Canvas'ta elle taşınmış konum. YOKSA otomatik yerleşim kullanılır —
-   * bu sayede canvas'tan önce oluşturulmuş tanımlar da düzgün çizilir ve
-   * form tabanlı düzenleme konum belirtmek zorunda kalmaz.
+   * Position moved by hand on the canvas. If ABSENT, automatic layout is used —
+   * so definitions created before the canvas are drawn properly too, and
+   * form-based editing does not have to specify a position.
    */
   x?: number | null;
   y?: number | null;
 }
 
-/** Bir adımdan çıkan geçişler — tekil ve paralel adımda farklı alanlar kullanılır. */
+/** Transitions out of a step — single and parallel steps use different fields. */
 export function outgoingTargets(step: WorkflowStep): { approve?: string | null; reject?: string | null } {
   return step.type === 'parallel'
     ? { approve: step.onComplete, reject: step.onAnyReject }
@@ -523,8 +523,8 @@ export interface WorkflowCondition {
 }
 
 /**
- * DefinitionJson'ı tipli grafiğe çevirir. Bozuk JSON'da null döner — tanım
- * kullanıcıdan geliyor ve bozuk girdi beklenen bir durum, istisna fırlatılmaz.
+ * Turns DefinitionJson into a typed graph. Returns null on malformed JSON — the definition
+ * comes from the user and malformed input is an expected case, no exception is thrown.
  */
 export function parseDefinition(json: string | null | undefined): WorkflowGraph | null {
   if (!json?.trim()) return null;
@@ -550,16 +550,16 @@ export function parseConditions(json: string | null | undefined): WorkflowCondit
   }
 }
 
-/** Rollback hedefi seçiminde gösterilen adım özeti. */
+/** Step summary shown when choosing a rollback target. */
 export interface WorkflowStepInfo {
   key: string;
   name: string;
   isParallel: boolean;
-  /** Adım tipi — Bitiş geri alma hedefi olamaz. */
+  /** Step type — End cannot be a rollback target. */
   type?: WorkflowStepType;
 }
 
-// ── Simülasyon (POST /Workflow/simulate) ─────────────────────────────────────
+// ── Simulation (POST /Workflow/simulate) ─────────────────────────────────────
 
 export interface WorkflowSimDecision {
   stepKey: string;
@@ -569,7 +569,7 @@ export interface WorkflowSimDecision {
 
 export interface WorkflowSimulateRequest {
   definition: Partial<WorkflowDefinition>;
-  /** Örnek kayıt (kolon → değer); entityId verilirse yok sayılır. */
+  /** Sample record (column → value); ignored if entityId is given. */
   record?: Record<string, string | number | boolean | null>;
   entityId?: number | null;
   decisions: WorkflowSimDecision[];
@@ -581,24 +581,24 @@ export interface WorkflowSimStep {
   seq: number;
   stepKey: string;
   type: string;
-  /** Adımdan çıkılan port (approve, reject, case:x, default…). */
+  /** Port taken out of the step (approve, reject, case:x, default…). */
   port?: string | null;
   caseKey?: string | null;
   decision?: string | null;
-  /** Otomatik eylemin özeti: yazılan alanlar ya da bildirim konusu. */
+  /** Summary of the automatic action: the fields written or the notification subject. */
   note?: string | null;
 }
 
 export interface WorkflowSimulation {
   outcome: WorkflowSimOutcome;
   endStepKey?: string | null;
-  /** Beklenen ya da hatalı adım. */
+  /** The awaited or failed step. */
   stopStepKey?: string | null;
   message?: string | null;
   path: WorkflowSimStep[];
 }
 
-/** Görevi başka bir kullanıcıya/role devretme isteği. */
+/** Request to reassign a task to another user/role. */
 export interface ReassignTaskRequest {
   taskId: number;
   userId?: number | null;

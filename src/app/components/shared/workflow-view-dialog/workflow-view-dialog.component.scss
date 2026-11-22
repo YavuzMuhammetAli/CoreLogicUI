@@ -1,6 +1,6 @@
-/* ── Akışı görüntüle ───────────────────────────────────────────────────────────
-   Kabuk adım pop-up'ıyla aynı (host kutu üretmez, overlay fixed); tuval gövdenin
-   kalan yüksekliğini doldurur (fillHeight). */
+/* ── View workflow ───────────────────────────────────────────────────────────
+   The shell is the same as the step pop-up (host creates no box, overlay is fixed); the canvas
+   fills the remaining height of the body (fillHeight). */
 
 :host {
   display: contents;
@@ -26,9 +26,9 @@
 .dialog-panel {
   width: 100%;
   max-width: 1040px;
-  /* Sabit yükseklik: tuval kendi içinde kayar, panel içerikle büyüyüp küçülmez. */
+  /* Fixed height: the canvas scrolls within itself, the panel doesn't grow/shrink with content. */
   height: min(780px, calc(100vh - 2 * var(--space-4)));
-  /* dvh = görünen alan; vh mobilde tarayıcı çubuklarını da sayar */
+  /* dvh = visible area; on mobile vh also counts the browser bars */
   height: min(780px, calc(100dvh - 2 * var(--space-4)));
   overscroll-behavior: contain;
   display: flex;
@@ -40,7 +40,7 @@
   }
 }
 
-// Kapat düğmesi başlığın yanında kalır — global .panel-head dar ekranda sarılıyor.
+// The close button stays next to the title — the global .panel-head wraps on narrow screens.
 .view-head {
   display: flex;
   flex-wrap: nowrap;
@@ -88,7 +88,7 @@
   min-height: 0;
 }
 
-// ── Şema lejantı (renkler tuvaldeki yol katmanıyla aynı — workflow-instance ile ortak görünüm) ──
+// ── Diagram legend (colours match the canvas path overlay — shared look with workflow-instance) ──
 
 .runtime-legend {
   display: flex;
@@ -126,9 +126,9 @@
   border-radius: 2px;
 }
 
-// ── Adım ipucu ──────────────────────────────────────────────────────────────
-// Diyaloğun (1000) üstünde, help-hint ile aynı katman. Fareyi engellemez:
-// düğümden ayrılınca kapanır, altındaki şemayı kaydırmaya engel olmaz.
+// ── Step tooltip ──────────────────────────────────────────────────────────────
+// Above the dialog (1000), same layer as help-hint. It doesn't block the mouse:
+// it closes when leaving the node and doesn't prevent scrolling the diagram beneath.
 
 .step-tip {
   position: fixed;

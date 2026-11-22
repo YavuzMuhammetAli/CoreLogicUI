@@ -10,7 +10,7 @@
     </div>
   } @else {
 
-    <!-- ── Mevcut abonelik ─────────────────────────────────────────────── -->
+    <!-- ── Current subscription ────────────────────────────────────────── -->
     <div class="panel">
       <div class="panel-head">
         <h2>{{ 'parameter.subscription.currentTitle' | t }}</h2>
@@ -56,14 +56,14 @@
       }
     </div>
 
-    <!-- ── Planlar ─────────────────────────────────────────────────────── -->
+    <!-- ── Plans ───────────────────────────────────────────────────────── -->
     <div class="panel">
       <div class="panel-head">
         <h2>{{ 'parameter.subscription.plansTitle' | t }}</h2>
       </div>
       <div class="panel-body">
 
-        <!-- Ücret alınmadığı açıkça söylenmeli; aksi halde kullanıcı ödeme yaptığını sanır. -->
+        <!-- It must be stated clearly that no fee is charged; otherwise the user thinks they paid. -->
         <div class="alert alert-info" role="status">
           {{ 'parameter.subscription.paymentNotice' | t }}
         </div>

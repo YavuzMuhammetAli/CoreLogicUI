@@ -23,7 +23,7 @@ function ev(eventType: string, stepKey: string | null, data?: object): WorkflowE
 const start = [ev('InstanceStarted', 'mudur'), ev('StepEntered', 'mudur'), ev('TaskCreated', 'mudur')];
 
 describe('workflow-runtime.overlay', () => {
-  it('sıralı ilerleme: geçilen adımlar ve kenarlar, bulunulan adım current', () => {
+  it('sequential progress: visited steps and edges, the current step is current', () => {
     const overlay = buildRuntimeOverlay(graph, [
       ...start, ev('TaskCompleted', 'mudur'), ev('StepEntered', 'onaylar')
     ], { status: 'Running', currentStepKey: 'onaylar' });
@@ -32,7 +32,7 @@ describe('workflow-runtime.overlay', () => {
     expect(overlay.edges).toEqual([edgeId('mudur', 'approve')]);
   });
 
-  it('paralelde tek dal onayı kenar üretmez; dal iptali karar sayılmaz', () => {
+  it('a single branch approval in parallel produces no edge; a branch cancellation is not a decision', () => {
     const overlay = buildRuntimeOverlay(graph, [
       ...start, ev('TaskCompleted', 'mudur'), ev('StepEntered', 'onaylar'),
       ev('TaskCompleted', 'onaylar', { branch: 'f' })
@@ -48,7 +48,7 @@ describe('workflow-runtime.overlay', () => {
     expect(done.edges).toEqual([edgeId('mudur', 'approve'), edgeId('onaylar', 'complete'), edgeId('tutar', 'case:buyuk')]);
   });
 
-  it('red yolu ve bitişte sonlanma', () => {
+  it('reject path and finishing at an end', () => {
     const overlay = buildRuntimeOverlay(graph, [
       ...start, ev('TaskRejected', 'mudur'), ev('StepEntered', 'red'), ev('InstanceRejected', 'red')
     ], { status: 'Rejected', currentStepKey: null });
@@ -57,7 +57,7 @@ describe('workflow-runtime.overlay', () => {
     expect(overlay.edges).toEqual([edgeId('mudur', 'reject')]);
   });
 
-  it('hedefsiz çıkışla biten sürecin son kararı kenar sayılır', () => {
+  it('the last decision of an instance finishing via an untargeted exit counts as an edge', () => {
     const open: WorkflowGraph = {
       startStep: 'mudur',
       steps: [
@@ -80,14 +80,14 @@ describe('workflow-runtime.overlay', () => {
     expect(rejected.edges).toEqual([edgeId('mudur', 'reject')]);
   });
 
-  it('çalışan süreçte bekleyen karar kenar üretmez', () => {
+  it('a pending decision in a running instance produces no edge', () => {
     const overlay = buildRuntimeOverlay(graph, [
       ...start, ev('TaskCompleted', 'mudur'), ev('StepEntered', 'onaylar'), ev('TaskCompleted', 'onaylar', { branch: 'f' })
     ], { status: 'Running', currentStepKey: 'onaylar' });
     expect(overlay.edges).toEqual([edgeId('mudur', 'approve')]);
   });
 
-  it('geri alma izi hedefe kadar keser', () => {
+  it('a rollback cuts the trail back to the target', () => {
     const overlay = buildRuntimeOverlay(graph, [
       ...start, ev('TaskCompleted', 'mudur'), ev('StepEntered', 'onaylar'),
       ev('TaskSkipped', 'onaylar', { reason: 'branchCancelled' }),
@@ -98,7 +98,7 @@ describe('workflow-runtime.overlay', () => {
     expect(overlay.edges).toEqual([]);
   });
 
-  it('alan güncelle ve bildirim "sonraki" kenarını çizer', () => {
+  it('update field and notification draw the "next" edge', () => {
     const automation: WorkflowGraph = {
       startStep: 'yaz',
       steps: [
@@ -117,7 +117,7 @@ describe('workflow-runtime.overlay', () => {
     expect(overlay.edges).toEqual([edgeId('yaz', 'next'), edgeId('haber', 'next')]);
   });
 
-  it('olaydaki otomatik adım failed; atlama varsayılan kenarı çizer', () => {
+  it('an automatic step in an incident is failed; a skip draws the default edge', () => {
     const failed = buildRuntimeOverlay(graph, [
       ...start, ev('TaskCompleted', 'mudur'), ev('StepEntered', 'onaylar'),
       ev('TaskCompleted', 'onaylar'), ev('StepEntered', 'tutar'), ev('StepFailed', 'tutar', { reason: 'x' })

@@ -12,15 +12,15 @@ import {
 } from '../../../models/relationship.model';
 import { IconComponent } from '../../shared/icon/icon.component';
 
-/** C# tanımlayıcı deseni — property, FK ve ara tablo adları için ortak. */
+/** C# identifier pattern — shared for property, FK and join table names. */
 const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 /**
- * İlişki ekleme/düzenleme popup'ı.
+ * Relationship add/edit popup.
  *
- * Yalnızca FORMU bilir: kaydetme, staging ve sunucu iletişimi üst component'in
- * (relationships-tab) işidir. Bu ayrım sayesinde form kuralları (ters property
- * zorunluluğu, SelfReference'ta hedefin otomatik dolması) tek yerde durur.
+ * Knows only the FORM: saving, staging and server communication are the job of the parent
+ * component (relationships-tab). Thanks to this split the form rules (inverse property
+ * requiredness, auto-filling the target for SelfReference) live in one place.
  */
 @Component({
     selector: 'app-relationship-dialog',
@@ -32,33 +32,33 @@ const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 export class RelationshipDialogComponent {
   private readonly fb = inject(FormBuilder);
 
-  /** Autocomplete kaynağı — yalnızca yayınlanmış modeller. */
+  /** Autocomplete source — only published models. */
   @Input() publishedModelNames: string[] = [];
 
-  /** Bu ekranda düzenlenen modelin adı (SelfReference'ta hedef olarak kullanılır). */
+  /** Name of the model edited on this screen (used as the target for SelfReference). */
   @Input() currentModelName = '';
 
-  /** Kaydetme sürüyor mu (üst component'ten gelir). */
+  /** Whether saving is in progress (comes from the parent component). */
   @Input() saving = false;
 
-  /** Sunucudan dönen hata mesajı. */
+  /** Error message returned from the server. */
   @Input() errorMessage: string | null = null;
 
   @Output() save = new EventEmitter<RelationshipUpsert>();
   @Output() cancelled = new EventEmitter<void>();
 
-  /** İlişki tipi kılavuzunu üst component açar; seçili tip birlikte gider. */
+  /** The parent component opens the relationship type guide; the selected type goes along. */
   @Output() typeHelpRequested = new EventEmitter<RelationshipType>();
 
   open = false;
 
-  /** null = yeni ilişki; dolu ise düzenlenen ilişkinin relationshipId'si. */
+  /** null = new relationship; if set, the relationshipId of the edited relationship. */
   editingRelationshipId: string | null = null;
 
   relationshipTypeOptions = RELATIONSHIP_TYPE_OPTIONS;
   draft: FormGroup = this.buildDraft();
 
-  /** Yeni ilişki için formu sıfırlayıp açar. */
+  /** Resets and opens the form for a new relationship. */
   openForCreate(nextOrder: number): void {
     this.editingRelationshipId = null;
     this.draft = this.buildDraft();
@@ -67,7 +67,7 @@ export class RelationshipDialogComponent {
     this.open = true;
   }
 
-  /** Mevcut ilişkiyi forma yükleyip açar. */
+  /** Loads an existing relationship into the form and opens it. */
   openForEdit(relationship: RelationshipDefinition): void {
     this.editingRelationshipId = relationship.relationshipId;
     this.draft = this.buildDraft();
@@ -102,10 +102,10 @@ export class RelationshipDialogComponent {
   }
 
   /**
-   * Seçili ilişki tipi. Select'ten string gelebileceği için her zaman sayıya
-   * çevrilir (aksi halde '4' === 4 karşılaştırmaları sessizce false döner).
+   * The selected relationship type. Since a string may come from the select it is always
+   * converted to a number (otherwise '4' === 4 comparisons silently return false).
    */
-  /** Şablondan okunabilen seçili tip (kılavuz açarken gönderilir). */
+  /** The selected type readable from the template (sent when opening the guide). */
   get selectedType(): RelationshipType {
     return this.draftType;
   }
@@ -114,22 +114,22 @@ export class RelationshipDialogComponent {
     return Number(this.draft.get('relationshipType')!.value) as RelationshipType;
   }
 
-  /** Seçili ilişki tipi ters property gerektiriyor mu (OneToMany / ManyToMany). */
+  /** Whether the selected relationship type requires an inverse property (OneToMany / ManyToMany). */
   get draftRequiresInverse(): boolean {
     return requiresInverse(this.draftType);
   }
 
-  /** Seçili tip ManyToMany mi — ara tablo alanı yalnızca o zaman gösterilir. */
+  /** Whether the selected type is ManyToMany — the join table field is shown only then. */
   get draftIsManyToMany(): boolean {
     return this.draftType === RelationshipType.ManyToMany;
   }
 
   /**
-   * İlişki tipi değiştiğinde:
-   *  - değeri sayıya normalize eder,
-   *  - ters property'nin zorunluluğunu YENİDEN kurar (tip geri değiştirildiğinde
-   *    eski "required" hatası takılı kalmasın diye),
-   *  - Self Reference'ta hedef modeli otomatik olarak modelin kendisi yapar.
+   * When the relationship type changes:
+   *  - normalizes the value to a number,
+   *  - REBUILDS the inverse property's requiredness (so an old "required" error does not
+   *    stick when the type is changed back),
+   *  - for Self Reference, automatically sets the target model to the model itself.
    */
   onTypeChange(): void {
     const type = this.draftType;
@@ -143,8 +143,8 @@ export class RelationshipDialogComponent {
   }
 
   onSubmit(): void {
-    // Doğrulayıcılar tip değişiminde zaten güncelleniyor; popup hiç değiştirilmeden
-    // açılıp kaydedilirse de doğru kuralın uygulandığından emin ol.
+    // Validators are already updated on type change; also make sure the right rule is applied
+    // when the popup is opened and saved without any change.
     this.applyInverseValidators(this.draftType);
 
     if (this.draft.invalid) {
@@ -182,7 +182,7 @@ export class RelationshipDialogComponent {
     });
   }
 
-  /** Ters property doğrulayıcılarını seçili tipe göre kurar. */
+  /** Builds the inverse property validators according to the selected type. */
   private applyInverseValidators(type: RelationshipType): void {
     const inverse = this.draft.get('inverseProperty')!;
     const pattern = Validators.pattern(IDENTIFIER_PATTERN);

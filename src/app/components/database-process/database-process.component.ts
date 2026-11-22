@@ -7,20 +7,20 @@ import { markDirty } from '../../utils/change-detection';
 import { IconComponent } from '../shared/icon/icon.component';
 
 @Component({
-    selector: 'app-database-proccess',
+    selector: 'app-database-process',
     imports: [TranslatePipe, IconComponent],
-    templateUrl: './database-proccess.component.html',
-    styleUrl: './database-proccess.component.scss',
+    templateUrl: './database-process.component.html',
+    styleUrl: './database-process.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DatabaseProccessComponent {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+export class DatabaseProcessComponent {
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
-  /** İstek devam ediyor mu? */
+  /** Is a request in progress? */
   loading = signal(false);
 
-  /** Sonuç mesajı ve tipi */
+  /** Result message and type */
   message = signal<{ text: string; type: 'success' | 'error' | 'idle' }>({
     text: '',
     type: 'idle'
@@ -30,7 +30,7 @@ export class DatabaseProccessComponent {
 
   constructor(private databaseService: DatabaseService) {}
 
-  /** Veritabanını sıfırdan oluşturma isteği gönderir */
+  /** Sends a request to create the database from scratch */
   createDatabase(): void {
     if (this.loading()) return;
     this.loading.set(true);
@@ -55,7 +55,7 @@ export class DatabaseProccessComponent {
     });
   }
 
-  /** Dinamik tablo oluşturma isteği gönderir */
+  /** Sends a request to create the dynamic tables */
   createTable(): void {
     if (this.loading()) return;
     this.loading.set(true);
@@ -80,7 +80,7 @@ export class DatabaseProccessComponent {
     });
   }
 
-  /** Veritabanı durumunu kontrol eder */
+  /** Checks the database status */
   checkDatabase(): void {
     if (this.loading()) return;
     this.loading.set(true);

@@ -8,32 +8,32 @@ export interface Notification {
 }
 
 /**
- * Uygulama genelinde geçici bildirim/banner yönetimi.
+ * App-wide transient notification/banner management.
  *
- * Guard ya da herhangi bir servis mesaj set edebilir;
- * LayoutComponent signal'ı okuyarak banner render eder.
- * Rota geçişlerinde otomatik temizlenme yoktur — LayoutComponent'in
- * kullanıcı kapatma butonuyla ya da bir sonraki guard çağrısında temizlenir.
+ * A guard or any service can set a message;
+ * LayoutComponent reads the signal and renders the banner.
+ * There is no automatic clearing on route changes — it is cleared by
+ * LayoutComponent's close button or on the next guard call.
  */
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
   private readonly _current = signal<Notification | null>(null);
   private _timer: ReturnType<typeof setTimeout> | null = null;
 
-  /** Aktif bildirimi okumak için şablonlarda kullanılır. */
+  /** Used in templates to read the active notification. */
   readonly current = this._current.asReadonly();
 
-  /** Uyarı tipinde bildirim göster; 5 sn sonra otomatik kapanır. */
+  /** Shows a warning notification; closes automatically after 5 s. */
   warn(message: string): void {
     this.show({ type: 'warn', message });
   }
 
-  /** Başarı tipinde bildirim göster; 5 sn sonra otomatik kapanır. */
+  /** Shows a success notification; closes automatically after 5 s. */
   success(message: string): void {
     this.show({ type: 'success', message });
   }
 
-  /** Bildirim banner'ını kapat. */
+  /** Closes the notification banner. */
   clear(): void {
     if (this._timer !== null) {
       clearTimeout(this._timer);
@@ -43,7 +43,7 @@ export class NotificationService {
   }
 
   private show(notification: Notification): void {
-    // Önceki timer varsa iptal et (yeni mesaj geldiğinde sayaç sıfırlanır)
+    // Cancel the previous timer if any (the countdown restarts when a new message arrives)
     if (this._timer !== null) {
       clearTimeout(this._timer);
     }

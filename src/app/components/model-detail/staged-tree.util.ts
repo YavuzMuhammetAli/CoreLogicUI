@@ -6,43 +6,43 @@ import { isFileType, maxFileSizeValidator } from '../../utils/file-size';
 import { isTextColumn } from '../../utils/column-rules';
 import { isColumnRequired } from '../../utils/record-field/column-required';
 
-/** Dinamik tablo satırı — alan adı → değer. */
+/** Dynamic table row — field name → value. */
 export type DataRow = Record<string, unknown>;
 
 /**
- * Bellekte bekleyen (henüz kaydedilmemiş) bir kayıt ve tüm alt ağacı.
+ * A record waiting in memory (not saved yet) together with its whole subtree.
  *
- * Kullanıcı ana model + alt modeller + torunlar zincirini hiçbir şey kaydetmeden
- * kurabilir; "Kaydet"e basıldığında ağaç kökten yapraklara doğru SIRAYLA işlenir.
- * Kaydedilen düğüm `savedId` alır ve sonraki denemelerde ATLANIR — böylece kısmi
- * bir başarısızlıktan sonra tekrar denendiğinde çift kayıt oluşmaz.
+ * The user can build the main model + sub-models + grandchildren chain without saving
+ * anything; when "Kaydet" (Save) is pressed the tree is processed IN ORDER from root to leaves.
+ * A saved node gets a `savedId` and is SKIPPED on later attempts — so retrying after a
+ * partial failure does not create duplicate records.
  */
 export interface StagedNode {
-  /** Ağaç içinde benzersiz geçici kimlik (gerçek ID değil). */
+  /** Temporary id unique within the tree (not the real ID). */
   localId: number;
   typeName: string;
-  /** Form değerleri (FK kolonu HARİÇ — o kaydetme anında eklenir). */
+  /** Form values (EXCLUDING the FK column — it is added at save time). */
   values: DataRow;
-  /** altTipAdı → o tipteki bekleyen düğümler. */
+  /** subTypeName → pending nodes of that type. */
   children: Map<string, StagedNode[]>;
-  /** Kaydedildiyse sunucudaki gerçek ID; null ise hâlâ bellekte. */
+  /** Real server ID once saved; null while still in memory. */
   savedId: number | null;
-  /** Son kaydetme denemesinin hata mesajı; başarılıysa null. */
+  /** Error message of the last save attempt; null on success. */
   error: string | null;
   /**
-   * Kullanıcı bu düğümün değerlerini değiştirdi mi.
+   * Whether the user changed this node's values.
    *
-   * Yalnızca `savedId` dolu düğümlerde anlamlıdır: `addTree` mevcut bir kaydı
-   * GÜNCELLEMEZ (`existingId` dolu düğümü atlar), o yüzden değişmiş kayıtlı düğümler
-   * ayrıca `update()` ile gönderilmelidir. Bu bayrak olmadan kullanıcının düzeltmesi
-   * sessizce kaybolur.
+   * Only meaningful on nodes with `savedId` set: `addTree` does NOT UPDATE an
+   * existing record (it skips nodes with `existingId`), so changed saved nodes
+   * must be sent separately via `update()`. Without this flag the user's correction
+   * is silently lost.
    */
   dirty: boolean;
 }
 
 let localIdSeq = 0;
 
-/** Yeni bir bekleyen düğüm oluşturur. */
+/** Creates a new pending node. */
 export function createStagedNode(typeName: string, values: DataRow): StagedNode {
   return {
     localId: ++localIdSeq,
@@ -56,19 +56,19 @@ export function createStagedNode(typeName: string, values: DataRow): StagedNode 
 }
 
 /**
- * Sunucudan gelen bir satırı ŞEMA kolon adlarına göre normalize eder.
+ * Normalizes a row coming from the server to the SCHEMA column names.
  *
- * Backend kolon meta adını PascalCase (`UnitPrice`), satır verisini ise
- * `System.Text.Json` varsayılan politikasıyla camelCase (`unitPrice`) döndürür
- * (bkz. `fieldValue` doc'u). `StagedNode.values` bu iki dünyanın buluştuğu yer
- * olduğu için satır TEK casing'e indirgenmelidir:
+ * The backend returns column meta names in PascalCase (`UnitPrice`) but row data
+ * in camelCase (`unitPrice`) with the default `System.Text.Json` policy
+ * (see the `fieldValue` doc). Since `StagedNode.values` is where these two worlds meet,
+ * the row must be reduced to a SINGLE casing:
  *
- * - Form kontrolleri `col.columnName` (PascalCase) ile kurulur → normalize edilmezse
- *   her alan boş açılır.
- * - `sanitizePayload` de PascalCase anahtarları tanır → normalize edilmezse camelCase
- *   orijinal ile PascalCase kopyası payload'a BİRLİKTE gider ve mevcut değer null'lanır.
+ * - Form controls are built with `col.columnName` (PascalCase) → without normalizing,
+ *   every field opens empty.
+ * - `sanitizePayload` also recognizes PascalCase keys → without normalizing, the camelCase
+ *   original and the PascalCase copy go into the payload TOGETHER and the existing value is nulled.
  *
- * Şemada olmayan alanlara dokunulmaz — `ID` gibi meta alanlar korunur.
+ * Fields not in the schema are left untouched — meta fields such as `ID` are preserved.
  */
 export function normalizeRow(columns: PublishedColumn[], row: DataRow): DataRow {
   const out: DataRow = {};
@@ -80,12 +80,12 @@ export function normalizeRow(columns: PublishedColumn[], row: DataRow): DataRow 
   return out;
 }
 
-/** Bir düğümün belirli tipteki alt düğümlerini döner (yoksa boş dizi). */
+/** Returns a node's child nodes of the given type (empty array if none). */
 export function childrenOf(node: StagedNode, childTypeName: string): StagedNode[] {
   return node.children.get(childTypeName) ?? [];
 }
 
-/** Alt düğüm ekler veya aynı localId'li olanı değiştirir. */
+/** Adds a child node or replaces the one with the same localId. */
 export function upsertChild(node: StagedNode, childTypeName: string, child: StagedNode): void {
   const list = [...childrenOf(node, childTypeName)];
   const idx = list.findIndex(n => n.localId === child.localId);
@@ -94,12 +94,12 @@ export function upsertChild(node: StagedNode, childTypeName: string, child: Stag
   node.children.set(childTypeName, list);
 }
 
-/** Alt düğümü kaldırır. */
+/** Removes a child node. */
 export function removeChild(node: StagedNode, childTypeName: string, localId: number): void {
   node.children.set(childTypeName, childrenOf(node, childTypeName).filter(n => n.localId !== localId));
 }
 
-/** Ağaçtaki (kök hariç) toplam bekleyen — henüz kaydedilmemiş — düğüm sayısı. */
+/** Total number of pending — not yet saved — nodes in the tree (root excluded). */
 export function pendingCount(node: StagedNode): number {
   let total = 0;
   for (const [, list] of node.children) {
@@ -111,7 +111,7 @@ export function pendingCount(node: StagedNode): number {
   return total;
 }
 
-/** Ağaçta kaydetme hatası taşıyan düğüm var mı. */
+/** Whether any node in the tree carries a save error. */
 export function hasErrors(node: StagedNode): boolean {
   for (const [, list] of node.children) {
     for (const child of list) {
@@ -123,23 +123,23 @@ export function hasErrors(node: StagedNode): boolean {
 }
 
 /**
- * Alt model FK kolonunun adı. Projedeki konvansiyon: `<ÜstTipAdı>Id`
- * (bkz. model-detail `buildTabState`). Şema tarafında da aynı ad üretilir.
+ * Name of the sub-model FK column. Project convention: `<ParentTypeName>Id`
+ * (see model-detail `buildTabState`). The schema side produces the same name.
  *
- * NOT: Kaydetme sırasında bu değeri İSTEMCİ ATAMAZ — `addTree` ucunda sunucu,
- * üst kaydın gerçek ID'sini yazar. Bu yardımcı yalnızca listeleme/filtreleme
- * (FK'ya göre alt kayıt çekme) için kullanılır.
+ * NOTE: the CLIENT DOES NOT ASSIGN this value when saving — on the `addTree` endpoint the server
+ * writes the parent record's real ID. This helper is only used for listing/filtering
+ * (fetching child records by FK).
  */
 export function fkColumnFor(parentTypeName: string): string {
   return parentTypeName + 'Id';
 }
 
 /**
- * Bekleyen ağacı `POST /PublishedModel/addTree` gövdesine çevirir.
+ * Converts the pending tree into the `POST /PublishedModel/addTree` body.
  *
- * `clientId` olarak düğümün geçici `localId`'si kullanılır; sunucu yanıtındaki
- * `savedIds` / `errors` sözlükleri bu anahtarla geri döner. FK kolonu payload'a
- * KONULMAZ — sunucu üst kaydın gerçek ID'sinden kendisi atar.
+ * The node's temporary `localId` is used as `clientId`; the `savedIds` / `errors`
+ * dictionaries in the server response come back keyed by it. The FK column is NOT
+ * PUT into the payload — the server assigns it itself from the parent's real ID.
  */
 export function toTreeDto(
   node: StagedNode,
@@ -162,7 +162,7 @@ export function toTreeDto(
   };
 }
 
-/** Ağaçtaki tüm düğümleri düz listeye açar (yanıttaki ID/hata eşlemesi için). */
+/** Flattens all nodes in the tree into a list (for ID/error mapping of the response). */
 export function flattenNodes(node: StagedNode): StagedNode[] {
   const out: StagedNode[] = [];
   const walk = (n: StagedNode) => {
@@ -174,29 +174,29 @@ export function flattenNodes(node: StagedNode): StagedNode[] {
 }
 
 /**
- * Ağaçtaki KAYITLI ve DEĞİŞTİRİLMİŞ düğümler — `addTree` bunları yazamaz, her biri için
- * ayrı bir `update()` gönderilmelidir. Kök dahil edilir; çağıran gerekiyorsa ayıklar.
+ * SAVED and MODIFIED nodes in the tree — `addTree` cannot write these, a separate
+ * `update()` must be sent for each. The root is included; the caller filters it out if needed.
  */
 export function dirtyNodes(root: StagedNode): StagedNode[] {
   return flattenNodes(root).filter(n => n.savedId !== null && n.dirty);
 }
 
-/** Ağaçta sunucuya EKLENECEK (henüz kaydedilmemiş) düğüm var mı. */
+/** Whether the tree has any node to be ADDED to the server (not yet saved). */
 export function hasInserts(root: StagedNode): boolean {
   return flattenNodes(root).some(n => n.savedId === null);
 }
 
-// ─── Doğrulama kuralları ──────────────────────────────────────────────────────
+// ─── Validation rules ─────────────────────────────────────────────────────────
 
 /**
- * Şema kurallarını (regex / uzunluk / aralık) Angular validator'larına çevirir.
+ * Converts schema rules (regex / length / range) into Angular validators.
  *
- * Kurallar `PublishedTableService.getSchema()` ile gelir — backend
- * `ValidateDynamicEntity` ile AYNI kaynağı kullanır, böylece istemci ve sunucu
- * doğrulaması birebir örtüşür ve kullanıcı hataları sunucuya gitmeden görür.
+ * The rules come via `PublishedTableService.getSchema()` — they use the SAME source
+ * as backend `ValidateDynamicEntity`, so client and server validation match exactly
+ * and the user sees errors before anything reaches the server.
  *
- * `Validators.pattern` boş değerde çalışmaz; bu kasıtlıdır — backend de null
- * değerlerde kural kontrollerini atlar.
+ * `Validators.pattern` does not run on empty values; this is intentional — the backend
+ * also skips rule checks for null values.
  */
 export function validatorsFor(
   col: PublishedColumn,
@@ -204,10 +204,10 @@ export function validatorsFor(
 ): ValidatorFn[] {
   const validators: ValidatorFn[] = [];
 
-  // Zorunluluk: getModels() `isNullable`, getSchema() `isRequired` döner — karar tek yerde.
+  // Required: getModels() returns `isNullable`, getSchema() returns `isRequired` — decided in one place.
   if (isColumnRequired(col, rule)) validators.push(Validators.required);
 
-  // image/file: maxLength = boyut sınırı (KB). Kural yoksa da platform tavanı uygulanır.
+  // image/file: maxLength = size limit (KB). The platform ceiling applies even without a rule.
   if (isFileType(col.dataType)) {
     validators.push(maxFileSizeValidator(col.dataType, rule?.maxLength ?? col.maxLength));
     return validators;
@@ -220,11 +220,11 @@ export function validatorsFor(
     if (rule.maxLength != null) validators.push(Validators.maxLength(rule.maxLength));
     if (rule.regex) {
       try {
-        // Geçersiz desen formu tamamen kilitlemesin — backend de bozuk regex'i atlıyor.
+        // An invalid pattern must not lock the whole form — the backend also skips broken regexes.
         new RegExp(rule.regex);
         validators.push(Validators.pattern(rule.regex));
       } catch {
-        /* bozuk desen — istemci tarafında atla */
+        /* broken pattern — skip on the client side */
       }
     }
   }

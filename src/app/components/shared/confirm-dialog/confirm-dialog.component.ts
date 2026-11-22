@@ -3,9 +3,9 @@ import { ModelUsage } from '../../../services/model-usage.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 
 /**
- * Tekrar kullanılabilir onay modalı. Basit bir evet/hayır onayı için `usage` boş bırakılır;
- * `usage` doluysa (örn. model silme öncesi rapor/dashboard kullanım listesi) önce kullanım
- * listesi gösterilir, "Yine de Sil" ile ikinci aşamaya geçilir ve orada son onay istenir.
+ * Reusable confirmation modal. For a simple yes/no confirmation leave `usage` empty;
+ * if `usage` is set (e.g. the report/dashboard usage list before deleting a model) the usage
+ * list is shown first, "Yine de Sil" (Delete anyway) moves to the second stage, where final confirmation is asked.
  */
 @Component({
     selector: 'app-confirm-dialog',
@@ -18,27 +18,27 @@ export class ConfirmDialogComponent {
   open = input(false);
   title = input('');
   message = input('');
-  /** Kullanım listesinin başlığında gösterilen model adı (örn. "'İzinler' modeli kullanılıyor:"). */
+  /** Model name shown in the usage list heading (e.g. "'İzinler' modeli kullanılıyor:" — the 'İzinler' model is in use:). */
   modelName = input('');
   usage = input<ModelUsage | null>(null);
-  /** İşlem (cascade silme) sürerken butonları kilitler. */
+  /** Locks the buttons while the operation (cascade delete) is running. */
   busy = input(false);
   /**
-   * Overlay'in yığın sırası. Varsayılan (null) CSS'teki 1000 değerini bırakır; yalnızca
-   * bu diyalog başka bir modalın ÜSTÜNDE açılacaksa verilir (örn. iç içe kayıt pop-up'ı
-   * `1000 + depth * 10` kullanıyor, onay kutusu bunun da üstüne çıkmalı).
+   * Stacking order of the overlay. The default (null) keeps the CSS value 1000; set it only
+   * when this dialog opens ON TOP of another modal (e.g. the nested record pop-up
+   * uses `1000 + depth * 10`, and the confirm box must go above that too).
    */
   zIndex = input<number | null>(null);
   /**
-   * Onay düğmesinin metni (çevrilmiş). Boşsa "Sil" — diyalog silme onayı için
-   * yazıldı; başka bir onayda (ör. "Kaydetmeden ayrıl") düğme ne yapacağını söylemeli.
+   * Text of the confirm button (translated). If empty, "Sil" (Delete) — the dialog was written
+   * for delete confirmation; for other confirmations (e.g. "Kaydetmeden ayrıl" / Leave without saving) the button should say what it does.
    */
   confirmLabel = input('');
 
   confirmed = output<void>();
   cancelled = output<void>();
 
-  /** 1: ilk onay (varsa kullanım listesi gösterilir), 2: kullanım varsa ikinci/son onay. */
+  /** 1: first confirmation (usage list shown if any), 2: second/final confirmation when there is usage. */
   private readonly step = signal<1 | 2>(1);
 
   readonly hasUsage = computed(() => {
@@ -49,9 +49,9 @@ export class ConfirmDialogComponent {
   readonly isFinalStep = computed(() => !this.hasUsage() || this.step() === 2);
 
   constructor() {
-    // Modal her açıldığında ilk adıma dön — önceki açılıştan kalan ikinci aşama sızmasın.
-    // Angular 18'de effect içinde sinyal yazmak açık izin ister; yoksa her açılışta
-    // NG0600 fırlar (diyalog yine açılır ama adım sıfırlanmaz ve konsol kirlenir).
+    // Go back to the first step every time the modal opens — the second stage from a previous opening must not leak.
+    // In Angular 18 writing a signal inside an effect needs explicit permission; otherwise every opening
+    // throws NG0600 (the dialog still opens, but the step isn't reset and the console gets noisy).
     effect(() => {
       if (this.open()) {
         this.step.set(1);

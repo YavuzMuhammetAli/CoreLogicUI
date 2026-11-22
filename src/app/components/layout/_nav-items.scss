@@ -1,5 +1,5 @@
-// Kenar çubuğu bağlantı stilleri — kabuk (layout) ve tasarlanmış menü (sidebar-nav) ortak.
-// Renkler global --sidebar-* token'larından gelir (styles.scss, açık/koyu tema).
+// Sidebar link styles — shared by the shell (layout) and the designed menu (sidebar-nav).
+// Colours come from the global --sidebar-* tokens (styles.scss, light/dark theme).
 
 .nav-label {
   display: block;
@@ -44,9 +44,9 @@
 }
 
 /**
- * H: "Görevlerim" yanındaki bekleyen görev sayacı.
- * Sağa yaslanır (margin-left:auto) — nav-item flex olduğu için metin solda,
- * rozet sağda hizalanır.
+ * H: Pending task counter next to "Görevlerim" (My Tasks).
+ * Aligned right (margin-left:auto) — since nav-item is flex, the text sits on the left
+ * and the badge on the right.
  */
 .nav-badge {
   margin-left: auto;
@@ -61,7 +61,7 @@
   text-align: center;
 }
 
-/** Normal kullanıcı hiç tabloya erişemediğinde sidebar'da gösterilen ipucu */
+/** Hint shown in the sidebar when a regular user cannot access any table */
 .nav-empty-hint {
   display: block;
   padding: var(--space-2) var(--space-3);

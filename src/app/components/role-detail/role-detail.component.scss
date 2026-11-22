@@ -1,4 +1,4 @@
-/* ── Rol Detay Sayfası ── */
+/* ── Role detail page ── */
 
 .detail-breadcrumb {
   display: flex;
@@ -22,7 +22,7 @@
   color: var(--fg);
 }
 
-/* Yeni rol oluşturma formu */
+/* Create new role form */
 .new-role-form {
   display: flex;
   gap: var(--space-2);
@@ -34,20 +34,20 @@
   }
 }
 
-/* Sağ panel başlık alt metni */
+/* Right panel header subtext */
 .role-subtitle {
   font-size: var(--text-sm);
   color: var(--muted);
 }
 
-/* Bölüm ayırıcı */
+/* Section divider */
 .section-divider {
   border: none;
   border-top: 1px solid var(--border-soft);
   margin: var(--space-6) 0;
 }
 
-/* Bölüm başlıkları */
+/* Section headings */
 .section-block {
   margin-bottom: var(--space-4);
 }
@@ -61,7 +61,7 @@
   margin-bottom: var(--space-4);
 }
 
-/* Rol adı düzenleme satırı */
+/* Role name edit row */
 .rename-row {
   display: flex;
   flex-wrap: wrap;
@@ -69,14 +69,14 @@
   align-items: center;
   margin-bottom: var(--space-2);
 
-  /* min-width: 0 + sarılma: dar ekranda düğmeler kesilmek yerine alt satıra iner */
+  /* min-width: 0 + wrapping: on narrow screens buttons move to the next line instead of being clipped */
   .input {
     flex: 1 1 200px;
     min-width: 0;
   }
 }
 
-/* Üye ekleme satırı */
+/* Add member row */
 .add-member-row {
   display: flex;
   flex-wrap: wrap;
@@ -84,15 +84,15 @@
   align-items: center;
   margin-bottom: var(--space-4);
 
-  /* Select en uzun seçeneği ("Ad Soyad — e-posta") kadar genişlemek ister; min-width: 0
-     olmadan "Kullanıcı Ekle" düğmesini panelin dışına itiyordu. */
+  /* The select wants to grow as wide as its longest option ("Ad Soyad — e-posta"); without
+     min-width: 0 it pushed the "Kullanıcı Ekle" (Add user) button out of the panel. */
   select.input {
     flex: 1 1 200px;
     min-width: 0;
   }
 }
 
-/* E-posta sütunu — küçük ekranlarda kesilebilir */
+/* E-mail column — may be truncated on small screens */
 .email-cell {
   font-size: var(--text-sm);
   color: var(--muted);
@@ -101,7 +101,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  /* Telefonda tam adres görünmeli — kesik e-postanın title'ını okumanın yolu yok */
+  /* On phones the full address must be visible — there's no way to read a truncated e-mail's title */
   @media (max-width: 768px) {
     max-width: none;
     white-space: normal;
@@ -109,7 +109,7 @@
   }
 }
 
-/* Kaydet butonu alt çubuğu */
+/* Save button bottom bar */
 .perm-footer {
   display: flex;
   justify-content: flex-end;
@@ -117,8 +117,8 @@
   gap: var(--space-3);
 }
 
-/* ── Sekme çubuğu (Kullanıcılar / İzin Verilen Modeller) ── */
-/* model-detail.component.scss ile aynı token tabanlı desen */
+/* ── Tab bar (Users / Permitted models) ── */
+/* Same token-based pattern as model-detail.component.scss */
 
 .tab-bar {
   display: flex;
@@ -180,7 +180,7 @@
   padding-top: var(--space-2);
 }
 
-/* ── İzin Verilen Modeller: arama kutusu ── */
+/* ── Permitted models: search box ── */
 
 .search-box {
   position: relative;
@@ -202,7 +202,7 @@
   padding-left: calc(var(--space-3) * 2 + 14px);
 }
 
-/* ── İzin Verilen Modeller: liste alt çubuğu (sayım + sayfalama) ── */
+/* ── Permitted models: list bottom bar (count + pagination) ── */
 
 .model-list-footer {
   display: flex;
@@ -214,7 +214,7 @@
   .pagination { margin-left: auto; }
 }
 
-/* ── İzin Verilen Modeller: model listesi (master) ── */
+/* ── Permitted models: model list (master) ── */
 
 .model-perm-list {
   list-style: none;
@@ -266,7 +266,7 @@
   color: var(--muted);
 }
 
-/* ── İzin Verilen Modeller: model izin detayı ── */
+/* ── Permitted models: model permission detail ── */
 
 .model-perm-detail {
   display: flex;

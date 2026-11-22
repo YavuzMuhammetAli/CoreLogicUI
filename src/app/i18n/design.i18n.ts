@@ -1,12 +1,12 @@
 import { Translations } from './translations.model';
 
 /**
- * Tasarım sayfası (/design) — ekran tasarımları listesi, navigasyon tasarımları ve tasarımcısı,
- * rol seçici, tasarım ayarları diyaloğu. Ekran tasarımcısının kendi metinleri `screen.*`'tadır.
- * `design.issue.{kod}` anahtarları sunucuyla ortak doğrulama kodlarıdır (nav-layout.validate.ts).
+ * Design page (/design) — screen design list, navigation designs and their designer,
+ * role picker, design settings dialog. The screen designer's own texts are in `screen.*`.
+ * `design.issue.{code}` keys are the validation codes shared with the server (nav-layout.validate.ts).
  */
 export const DESIGN_I18N: Translations = {
-  // ─── Ortak: roller ve ayarlar diyaloğu ──────────────────────────────────────
+  // ─── Shared: roles and settings dialog ─────────────────────────────────────
   'design.roles.label': { tr: 'Roller', en: 'Roles' },
   'design.roles.none': { tr: 'Henüz rol tanımlanmamış.', en: 'No roles have been defined yet.' },
   'design.roles.manage': { tr: 'Rolleri yönet', en: 'Manage roles' },
@@ -20,7 +20,7 @@ export const DESIGN_I18N: Translations = {
   'design.settings.nameRequired': { tr: 'Ad zorunludur (en fazla 100 karakter).', en: 'A name is required (at most 100 characters).' },
   'design.settings.rolesRequired': { tr: 'En az bir rol seçin.', en: 'Select at least one role.' },
 
-  // ─── Tasarım sayfası ────────────────────────────────────────────────────────
+  // ─── Design page ───────────────────────────────────────────────────────────
   'design.hub.title': { tr: 'Tasarım', en: 'Design' },
   'design.hub.tabsAria': { tr: 'Tasarım türü', en: 'Design type' },
   'design.hub.tabScreens': { tr: 'Ekranlar', en: 'Screens' },
@@ -100,7 +100,7 @@ export const DESIGN_I18N: Translations = {
   'design.nav.startCurrent': { tr: 'Bugünkü menü (tüm modeller ve sayfalar)', en: 'The current menu (all models and pages)' },
   'design.nav.startEmpty': { tr: 'Boş', en: 'Empty' },
 
-  // ─── Navigasyon tasarımcısı ─────────────────────────────────────────────────
+  // ─── Navigation designer ───────────────────────────────────────────────────
   'design.nav.designerTitle': { tr: 'Navigasyon', en: 'Navigation' },
   'design.nav.back': { tr: 'Tasarımlar', en: 'Layouts' },
   'design.nav.settings': { tr: 'Ad ve roller', en: 'Name and roles' },
@@ -185,7 +185,7 @@ export const DESIGN_I18N: Translations = {
   'design.nav.kind.page': { tr: 'Sayfa', en: 'Page' },
   'design.nav.kind.url': { tr: 'Bağlantı', en: 'Link' },
 
-  // ─── Doğrulama sorunları (sunucuyla ortak kodlar) ───────────────────────────
+  // ─── Validation issues (codes shared with the server) ──────────────────────
   'design.issue.unreadable': { tr: 'Tasarım belgesi okunamadı.', en: 'The layout document could not be read.' },
   'design.issue.tooLarge': { tr: 'Tasarım çok büyük.', en: 'The layout is too large.' },
   'design.issue.limit': {

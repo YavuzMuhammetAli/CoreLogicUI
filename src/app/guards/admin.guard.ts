@@ -5,11 +5,11 @@ import { map } from 'rxjs/operators';
 import { PermissionService } from '../services/permission.service';
 
 /**
- * Yalnızca yöneticilerin erişebileceği rotaları korur.
+ * Protects routes that only administrators may access.
  *
- * ensureLoaded() ile yetki verisinin yüklü olmasını garantiler;
- * sayfa yenilemesinde senkron sinyal null olsa dahi doğru kararı verir.
- * Yönetici değilse /login'e yönlendirir.
+ * Guarantees the permission data is loaded via ensureLoaded();
+ * decides correctly even if the synchronous signal is null on a page reload.
+ * Redirects to /login if the user is not an administrator.
  */
 export const adminGuard: CanActivateFn = (): Observable<boolean | UrlTree> => {
   const permissions = inject(PermissionService);

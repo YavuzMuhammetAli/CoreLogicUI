@@ -7,11 +7,11 @@ import { AuthService } from '../services/auth.service';
 import { NotificationService } from '../services/notification.service';
 
 /**
- * Hata interceptor'ının yönlendirme kuralları.
+ * Redirect rules of the error interceptor.
  *
- * Asıl korunan davranış: yardımcı bir isteğin 403'ü kullanıcıyı sayfadan koparmamalı.
- * Bu kural yokken admin olmayan kullanıcı açılış dashboard'unu hiç göremiyor ve kayıt
- * ekranına ilk denemede giremiyordu (layout'un loadAssembly'si ve form kuralları 403 dönüyordu).
+ * The main behaviour under guard: a 403 on an auxiliary request must not pull the user off the page.
+ * Without this rule a non-admin user could never see the landing dashboard and could not enter the record
+ * screen on the first try (the layout's loadAssembly and form rules returned 403).
  */
 describe('errorInterceptor', () => {
   let http: HttpClient;
@@ -39,7 +39,7 @@ describe('errorInterceptor', () => {
 
   afterEach(() => httpMock.verify());
 
-  /** İsteği atar, verilen durum koduyla yanıtlar; hatanın zincirde devam ettiğini doğrular. */
+  /** Sends the request, responds with the given status code; verifies the error continues down the chain. */
   function failWith(status: number, context?: HttpContext, body: object = { success: false }): void {
     let errored = false;
     http.get('/test', { context }).subscribe({ error: () => (errored = true) });
@@ -47,34 +47,34 @@ describe('errorInterceptor', () => {
     expect(errored).withContext('hata zinciri devam etmeli').toBeTrue();
   }
 
-  it('403: işaretsiz istekte /models\'e yönlendirir', () => {
+  it('403: redirects to /models on an unmarked request', () => {
     failWith(403);
     expect(router.navigate).toHaveBeenCalledWith(['/models']);
   });
 
-  it('403: SKIP_FORBIDDEN_REDIRECT işaretli istekte yönlendirmez', () => {
+  it('403: does not redirect on a request marked SKIP_FORBIDDEN_REDIRECT', () => {
     failWith(403, new HttpContext().set(SKIP_FORBIDDEN_REDIRECT, true));
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('401: oturum varken temizleyip login\'e yönlendirir (işaretten bağımsız)', () => {
+  it('401: with a session, clears it and redirects to login (regardless of the mark)', () => {
     failWith(401, new HttpContext().set(SKIP_FORBIDDEN_REDIRECT, true));
     expect(auth.clearSession).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { reason: 'session_expired' } });
   });
 
-  it('401: oturum yokken yönlendirmez', () => {
+  it('401: does not redirect without a session', () => {
     auth.clearSession.and.returnValue(false);
     failWith(401);
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('401 session_invalidated: veri geri yüklendi nedeniyle login\'e yönlendirir', () => {
+  it('401 session_invalidated: redirects to login with the data-restored reason', () => {
     failWith(401, undefined, { success: false, code: 'session_invalidated' });
     expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { reason: 'tenant_restored' } });
   });
 
-  it('503 tenant_maintenance: oturumu korur, yalnız uyarı gösterir', () => {
+  it('503 tenant_maintenance: keeps the session, only shows a warning', () => {
     const warn = spyOn(TestBed.inject(NotificationService), 'warn');
     failWith(503, undefined, { success: false, code: 'tenant_maintenance', message: 'Geri yükleniyor' });
     expect(router.navigate).not.toHaveBeenCalled();
@@ -82,14 +82,14 @@ describe('errorInterceptor', () => {
     expect(warn).toHaveBeenCalledWith('Geri yükleniyor');
   });
 
-  it('429: yönlendirmez, kullanıcıya hız sınırını söyler', () => {
+  it('429: does not redirect, tells the user about the rate limit', () => {
     const warn = spyOn(TestBed.inject(NotificationService), 'warn');
     failWith(429);
     expect(warn).toHaveBeenCalled();
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('diğer hatalarda yönlendirmez', () => {
+  it('does not redirect on other errors', () => {
     failWith(500);
     expect(router.navigate).not.toHaveBeenCalled();
   });

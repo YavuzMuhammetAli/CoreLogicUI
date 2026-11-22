@@ -25,24 +25,24 @@ import { TimerEditorComponent } from '../editors/timer-editor.component';
 import { keyProblem } from '../designer/inspector-form';
 import { IconComponent } from '../../shared/icon/icon.component';
 
-/** Form alanı tipi seçenekleri — model kolon tipleriyle aynı sözlükten dar bir alt küme. */
+/** Form field type options — a narrow subset of the same dictionary as model column types. */
 const FORM_FIELD_TYPES = ['string', 'int', 'decimal', 'boolean', 'datetime', 'dateonly', 'enum'] as const;
 
-/** Pop-up kaydedildiğinde tasarım belgesine yazılacak sonuç. */
+/** Result written to the design document when the pop-up is saved. */
 export interface StepDialogResult {
   step: WorkflowStep;
   statusLabel: string;
-  /** Düzenlenen adımın özgün anahtarı; yeni adımda boş. Anahtar değiştiyse bağlantılar taşınır. */
+  /** Original key of the edited step; empty for a new step. If the key changed, connections are moved. */
   originalKey: string;
 }
 
 /**
- * Tek bir akış adımının ekleme/düzenleme pop-up'ı.
+ * Add/edit pop-up of a single flow step.
  *
- * Adımı NESNE olarak alır ve kendi formunu kurar; tasarım belgesindeki adıma
- * kaydedilene kadar dokunulmaz — İptal hiçbir şeyi geri almak zorunda değil.
- * Kaydedince form değeri `stepFromFormValue` ile asıl adımın üstüne birleştirilir
- * (formda karşılığı olmayan alanlar korunur).
+ * Takes the step as an OBJECT and builds its own form; the step in the design document
+ * is not touched until saved — Cancel does not have to undo anything.
+ * On save the form value is merged onto the original step with `stepFromFormValue`
+ * (fields without a counterpart in the form are preserved).
  */
 @Component({
     selector: 'app-workflow-step-dialog',
@@ -64,20 +64,20 @@ export class WorkflowStepDialogComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly languageService = inject(LanguageService);
 
-  /** Düzenlenecek adım; yeni adımda null. */
+  /** Step to edit; null for a new step. */
   readonly step = input<WorkflowStep | null>(null);
-  /** Adımın durum etiketi (`entityStatusMap` girdisi). */
+  /** The step's status label (`entityStatusMap` entry). */
   readonly statusLabel = input('');
-  /** Yeni adıma önerilen anahtar. */
+  /** Key suggested for a new step. */
   readonly newKey = input('');
   readonly readonly = input(false);
   readonly roles = input<Role[]>([]);
   readonly users = input<AppUser[]>([]);
-  /** Tüm adım anahtarları (kendisi hariç tutulur) — geçiş hedefi listesi ve tekillik denetimi. */
+  /** All step keys (its own is excluded) — transition target list and uniqueness check. */
   readonly stepKeys = input<string[]>([]);
-  /** Akışın bağlı olduğu modelin kolonları — kayıt alanı seçicisi. Model seçilmemişse boş. */
+  /** Columns of the model the flow is bound to — record field picker. Empty if no model is selected. */
   readonly columns = input<PublishedColumn[]>([]);
-  /** Adımların adları (ve tipleri) — hedef seçicisi "Ad (anahtar)" göstersin; bildirim insan adımlarını seçsin. */
+  /** Step names (and types) — so the target picker shows "Name (key)"; notification picks human steps. */
   readonly steps = input<Array<{ key: string; name: string; type?: string }>>([]);
 
   readonly saved = output<StepDialogResult>();
@@ -87,9 +87,9 @@ export class WorkflowStepDialogComponent implements OnInit {
   readonly originalKey = computed(() => this.step()?.key ?? '');
 
   /**
-   * Koşul, Bitiş, Alan güncelle ve Bildirim kendi düzenleyicisiyle açılır
-   * (onay/paralel reaktif formu onlara uymuyor); düzenleyici adımın kopyasını
-   * yayar, Kaydet belgeye yazar.
+   * Condition, End, Field update and Notification open with their own editor
+   * (the approval/parallel reactive form does not fit them); the editor emits a copy
+   * of the step, Save writes it to the document.
    */
   readonly special = computed(() => {
     const type = this.step()?.type;
@@ -99,7 +99,7 @@ export class WorkflowStepDialogComponent implements OnInit {
   readonly specialLabel = signal('');
   readonly specialError = signal<string | null>(null);
 
-  /** Koşul hedefleri: diğer adımlar, "Ad (anahtar)". */
+  /** Condition targets: other steps, "Name (key)". */
   readonly targets = computed<StepTarget[]>(() => {
     const names = new Map(this.steps().map(s => [s.key.toLowerCase(), s.name]));
     return this.stepKeys()
@@ -110,7 +110,7 @@ export class WorkflowStepDialogComponent implements OnInit {
       });
   });
 
-  /** Bildirimin "adım görevlileri" seçimi: görev açan adımlar (onay, görev, paralel). */
+  /** The notification's "step assignees" choice: steps that open tasks (approval, task, parallel). */
   readonly humanSteps = computed<StepTarget[]>(() =>
     this.steps()
       .filter(s => s.type === 'approval' || s.type === 'parallel')
@@ -123,12 +123,12 @@ export class WorkflowStepDialogComponent implements OnInit {
 
   form!: FormGroup;
 
-  /** Kaydet geçersiz formla denendi — alt çubuktaki uyarıyı açar. */
+  /** Save was attempted with an invalid form — opens the warning in the bottom bar. */
   showErrors = false;
-  /** Anahtar başka bir adımda kullanılıyor. */
+  /** The key is used by another step. */
   duplicateKey = false;
 
-  /** Açılıştaki form değeri — hiçbir şey değişmeden Kaydet'e basılınca belge değişmesin. */
+  /** Form value at open time — pressing Save without changing anything should not change the document. */
   private initialValue = '';
 
   ngOnInit(): void {
@@ -163,31 +163,31 @@ export class WorkflowStepDialogComponent implements OnInit {
   }
 
   /**
-   * Geçiş hedefleri: diğer adımlar. Kendi anahtarı (hem özgün hem şu an
-   * yazılı olan) çıkarılır — adım kendine bağlanamaz.
+   * Transition targets: other steps. Its own key (both the original and the currently
+   * typed one) is removed — a step cannot connect to itself.
    */
   get targetKeys(): string[] {
     const ownKeys = [this.originalKey(), String(this.form.get('key')?.value ?? '')];
     return this.stepKeys().filter(key => !ownKeys.some(own => sameKey(own, key)));
   }
 
-  // ── Dallar ────────────────────────────────────────────────────────────────
+  // ── Branches ────────────────────────────────────────────────────────────────
 
   addBranch(): void {
-    this.branches.push(newBranchGroup(this.fb, { key: `dal${this.branches.length + 1}`, name: '' }));
+    this.branches.push(newBranchGroup(this.fb, { key: `branch${this.branches.length + 1}`, name: '' }));
   }
 
   removeBranch(index: number): void {
     this.branches.removeAt(index);
   }
 
-  /** Paralele geçişte iki boş dal hazırlanır (en az iki dal şart). */
+  /** Switching to parallel prepares two empty branches (at least two branches are required). */
   onTypeChange(): void {
     if (!this.isParallel) return;
     while (this.branches.length < 2) this.addBranch();
   }
 
-  // ── Form alanları ─────────────────────────────────────────────────────────
+  // ── Form fields ─────────────────────────────────────────────────────────
 
   addField(): void {
     this.fields.push(newFieldGroup(this.fb));
@@ -197,7 +197,7 @@ export class WorkflowStepDialogComponent implements OnInit {
     this.fields.removeAt(index);
   }
 
-  // ── Kayıt alanları ────────────────────────────────────────────────────────
+  // ── Record fields ────────────────────────────────────────────────────────
 
   addRecordField(): void {
     this.recordFields.push(newRecordFieldGroup(this.fb));
@@ -208,8 +208,8 @@ export class WorkflowStepDialogComponent implements OnInit {
   }
 
   /**
-   * Satırın seçicisinde gösterilecek kolonlar: başka satırlarda seçilmiş olanlar
-   * gizlenir (aynı kolon iki kez seçilemez), satırın kendi değeri kalır.
+   * Columns to show in the row's picker: those selected in other rows are
+   * hidden (the same column cannot be selected twice), the row's own value stays.
    */
   columnsFor(index: number): PublishedColumn[] {
     const taken = new Set(
@@ -220,14 +220,14 @@ export class WorkflowStepDialogComponent implements OnInit {
     return this.columns().filter(c => !taken.has(c.columnName.toLowerCase()));
   }
 
-  /** Kolon seçicideki metin: "Etiket (KolonAdı)" ya da yalnız kolon adı. */
+  /** Text in the column picker: "Label (ColumnName)" or just the column name. */
   columnLabel(column: PublishedColumn): string {
     return column.label && column.label !== column.columnName
       ? `${column.label} (${column.columnName})`
       : column.columnName;
   }
 
-  // ── Kapatma ───────────────────────────────────────────────────────────────
+  // ── Closing ───────────────────────────────────────────────────────────────
 
   onSpecialStep(step: WorkflowStep): void {
     this.specialDraft.set(step);
@@ -240,7 +240,7 @@ export class WorkflowStepDialogComponent implements OnInit {
     this.specialError.set(null);
   }
 
-  /** Özel düzenleyicili adımların kaydı: anahtar kuralı panelle aynı; değişiklik yoksa belge değişmez. */
+  /** Saving steps with a custom editor: the key rule is the same as the panel's; with no change the document does not change. */
   private saveSpecial(): void {
     const draft = this.specialDraft();
     const original = this.step();
@@ -271,8 +271,8 @@ export class WorkflowStepDialogComponent implements OnInit {
       return;
     }
 
-    // Anahtar akışta tekil olmalı: iki adım aynı anahtarı taşırsa bağlantılar
-    // hangisine gittiği belirsizleşir ve doğrulayıcı yayını reddeder.
+    // The key must be unique in the flow: if two steps carry the same key it becomes
+    // unclear which one connections go to, and the validator rejects publishing.
     const key = String(this.form.get('key')?.value ?? '');
     this.duplicateKey = this.stepKeys().some(existing =>
       sameKey(existing, key) && !sameKey(existing, this.originalKey()));
@@ -283,10 +283,10 @@ export class WorkflowStepDialogComponent implements OnInit {
       return;
     }
 
-    // Var olan adım hiç değiştirilmeden kaydedildiyse belgeye yazılmaz: eşleyici
-    // adımı normalleştirdiği için (boş form → açık alanlar) belge "değişmiş"
-    // görünür ve kullanıcı boş yere "kaydedilmemiş değişiklik" uyarısı alırdı.
-    // (pristine yetmez: dal/alan ekleyip silmek kontrolü "kirli" işaretlemiyor.)
+    // If an existing step was saved without any change it is not written to the document: since the mapper
+    // normalises the step (empty form → explicit fields) the document would look "changed"
+    // and the user would get a pointless "unsaved changes" warning.
+    // (pristine is not enough: adding and removing a branch/field does not mark the control "dirty".)
     if (!this.isNew() && JSON.stringify(this.form.getRawValue()) === this.initialValue) {
       this.cancelled.emit();
       return;
@@ -305,7 +305,7 @@ export class WorkflowStepDialogComponent implements OnInit {
     this.cancel();
   }
 
-  /** Alanın hata göstermesi gerekiyor mu (dokunulmuş + geçersiz). */
+  /** Should the field show an error (touched + invalid). */
   invalid(path: string): boolean {
     const control = this.form.get(path);
     return !!control && control.invalid && control.touched;

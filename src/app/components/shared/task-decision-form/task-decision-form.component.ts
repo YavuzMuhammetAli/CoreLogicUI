@@ -12,20 +12,20 @@ import { TaskSchema, buildTaskForm, parseTaskSchema, readTaskForm } from './task
 import { IconComponent } from '../icon/icon.component';
 
 /**
- * Görev karar formu — adım formu + açıklama + Onayla/Reddet.
+ * Task decision form — step form + comment + Approve/Reject.
  *
- * Görev detayı (`/tasks/:id`) ve kayıt detayı (`/models/:type/:id`) aynı formu
- * kullanır; karar mantığı tek yerde durur.
+ * The task detail (`/tasks/:id`) and the record detail (`/models/:type/:id`) use the same
+ * form; the decision logic lives in one place.
  *
- * Karar ARA ONAY DİYALOĞU OLMADAN gönderilir: kullanıcı zaten formu doldurup
- * butonu seçmiş durumda, ikinci bir "emin misiniz" adımı yalnızca tıklama ekliyordu.
+ * The decision is sent WITHOUT AN INTERMEDIATE CONFIRMATION DIALOG: the user has already filled
+ * the form and chosen the button; a second "are you sure" step only added a click.
  *
- * Dinamik form YENİDEN YAZILMADI: adım şeması `dataType` sözlüğünü model
- * kolonlarıyla paylaştığı için (CoreLogicTypeMap) `inputTypeFor`, `stepFor` ve
- * `parseEnumValues` yardımcıları olduğu gibi kullanılıyor.
+ * The dynamic form was NOT REWRITTEN: since the step schema shares the `dataType` vocabulary
+ * with model columns (CoreLogicTypeMap), the `inputTypeFor`, `stepFor` and
+ * `parseEnumValues` helpers are used as is.
  *
- * Form şeması TANIMDAN değil GÖREVDEN okunur — görev açıldığı andaki formu
- * gösterir, tanım o sırada yeni bir sürüme geçmiş olabilir.
+ * The form schema is read from the TASK, not the DEFINITION — it shows the form as it was when the task
+ * was opened; the definition may have moved to a new version since.
  */
 @Component({
     selector: 'app-task-decision-form',
@@ -36,18 +36,18 @@ import { IconComponent } from '../icon/icon.component';
 })
 export class TaskDecisionFormComponent implements OnChanges {
   readonly task = input.required<WorkflowTask>();
-  /** Panel başlığı; verilmezse "Onay formu". */
+  /** Panel title; "Onay formu" (Approval form) if not given. */
   readonly heading = input<string | null>(null);
 
-  /** Karar sunucuda kabul edildi — sunucu mesajıyla. */
+  /** The decision was accepted by the server — with the server message. */
   readonly completed = output<string>();
 
   private readonly fb = inject(FormBuilder);
   private readonly taskService = inject(WorkflowTaskService);
   private readonly languageService = inject(LanguageService);
 
-  // Şablonun çağırabilmesi için saf yardımcılar alan olarak bağlanıyor
-  // (record-form-dialog ile aynı desen).
+  // Pure helpers are bound as fields so the template can call them
+  // (same pattern as record-form-dialog).
   readonly inputTypeFor = inputTypeFor;
   readonly stepFor = stepFor;
   readonly parseEnumValues = parseEnumValues;
@@ -56,7 +56,7 @@ export class TaskDecisionFormComponent implements OnChanges {
   schema: TaskSchema = parseTaskSchema(null);
   form: FormGroup = this.fb.group({ comment: [''] });
 
-  /** Gönderilmekte olan karar — basılan butonda spinner göstermek için. */
+  /** The decision being submitted — to show a spinner on the pressed button. */
   readonly saving = signal<'approve' | 'reject' | null>(null);
   readonly submitError = signal<string | null>(null);
 
@@ -65,22 +65,22 @@ export class TaskDecisionFormComponent implements OnChanges {
   }
 
   /**
-   * Adım KAYIT alanı istiyorsa onay kayıt ekranından verilir: alanlar orada,
-   * formun kendisinde doldurulur ve onayla aynı transaction'da yazılır. Burada
-   * onaylamak zorunlu alanları boş bırakıp sunucudan hata almak olurdu.
+   * If the step requires RECORD fields, approval is given from the record screen: the fields are
+   * filled there, in the form itself, and written in the same transaction as the approval. Approving
+   * here would mean leaving required fields empty and getting an error from the server.
    */
   get approveOnRecord(): boolean {
     return this.schema.recordFields.length > 0;
   }
 
-  /** Yönetici "Atla" işlemi gerekçeyi bu alandan okur. */
+  /** The admin "Atla" (Skip) action reads its reason from this field. */
   get commentValue(): string | null {
     return (this.form.get('comment')?.value as string) || null;
   }
 
   /**
-   * Form ilk render'dan ÖNCE kurulmalı (formControlName'ler kontrolü bulamazsa
-   * hata fırlatır) — bu yüzden effect değil ngOnChanges.
+   * The form must be built BEFORE the first render (formControlNames throw if they
+   * can't find their control) — hence ngOnChanges, not effect.
    */
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['task']) {
@@ -95,7 +95,7 @@ export class TaskDecisionFormComponent implements OnChanges {
     this.form = buildTaskForm(this.fb, this.fields);
 
     if (this.isClosed) {
-      // Kapalı görevde form salt-okunur: geçmiş karar görünsün ama değiştirilemesin.
+      // On a closed task the form is read-only: the past decision is visible but can't be changed.
       this.patchExistingValues();
       this.form.disable();
     }
@@ -123,8 +123,8 @@ export class TaskDecisionFormComponent implements OnChanges {
   decide(decision: 'approve' | 'reject'): void {
     if (this.saving()) return;
 
-    // Onayda form doğrulaması şart; REDDE değil — bir talebi reddetmek için
-    // zorunlu alanları doldurmak zorunda bırakmak anlamsız olurdu.
+    // Form validation is required on approve; NOT on reject — forcing required fields
+    // to be filled in order to reject a request would make no sense.
     if (decision === 'approve' && this.form.invalid) {
       this.form.markAllAsTouched();
       return;

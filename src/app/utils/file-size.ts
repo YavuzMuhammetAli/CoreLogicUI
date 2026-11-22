@@ -3,16 +3,16 @@ import { Lang } from '../services/language.service';
 import { formatNumber } from './locale-format';
 
 /**
- * `image` / `file` kolonlarının boyut sınırı.
+ * Size limit for `image` / `file` columns.
  *
- * Bu tiplerde şemadaki `maxLength` karakter değil, **dosya boyutu sınırıdır (KB)**. Kolon
- * DDL'de hep `varbinary(max)` olduğu için değer yalnızca doğrulamada okunur (migrasyon yok).
- * Backend eşi: `Core/Constants/FileLimits.cs` — tavan iki tarafta aynı olmalı.
+ * For these types the schema's `maxLength` is not characters but **the file size limit (KB)**. Since the column
+ * is always `varbinary(max)` in DDL, the value is only read during validation (no migration).
+ * Backend counterpart: `Core/Constants/FileLimits.cs` — the cap must be the same on both sides.
  *
- * Kullanıcı sınırı MB olarak girer (ondalıklı: 0,5 MB); saklarken KB'ye çevrilir.
+ * The user enters the limit in MB (decimals allowed: 0.5 MB); it is converted to KB when stored.
  */
 
-/** byte[] olarak derlenen, boyut sınırı anlamlı tipler. */
+/** Types compiled as byte[], for which a size limit is meaningful. */
 const FILE_TYPES = new Set(['image', 'file']);
 
 export function isFileType(dataType: string | null | undefined): boolean {
@@ -20,14 +20,14 @@ export function isFileType(dataType: string | null | undefined): boolean {
 }
 
 /**
- * Dosya kolonunun izinli tür grupları. Şemada `enumValues` içinde `pdf|office` olarak durur;
- * boşsa serbest. Sunucu içeriği baytlardan denetler (backend `Core/Utilities/Files/FileSignature`),
- * buradaki `accept` yalnız dosya seçicide kolaylıktır.
+ * Allowed type groups of a file column. Stored in the schema's `enumValues` as `pdf|office`;
+ * unrestricted if empty. The server checks the content from its bytes (backend `Core/Utilities/Files/FileSignature`);
+ * the `accept` here is only a convenience in the file picker.
  */
 export const FILE_TYPE_GROUPS = ['pdf', 'image', 'office', 'text'] as const;
 export type FileTypeGroup = (typeof FILE_TYPE_GROUPS)[number];
 
-/** Sunucunun resim olarak kabul ettikleri. Listeli `accept`, iOS'ta HEIC'i JPEG'e çevirtir. */
+/** What the server accepts as images. An explicit `accept` list makes iOS convert HEIC to JPEG. */
 const IMAGE_ACCEPT = 'image/png,image/jpeg,image/gif,image/webp,image/bmp';
 
 const GROUP_ACCEPT: Record<FileTypeGroup, string> = {
@@ -42,59 +42,59 @@ export function parseFileGroups(value: string | null | undefined): FileTypeGroup
   return FILE_TYPE_GROUPS.filter(group => selected.has(group));
 }
 
-/** Gruplar şemada sabit sırayla durur: kayıtlı değer ile form anahtarı eşleşsin. */
+/** Groups are stored in a fixed order in the schema: so the saved value matches the form key. */
 export function joinFileGroups(groups: readonly FileTypeGroup[]): string {
   return FILE_TYPE_GROUPS.filter(group => groups.includes(group)).join('|');
 }
 
-/** Dosya seçicinin `accept` değeri; kısıt yoksa null. */
+/** The file picker's `accept` value; null if unrestricted. */
 export function fileAccept(dataType: string, enumValues: string | null | undefined): string | null {
   if (dataType === 'image') return IMAGE_ACCEPT;
   const groups = parseFileGroups(enumValues);
   return groups.length ? groups.map(group => GROUP_ACCEPT[group]).join(',') : null;
 }
 
-/** Resim tavanı: 50 MB. */
+/** Image cap: 50 MB. */
 export const IMAGE_MAX_FILE_KB = 50 * 1024;
 
 /**
- * Dosya tavanı: 100 MB. Dosya JSON gövdesinde base64 olarak gider (%33 şişer) ve hem
- * tarayıcıda hem sunucuda tek parça bellekte tutulur; mevcut taşıma yöntemiyle güvenli
- * üst sınır budur. Daha büyüğü için parçalı (streaming) yükleme + satır dışı depolama gerekir.
+ * File cap: 100 MB. The file travels as base64 in the JSON body (33% overhead) and is held in memory
+ * in one piece in both the browser and the server; this is the safe upper bound with the current
+ * transport. Anything larger needs chunked (streaming) upload + off-row storage.
  */
 export const FILE_MAX_FILE_KB = 100 * 1024;
 
-/** Şema ekranındaki MB girişinin alt sınırı (~10 KB). */
+/** Lower bound of the MB input on the schema screen (~10 KB). */
 export const MIN_FILE_LIMIT_MB = 0.01;
 
-/** Tipin tavanı (KB): image 50 MB, file 100 MB. Sınır verilmemiş kolonlarda da bu uygulanır. */
+/** The type's cap (KB): image 50 MB, file 100 MB. Also applied to columns without a limit. */
 export function maxFileKbFor(dataType: string | null | undefined): number {
   return dataType === 'image' ? IMAGE_MAX_FILE_KB : FILE_MAX_FILE_KB;
 }
 
-/** Tipin tavanı (MB) — şema ekranındaki girişin üst sınırı. */
+/** The type's cap (MB) — upper bound of the input on the schema screen. */
 export function maxFileMbFor(dataType: string | null | undefined): number {
   return maxFileKbFor(dataType) / 1024;
 }
 
-/** Kolon sınırı ile tipin tavanından küçük olanı (KB); sınır yoksa tavan. */
+/** The smaller of the column limit and the type cap (KB); the cap if there is no limit. */
 export function effectiveFileLimitKb(dataType: string | null | undefined, maxLengthKb: number | null | undefined): number {
   const cap = maxFileKbFor(dataType);
   return maxLengthKb != null && maxLengthKb > 0 ? Math.min(maxLengthKb, cap) : cap;
 }
 
 /**
- * Şema ekranındaki "Maks. Dosya Boyutu (MB)" girişinin doğrulayıcısı. Üst sınır sütunun
- * tipine bağlı olduğu için kardeş `dataType` kontrolünden okunur; tip değişince çağıran
- * `updateValueAndValidity()` ile yeniden doğrulatır.
+ * Validator for the "Maks. Dosya Boyutu (MB)" (max file size) input on the schema screen. Since the upper bound
+ * depends on the column's type it is read from the sibling `dataType` control; when the type changes the caller
+ * re-validates with `updateValueAndValidity()`.
  */
 export const fileLimitMbValidator: ValidatorFn = control => {
   const value = control.value;
   if (value === null || value === undefined || value === '') return null;
-  // Kontrol oluşturulurken henüz gruba bağlı değildir; tip bilinmeden karar verilmez.
-  // Değer ya da tip değişince (select'in change'i, popup kaydı) yeniden doğrulanır.
+  // When created the control is not attached to a group yet; no decision without knowing the type.
+  // It is re-validated when the value or type changes (the select's change, popup save).
   if (!control.parent) return null;
-  // Gizli alan: sütun dosya tipinde değilse değer kaydedilmez (normalizeColumnRules), engellemez.
+  // Hidden field: if the column is not a file type the value is not saved (normalizeColumnRules), so don't block.
   const dataType = control.parent.get('dataType')?.value;
   if (!isFileType(dataType)) return null;
   const mb = Number(value);
@@ -104,7 +104,7 @@ export const fileLimitMbValidator: ValidatorFn = control => {
   return null;
 };
 
-/** Kullanıcının girdiği MB → saklanan KB (tam sayı, en az 1). Boş → null. */
+/** MB entered by the user → stored KB (integer, at least 1). Empty → null. */
 export function mbToKb(mb: number | string | null | undefined): number | null {
   if (mb === null || mb === undefined || mb === '') return null;
   const value = Number(mb);
@@ -112,13 +112,13 @@ export function mbToKb(mb: number | string | null | undefined): number | null {
   return Math.max(1, Math.round(value * 1024));
 }
 
-/** Saklanan KB → forma gösterilecek MB (en fazla 2 ondalık). Boş → null. */
+/** Stored KB → MB shown in the form (at most 2 decimals). Empty → null. */
 export function kbToMb(kb: number | null | undefined): number | null {
   if (kb == null || kb <= 0) return null;
   return Math.round((kb / 1024) * 100) / 100;
 }
 
-/** Base64 metnin çözülmüş bayt uzunluğu (dosyanın gerçek boyutu). */
+/** Decoded byte length of base64 text (the file's actual size). */
 export function base64ByteLength(b64: string): number {
   const clean = b64.replace(/\s/g, '');
   if (!clean) return 0;
@@ -126,22 +126,22 @@ export function base64ByteLength(b64: string): number {
   return Math.floor((clean.length * 3) / 4) - padding;
 }
 
-/** Okunur boyut: 512 KB, 1,5 MB (aktif dile göre). */
+/** Readable size: 512 KB, 1.5 MB (per the active language). */
 export function formatFileSize(bytes: number, lang: Lang): string {
   const kb = bytes / 1024;
   if (kb < 1024) return `${formatNumber(Math.max(1, Math.round(kb)), lang)} KB`;
   return `${formatNumber(Math.round((kb / 1024) * 10) / 10, lang)} MB`;
 }
 
-/** Hata metni için i18n anahtarı + yer tutucular (bileşen kendi etiketini ekler). */
+/** i18n key + placeholders for the error text (the component adds its own label). */
 export interface FileSizeError {
   key: 'model.detail.fieldMaxFileSize';
   params: { actual: string; limit: string };
 }
 
 /**
- * Seçilen dosya sınırı aşıyor mu? Dosya OKUNMADAN önce çağrılır — büyük bir dosyayı
- * base64'e çevirip belleğe almaya gerek kalmaz. Aşıyorsa hata, değilse null.
+ * Does the selected file exceed the limit? Called BEFORE the file is read — so a large file need not be
+ * converted to base64 and loaded into memory. An error if it exceeds, otherwise null.
  */
 export function fileSizeError(
   file: File,
@@ -158,9 +158,9 @@ export function fileSizeError(
 }
 
 /**
- * Form değeri (base64) sınırı aşıyorsa `{ maxFileSize: { limitKb, actualBytes } }`.
- * Seçim anındaki engellemenin arkasındaki savunma katmanı: değer başka bir yoldan
- * (kayıttan yüklenen eski veri) gelse de form sınırı aşan dosyayla kaydedilemez.
+ * `{ maxFileSize: { limitKb, actualBytes } }` if the form value (base64) exceeds the limit.
+ * A defence layer behind the check at selection time: even if the value arrives another way
+ * (old data loaded from the record), the form cannot be saved with a file over the limit.
  */
 export function maxFileSizeValidator(
   dataType: string | null | undefined,

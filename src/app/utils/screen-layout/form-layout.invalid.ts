@@ -1,19 +1,19 @@
 import { FormRenderPlan, PlanLocation } from './form-layout.resolve';
 
 /**
- * Görünmeyen yerdeki geçersiz alanı bulma — SAF.
+ * Finding an invalid field in a hidden place — PURE.
  *
- * Sekmeli/katlanır formda Kaydet'e basıldığında hatalı alan pasif bir sekmede ya da kapalı
- * bir bölümde kalabilir; kullanıcı hiçbir şey olmadı sanır. Bu fonksiyonlar planın çizim
- * sırasında ilk hatalı alanı ve sekme başına hata sayısını verir; bileşen o sekmeye geçer,
- * bölümü açar ve alana odaklanır.
+ * In a tabbed/collapsible form, when Save is pressed the invalid field may sit in an inactive tab or a
+ * collapsed section; the user thinks nothing happened. These functions return the first invalid field
+ * in the plan's render order and the error count per tab; the component switches to that tab,
+ * expands the section and focuses the field.
  */
 
 export interface InvalidLocation extends PlanLocation {
   readonly column: string;
 }
 
-/** Çizim sırasındaki ilk geçersiz alan; yoksa null. */
+/** The first invalid field in render order; null if none. */
 export function firstInvalidLocation(plan: FormRenderPlan, invalid: ReadonlySet<string>): InvalidLocation | null {
   if (invalid.size === 0) return null;
   for (const tab of plan.tabs) {
@@ -28,7 +28,7 @@ export function firstInvalidLocation(plan: FormRenderPlan, invalid: ReadonlySet<
   return null;
 }
 
-/** Sekme kimliği → o sekmedeki geçersiz alan sayısı (yalnız hatalı sekmeler). */
+/** Tab id → number of invalid fields in that tab (only tabs with errors). */
 export function invalidCountByTab(plan: FormRenderPlan, invalid: ReadonlySet<string>): Map<string, number> {
   const counts = new Map<string, number>();
   if (invalid.size === 0) return counts;
@@ -39,7 +39,7 @@ export function invalidCountByTab(plan: FormRenderPlan, invalid: ReadonlySet<str
   return counts;
 }
 
-/** Verilen kolonlardan en az birini içeren sekmeler, plan sırasıyla. */
+/** Tabs containing at least one of the given columns, in plan order. */
 export function tabsWithColumns(plan: FormRenderPlan, columns: ReadonlySet<string>): string[] {
   if (columns.size === 0) return [];
   const tabIds = new Set<string>();
@@ -50,7 +50,7 @@ export function tabsWithColumns(plan: FormRenderPlan, columns: ReadonlySet<strin
   return plan.tabs.map(t => t.id).filter(id => tabIds.has(id));
 }
 
-/** Verilen kolonları içeren bölümler. */
+/** Sections containing the given columns. */
 export function sectionsWithColumns(plan: FormRenderPlan, columns: ReadonlySet<string>): Set<string> {
   const out = new Set<string>();
   for (const column of columns) {

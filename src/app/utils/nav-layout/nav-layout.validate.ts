@@ -4,15 +4,15 @@ import {
 import { utf8Length } from '../screen-layout/screen-layout.validate';
 
 /**
- * Navigasyon belgesi doğrulaması — SAF.
+ * Navigation document validation — PURE.
  *
- * Sunucudaki `Business/Concrete/Design/NavigationLayoutValidator.cs` ile BİREBİR aynı kurallar;
- * ortak vektörler `nav-layout.vectors.json` iki repoda birebir kopyadır. Kural değiştiren her
- * düzenleme iki dosyaya birlikte yapılır ve vektör eklenir.
+ * Rules IDENTICAL to the server-side `Business/Concrete/Design/NavigationLayoutValidator.cs`;
+ * the shared vectors `nav-layout.vectors.json` are byte-for-byte copies in both repos. Every edit that
+ * changes a rule is made to both files together and a vector is added.
  *
- * Elle eşitlenen ayrıntılar: tam sayı kararı `Number.isInteger` ↔ `d == Math.Floor(d)` (10.0 tam
- * sayıdır), metin uzunluğu UTF-16 birimi, boyut UTF-8 bayt, düzenli ifadelerde .NET tarafı `\z`
- * kullanır (JS `$` sondaki satır sonunu kabul etmez).
+ * Details kept in sync by hand: the integer check `Number.isInteger` ↔ `d == Math.Floor(d)` (10.0 is an
+ * integer), text length in UTF-16 units, size in UTF-8 bytes, the .NET side uses `\z` in regular
+ * expressions (JS `$` does not accept a trailing newline).
  */
 
 const STRUCTURAL = new Set<NavIssueCode>([
@@ -24,7 +24,7 @@ const SEMANTIC = new Set<NavIssueCode>(['emptyLabel', 'unknownModel', 'unknownTa
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,40}$/;
 const ICON_PATTERN = /^[a-z0-9_]{1,40}$/;
-/** Yalnız http(s); boşluk ve kontrol karakteri yok. `javascript:` gibi şemalar böylece dışarıda kalır. */
+/** http(s) only; no whitespace or control characters. Schemes like `javascript:` are thus excluded. */
 const URL_PATTERN = /^[Hh][Tt][Tt][Pp][Ss]?:\/\/[^\u0000- \u007f]+$/;
 const INT_MAX = 2_147_483_647;
 
@@ -38,12 +38,12 @@ export function navSeverityOf(code: NavIssueCode, mode: NavValidationMode): NavI
   return 'warning';
 }
 
-/** Bağlantı adresi kabul edilir mi (tasarımcıdaki alan doğrulaması da bunu kullanır). */
+/** Whether a link address is accepted (the designer's field validation uses this too). */
 export function isAllowedNavUrl(url: string): boolean {
   return url.length <= NAV_LIMITS.maxUrl && URL_PATTERN.test(url);
 }
 
-/** Ham JSON metnini doğrular — boyut ve ayrıştırma dahil (sunucunun gördüğü yol). */
+/** Validates raw JSON text — including size and parsing (the path the server sees). */
 export function validateNavLayoutText(text: string, facts: NavFacts | null, mode: NavValidationMode): NavIssue[] {
   if (!text.trim()) return [only('unreadable', mode)];
   if (utf8Length(text) > NAV_LIMITS.maxBytes) return [only('tooLarge', mode)];
@@ -57,7 +57,7 @@ export function validateNavLayoutText(text: string, facts: NavFacts | null, mode
   return validateNavLayout(parsed, facts, mode);
 }
 
-/** Ayrıştırılmış belgeyi doğrular. `facts` null ise hedef varlık denetimleri atlanır. */
+/** Validates a parsed document. If `facts` is null, target existence checks are skipped. */
 export function validateNavLayout(input: unknown, facts: NavFacts | null, mode: NavValidationMode): NavIssue[] {
   try {
     if (!isObject(input) || input['schemaVersion'] !== 1) throw UNREADABLE;
@@ -70,7 +70,7 @@ export function validateNavLayout(input: unknown, facts: NavFacts | null, mode: 
   }
 }
 
-// ─── İç ayrıntılar ──────────────────────────────────────────────────────────
+// ─── Internal details ───────────────────────────────────────────────────────
 
 const UNREADABLE = Symbol('unreadable');
 

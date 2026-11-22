@@ -22,11 +22,11 @@ describe('ModelIconComponent', () => {
     fixture.detectChanges();
   });
 
-  it('ikon yoksa varsayılan tablo ikonunu çizer', () => {
+  it('draws the default table icon when there is no icon', () => {
     expect(d()).toBe(ICONS.table);
   });
 
-  it('katalog dışı adda varsayılana düşer', async () => {
+  it('falls back to the default for a name outside the catalog', async () => {
     fixture.componentInstance.icon.set('yok_boyle_ikon');
     fixture.detectChanges();
     await fixture.whenStable();
@@ -34,7 +34,7 @@ describe('ModelIconComponent', () => {
     expect(d()).toBe(ICONS.table);
   });
 
-  it('katalogdaki ikonun path\'ini çizer', async () => {
+  it('draws the path of an icon in the catalog', async () => {
     const expected = await resolveModelIconPath('shopping_cart');
     fixture.componentInstance.icon.set('shopping_cart');
     fixture.detectChanges();

@@ -7,8 +7,8 @@ import { TableDetailComponent } from './table-detail.component';
 import { PublishedTableService } from '../../services/published-table.service';
 import { NotificationService } from '../../services/notification.service';
 
-/** Model ikonu akışı: Yayınla önce ikonu seçtirir, ikon (değiştiyse) yayından ÖNCE yazılır. */
-describe('TableDetailComponent — model ikonu', () => {
+/** Model icon flow: Publish first asks for the icon; the icon (if changed) is written BEFORE publishing. */
+describe('TableDetailComponent — model icon', () => {
   let component: TableDetailComponent;
   let service: PublishedTableService;
   let calls: string[];
@@ -35,32 +35,32 @@ describe('TableDetailComponent — model ikonu', () => {
     spyOn(service, 'setTableIcon').and.callFake((name, icon) => { calls.push(`icon:${name}:${icon}`); return of({ success: true, message: '' }); });
     spyOn(service, 'publish').and.callFake(name => { calls.push(`publish:${name}`); return of({ success: true, message: '' }); });
 
-    // Kaydedilmiş, ikonsuz model.
+    // Saved model without an icon.
     component.isSaved = true;
     component.savedRootName = 'Siparis';
     component.editTypeName = 'Siparis';
   });
 
-  it('Yayınla seçiciyi yayın kipinde açar, henüz yayınlamaz', () => {
+  it('Publish opens the picker in publish mode and does not publish yet', () => {
     component.onPublish();
     expect(component.iconPickerMode).toBe('publish');
     expect(calls).toEqual([]);
   });
 
-  it('seçilen ikon yayından önce yazılır', () => {
+  it('the selected icon is written before publishing', () => {
     component.onPublish();
     component.onIconConfirmed('receipt_long');
     expect(calls).toEqual(['icon:Siparis:receipt_long', 'publish:Siparis']);
     expect(component.iconPickerMode).toBeNull();
   });
 
-  it('ikon değişmediyse yalnız yayınlanır', () => {
+  it('only publishes when the icon did not change', () => {
     component.onPublish();
     component.onIconConfirmed(null);
     expect(calls).toEqual(['publish:Siparis']);
   });
 
-  it('ikon yazılamazsa uyarır ama yayın yine yapılır', () => {
+  it('warns when the icon cannot be written but still publishes', () => {
     (service.setTableIcon as jasmine.Spy).and.returnValue(of({ success: false, message: '025' }));
     const warn = spyOn(TestBed.inject(NotificationService), 'warn');
 
@@ -71,14 +71,14 @@ describe('TableDetailComponent — model ikonu', () => {
     expect(service.publish).toHaveBeenCalledWith('Siparis');
   });
 
-  it('başlıktan seçim kayıtlı modelde hemen yazılır, yayınlamaz', () => {
+  it('selecting from the header writes immediately on a saved model and does not publish', () => {
     component.openIconPicker();
     component.onIconConfirmed('warehouse');
     expect(calls).toEqual(['icon:Siparis:warehouse']);
     expect(component.modelIcon).toBe('warehouse');
   });
 
-  it('kaydedilmemiş modelde başlıktan seçim yalnız bellekte tutulur', () => {
+  it('on an unsaved model, selecting from the header is kept only in memory', () => {
     component.isSaved = false;
     component.savedRootName = null;
     component.editTypeName = null;

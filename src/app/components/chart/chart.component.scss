@@ -32,8 +32,8 @@
   align-items: flex-start;
   gap: var(--space-1);
   padding: var(--space-2) 0;
-  /* Değer yazısı kartın genişliğine göre ölçeklenir (cqi). Sabit 48px'te telefondaki
-     yarım genişlik KPI'da 8+ haneli sayılar kartın overflow:hidden'ına kesiliyordu. */
+  /* The value text scales with the card's width (cqi). At a fixed 48px, on a phone's
+     half-width KPI, numbers with 8+ digits were cut off by the card's overflow:hidden. */
   container-type: inline-size;
 }
 

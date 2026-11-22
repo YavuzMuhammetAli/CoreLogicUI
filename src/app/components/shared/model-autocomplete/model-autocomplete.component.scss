@@ -1,4 +1,4 @@
-/* Model autocomplete — token tabanlı, corelogic-design ile aynı dil. */
+/* Model autocomplete — token-based, same language as corelogic-design. */
 
 .ac-wrapper {
   position: relative;
@@ -26,7 +26,7 @@
   height: 20px;
   padding: 0;
 
-  /* Görünüm 20px kalır, dokunma alanı ~32px — parmakla ıskalanmasın */
+  /* The visual stays 20px, the touch area is ~32px — so fingers don't miss it */
   &::before {
     content: '';
     position: absolute;
@@ -58,7 +58,7 @@
   top: calc(100% + var(--space-1));
   left: 0;
   right: 0;
-  /* Klavye açıkken görünen alan küçülür; liste klavyenin arkasına taşmasın */
+  /* The visible area shrinks while the keyboard is open; the list must not spill behind the keyboard */
   max-height: min(220px, 35dvh);
   margin: 0;
   padding: var(--space-1);

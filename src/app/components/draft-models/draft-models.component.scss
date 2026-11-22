@@ -1,4 +1,4 @@
-/* .page-wrap / .page-head global — bkz. styles.scss */
+/* .page-wrap / .page-head are global — see styles.scss */
 
 .list-info {
   display: flex;
@@ -9,9 +9,9 @@
   margin-bottom: var(--space-4);
 }
 
-/* Esnek ızgara — kart sayısı ekran genişliğine göre kendiliğinden artar
-   (model-list / form-build ile aynı desen). Kartlar alt modellerini içlerinde
-   taşıdığı için yükseklikleri eşit değil; align-items: start ile üstten hizalanır. */
+/* Flexible grid — the card count grows automatically with screen width
+   (same pattern as model-list / form-build). Cards carry their sub-models inside,
+   so their heights differ; align-items: start aligns them to the top. */
 .draft-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -30,7 +30,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  /* Global .panel-head 20/24px padding veriyor — kart ızgarada daha derli toplu dursun */
+  /* The global .panel-head gives 20/24px padding — keep the card tidier in the grid */
   padding: var(--space-3) var(--space-4);
   flex-wrap: wrap;
 }
@@ -53,7 +53,7 @@
   gap: var(--space-2);
 }
 
-/* Yarım yayınlama: hangi (zaten yayınlanmış) modelin alt modeli olduğunu gösterir */
+/* Half-finished publish: shows which (already published) model this is a sub-model of */
 .draft-parent-path {
   overflow-wrap: anywhere;
   font-size: var(--text-xs);
@@ -63,7 +63,7 @@
 }
 
 .draft-name {
-  /* Uzun (boşluksuz, mono) tablo adları kartı taşırmasın */
+  /* Keep long (unspaced, mono) table names from overflowing the card */
   overflow-wrap: anywhere;
   min-width: 0;
   font-size: var(--text-base);
@@ -84,7 +84,7 @@
   margin-right: var(--space-1);
 }
 
-/* ── Alt model iç içe (nested) gösterim — model-node ile aynı desen ─────────── */
+/* ── Nested sub-model display — same pattern as model-node ─────────────── */
 
 .draft-card--sub {
   margin-top: var(--space-3);

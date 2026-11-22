@@ -1,4 +1,4 @@
-import '../../../i18n/lazy/design'; // design.* sözlüğü bu parçayla iner
+import '../../../i18n/lazy/design'; // the design.* dictionary loads with this chunk
 import {
   ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, input, output, signal, untracked, viewChild
 } from '@angular/core';
@@ -12,9 +12,9 @@ export interface DesignSettings {
 }
 
 /**
- * Tasarım ayarları diyaloğu — ad + roller. Ekran tasarımı varyantı ve navigasyon tasarımı
- * oluşturma/düzenleme ortak kullanır; tasarıma özel ek seçenekler `ng-content` ile gelir
- * (ör. "Varsayılan", "Mevcut tasarımdan kopyala").
+ * Design settings dialog — name + roles. Shared by screen design variant and navigation design
+ * create/edit; design-specific extra options come through `ng-content`
+ * (e.g. "Varsayılan" (Default), "Mevcut tasarımdan kopyala" (Copy from current design)).
  */
 @Component({
     selector: 'app-design-settings-dialog',
@@ -71,11 +71,11 @@ export class DesignSettingsDialogComponent {
   name = input('');
   roleIds = input<readonly number[]>([]);
   roles = input<readonly Role[]>([]);
-  /** Rol alanı gösterilsin mi (ör. varsayılan ekran tasarımının rolü olmaz). */
+  /** Whether to show the role field (e.g. the default screen design has no roles). */
   showRoles = input(true);
-  /** En az bir rol zorunlu (rollere özel ekran tasarımı). */
+  /** At least one role is required (role-specific screen design). */
   rolesRequired = input(false);
-  /** Rol alanının altındaki açıklama (çevrilmiş). */
+  /** Help text under the role field (translated). */
   rolesHint = input('');
   confirmLabel = input('');
   busy = input(false);
@@ -95,7 +95,7 @@ export class DesignSettingsDialogComponent {
   private readonly nameInput = viewChild<ElementRef<HTMLInputElement>>('nameInput');
 
   constructor() {
-    // Her açılışta girdilerden başla; önceki açılıştan kalan yazı sızmasın.
+    // Start from the inputs on every opening; text left from a previous opening must not leak.
     effect(() => {
       if (!this.open()) return;
       untracked(() => {

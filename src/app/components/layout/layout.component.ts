@@ -39,33 +39,33 @@ import { resolveNav } from '../../utils/nav-layout/nav-layout.resolve';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LayoutComponent implements OnInit, OnDestroy {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
-  /** Sidebar açık mı? Mobilde kapalı başlar (bkz. setupMobileSidebar). */
+  /** Whether the sidebar is open. Starts closed on mobile (see setupMobileSidebar). */
   readonly sidebarOpen = signal(true);
 
   /**
-   * Dar ekran (≤768px): sidebar içeriği itmez, üstüne çekmece olarak açılır;
-   * arka plana dokununca, Esc'le ya da sayfa değişince kapanır.
-   * Kırılma noktası layout.component.scss'teki @media ile AYNI olmalı.
+   * Narrow screen (≤768px): the sidebar does not push the content, it opens as a drawer over it;
+   * it closes on backdrop tap, Esc, or page change.
+   * The breakpoint must be the SAME as the @media in layout.component.scss.
    */
   readonly isMobile = signal(false);
   private static readonly MobileQuery = '(max-width: 768px)';
   private mobileQuery?: MediaQueryList;
   private readonly onMobileChange = (e: MediaQueryListEvent) => {
     this.isMobile.set(e.matches);
-    // Mobile geçerken çekmeceyi kapat, masaüstüne dönerken sabit sidebar'ı geri aç.
+    // Close the drawer when switching to mobile, reopen the fixed sidebar when returning to desktop.
     this.sidebarOpen.set(!e.matches);
   };
 
-  /** Token'dan okunan kullanıcı — profil gelene kadar (ya da gelmezse) gösterilir. */
+  /** User read from the token — shown until the profile arrives (or if it never does). */
   private readonly tokenUser = signal<{ name: string; email: string; initials: string } | null>(null);
 
   /**
-   * Topbar'daki profil çipi. /Profile/me verisi varsa o kullanılır: ad/soyad
-   * profil ekranıyla aynı baş harfleri verir, fotoğraf eklenip silinince de
-   * UserProfileService.current üzerinden anında güncellenir.
+   * Profile chip in the topbar. If /Profile/me data exists it is used: first/last name
+   * gives the same initials as the profile screen, and when a photo is added or removed it
+   * updates instantly via UserProfileService.current.
    */
   readonly currentUser = computed<{ name: string; email: string; initials: string; photoUrl: string | null } | null>(() => {
     const token = this.tokenUser();
@@ -81,22 +81,22 @@ export class LayoutComponent implements OnInit, OnDestroy {
     };
   });
 
-  /** Profil dropdown açık mı? */
+  /** Whether the profile dropdown is open. */
   menuOpen = false;
 
-  /** Profil menüsü sarmalayıcısı — dışarı tıklama kontrolü için */
+  /** Profile menu wrapper — for the outside-click check */
   @ViewChild('profileMenuRef') profileMenuRef?: ElementRef<HTMLElement>;
 
-  /** Normal kullanıcı sidebar'ında gösterilecek, okuma yetkili tablolar */
+  /** Tables with read permission, shown in the regular user's sidebar */
   navTables: PublishedModel[] = [];
 
-  /** Admin tarafından navigasyonda gösterilmek üzere yayınlanmış dashboard'lar — tüm kullanıcılar görür */
+  /** Dashboards published by the admin to be shown in navigation — visible to all users */
   navDashboards: DashboardDefinition[] = [];
 
   /**
-   * Admin'in Tasarım sayfasında kurduğu, kullanıcının rolüne düşen menü (sunucu seçer). Varsa
-   * admin olmayan kullanıcının Görevlerim/Tablolar/Raporlama bloğunun yerini alır; yoksa (tasarım
-   * yok, modül kurulu değil, istek düştü) bugünkü otomatik menü çizilir. Admin'in menüsü değişmez.
+   * The menu the admin built on the Design page that applies to the user's role (chosen by the server). If present,
+   * it replaces the non-admin user's My Tasks/Tables/Reporting block; otherwise (no design,
+   * module not installed, request failed) the current automatic menu is drawn. The admin's menu does not change.
    */
   private readonly navDoc = signal<{ id: number; doc: NavLayout } | null>(null);
   private readonly navModels = signal<PublishedModel[]>([]);
@@ -112,15 +112,15 @@ export class LayoutComponent implements OnInit, OnDestroy {
   });
 
   /**
-   * H: Sidebar'daki "Görevlerim" rozeti — bekleyen onay sayısı.
+   * H: The "Görevlerim" (My Tasks) badge in the sidebar — pending approval count.
    *
-   * Projede SignalR/WebSocket olmadığı için anlık bildirim yok; sayı belirli
-   * aralıklarla yeniden çekilir. Sinyal kullanılıyor ki markDirty gerekmesin.
+   * The project has no SignalR/WebSocket, so there are no instant notifications; the count is
+   * re-fetched at intervals. A signal is used so markDirty is not needed.
    */
   readonly pendingTaskCount = signal(0);
 
-  /** Rozet yenileme aralığı (ms). Sekme gizliyken hiç sorulmaz, görünür olunca hemen tazelenir
-   *  (bkz. utils/visible-poll) — aralık bu yüzden 60 sn'ye çıkabildi. */
+  /** Badge refresh interval (ms). Never asked while the tab is hidden, refreshed immediately when visible
+   *  (see utils/visible-poll) — which is why the interval could go up to 60 s. */
   private static readonly TaskPollIntervalMs = 60_000;
 
   private taskPoll?: VisiblePoll;
@@ -143,7 +143,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Token'dan temel kullanıcı bilgisini al (anlık, SSR-safe)
+    // Get basic user info from the token (instant, SSR-safe)
     const tokenUser = this.auth.getSessionUser();
     this.tokenUser.set(tokenUser);
 
@@ -151,48 +151,48 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
     this.setupMobileSidebar();
 
-    // Derlenmiş modelleri backend kendisi yükler (TenantResolutionMiddleware, tenant'ın ilk
-    // isteğinde). Kabuk eskiden admin için her açılışta /PublishModel/loadAssembly çağırıyordu;
-    // her çağrı sunucuda baştan Roslyn derlemesi + tenant'ın EF modelinin yeniden kurulması ve
-    // bellekte kalan bir eski nesil demekti. Gerçekten yüklenmemişse model-data'nın geri dönüşü çağırır.
+    // The backend loads the compiled models itself (TenantResolutionMiddleware, on the tenant's first
+    // request). The shell used to call /PublishModel/loadAssembly for admins on every open;
+    // each call meant a full Roslyn compilation on the server + rebuilding the tenant's EF model and
+    // an old generation left in memory. If it really is not loaded, model-data's fallback calls it.
 
-    // H: Görev rozeti. isPlatformBrowser kontrolünün ALTINDA — sunucu tarafında
-    // zamanlayıcı kurmak anlamsız ve sızıntı olurdu.
+    // H: Task badge. BELOW the isPlatformBrowser check — setting up a timer
+    // on the server side would be pointless and a leak.
     this.taskPoll = startVisiblePoll(() => this.refreshTaskCount(), LayoutComponent.TaskPollIntervalMs);
 
-    // Arayüz dili bildirim e-postalarının dili olarak saklanır. Kabuk her açılışta
-    // bir kez yazar — dil tercihi hiç kaydedilmemiş mevcut kullanıcılar da (girişten
-    // ya da sayfa yenilemesinden sonra) tercihlerini böylece kazanır.
+    // The UI language is stored as the language of notification emails. The shell writes it
+    // once on every open — existing users who never saved a language preference also gain one
+    // this way (after login or a page reload).
     this.syncLanguagePreference();
 
-    // Profili (ad/soyad + fotoğraf) backend'den çek; getMe() sonucu
-    // UserProfileService.current'a yazar, currentUser oradan hesaplanır.
-    // Önce temizle: önceki oturumun fotoğrafı/harfleri yeni girişte görünmesin.
-    // Başarısız olursa token verisi yeterli.
+    // Fetch the profile (first/last name + photo) from the backend; getMe() writes the result to
+    // UserProfileService.current, and currentUser is computed from there.
+    // Clear first: the previous session's photo/initials must not show on a new login.
+    // If it fails, the token data is enough.
     this.userProfile.clearCurrent();
     if (tokenUser) {
       this.userProfile.getMe().subscribe({
-        error: () => { /* sessizce atla; token verisi görüntüleniyor */ }
+        error: () => { /* skip silently; the token data is displayed */ }
       });
     }
 
-    // İzinler APP_INITIALIZER tarafından zaten yüklendi; sadece model listesini al.
-    // Normal kullanıcı sidebar nav'ı için okuma yetkili tabloları filtrele.
+    // Permissions were already loaded by APP_INITIALIZER; just fetch the model list.
+    // Filter tables with read permission for the regular user's sidebar nav.
     this.publishedModel.getModels().pipe(markDirty(this.cdr)).subscribe({
       next: modelsRes => {
         const allModels = modelsRes.success ? (modelsRes.data ?? []) : [];
-        // Admin'de bu grup template'te zaten gizli; filtre yine de doğru çalışır.
+        // For admins this group is already hidden in the template; the filter still works correctly.
         this.navTables = allModels.filter(m =>
           this.permissionService.canNavigate(m.typeName)
         );
         this.navModels.set(this.navTables);
       },
       error: err => {
-        console.warn('[CoreLogic] Model listesi yükleme hatası:', err?.message);
+        console.warn('[CoreLogic] Failed to load model list:', err?.message);
       }
     });
 
-    // Tasarlanmış menü yalnız admin olmayanlara; yardımcı istek — düşerse otomatik menü kalır.
+    // The designed menu is for non-admins only; an auxiliary request — if it fails the automatic menu stays.
     if (!this.permissionService.isAdmin()) {
       this.navigationLayouts.my().subscribe({
         next: res => {
@@ -203,20 +203,20 @@ export class LayoutComponent implements OnInit, OnDestroy {
       });
     }
 
-    // Admin tarafından navigasyona yayınlanmış dashboard'ları yükle — tüm kullanıcılar görür.
-    // Yalnız menü dashboard'ları, widget tanımları olmadan.
+    // Load dashboards published to navigation by the admin — visible to all users.
+    // Only the menu dashboards, without widget definitions.
     this.dashboardService.nav().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         const all = res.success ? (res.data ?? []) : [];
         this.navDashboards = all.filter(d => d.showInNav);
       },
       error: err => {
-        console.warn('[CoreLogic] Dashboard listesi yükleme hatası:', err?.message);
+        console.warn('[CoreLogic] Failed to load dashboard list:', err?.message);
       }
     });
   }
 
-  /* ──────────────── Profil dropdown ──────────────── */
+  /* ──────────────── Profile dropdown ──────────────── */
 
   toggleMenu(): void {
     this.menuOpen = !this.menuOpen;
@@ -226,17 +226,17 @@ export class LayoutComponent implements OnInit, OnDestroy {
     this.menuOpen = false;
   }
 
-  /** Profil menüsü sarmalayıcısı dışına tıklandığında menüyü kapat */
+  /** Close the menu when clicking outside the profile menu wrapper */
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    // Kontrol yalnızca .profile-menu-wrap elementine karşı yapılır;
-    // tüm layout host'una karşı değil — aksi hâlde her tıklama "içeride" sayılır.
+    // The check is made only against the .profile-menu-wrap element,
+    // not against the whole layout host — otherwise every click would count as "inside".
     if (!this.profileMenuRef?.nativeElement.contains(event.target as Node)) {
       this.menuOpen = false;
     }
   }
 
-  /** Escape tuşuyla menüyü (mobilde açık çekmeceyi de) kapat */
+  /** Close the menu (and the open drawer on mobile) with the Escape key */
   @HostListener('document:keydown.escape')
   onEscape(): void {
     this.menuOpen = false;
@@ -248,7 +248,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     this.router.navigate(['/profile']);
   }
 
-  /* ──────────────── Diğer ──────────────── */
+  /* ──────────────── Other ──────────────── */
 
   logout(): void {
     this.menuOpen = false;
@@ -267,8 +267,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Mobil çekmece davranışı. Eskiden sidebar mobilde de açık başlıyor, karartma katmanı
-   * menü düğmesini örtüyordu — kullanıcı menüyü kapatamıyordu.
+   * Mobile drawer behaviour. The sidebar used to start open on mobile too, and the backdrop
+   * covered the menu button — the user could not close the menu.
    */
   private setupMobileSidebar(): void {
     this.mobileQuery = window.matchMedia(LayoutComponent.MobileQuery);
@@ -276,7 +276,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     if (this.mobileQuery.matches) this.sidebarOpen.set(false);
     this.mobileQuery.addEventListener('change', this.onMobileChange);
 
-    // Mobilde bir linke dokununca çekmece kapansın; yoksa yeni sayfa menünün altında kalır.
+    // On mobile, tapping a link closes the drawer; otherwise the new page stays under the menu.
     this.router.events.pipe(
       filter(e => e instanceof NavigationEnd),
       takeUntilDestroyed(this.destroyRef)
@@ -285,26 +285,26 @@ export class LayoutComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Açık/koyu tema arasında geçiş yapar */
+  /** Toggles between light/dark theme */
   toggleTheme(): void {
     this.themeService.toggle();
   }
 
-  /** Arayüz dili (TR/EN) arasında geçiş yapar */
+  /** Toggles the UI language (TR/EN) */
   toggleLanguage(): void {
     this.languageService.toggle();
     this.syncLanguagePreference();
   }
 
   /**
-   * Seçili dili backend'e yazar; bildirim e-postaları bu dilde gider.
-   * Beklenmez ve hata yutulur: tercih tablosu kurulmamış bir tenant'ta (migrasyon
-   * < 019) ekran bozulmamalı — e-posta o durumda şirketin varsayılan dilinde gider.
+   * Writes the selected language to the backend; notification emails are sent in this language.
+   * Not awaited and errors are swallowed: on a tenant without the preference table (migration
+   * < 019) the screen must not break — in that case email goes out in the company's default language.
    */
   private syncLanguagePreference(): void {
-    // Yalnız DEĞİŞTİYSE yazılır: eskiden her sayfa yenilemesi bir veritabanı yazımıydı
-    // (PUT /Profile/language). Son yazılan (kullanıcı, dil) tarayıcıda tutulur; başka
-    // kullanıcıyla girişte ya da dil değişince yeniden yazılır.
+    // Written only IF CHANGED: previously every page reload was a database write
+    // (PUT /Profile/language). The last written (user, language) is kept in the browser; it is
+    // rewritten on login with another user or when the language changes.
     const lang = this.languageService.lang();
     const user = this.auth.getSessionUser();
     const marker = `${user?.tenantId ?? ''}|${user?.email ?? ''}|${lang}`;
@@ -323,18 +323,18 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   private writeLanguageMarker(marker: string): void {
-    try { localStorage.setItem(LayoutComponent.LanguageMarkerKey, marker); } catch { /* gizli pencere */ }
+    try { localStorage.setItem(LayoutComponent.LanguageMarkerKey, marker); } catch { /* private window */ }
   }
 
   /**
-   * H: Bekleyen görev sayısını tazeler.
+   * H: Refreshes the pending task count.
    *
-   * Hata sessizce yutulur ve rozet son bilinen değerinde kalır: workflow modülü
-   * kurulmamış bir tenant'ta (migrasyon < 017) bu uç hata döner ve her 30 saniyede
-   * kullanıcıya uyarı göstermek anlamsız olurdu.
+   * Errors are swallowed silently and the badge stays at its last known value: on a tenant without the
+   * workflow module (migration < 017) this endpoint returns an error, and showing a warning to the
+   * user every 30 seconds would be pointless.
    */
   private refreshTaskCount() {
-    // Hata sessizdir (yoklayıcı yalnız aralığı uzatır).
+    // Errors are silent (the poller only lengthens the interval).
     return this.taskService.myCount().pipe(
       tap(res => { if (res.success) this.pendingTaskCount.set(res.data ?? 0); })
     );
@@ -346,7 +346,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 }
 
-/** Tasarlanmış menüdeki uygulama sayfalarının varsayılan adları (admin etiket vermediyse). */
+/** Default names of app pages in the designed menu (when the admin gave no label). */
 const PAGE_LABEL_KEYS: Record<NavPage, string> = {
   tasks: 'layout.tasks',
   reports: 'layout.reports',

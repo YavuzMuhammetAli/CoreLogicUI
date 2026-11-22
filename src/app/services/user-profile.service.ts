@@ -11,16 +11,16 @@ export class UserProfileService {
   private readonly baseUrl = `${environment.apiBaseUrl}/Profile`;
 
   /**
-   * Oturumdaki kullanıcının son bilinen profili — null ise henüz yüklenmedi.
-   * Topbar avatarı bunu okur; profil ekranı fotoğraf/ad değişince günceller ki
-   * sağ üst köşe sayfa yenilenmeden yeni hâli göstersin.
+   * Last known profile of the session user — null means not loaded yet.
+   * The topbar avatar reads it; the profile screen updates it when the photo/name changes so
+   * the top-right corner shows the new state without a page reload.
    */
   private readonly _current = signal<UserProfile | null>(null);
   readonly current = this._current.asReadonly();
 
   constructor(private http: HttpClient) {}
 
-  /** Giriş yapmış kullanıcının profilini döndürür (GET /Profile/me). */
+  /** Returns the logged-in user's profile (GET /Profile/me). */
   getMe(): Observable<DataResponseModel<UserProfile>> {
     return this.http.get<DataResponseModel<UserProfile>>(`${this.baseUrl}/me`).pipe(
       tap(res => {
@@ -29,29 +29,29 @@ export class UserProfileService {
     );
   }
 
-  /** Profil ekranında kaydedilen değişikliği paylaşılan profile yansıtır. */
+  /** Reflects a change saved on the profile screen into the shared profile. */
   setCurrent(profile: UserProfile): void {
     this._current.set(profile);
   }
 
-  /** Paylaşılan profili temizler (yeni oturum kabuğu açılırken). */
+  /** Clears the shared profile (when a new session shell opens). */
   clearCurrent(): void {
     this._current.set(null);
   }
 
-  /** Profil bilgilerini günceller (PUT /Profile/update). */
+  /** Updates the profile info (PUT /Profile/update). */
   updateProfile(dto: ProfileUpdateDto): Observable<ResponseModel> {
     return this.http.put<ResponseModel>(`${this.baseUrl}/update`, dto);
   }
 
-  /** Şifre değiştirir (POST /Profile/change-password). */
+  /** Changes the password (POST /Profile/change-password). */
   changePassword(dto: ChangePasswordDto): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/change-password`, dto);
   }
 
   /**
-   * Profil fotoğrafı yükler (POST /Profile/upload-photo).
-   * Yanıt: { success, message, data: photoUrl }
+   * Uploads the profile photo (POST /Profile/upload-photo).
+   * Response: { success, message, data: photoUrl }
    */
   uploadPhoto(file: File): Observable<DataResponseModel<string>> {
     const form = new FormData();
@@ -60,25 +60,25 @@ export class UserProfileService {
   }
 
   /**
-   * Arayüz dilini backend'e yazar (PUT /Profile/language). Bildirim e-postaları
-   * arka planda gönderildiği için isteğin Accept-Language'ı yoktur; kullanıcının
-   * hangi dilde mail alacağı buradan öğrenilir.
+   * Writes the UI language to the backend (PUT /Profile/language). Notification emails
+   * are sent in the background, so there is no request Accept-Language; this is where
+   * the language the user receives mail in is learned.
    *
-   * Bu metot LanguageService'e KONMADI: languageInterceptor o servisi kullanıyor,
-   * HttpClient enjekte etmek döngüsel DI oluştururdu.
+   * This method was NOT PUT in LanguageService: languageInterceptor uses that service,
+   * and injecting HttpClient there would create a circular DI.
    */
   setLanguage(language: 'tr' | 'en'): Observable<ResponseModel> {
     return this.http.put<ResponseModel>(`${this.baseUrl}/language`, { language });
   }
 
-  /** Profil fotoğrafını siler (DELETE /Profile/photo). */
+  /** Deletes the profile photo (DELETE /Profile/photo). */
   deletePhoto(): Observable<ResponseModel> {
     return this.http.delete<ResponseModel>(`${this.baseUrl}/photo`);
   }
 
   /**
-   * Göreli PhotoUrl'yi tam URL'ye dönüştürür.
-   * Backend /uploads/avatars/... döndürür; bunu apiBaseUrl ile tamamlar.
+   * Converts a relative PhotoUrl into a full URL.
+   * The backend returns /uploads/avatars/...; this completes it with apiBaseUrl.
    */
   resolvePhotoUrl(photoUrl: string | null | undefined): string | null {
     if (!photoUrl) return null;

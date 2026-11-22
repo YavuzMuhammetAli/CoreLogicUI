@@ -2,50 +2,50 @@ import { Observable } from 'rxjs';
 import { ResponseModel } from '../../../models/responseModel';
 
 /**
- * Silinen kayıt listelerinin ortak öğe şekli.
+ * Shared item shape of the deleted-record lists.
  *
- * Dört ekran (model / taslak / rapor / dashboard) aynı kartı çiziyordu; farkları
- * yalnızca gösterilen rozetler ve geri yükleme anahtarıydı. Bu tip o farkları
- * veriye indirger, böylece görünüm ve durum yönetimi tek yerde kalır.
+ * Four screens (model / draft / report / dashboard) drew the same card; they differed
+ * only in the badges shown and the restore key. This type reduces those differences
+ * to data, so the view and state management stay in one place.
  */
 export interface DeletedItem {
-  /** Listede benzersiz anahtar (@for track). */
+  /** Unique key in the list (@for track). */
   id: number;
-  /** Kartın başlığı — model/tablo/rapor/dashboard adı. */
+  /** Card title — model/table/report/dashboard name. */
   title: string;
-  /** Başlığın altında gösterilen açıklama (varsa). */
+  /** Description shown under the title (if any). */
   description?: string | null;
   /**
-   * Başlığın yanında gösterilen ek meta rozetleri
-   * (ör. rapor için model adı, dashboard için "3 widget").
+   * Extra meta badges shown next to the title
+   * (e.g. the model name for a report, "3 widget" for a dashboard).
    */
   badges?: string[];
   /**
-   * Geri yükleme çağrısına verilecek anahtar. Modeller/taslaklar tablo ADIYLA,
-   * raporlar/dashboardlar ID ile geri yüklenir; bu alan farkı kapsüller.
+   * Key passed to the restore call. Models/drafts are restored by table NAME,
+   * reports/dashboards by ID; this field encapsulates the difference.
    */
   restoreKey: string | number;
 }
 
 /**
- * Bir "silinenler" ekranının veri kaynağı ve metin ön eki.
- * Ekranlar bunu sağlar; listeleme/hata/geri yükleme akışını
- * <c>DeletedListComponent</c> yürütür.
+ * Data source and text prefix of a "deleted" screen.
+ * Screens provide this; the listing/error/restore flow is run by
+ * <c>DeletedListComponent</c>.
  */
 export interface DeletedListSource {
   /**
-   * Çeviri anahtarı ön eki (ör. 'deleted.models'). Ekrana özel metinler
-   * `{prefix}.title`, `{prefix}.empty`, `{prefix}.restoreConfirm` gibi
-   * anahtarlardan okunur; ortak metinler `deleted.*` altındadır.
+   * Translation key prefix (e.g. 'deleted.models'). Screen-specific texts are read
+   * from keys such as `{prefix}.title`, `{prefix}.empty`, `{prefix}.restoreConfirm`;
+   * shared texts are under `deleted.*`.
    */
   i18nPrefix: string;
 
-  /** "Geri" bağlantısının hedefi. */
+  /** Target of the "Geri" (Back) link. */
   backLink: string;
 
-  /** Silinmiş kayıtları getirir ve ortak öğe şekline eşler. */
+  /** Fetches deleted records and maps them to the shared item shape. */
   load(): Observable<{ success: boolean; message: string; items: DeletedItem[] }>;
 
-  /** Kaydı yeniden aktif eder. */
+  /** Reactivates the record. */
   restore(item: DeletedItem): Observable<ResponseModel>;
 }

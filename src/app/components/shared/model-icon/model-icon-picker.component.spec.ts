@@ -7,7 +7,7 @@ describe('ModelIconPickerComponent', () => {
   let picker: ModelIconPickerComponent;
 
   beforeEach(async () => {
-    await loadAllModelIconPaths();   // parçalar önceden gelsin; açılış senkron çizilsin
+    await loadAllModelIconPaths();   // load the chunks up front so the opening renders synchronously
     fixture = TestBed.createComponent(ModelIconPickerComponent);
     picker = fixture.componentInstance;
     fixture.componentRef.setInput('current', 'warehouse');
@@ -19,13 +19,13 @@ describe('ModelIconPickerComponent', () => {
 
   const cells = () => Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('.picker-cell'));
 
-  it('açılışta kayıtlı ikon seçili gelir', () => {
+  it('the saved icon is selected on open', () => {
     expect(picker.selected()).toBe('warehouse');
     const selected = cells().filter(c => c.getAttribute('aria-checked') === 'true');
     expect(selected.map(c => c.getAttribute('aria-label'))).toEqual(['warehouse']);
   });
 
-  it('arama ad ve Türkçe anahtar kelimede süzer', () => {
+  it('search filters by name and Turkish keywords', () => {
     picker.onSearch('SEPET');
     fixture.detectChanges();
     const names = cells().map(c => c.getAttribute('aria-label'));
@@ -37,7 +37,7 @@ describe('ModelIconPickerComponent', () => {
     expect(cells().map(c => c.getAttribute('aria-label'))).toEqual(['local_shipping']);
   });
 
-  it('onay seçili adı, varsayılan için null yayar', () => {
+  it('confirm emits the selected name, null for the default', () => {
     const emitted: (string | null)[] = [];
     picker.confirmed.subscribe(v => emitted.push(v));
 
@@ -49,7 +49,7 @@ describe('ModelIconPickerComponent', () => {
     expect(emitted).toEqual(['payments', null]);
   });
 
-  it('meşgulken onay ve iptal yayılmaz', () => {
+  it('confirm and cancel are not emitted while busy', () => {
     fixture.componentRef.setInput('busy', true);
     let count = 0;
     picker.confirmed.subscribe(() => count++);

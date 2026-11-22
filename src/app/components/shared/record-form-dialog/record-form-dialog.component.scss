@@ -1,9 +1,9 @@
-/* ── Kayıt pop-up'ı ───────────────────────────────────────────────────────────
-   z-index şablondan verilir (1000 + depth * 10) — iç içe katmanlar üst üste
-   binmeli ve her seviye bir öncekinin üstünde durmalı. */
+/* ── Record pop-up ───────────────────────────────────────────────────────────
+   z-index is set from the template (1000 + depth * 10) — nested layers must
+   stack, each level above the previous one. */
 
-/* Host kendi kutusunu oluşturmasın: tek çocuğu `position: fixed` olduğu için
-   host varsayılan inline kutusu sayfa akışında sıfır boyutlu bir artık bırakır. */
+/* The host must not create its own box: since its only child is `position: fixed`,
+   the host's default inline box leaves a zero-size remnant in the page flow. */
 :host {
   display: contents;
 }
@@ -24,7 +24,7 @@
   width: 100%;
   max-width: 860px;
   max-height: calc(100vh - 2 * var(--space-4));
-  /* dvh = görünen alan; vh mobilde tarayıcı çubuklarını da sayar ve alttaki düğmeler kesilir */
+  /* dvh = visible area; on mobile vh also counts the browser bars and the bottom buttons get cut off */
   max-height: calc(100dvh - 2 * var(--space-4));
   overscroll-behavior: contain;
   overflow-y: auto;
@@ -51,7 +51,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  /* Uzun alt başlıkta da kapatma düğmesi aynı satırda kalsın (dar ekranda başlık sarılır) */
+  /* Keep the close button on the same line even with a long subtitle (the title wraps on narrow screens) */
   flex: 1 1 0;
   min-width: 0;
   min-width: 0;
@@ -65,9 +65,9 @@
   font-size: var(--text-sm);
 }
 
-/* Alan ızgarası app-record-layout'ta (varsayılan görünüm + ekran tasarımı). */
+/* The field grid lives in app-record-layout (default view + screen design). */
 
-/* ── Alt model bölümü ─────────────────────────────────────────────────────── */
+/* ── Child model section ─────────────────────────────────────────────────────── */
 
 .record-children {
   margin-top: var(--space-6);
@@ -150,14 +150,14 @@
   overflow-x: auto;
 }
 
-/* Araç çubuğunun sağ tarafı: toplu sil + yeni kayıt */
+/* Right side of the toolbar: bulk delete + new record */
 .tab-toolbar-actions {
   display: flex;
   gap: var(--space-2);
   flex-wrap: wrap;
 }
 
-/* ── Satır seçimi (toplu silme) ────────────────────────────────────────────── */
+/* ── Row selection (bulk delete) ────────────────────────────────────────────── */
 
 .select-col,
 .select-cell {
@@ -165,7 +165,7 @@
   text-align: center;
 }
 
-/* Satırın tamamı düzenleme katmanını açar — aksiyon butonları kaldırıldı. */
+/* The whole row opens the edit layer — the action buttons were removed. */
 .clickable-row {
   cursor: pointer;
 
@@ -179,7 +179,7 @@ tr.row-selected td {
   background: var(--surface-warm);
 }
 
-/* Global .alert flex olduğu için hata listesi kendi kapsayıcısında dikey akmalı */
+/* Since the global .alert is flex, the error list must flow vertically in its own container */
 .bulk-error-list {
   display: flex;
   flex-direction: column;
@@ -191,7 +191,7 @@ tr.row-selected td {
   }
 }
 
-/* Kaydedilemeyen satır — kullanıcı düzeltebilsin diye ekranda KALIR. */
+/* A row that couldn't be saved — it STAYS on screen so the user can fix it. */
 .row-invalid td {
   background: var(--danger-bg);
 }
@@ -204,7 +204,7 @@ tr.row-selected td {
 
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 
-/* Satır hatası okunabilmeli: global td kuralı (nowrap + ellipsis) mesajı keserdi */
+/* The row error must be readable: the global td rule (nowrap + ellipsis) would cut the message */
 .record-error-row td {
   white-space: normal;
   max-width: none;

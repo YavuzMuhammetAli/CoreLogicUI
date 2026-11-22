@@ -1,26 +1,26 @@
 import { fieldValue } from '../model-data/model-data.util';
 
-/** Dinamik tablo satırı — kolon adı → değer. */
+/** Dynamic table row — column name → value. */
 export type DataRow = Record<string, unknown>;
 
-/** Sıralama yönü. */
+/** Sort direction. */
 export type SortDirection = 'asc' | 'desc';
 
-/** Görüntülenecek satırları belirleyen girdilerin tamamı. */
+/** All inputs that determine the rows to display. */
 export interface DisplayRowsInput {
   rows: DataRow[];
   searchTerm: string;
   sortCol: string;
   sortDir: SortDirection;
-  /** Aramada taranacak kolon adları (görünür kolonlar). */
+  /** Column names scanned by search (visible columns). */
   searchableColumns: string[];
-  /** Sıralamada kullanılacak dil — TR/EN arasında harf sırası değişir. */
+  /** Language used for sorting — letter order differs between TR/EN. */
   locale: string;
 }
 
 /**
- * Bir sonucun yeniden hesaplanmasını gerektiren girdilerin anlık görüntüsü.
- * Referans/değer karşılaştırmasıyla önbellek geçerliliği belirlenir.
+ * Snapshot of the inputs whose change requires recomputing a result.
+ * Cache validity is decided by reference/value comparison.
  */
 export interface DisplayRowsCache {
   rows: DataRow[];
@@ -32,8 +32,8 @@ export interface DisplayRowsCache {
 }
 
 /**
- * Arama filtresi + sıralama uygular. SAF fonksiyondur: girdiyi değiştirmez,
- * component'e ve Angular'a bağımlı değildir, TestBed olmadan test edilebilir.
+ * Applies the search filter + sorting. PURE function: does not mutate the input,
+ * does not depend on the component or Angular, testable without TestBed.
  */
 export function computeDisplayRows(input: DisplayRowsInput): DataRow[] {
   let rows = [...input.rows];
@@ -55,8 +55,8 @@ export function computeDisplayRows(input: DisplayRowsInput): DataRow[] {
       const av = fieldValue(a, col) ?? '';
       const bv = fieldValue(b, col) ?? '';
       const an = Number(av), bn = Number(bv);
-      // Locale sabit 'tr' DEĞİL: uygulama TR/EN arasında geçiş yapıyor ve
-      // harf sıralaması dile göre değişir (ör. TR'de i/ı, ç, ş).
+      // Locale is NOT fixed to 'tr': the app switches between TR/EN and
+      // letter ordering depends on the language (e.g. i/ı, ç, ş in TR).
       const cmp = !isNaN(an) && !isNaN(bn)
         ? an - bn
         : String(av).localeCompare(String(bv), input.locale, { numeric: true });
@@ -68,15 +68,15 @@ export function computeDisplayRows(input: DisplayRowsInput): DataRow[] {
 }
 
 /**
- * <see cref="computeDisplayRows"/>'un önbellekli sarmalayıcısı.
+ * Cached wrapper of <see cref="computeDisplayRows"/>.
  *
- * Şablon @for'u ve seçim yardımcıları sonucu change detection turu başına
- * birden çok kez ister; her çağrıda kopyala+filtrele+sırala yapmak ve YENİ
- * dizi kimliği döndürmek @for'u her turda baştan diff'letirdi.
+ * The template @for and the selection helpers request the result several times
+ * per change detection turn; copying+filtering+sorting on every call and returning a NEW
+ * array identity would make @for re-diff from scratch on every turn.
  *
- * Önbellek anahtarına DİL de girer. Girmediğinde TR→EN geçişinde sıralama
- * donuyordu: satırlar, arama ve sıralama alanları değişmediği için eski
- * (Türkçe sıralanmış) sonuç dönmeye devam ediyordu.
+ * The LANGUAGE is part of the cache key as well. Without it, sorting froze on a
+ * TR→EN switch: since the rows, search and sort fields had not changed, the old
+ * (Turkish-sorted) result kept being returned.
  */
 export function selectDisplayRows(
   input: DisplayRowsInput,

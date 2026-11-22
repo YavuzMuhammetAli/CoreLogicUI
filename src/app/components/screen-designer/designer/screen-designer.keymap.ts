@@ -1,8 +1,8 @@
 /**
- * Ekran tasarımcısı kısayolları — SAF (DOM yok).
+ * Screen designer shortcuts — PURE (no DOM).
  *
- * İş akışı tuvalinin `commandFor`'u Alt bileşimlerini bilinçli olarak yok sayar; burada
- * Alt+ok, sürükle-bırakın klavye karşılığıdır (erişilebilirlik ve dokunmatik olmayan yol).
+ * The workflow canvas's `commandFor` deliberately ignores Alt combinations; here
+ * Alt+arrow is the keyboard equivalent of drag and drop (accessibility and the non-touch path).
  */
 
 export type ScreenCommand =

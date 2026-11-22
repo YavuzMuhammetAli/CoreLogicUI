@@ -9,7 +9,7 @@ import { PublishedModelService } from './published-model.service';
 import { AutoValueTrigger } from '../utils/auto-value/auto-value';
 import { MemberMetadataUpdate } from '../utils/column-rules';
 
-/** Bir modelin belirli bir versiyonunu temsil eder */
+/** Represents a specific version of a model */
 export interface ModelVersion {
   id: number;
   modelName: string;
@@ -23,43 +23,43 @@ export interface ModelVersion {
 export interface PublishedTableDto {
   tableName: string;
   description: string;
-  /** Kullanıcı dostu model adı ("Satış Pazarlama Formu"); tableName bundan türetilir. */
+  /** User-friendly model name ("Satış Pazarlama Formu"); tableName is derived from it. */
   label?: string | null;
-  /** Model ikonu (Material Symbols adı, katalog: shared/model-icon). Boş = varsayılan. */
+  /** Model icon (Material Symbols name, catalog: shared/model-icon). Empty = default. */
   icon?: string | null;
   version: number;
-  /** Alt model için parent model adı. Verilmezse kök model olarak kaydedilir. */
+  /** Parent model name for a sub-model. If omitted, it is saved as a root model. */
   parentTableName?: string;
 }
 
-/** Tek bir kolon kaydını temsil eder (DB'den okunan) */
+/** Represents a single column record (read from the DB) */
 export interface PublishedColumnSchema {
   name: string;
-  // UI tip adı: string / int / long / short / byte / decimal / double / float / boolean /
+  // UI type name: string / int / long / short / byte / decimal / double / float / boolean /
   // datetime / dateonly / timeonly / guid / enum / lookup / image / file
   dataType: string;
   isRequired: boolean;
-  // D3: dinamik doğrulama kuralları — düzenleme ekranının formu doldurması için
+  // D3: dynamic validation rules — for the edit screen to fill its form
   minLength?: number | null;
   maxLength?: number | null;
   min?: number | null;
   max?: number | null;
   regex?: string | null;
   regexMessage?: string | null;
-  // Yeni tip metadata'sı: enum / lookup
-  enumValues?: string | null;          // 'A|B|C' biçiminde izinli değerler
-  lookupTargetTable?: string | null;   // lookup hedef model adı
-  lookupDisplayColumn?: string | null; // lookup dropdown'da gösterilecek hedef kolon
-  // UI metadata: kullanıcı dostu gösterim
-  label?: string | null;        // columnName yerine gösterilecek insan-dostu etiket
-  description?: string | null;  // detay sayfasında "i" baloncuğunda gösterilecek açıklama
-  // Otomatik değer kuralı (bkz. utils/auto-value) — trigger null ise kural yok
+  // New type metadata: enum / lookup
+  enumValues?: string | null;          // allowed values in 'A|B|C' form
+  lookupTargetTable?: string | null;   // lookup target model name
+  lookupDisplayColumn?: string | null; // target column shown in the lookup dropdown
+  // UI metadata: user-friendly display
+  label?: string | null;        // human-friendly label shown instead of columnName
+  description?: string | null;  // description shown in the "i" bubble on the detail page
+  // Auto value rule (see utils/auto-value) — no rule if trigger is null
   autoValueTrigger?: AutoValueTrigger | null;
   autoValueExpression?: string | null;
   isReadOnly?: boolean | null;
 }
 
-/** POST /Published/addMember — kolon metadata'sı (query string olarak gider). */
+/** POST /Published/addMember — column metadata (sent as a query string). */
 export interface AddMemberRequest {
   typeName: string;
   memberName: string;
@@ -81,7 +81,7 @@ export interface AddMemberRequest {
   isReadOnly?: boolean | null;
 }
 
-/** POST /Published/setMemberAutoValue gövdesi. */
+/** Body of POST /Published/setMemberAutoValue. */
 export interface SetMemberAutoValueRequest {
   typeName: string;
   memberName: string;
@@ -90,23 +90,23 @@ export interface SetMemberAutoValueRequest {
   isReadOnly: boolean;
 }
 
-/** Tablo şeması + kolonları — GET /Published/getTable dönüşü */
+/** Table schema + columns — the GET /Published/getTable response */
 export interface PublishedTableSchema {
   tableName: string;
   description: string;
-  /** Kullanıcı dostu model adı. Eski kayıtlarda boş olabilir — o zaman tableName gösterilir. */
+  /** User-friendly model name. May be empty on old records — then tableName is shown. */
   label?: string | null;
-  /** Model ikonu (migrasyon 025). Boşsa varsayılan çizilir. */
+  /** Model icon (migration 025). If empty, the default is drawn. */
   icon?: string | null;
   version: number;
   columns: PublishedColumnSchema[];
-  /** Üst (parent) modelin adı. null ise kök modeldir. */
+  /** Name of the parent model. null means it is a root model. */
   parentTableName?: string | null;
-  /** Model ağacındaki derinlik. Kök = 1, maks = 4. */
+  /** Depth in the model tree. Root = 1, max = 4. */
   depth?: number;
 }
 
-/** GET /Published/getAll satırı (PublishedTable entity'si). */
+/** A GET /Published/getAll row (the PublishedTable entity). */
 export interface PublishedTableRow {
   id: number;
   tableName: string;
@@ -124,25 +124,25 @@ export class PublishedTableService {
   constructor(private http: HttpClient, private publishedModels: PublishedModelService) {}
 
   /**
-   * Şemayı değiştiren her çağrı model listesi önbelleğini düşürür (bkz. PublishedModelService.getModels);
-   * ekranların bunu ayrıca hatırlaması gerekmez. Başarısız yanıtta da düşer — zararsız bir yeniden istek.
+   * Every schema-changing call drops the model list cache (see PublishedModelService.getModels);
+   * screens don't have to remember it. It also drops on a failed response — a harmless re-request.
    */
   private invalidatesModels<T>(): MonoTypeOperatorFunction<T> {
     return tap({ next: () => this.publishedModels.invalidateModels() });
   }
 
-  /** Yeni tablo metadata kaydı ekler. parentTableName verilirse alt model olarak kaydedilir. */
+  /** Adds a new table metadata record. If parentTableName is given, it is saved as a sub-model. */
   addTable(table: PublishedTableDto): Observable<ResponseModel> {
     let params = new HttpParams();
     if (table.parentTableName) {
       params = params.set('parentTableName', table.parentTableName);
     }
-    // parentTableName body entity'sinde yok; yalnızca query param olarak gönderilir
+    // parentTableName is not in the body entity; it is sent only as a query param
     const body = { tableName: table.tableName, description: table.description, label: table.label ?? null, icon: table.icon ?? null, version: table.version };
     return this.http.post<ResponseModel>(`${this.baseUrl}/addTable`, body, { params }).pipe(this.invalidatesModels());
   }
 
-  /** Tabloya kolon metadata kaydı ekler (opsiyonel kural parametreleri null ise query string'e eklenmez) */
+  /** Adds a column metadata record to the table (optional rule parameters are left out of the query string if null) */
   addMember(m: AddMemberRequest): Observable<ResponseModel> {
     let params = new HttpParams()
       .set('typeName', m.typeName)
@@ -172,8 +172,8 @@ export class PublishedTableService {
   }
 
   /**
-   * Kaydedilen modeli Roslyn ile derler, SQL tablosunu oluşturur ve yayınlar.
-   * Backend tüm adımları (derleme + migration) tek endpoint'te yürütür.
+   * Compiles the saved model with Roslyn, creates the SQL table and publishes it.
+   * The backend runs all steps (compile + migration) in a single endpoint.
    */
   publish(typeName: string): Observable<ResponseModel> {
     const params = new HttpParams().set('typeName', typeName);
@@ -181,11 +181,11 @@ export class PublishedTableService {
   }
 
   /**
-   * Kaydedilmiş tablo şemasını (tablo + kolonlar) DB'den okur.
-   * Model yayınlama akışının "Veritabanından Oku" adımını karşılar:
-   *   Model Oluştur → Kaydet → Veritabanından Oku → Yayınla
-   * Yayınlama, bu metodun döndürdüğü veri üzerinden yapılmalıdır;
-   * istemci form state'i kullanılmamalıdır.
+   * Reads the saved table schema (table + columns) from the DB.
+   * Serves the "Veritabanından Oku" (Read from database) step of the model publish flow:
+   *   Create model → Save → Read from database → Publish
+   * Publishing must be done from the data this method returns;
+   * the client form state must not be used.
    */
   getSchema(typeName: string): Observable<DataResponseModel<PublishedTableSchema>> {
     const params = new HttpParams().set('typeName', typeName);
@@ -195,8 +195,8 @@ export class PublishedTableService {
   }
 
   /**
-   * Kayıtlı tüm tabloları (taslak + yayınlanmış) getirir.
-   * D-FK: parentTableId/depth, ana/alt model ağacını client-side kurmak için kullanılır.
+   * Fetches all saved tables (draft + published).
+   * D-FK: parentTableId/depth are used to build the main/sub-model tree client-side.
    */
   getAllTables(): Observable<ListResponseModel<PublishedTableRow>> {
     return this.http.get<ListResponseModel<PublishedTableRow>>(
@@ -204,7 +204,7 @@ export class PublishedTableService {
     );
   }
 
-  /** Belirtilen model için tüm sürüm geçmişini getirir */
+  /** Fetches the full version history of the given model */
   getVersions(modelName: string): Observable<ListResponseModel<ModelVersion>> {
     const params = new HttpParams().set('modelName', modelName);
     return this.http.get<ListResponseModel<ModelVersion>>(
@@ -212,7 +212,7 @@ export class PublishedTableService {
     );
   }
 
-  /** Belirtilen modeli istenen versiyona geri alır */
+  /** Rolls the given model back to the requested version */
   rollback(modelName: string, version: number): Observable<ResponseModel> {
     const params = new HttpParams()
       .set('modelName', modelName)
@@ -221,8 +221,8 @@ export class PublishedTableService {
   }
 
   /**
-   * Bir kolonu pasif yapar (soft-delete). SQL kolonu DROP edilmez; kolon yalnızca
-   * bir sonraki publish'te şemadan/üretilen tipten düşer, mevcut veri DB'de kalır.
+   * Deactivates a column (soft-delete). The SQL column is not DROPped; the column only
+   * disappears from the schema/generated type on the next publish, existing data stays in the DB.
    */
   removeMember(typeName: string, memberName: string): Observable<ResponseModel> {
     const params = new HttpParams()
@@ -231,7 +231,7 @@ export class PublishedTableService {
     return this.http.post<ResponseModel>(`${this.baseUrl}/removeMember`, null, { params }).pipe(this.invalidatesModels());
   }
 
-  /** Yalnızca model etiketini günceller — tablo adı, derinlik ve parent değişmez. */
+  /** Updates only the model label — table name, depth and parent do not change. */
   setTableLabel(typeName: string, label: string | null): Observable<ResponseModel> {
     let params = new HttpParams().set('typeName', typeName);
     if (label?.trim()) params = params.set('label', label.trim());
@@ -239,8 +239,8 @@ export class PublishedTableService {
   }
 
   /**
-   * Yalnızca model ikonunu yazar (boş = varsayılan). Yeniden yayın gerekmez. Kolon tenant
-   * migrasyonu 025 ile gelir; kurulmamışsa sunucu açık hata döner.
+   * Writes only the model icon (empty = default). No republish needed. The column comes with tenant
+   * migration 025; if it is not installed the server returns an explicit error.
    */
   setTableIcon(typeName: string, icon: string | null): Observable<ResponseModel> {
     let params = new HttpParams().set('typeName', typeName);
@@ -249,26 +249,26 @@ export class PublishedTableService {
   }
 
   /**
-   * Kayıtlı bir kolonun meta verisini (etiket, açıklama, zorunluluk, kurallar, dosya boyutu
-   * sınırı, lookup gösterim kolonu) topluca yazar — TAM değiştirme, boş kural kaldırılır.
-   * Ad/tip değişmez; yeniden yayın gerekmez. Gövde `toMemberMetadataUpdate` ile kurulur.
+   * Writes a saved column's metadata (label, description, required, rules, file size
+   * limit, lookup display column) in one go — FULL replacement, an empty rule is removed.
+   * Name/type do not change; no republish needed. The body is built with `toMemberMetadataUpdate`.
    */
   updateMemberMetadata(body: MemberMetadataUpdate): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/updateMemberMetadata`, body).pipe(this.invalidatesModels());
   }
 
   /**
-   * Kayıtlı bir kolonun otomatik değer kuralını yazar; `trigger` null ise kural kaldırılır.
-   * Sunucu formülü ayrıştırır, alanları ve tablodaki döngüleri denetler. Kolon şeması
-   * değişmez, yeniden yayın gerekmez — kural bir sonraki kayıtta devreye girer.
+   * Writes a saved column's auto value rule; if `trigger` is null the rule is removed.
+   * The server parses the formula and checks the fields and cycles in the table. The column schema
+   * does not change, no republish needed — the rule takes effect on the next save.
    */
   setMemberAutoValue(req: SetMemberAutoValueRequest): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/setMemberAutoValue`, req).pipe(this.invalidatesModels());
   }
 
   /**
-   * Bir modeli ve tüm alt modellerini pasif yapar (soft-delete). SQL tabloları ve
-   * içindeki kayıtlar silinmez; model yalnızca uygulamadan (liste/derlenmiş tip) kaybolur.
+   * Deactivates a model and all its sub-models (soft-delete). The SQL tables and
+   * their records are not deleted; the model only disappears from the app (list/compiled type).
    */
   deleteModel(typeName: string): Observable<ResponseModel> {
     const params = new HttpParams().set('typeName', typeName);
@@ -276,8 +276,8 @@ export class PublishedTableService {
   }
 
   /**
-   * Hiç yayınlanmamış (taslak) olup silinmiş (pasiflenmiş) modelleri getirir.
-   * "Silinen Taslaklar" sayfası bu listeyi gösterir.
+   * Fetches models that were never published (drafts) and were deleted (deactivated).
+   * The "Silinen Taslaklar" (Deleted drafts) page shows this list.
    */
   getDeletedDrafts(): Observable<ListResponseModel<{ id: number; tableName: string; description: string; version: number }>> {
     return this.http.get<ListResponseModel<{ id: number; tableName: string; description: string; version: number }>>(
@@ -286,8 +286,8 @@ export class PublishedTableService {
   }
 
   /**
-   * Silinmiş (pasif) bir taslağı geri yükler (Active=true). Daha önce yayınlanmış bir
-   * modelse backend reddeder — taslak geri yükleme yalnızca hiç yayınlanmamış modeller içindir.
+   * Restores a deleted (inactive) draft (Active=true). If the model was published before,
+   * the backend rejects it — draft restore is only for models that were never published.
    */
   restoreDraft(typeName: string): Observable<ResponseModel> {
     const params = new HttpParams().set('typeName', typeName);
@@ -295,8 +295,8 @@ export class PublishedTableService {
   }
 
   /**
-   * Daha önce en az bir kez yayınlanmış olup silinmiş (pasiflenmiş) modelleri getirir.
-   * "Silinmiş Modeller" sayfası bu listeyi gösterir.
+   * Fetches models that were published at least once and then deleted (deactivated).
+   * The "Silinmiş Modeller" (Deleted models) page shows this list.
    */
   getDeletedModels(): Observable<ListResponseModel<{ id: number; tableName: string; description: string; version: number }>> {
     return this.http.get<ListResponseModel<{ id: number; tableName: string; description: string; version: number }>>(
@@ -305,8 +305,8 @@ export class PublishedTableService {
   }
 
   /**
-   * Silinmiş (pasif) bir modeli ve alt modellerini geri yükler: tablo ağacı +
-   * ModelDefinition sürümleri aktif edilir, derlenmiş tip yeniden derlenir.
+   * Restores a deleted (inactive) model and its sub-models: the table tree +
+   * ModelDefinition versions are activated, the compiled type is recompiled.
    */
   restoreModel(typeName: string): Observable<ResponseModel> {
     const params = new HttpParams().set('typeName', typeName);

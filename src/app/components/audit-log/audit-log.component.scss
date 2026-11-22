@@ -2,21 +2,21 @@
   display: block;
   padding: var(--space-6);
 
-  /* Dar ekranda boşluğu .page-content zaten veriyor — çift boşluk içeriği daraltıyordu */
+  /* On narrow screens .page-content already provides the spacing — double spacing squeezed the content */
   @media (max-width: 768px) {
     padding: 0;
   }
 }
 
-/* Ardışık paneller arasına dikey boşluk (.panel'in kendi margin'i yok).
-   Yeni ekranlarda konteyneri .flow ile sarmalamak tercih edilir. */
+/* Vertical spacing between consecutive panels (.panel has no margin of its own).
+   On new screens, wrapping the container with .flow is preferred. */
 .panel + .panel {
   margin-top: var(--space-6);
 }
 
-/* Sayfalama ve .table-footer: global (styles.scss) */
+/* Pagination and .table-footer: global (styles.scss) */
 
-/* Genişletilmiş satırdaki eski/yeni değer karşılaştırma alanı */
+/* Old/new value comparison area in the expanded row */
 .audit-detail {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -44,15 +44,15 @@
   }
 }
 
-/* Detay hücresi tablo hücresi kurallarını (nowrap + 260px) almasın */
+/* The detail cell must not get the table cell rules (nowrap + 260px) */
 .data-table td.audit-detail-cell {
   max-width: none;
   white-space: normal;
 }
 
 @media (max-width: 768px) {
-  /* Tablo telefonda ~900px genişliğinde ve yatay kayıyor; detay o genişliğe yayılınca
-     her satırı okumak için yana kaydırmak gerekiyordu. Görünen alana sabitlenir. */
+  /* On phones the table is ~900px wide and scrolls horizontally; when the detail spread to that width,
+     reading each row required scrolling sideways. It is pinned to the visible area. */
   .audit-detail {
     grid-template-columns: minmax(0, 1fr);
     position: sticky;

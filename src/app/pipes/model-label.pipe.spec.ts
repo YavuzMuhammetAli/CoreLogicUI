@@ -28,15 +28,15 @@ function setup(models$: Observable<PublishedModel[]>) {
 }
 
 describe('ModelLabelPipe', () => {
-  it('etiketi gösterir; etiketsiz modelde tablo adına, boş girdide boşa düşer', () => {
-    // of(): önbellek doluyken olduğu gibi SENKRON döner — şablon içinde sinyal yazımı patlamamalı.
+  it('shows the label; falls back to the table name for a model without a label, and to empty for empty input', () => {
+    // of(): returns SYNCHRONOUSLY, as when the cache is filled — a signal write inside the template must not blow up.
     const fixture = setup(of(MODELS));
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toBe('Satınalma Talebi|Etiketsiz|');
   });
 
-  it('etiketler geç gelince OnPush bileşen de tazelenir', () => {
+  it('an OnPush component also refreshes when the labels arrive late', () => {
     const models$ = new Subject<PublishedModel[]>();
     const fixture = setup(models$);
     expect(fixture.nativeElement.textContent).toBe('SatinalmaTalebi|Etiketsiz|');

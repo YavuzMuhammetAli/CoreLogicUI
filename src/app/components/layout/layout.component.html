@@ -1,6 +1,6 @@
 <div class="app-shell" [class.sidebar-collapsed]="!sidebarOpen()">
 
-  <!-- Sidebar — kapalıyken inert: gizli linkler Tab ile odak almasın -->
+  <!-- Sidebar — inert while closed: hidden links must not receive focus via Tab -->
   <aside
     class="sidebar"
     [attr.aria-label]="'layout.sidebarAriaLabel' | t"
@@ -8,7 +8,7 @@
     <div class="sidebar-logo">
       <span class="logo-mark">CL</span>
       <span class="logo-text">CoreLogic</span>
-      <!-- Yalnız mobilde görünür (bkz. .sidebar-close) -->
+      <!-- Visible only on mobile (see .sidebar-close) -->
       <button
         class="sidebar-close"
         type="button"
@@ -20,7 +20,7 @@
 
     <nav class="sidebar-nav">
 
-      <!-- Admin: model genel listesi + platform yönetim linkleri -->
+      <!-- Admin: general model list + platform management links -->
       @if (permissionService.isAdmin()) {
         <span class="nav-label eyebrow">{{ 'layout.navData' | t }}</span>
         <a
@@ -118,14 +118,14 @@
       }
 
       @if (!permissionService.isAdmin() && designedNav(); as nodes) {
-        <!-- Admin'in Tasarım sayfasında kurduğu, kullanıcının rolüne düşen menü -->
+        <!-- The menu the admin built on the Design page that applies to the user's role -->
         <app-sidebar-nav [nodes]="nodes" [layoutId]="designedNavId()" [pendingTaskCount]="pendingTaskCount()" />
       } @else {
 
       <!--
-        H: Görevlerim — admin bloğunun DIŞINDA, çünkü onay görevleri normal
-        kullanıcılara düşer. Rozet bekleyen görev sayısını gösterir; projede
-        SignalR olmadığı için bu sayı pollanır (layout.component.ts).
+        H: My Tasks — OUTSIDE the admin block, because approval tasks go to regular
+        users. The badge shows the pending task count; since the project has no
+        SignalR this number is polled (layout.component.ts).
       -->
       <a
         class="nav-item"
@@ -141,7 +141,7 @@
         }
       </a>
 
-      <!-- Normal kullanıcı: yalnızca okuma yetkili tablolar -->
+      <!-- Regular user: only tables with read permission -->
       @if (!permissionService.isAdmin()) {
         <span class="nav-label eyebrow">{{ 'layout.navTables' | t }}</span>
         @for (t of navTables; track t.typeName) {
@@ -158,7 +158,7 @@
         }
       }
 
-      <!-- Raporlama: tüm kullanıcılara görünür — yetki kontrolü model bazında backend'de yapılır -->
+      <!-- Reporting: visible to all users — permission checks are done per model on the backend -->
       <span class="nav-label eyebrow" style="margin-top: var(--space-4)">{{ 'layout.navReporting' | t }}</span>
       <a
         class="nav-item"
@@ -178,7 +178,7 @@
         {{ 'layout.dashboard' | t }}
       </a>
 
-      <!-- Admin tarafından navigasyona yayınlanmış dashboard'lar — tüm kullanıcılar görür -->
+      <!-- Dashboards published to navigation by the admin — visible to all users -->
       @for (d of navDashboards; track d.id) {
         <a
           class="nav-item"
@@ -201,12 +201,12 @@
     </div>
   </aside>
 
-  <!-- Mobil çekmece açıkken arka plan: dokununca kapanır -->
+  <!-- Backdrop while the mobile drawer is open: closes on tap -->
   @if (isMobile() && sidebarOpen()) {
     <div class="sidebar-backdrop" aria-hidden="true" (click)="closeSidebar()"></div>
   }
 
-  <!-- Ana içerik -->
+  <!-- Main content -->
   <div class="main-area">
     <!-- Topbar -->
     <header class="topbar">
@@ -229,7 +229,7 @@
           {{ languageService.lang() === 'tr' ? 'EN' : 'TR' }}
         </button>
 
-        <!-- Uygulama içi bildirimler (görev atandı/gecikti vb.) -->
+        <!-- In-app notifications (task assigned/overdue, etc.) -->
         <app-notification-bell />
 
         <button
@@ -238,16 +238,16 @@
           (click)="toggleTheme()"
           [attr.aria-label]="themeService.theme() === 'dark' ? ('layout.switchToLight' | t) : ('layout.switchToDark' | t)">
           @if (themeService.theme() === 'dark') {
-            <!-- Koyu temadayken güneş: tıklayınca açık temaya geçer -->
+            <!-- Sun while in dark theme: click to switch to light theme -->
             <app-icon name="light_mode" />
           } @else {
-            <!-- Açık temadayken ay: tıklayınca koyu temaya geçer -->
+            <!-- Moon while in light theme: click to switch to dark theme -->
             <app-icon name="dark_mode" />
           }
         </button>
 
         @if (currentUser(); as user) {
-          <!-- Profil dropdown tetikleyicisi -->
+          <!-- Profile dropdown trigger -->
           <div class="profile-menu-wrap" #profileMenuRef>
             <button
               class="user-chip"
@@ -257,7 +257,7 @@
               aria-haspopup="menu"
               [attr.aria-label]="'layout.openProfileMenuAria' | t">
 
-              <!-- Avatar: fotoğraf varsa img, yoksa baş harfler -->
+              <!-- Avatar: img if there is a photo, otherwise initials -->
               @if (user.photoUrl) {
                 <img
                   [src]="user.photoUrl"
@@ -271,7 +271,7 @@
                 <span class="user-name">{{ user.name }}</span>
               </div>
 
-              <!-- Chevron ikonu -->
+              <!-- Chevron icon -->
               <app-icon name="keyboard_arrow_down" size="16" class="menu-chevron" [class.open]="menuOpen" />
             </button>
 
@@ -282,7 +282,7 @@
                 role="menu"
                 [attr.aria-label]="'layout.profileMenuAria' | t">
 
-                <!-- Üst bilgi başlığı -->
+                <!-- Header info -->
                 <div class="dropdown-header">
                   <div class="dropdown-avatar-wrap">
                     @if (user.photoUrl) {
@@ -302,7 +302,7 @@
 
                 <div class="dropdown-divider" role="separator"></div>
 
-                <!-- Profili Düzenle -->
+                <!-- Edit Profile -->
                 <button
                   class="dropdown-item"
                   role="menuitem"
@@ -314,7 +314,7 @@
 
                 <div class="dropdown-divider" role="separator"></div>
 
-                <!-- Çıkış Yap -->
+                <!-- Log Out -->
                 <button
                   class="dropdown-item dropdown-item-danger"
                   role="menuitem"
@@ -330,7 +330,7 @@
       </div>
     </header>
 
-    <!-- Yetki uyarı banner'ı — guard yönlendirmesi sonrası görünür -->
+    <!-- Permission warning banner — visible after a guard redirect -->
     @if (notificationService.current(); as notification) {
       <div
         class="alert alert-{{ notification.type }}"
@@ -349,7 +349,7 @@
       </div>
     }
 
-    <!-- Sayfa içeriği -->
+    <!-- Page content -->
     <main class="page-content">
       <router-outlet></router-outlet>
     </main>

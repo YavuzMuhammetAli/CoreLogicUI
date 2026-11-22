@@ -1,4 +1,4 @@
-/* ---- Yayınlanmış modeller listesi (liste ekranı) ---- */
+/* ---- Published model list (list screen) ---- */
 .model-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -20,8 +20,8 @@
   }
 }
 
-/* Düzenlemeye giden ana link — kartın gövdesini kaplar (nested <a> olmaması için
-   Sil aksiyonu bu link'in DIŞINDA, .model-card-actions'ta yer alır) */
+/* Main link to editing — covers the card body (to avoid a nested <a>, the
+   Delete action sits OUTSIDE this link, in .model-card-actions) */
 .model-card-link {
   display: flex;
   flex-direction: column;

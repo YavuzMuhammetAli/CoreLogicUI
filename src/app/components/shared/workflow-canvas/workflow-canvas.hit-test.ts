@@ -5,28 +5,28 @@ import {
 import { ExitKind, ExitPort, exitsOf } from '../../../utils/workflow/workflow-exits';
 
 /**
- * Canvas düğüm/kenar yerleşimi ve isabet testi — SAF fonksiyonlar, Angular yok.
+ * Canvas node/edge layout and hit testing — PURE functions, no Angular.
  *
- * Component yalnızca sinyal, DOM dinleyicisi ve output tutar; konum önceliği ve
- * isabet kararı buradadır, dolayısıyla TestBed'siz test edilebilir.
+ * The component only holds signals, DOM listeners and outputs; position precedence and
+ * hit decisions live here, so they can be tested without TestBed.
  */
 
-/** Port türü: olumlu (onay), olumsuz (red) ya da nötr (koşul yolu). */
+/** Port kind: positive (approve), negative (reject) or neutral (condition path). */
 export type PortKind = ExitKind;
 
-/** Düğümün altındaki bir çıkış portu. */
+/** An exit port at the bottom of a node. */
 export interface CanvasPort {
   port: ExitPort;
   kind: PortKind;
-  /** Düğümün soluna göre yatay konum (px). */
+  /** Horizontal position relative to the node's left (px). */
   offset: number;
-  /** Hedef adım; boşsa akış bu çıkışta biter (terminal). */
+  /** Target step; if empty the flow ends at this exit (terminal). */
   target: string | null;
-  /** Koşul durumunun etiketi; varsayılan yol ve onay/red'de null. */
+  /** Label of the condition case; null for the default path and approve/reject. */
   label: string | null;
 }
 
-/** Canvas'ta çizilen düğüm — konum ve ölçü dahil. */
+/** A node drawn on the canvas — including position and size. */
 export interface CanvasNode {
   key: string;
   label: string;
@@ -38,43 +38,43 @@ export interface CanvasNode {
   isParallel: boolean;
   branchLabels: string[];
   /**
-   * Bağlanabilir çıkışlar (tip kataloğundan). Kapalı çıkış (red kapalı adımda
-   * red) port olarak çizilmez: oraya çizilen bağlantı kayıtta sessizce kaybolurdu.
+   * Connectable exits (from the type catalog). A disabled exit (reject on a step with reject
+   * turned off) isn't drawn as a port: a connection drawn there would silently vanish on save.
    */
   ports: CanvasPort[];
-  /** Konumu tanımda (ya da sürüklenirken) belli mi; değilse otomatik yerleşimden geliyor. */
+  /** Whether the position is set in the definition (or while dragging); otherwise it comes from auto layout. */
   pinned: boolean;
 }
 
-/** İki düğüm arasındaki bağlantı. */
+/** A connection between two nodes. */
 export interface CanvasEdge {
   key: string;
   label: string;
   isRejection: boolean;
-  /** Kaynak adımın anahtarı — kenar silinince hangi alanın temizleneceğini söyler. */
+  /** Key of the source step — tells which field to clear when the edge is deleted. */
   from: string;
   to: string;
   port: PortKind;
-  /** Kaynağın gerçek çıkışı (approve/reject/complete/anyReject) — kenar kimliği. */
+  /** The source's actual exit (approve/reject/complete/anyReject) — the edge identity. */
   exitPort: ExitPort;
   geometry: EdgeGeometry;
 }
 
-/** Konumu hiç belirlenmemiş düğümün düşeceği yer. */
+/** Where a node with no position at all lands. */
 export const DEFAULT_NODE_X = 24;
 export const DEFAULT_NODE_Y = 24;
 
-/** Kenara tıklama toleransı (ekran pikseli). */
+/** Click tolerance for edges (screen pixels). */
 export const EDGE_HIT_TOLERANCE = 8;
 
 /**
- * Düğüm konumlarını öncelik sırasıyla çözer:
+ * Resolves node positions in order of precedence:
  *
- *     canlı sürükleme  >  tanımdaki x/y  >  otomatik yerleşim  >  varsayılan
+ *     live drag  >  x/y in the definition  >  auto layout  >  default
  *
- * Otomatik yerleşim yalnızca KONUMU OLMAYAN düğümler için başlangıç noktasıdır;
- * böylece canvas'tan önce form ile yazılmış tanımlar da düzgün açılır ve form
- * tabanlı düzenleme konum belirtmek zorunda kalmaz.
+ * Auto layout is only the starting point for nodes WITHOUT A POSITION;
+ * that way definitions written via the form before the canvas also open properly, and
+ * form-based editing doesn't have to specify positions.
  */
 export function resolveNodePositions(
   graph: WorkflowGraph | null,
@@ -113,18 +113,18 @@ export function resolveNodePositions(
   return nodes.map(entry => entry.node);
 }
 
-/** Kutular arasında bırakılan asgari boşluk (çakışma sayılma eşiği). */
+/** Minimum gap left between boxes (the threshold for counting as an overlap). */
 const OVERLAP_MARGIN = 16;
-/** Çakışma çözümünün en fazla deneme sayısı — kötü bir tanımda bile sonlanmalı. */
+/** Maximum number of attempts to resolve overlaps — must terminate even for a bad definition. */
 const OVERLAP_MAX_STEPS = 64;
 
 /**
- * Konumu tanımda OLMAYAN (otomatik yerleşimden gelen) düğüm, elle konumlanmış
- * bir düğümün üstüne düşerse boş yer bulana dek aşağı itilir.
+ * A node WITHOUT a position in the definition (coming from auto layout) that lands on a manually
+ * positioned node is pushed down until it finds free space.
  *
- * Otomatik yerleşim elle taşınmış kutulardan habersizdir: kullanıcı bir kutuyu
- * sürükleyip bıraktıktan sonra yeni eklenen adım tam onun üstüne düşebiliyordu.
- * Elle konulmuş kutu hiç kıpırdatılmaz — kullanıcının kararı.
+ * Auto layout is unaware of manually moved boxes: after the user dragged and dropped a box,
+ * a newly added step could land right on top of it.
+ * A manually placed box is never moved — that's the user's decision.
  */
 function avoidPinnedOverlap(entries: Array<{ node: CanvasNode; pinned: boolean }>): void {
   const settled = entries.filter(entry => entry.pinned).map(entry => entry.node);
@@ -149,10 +149,10 @@ function overlaps(a: CanvasNode, b: CanvasNode): boolean {
 }
 
 /**
- * Noktanın üzerinde bulunduğu düğüm.
+ * The node the point is over.
  *
- * Liste SONDAN taranır: sonra render edilen düğüm DOM'da üstte çizilir, örtüşme
- * halinde kullanıcının gördüğü ve tıkladığını sandığı düğüm odur.
+ * The list is scanned FROM THE END: a node rendered later is drawn on top in the DOM, so when
+ * they overlap it is the node the user sees and thinks they clicked.
  */
 export function nodeAt(nodes: ReadonlyArray<CanvasNode>, point: Point): CanvasNode | null {
   for (let i = nodes.length - 1; i >= 0; i--) {
@@ -167,11 +167,11 @@ export function nodeAt(nodes: ReadonlyArray<CanvasNode>, point: Point): CanvasNo
 }
 
 /**
- * Noktaya en yakın kenar — tolerans içindeyse.
+ * The edge nearest to the point — if within tolerance.
  *
- * Tolerans DÜNYA değil EKRAN koordinatında ölçülür (`tolerance / zoom`): aksi
- * halde uzaklaştıkça kenarlar tıklanamaz, yakınlaştıkça da kenardan uzağa
- * tıklamak kenarı seçerdi.
+ * The tolerance is measured in SCREEN, not WORLD, coordinates (`tolerance / zoom`): otherwise
+ * edges would become unclickable when zoomed out, and when zoomed in clicking far from
+ * an edge would select it.
  */
 export function edgeAt(
   edges: ReadonlyArray<CanvasEdge>,
@@ -196,10 +196,10 @@ export function edgeAt(
 }
 
 /**
- * Dikdörtgenle KESİŞEN düğümler (lasso seçimi).
+ * Nodes INTERSECTING the rectangle (lasso selection).
  *
- * Tamamen içinde kalma şartı aranmaz: kullanıcı büyük bir düğümün üzerinden
- * küçük bir çerçeve geçirdiğinde onu seçmiş saymak beklenen davranıştır.
+ * Full containment isn't required: when the user drags a small frame over a large node,
+ * treating it as selected is the expected behaviour.
  */
 export function nodesInRect(nodes: ReadonlyArray<CanvasNode>, a: Point, b: Point): CanvasNode[] {
   const minX = Math.min(a.x, b.x);
@@ -212,7 +212,7 @@ export function nodesInRect(nodes: ReadonlyArray<CanvasNode>, a: Point, b: Point
     node.y <= maxY && node.y + node.height >= minY);
 }
 
-/** Düğümün bağlanabilir çıkışları, alt kenara eşit aralıkla dizilmiş. */
+/** The node's connectable exits, spaced evenly along the bottom edge. */
 export function portsOf(step: WorkflowStep, width: number): CanvasPort[] {
   const enabled = exitsOf(step).filter(exit => exit.enabled);
   const offsets = portPositions(enabled.length, width);

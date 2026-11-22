@@ -1,5 +1,5 @@
 @if (plan(); as p) {
-  <!-- Tasarımdan sonra modele eklenen alanlar formun sonuna düştü — yalnız admin görür -->
+  <!-- Fields added to the model after the design fell to the end of the form — only the admin sees this -->
   @if (designLink(); as link) {
     @if (p.unplaced.length > 0) {
       <div class="alert alert-warn layout-stale" role="status">
@@ -90,7 +90,7 @@
     </div>
   }
 } @else {
-  <!-- Yayınlanmış tasarım yok: bugünkü görünüm -->
+  <!-- No published design: the current view -->
   <div class="legacy-grid">
     @for (col of legacyColumns(); track col.columnName) {
       @if (control(col.columnName); as ctrl) {

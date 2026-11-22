@@ -28,7 +28,7 @@ import { IconComponent } from '../shared/icon/icon.component';
 
 type DataRow = Record<string, unknown>;
 
-/** Filtre panelindeki kolon — `kind` ve seçenekler her turda yeniden hesaplanmasın diye hazır tutulur. */
+/** Column in the filter panel — kept precomputed so `kind` and options are not recomputed every cycle. */
 interface FilterColumn {
   column: PublishedColumn;
   kind: FilterKind;
@@ -46,7 +46,7 @@ interface FilterColumn {
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ModelDataComponent implements OnInit {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly languageService = inject(LanguageService);
@@ -54,10 +54,10 @@ export class ModelDataComponent implements OnInit {
 
   private readonly destroyRef = inject(DestroyRef);
 
-  /** Arama ve filtre yazılırken her tuşta sorgu atılmasın. */
+  /** Do not fire a query on every keystroke while typing search and filter. */
   private static readonly QUERY_DEBOUNCE_MS = 300;
 
-  /** Sabit genişlikli tabloda genişliği verilmemiş kolonun ve sabit kolonların genişliği (px). */
+  /** Width (px) of fixed columns and of columns without a given width in the fixed-width table. */
   static readonly AUTO_COLUMN_PX = 160;
   static readonly ID_COLUMN_PX = 80;
   static readonly SELECT_COLUMN_PX = 44;
@@ -66,57 +66,57 @@ export class ModelDataComponent implements OnInit {
   typeName = '';
   model: PublishedModel | undefined;
 
-  // Grid durumu
+  // Grid state
   rows: DataRow[] = [];
   loadingRows = false;
   loadError: string | null = null;
 
-  // Sayfalama durumu
+  // Pagination state
   pageIndex = 1;
   pageSize  = 20;
   total     = 0;
   readonly pageSizeOptions = [20, 50, 100];
 
-  // Arama, sıralama ve filtre — sunucuda uygulanır, sayfa değişince korunur
+  // Search, sort and filter — applied on the server, kept across page changes
   searchTerm = '';
   sort: ListSort | null = null;
   columnFilters: ColumnFilters = {};
   readonly filtersOpen = signal(false);
   private readonly queryChanges = new Subject<void>();
-  /** Yanıtlar sırasız dönebilir: yalnız son isteğin sonucu uygulanır. */
+  /** Responses may arrive out of order: only the latest request's result is applied. */
   private rowsRequest = 0;
 
-  // Sürüm paneli durumu
+  // Version panel state
   versions = signal<ModelVersion[]>([]);
   showVersionPanel = signal(false);
 
-  // Assembly yüklenmemiş hatası için tek-seferlik retry bayrağı
+  // One-shot retry flag for the "assembly not loaded" error
   private rowsRetried = false;
 
-  // Admin tarafından yönetilen kolon görünürlüğü — null = ayar yok, tüm kolonlar görünür
+  // Admin-managed column visibility — null = no setting, all columns visible
   visibleColumnNames: string[] | null = null;
   savingColumnVisibility = false;
 
   /**
-   * Yayınlanmış liste yerleşimi (ekran tasarımı). Varsa kolon sırası ve genişlikleri ondan
-   * gelir ve "Kolonlar" ayarının yerini alır; yoksa null.
+   * Published list layout (screen design). If present, column order and widths come
+   * from it and it replaces the "Kolonlar" (Columns) setting; otherwise null.
    */
   listLayout: ListLayout | null = null;
 
-  /** "Ekranı tasarla": görünen liste tasarımı (sunucu role göre seçti) açılsın. */
+  /** "Ekranı tasarla" (Design screen): open the list design being shown (chosen by the server per role). */
   get designQuery(): Record<string, string | number | null> {
     return { view: 'list', layout: this.metadata.publishedLayoutId(this.typeName, 'list') };
   }
 
-  // Toplu silme durumu
+  // Bulk delete state
   /**
-   * Seçili satırların ID'leri. Sayfalama SUNUCU taraflı olduğu için seçim sayfalar
-   * arasında TAŞINMAZ — görünmeyen satırların silinmesi kullanıcı için sürpriz olur.
+   * IDs of the selected rows. Since pagination is SERVER-side, the selection is NOT CARRIED
+   * across pages — deleting rows the user cannot see would be a surprise.
    */
   selectedIds = new Set<number>();
-  /** Silinemeyen satırların hata özeti (satırlar seçili kalır). */
+  /** Error summary of rows that could not be deleted (the rows stay selected). */
   bulkErrors: string[] = [];
-  /** Son denemede kaç kayıt gönderildi (özet metni için). */
+  /** How many records were sent in the last attempt (for the summary text). */
   bulkTotal = 0;
   readonly confirmOpen = signal(false);
   readonly bulkBusy = signal(false);
@@ -135,9 +135,9 @@ export class ModelDataComponent implements OnInit {
       .pipe(debounceTime(ModelDataComponent.QUERY_DEBOUNCE_MS), takeUntilDestroyed(this.destroyRef), markDirty(this.cdr))
       .subscribe(() => this.applyQuery());
 
-    // snapshot yerine paramMap observable'ına abone ol;
-    // aynı component örneği farklı modeller için yeniden kullanıldığında
-    // (Angular route-reuse) her parametre değişiminde tetiklenir.
+    // Subscribe to the paramMap observable instead of the snapshot;
+    // when the same component instance is reused for different models
+    // (Angular route reuse) it fires on every parameter change.
     this.route.paramMap.pipe(markDirty(this.cdr)).subscribe(params => {
       this.typeName = params.get('typeName') ?? '';
       this.resetState();
@@ -146,12 +146,12 @@ export class ModelDataComponent implements OnInit {
     });
   }
 
-  /** Yeni modele geçerken önceki modelin durumunu temizle */
+  /** Clear the previous model's state when switching to a new model */
   private resetState(): void {
     this.model = undefined;
     this.rows = [];
     this.loadError = null;
-    this.loadingRows = true; // meta yüklenene kadar "bulunamadı" paneli gösterilmez
+    this.loadingRows = true; // the "not found" panel is not shown until meta is loaded
     this.rowsRetried = false;
     this.showVersionPanel.set(false);
     this.versions.set([]);
@@ -166,7 +166,7 @@ export class ModelDataComponent implements OnInit {
     this.clearSelection();
   }
 
-  /** Seçimi ve önceki toplu silme özetini sıfırlar. */
+  /** Resets the selection and the previous bulk delete summary. */
   private clearSelection(): void {
     this.selectedIds = new Set<number>();
     this.bulkErrors = [];
@@ -178,11 +178,11 @@ export class ModelDataComponent implements OnInit {
   }
 
   /**
-   * Kolon türevlerinin önbelleği. Şablon `tableHeaders`'ı her SATIRDA, genişlik ve görünürlük
-   * listelerini her change detection turunda okur; getter'lar her okumada yeniden çözümleyip
-   * yeni dizi döndürüyordu (100 satırlık sayfada tur başına ~100 kolon çözümlemesi ve @for'un
-   * her turda baştan diff'lemesi). Girdiler (yerleşim, model, görünürlük ayarı) referansla
-   * karşılaştırılır — üçü de yerinde değiştirilmez, hep yeniden atanır.
+   * Cache of column derivatives. The template reads `tableHeaders` on every ROW and the width and visibility
+   * lists on every change detection cycle; the getters re-resolved on every read and returned
+   * a new array (on a 100-row page ~100 column resolutions per cycle, and @for re-diffing
+   * from scratch every cycle). Inputs (layout, model, visibility setting) are compared by
+   * reference — none of the three is mutated in place, they are always reassigned.
    */
   private colsMemo?: {
     layout: ListLayout | null;
@@ -224,20 +224,20 @@ export class ModelDataComponent implements OnInit {
     return this.colsMemo;
   }
 
-  /** Görünür kolonlar ve genişlikleri — liste yerleşimi, yoksa "Kolonlar" ayarı, o da yoksa hepsi. */
+  /** Visible columns and their widths — the list layout, otherwise the "Kolonlar" (Columns) setting, otherwise all. */
   get resolvedColumns(): ResolvedListColumn[] {
     return this.cols.resolved;
   }
 
-  /** Görünür kolonlar — ayar yoksa şema kolonlarının tümü */
+  /** Visible columns — all schema columns if there is no setting */
   get displayColumns(): PublishedColumn[] {
     return this.cols.display;
   }
 
   /**
-   * Liste yerleşiminde kolon genişlikleri `<colgroup>` ile verilir ve tablo sabit düzende
-   * çizilir (aksi halde tarayıcı genişliği içeriğe göre yeniden dağıtır). Sıra: seçim kutusu,
-   * ID, yerleşimin kolonları, iş akışı durumu.
+   * In a list layout column widths are given via `<colgroup>` and the table is drawn with a fixed
+   * layout (otherwise the browser redistributes the widths by content). Order: selection checkbox,
+   * ID, the layout's columns, workflow status.
    */
   get columnWidths(): number[] {
     const widths: number[] = [];
@@ -252,31 +252,31 @@ export class ModelDataComponent implements OnInit {
     return this.columnWidths.reduce((sum, w) => sum + w, 0);
   }
 
-  /** Kolon görünürlüğü popover'ı için kolon listesi (liste görünümünde zorunlu kolon yok) */
+  /** Column list for the column visibility popover (no required columns in the list view) */
   get columnVisibilityItems(): ColumnVisibilityItem[] {
     return this.cols.visibilityItems;
   }
 
-  /** Popover'ın o anki etkin seçimi — ayar yoksa tüm kolonlar işaretli gösterilir */
+  /** The popover's current effective selection — all columns shown checked if there is no setting */
   get effectiveVisibleColumnNames(): string[] {
     return this.cols.effectiveVisible;
   }
 
-  /** Admin tarafından kayıtlı liste-görünümü kolon ayarını yükler */
+  /** Loads the list-view column setting saved by the admin */
   private loadColumnVisibility(): void {
     const typeName = this.typeName;
     this.modelColumnSetting.get(typeName, 'list').pipe(markDirty(this.cdr)).subscribe({
       next: res => {
-        if (typeName !== this.typeName) return; // bu sırada başka modele geçilmiş olabilir
+        if (typeName !== this.typeName) return; // another model may have been opened in the meantime
         this.visibleColumnNames = (res.success && res.data?.visibleColumns?.length)
           ? res.data.visibleColumns
           : null;
       },
-      error: () => { /* ayar yüklenemezse tüm kolonlar görünür kalır */ }
+      error: () => { /* if the setting cannot be loaded all columns stay visible */ }
     });
   }
 
-  /** Admin kolon görünürlüğü ayarını kaydeder */
+  /** Saves the admin's column visibility setting */
   onSaveColumnVisibility(names: string[]): void {
     this.savingColumnVisibility = true;
     const dto: ModelColumnSettingDto = { typeName: this.typeName, viewType: 'list', visibleColumns: names };
@@ -289,9 +289,9 @@ export class ModelDataComponent implements OnInit {
     });
   }
 
-  /** Model meta verisini backend'den çek, ardından satırları yükle */
+  /** Fetch the model meta from the backend, then load the rows */
   private loadModelMeta(): void {
-    // Liste yerleşimi kolonlarla birlikte okunur — tablo önce varsayılan kolonlarla çizilip "zıplamasın".
+    // The list layout is read together with the columns — so the table is not first drawn with default columns and then "jumps".
     forkJoin({
       models: this.publishedModel.getModels(),
       layout: this.metadata.listLayout$(this.typeName)
@@ -307,7 +307,7 @@ export class ModelDataComponent implements OnInit {
     });
   }
 
-  /** Geçerli sayfanın kayıtlarını yükle */
+  /** Load the records of the current page */
   loadRows(): void {
     this.loadingRows = true;
     this.loadError = null;
@@ -328,12 +328,12 @@ export class ModelDataComponent implements OnInit {
           this.total = paged?.total ?? 0;
           this.rowsRetried = false;
         } else if (!this.rowsRetried && res.message?.includes('Assembly') && this.permissionService.isAdmin()) {
-          // Backend yeniden başlatıldıysa assembly null olur; bir kez yükleyip tekrar dene.
-          // loadAssembly admin'e özel — admin olmayan kullanıcı doğrudan hata mesajını görür.
+          // If the backend was restarted the assembly is null; load it once and retry.
+          // loadAssembly is admin-only — a non-admin user sees the error message directly.
           this.rowsRetried = true;
           this.publishModel.loadAssembly().pipe(markDirty(this.cdr)).subscribe({
             next: () => {
-              // Assembly yeniden yüklendi; model meta'sını da taze çek (önbellek atlanır)
+              // Assembly reloaded; fetch the model meta fresh as well (cache bypassed)
               this.publishedModel.invalidateModels();
               this.publishedModel.getModels().pipe(markDirty(this.cdr)).subscribe({
                 next: metaRes => {
@@ -364,9 +364,9 @@ export class ModelDataComponent implements OnInit {
     });
   }
 
-  // ─── Arama, sıralama, filtre ───────────────────────────────────────────────────
+  // ─── Search, sort, filter ──────────────────────────────────────────────────────
 
-  /** Filtre paneli kolonları — yalnız listede görünen ve filtrelenebilen kolonlar. */
+  /** Filter panel columns — only columns visible in the list and filterable. */
   get filterColumns(): FilterColumn[] {
     return this.cols.filterable;
   }
@@ -375,7 +375,7 @@ export class ModelDataComponent implements OnInit {
     return activeFilterCount(this.columnFilters);
   }
 
-  /** Liste bir seçimle daraltılmış mı (boş sonuçta "kayıt yok" değil "eşleşme yok" denir). */
+  /** Whether the list is narrowed by a selection (an empty result says "no match", not "no records"). */
   get isQueryActive(): boolean {
     return !!this.searchTerm.trim() || this.activeFilters > 0;
   }
@@ -409,52 +409,52 @@ export class ModelDataComponent implements OnInit {
     this.applyQuery();
   }
 
-  /** Seçim değişti: ilk sayfadan başlanır, seçili satırlar başka bir listeye taşınmaz. */
+  /** Selection changed: start from the first page; selected rows are not carried to another list. */
   private applyQuery(): void {
     this.pageIndex = 1;
     this.clearSelection();
     this.loadRows();
   }
 
-  /** Başlıkta gösterilecek model adı — model etiketi (ör. "Teklif"), yoksa tablo adı. */
+  /** Model name shown in the header — the model label (e.g. "Teklif"), otherwise the table name. */
   get modelTitle(): string {
     return this.model?.label?.trim() || this.typeName;
   }
 
-  /** UI'da gösterilecek etiket — admin Label tanımlamışsa onu, yoksa ham columnName'i döner. */
+  /** Label shown in the UI — the admin-defined Label if any, otherwise the raw columnName. */
   colLabel(col: PublishedColumn): string {
     return col.label?.trim() || col.columnName;
   }
 
   /**
-   * Tablo başlıklarını belirle (ID + görünür schema sütunları).
-   * key: veri/lookup anahtarı (ham columnName) — hücre değeri bu anahtarla okunur.
-   * label: kullanıcıya gösterilen metin (admin Label tanımlamışsa onu kullanır).
+   * Determine the table headers (ID + visible schema columns).
+   * key: data/lookup key (raw columnName) — the cell value is read with this key.
+   * label: text shown to the user (uses the Label if the admin defined one).
    */
   get tableHeaders(): { key: string; label: string; sortable: boolean; longText: boolean }[] {
     return this.cols.headers;
   }
 
-  // ─── Sayfalama ─────────────────────────────────────────────────────────────────
+  // ─── Pagination ────────────────────────────────────────────────────────────────
 
-  /** Toplam sayfa sayısı */
+  /** Total page count */
   get totalPages(): number {
     return Math.ceil(this.total / this.pageSize) || 1;
   }
 
-  /** Footer'da "X–Y / N kayıt" gösterimi için sayfa başlangıcı */
+  /** Page start for the "X–Y / N records" display in the footer */
   get pageRangeStart(): number {
     return this.total === 0 ? 0 : (this.pageIndex - 1) * this.pageSize + 1;
   }
 
-  /** Footer'da "X–Y / N kayıt" gösterimi için sayfa sonu */
+  /** Page end for the "X–Y / N records" display in the footer */
   get pageRangeEnd(): number {
     return Math.min(this.pageIndex * this.pageSize, this.total);
   }
 
   /**
-   * Sayfa numarası butonları için görünür aralık — en fazla 5 sayfa.
-   * Sayfa değiştikçe pencere ortanır (ilk/son sayfa ile ellipsis gösterilir).
+   * Visible range for the page number buttons — at most 5 pages.
+   * The window is centred as the page changes (first/last page and an ellipsis are shown).
    */
   get visiblePages(): number[] {
     return pageWindow(this.pageIndex, this.totalPages);
@@ -463,7 +463,7 @@ export class ModelDataComponent implements OnInit {
   goToPage(p: number): void {
     if (p < 1 || p > this.totalPages || p === this.pageIndex) return;
     this.pageIndex = p;
-    this.clearSelection();     // seçim sayfalar arasında taşınmaz
+    this.clearSelection();     // the selection is not carried across pages
     this.loadRows();
   }
 
@@ -477,7 +477,7 @@ export class ModelDataComponent implements OnInit {
     this.loadRows();
   }
 
-  // ─── Satır seçimi ve toplu silme ───────────────────────────────────────────
+  // ─── Row selection and bulk delete ─────────────────────────────────────────
 
   isRowSelected(row: DataRow): boolean {
     return this.selectedIds.has(this.rowId(row));
@@ -521,9 +521,9 @@ export class ModelDataComponent implements OnInit {
   }
 
   /**
-   * Seçili kayıtları siler. Sunucuda toplu silme ucu YOKTUR; her kayıt tek tek silinir.
-   * Kısmi başarı kabul edilir: silinenler listeden düşer, silinemeyenler SEÇİLİ KALIR ve
-   * hataları özetlenir — kullanıcı yalnızca sorunlu satırlarla ilgilenir.
+   * Deletes the selected records. There is NO bulk delete endpoint on the server; each record is deleted one by one.
+   * Partial success is accepted: deleted rows drop out of the list, those that could not be deleted STAY SELECTED and
+   * their errors are summarised — the user deals only with the problematic rows.
    */
   confirmBulkDelete(): void {
     const ids = [...this.selectedIds];
@@ -552,7 +552,7 @@ export class ModelDataComponent implements OnInit {
       this.selectedIds = new Set(failed.map(r => r.id));
       this.bulkErrors = failed.map(r => `ID:${r.id} — ${r.message}`);
 
-      // Son sayfadaki tüm kayıtlar silindiyse bir önceki sayfaya çekil.
+      // If all records on the last page were deleted, step back to the previous page.
       if (failed.length < ids.length && this.pageIndex > 1 && ids.length >= this.rows.length) {
         this.pageIndex = Math.max(1, this.pageIndex - 1);
       }
@@ -560,12 +560,12 @@ export class ModelDataComponent implements OnInit {
     });
   }
 
-  // ─── Util delegasyonları — template'te doğrudan çağrılabilmesi için ────────────
+  // ─── Util delegations — so they can be called directly from the template ──────
 
   cellValue     = cellValue;
   fileUrl       = fileRefUrl;
 
-  /** Hücredeki dosya/resim gösterimi (sunucu içerik değil bağlantı gönderir); yoksa null. */
+  /** File/image display in the cell (the server sends a link, not the content); otherwise null. */
   fileRefOf(row: DataRow, key: string): FileRef | null {
     return asFileRef(fieldValue(row, key));
   }
@@ -575,11 +575,11 @@ export class ModelDataComponent implements OnInit {
   }
 
   /**
-   * H: Kaydın açık iş akışındaki durumu.
+   * H: The record's status in the open workflow.
    *
-   * WorkflowStatus DbBaseObject'ten gelen bir SİSTEM kolonudur; kullanıcı
-   * kolonları arasında (tableHeaders) yer almaz ama satır verisinde taşınır.
-   * Sunucu camelCase döndüğü için iki yazım da denenir.
+   * WorkflowStatus is a SYSTEM column coming from DbBaseObject; it is not among the user
+   * columns (tableHeaders) but is carried in the row data.
+   * Since the server returns camelCase, both spellings are tried.
    */
   workflowStatusOf(row: DataRow): string {
     const value = row['workflowStatus'] ?? row['WorkflowStatus'];
@@ -587,14 +587,14 @@ export class ModelDataComponent implements OnInit {
   }
 
   /**
-   * Süreç kolonu yalnızca en az bir satırda durum varsa çizilir.
+   * The process column is drawn only if at least one row has a status.
    *
-   * Akış kullanmayan modellerde kolonu her zaman göstermek, sürekli boş bir
-   * sütun bırakırdı; kolon listesi zaten admin tarafından yönetiliyor ve
-   * gereksiz genişlik pahalı.
+   * Always showing the column on models that do not use workflows would leave a
+   * permanently empty column; the column list is already managed by the admin and
+   * unnecessary width is costly.
    */
   get hasWorkflowStatus(): boolean {
-    // Satır dizisi yalnız yeniden atanır; aynı dizi için sonuç değişmez.
+    // The rows array is only ever reassigned; the result does not change for the same array.
     if (this.workflowStatusMemo?.rows !== this.rows) {
       this.workflowStatusMemo = { rows: this.rows, value: this.rows.some(row => this.workflowStatusOf(row) !== '') };
     }
@@ -603,7 +603,7 @@ export class ModelDataComponent implements OnInit {
 
   private workflowStatusMemo?: { rows: DataRow[]; value: boolean };
 
-  /** Sürüm geçmişini backend'den yükler */
+  /** Loads the version history from the backend */
   loadVersions(): void {
     this.publishedTableService.getVersions(this.typeName).pipe(markDirty(this.cdr)).subscribe({
       next: r => {
@@ -611,11 +611,11 @@ export class ModelDataComponent implements OnInit {
           this.versions.set(r.data ?? []);
         }
       },
-      error: () => { /* sessizce geç */ }
+      error: () => { /* skip silently */ }
     });
   }
 
-  /** Sürüm panelini aç/kapat; açılırken veriyi yükle */
+  /** Open/close the version panel; load the data when opening */
   toggleVersionPanel(): void {
     this.showVersionPanel.update(v => !v);
     if (this.showVersionPanel()) {
@@ -623,7 +623,7 @@ export class ModelDataComponent implements OnInit {
     }
   }
 
-  /** Onay bekleyen sürüm; null ise diyalog kapalıdır. */
+  /** Version awaiting confirmation; the dialog is closed when null. */
   pendingRollbackVersion: number | null = null;
   isRollingBack = false;
 
@@ -635,7 +635,7 @@ export class ModelDataComponent implements OnInit {
     this.pendingRollbackVersion = null;
   }
 
-  /** Onay alındıktan sonra rollback isteği gönderir; başarıda veri + sürümleri yeniler */
+  /** Sends the rollback request once confirmed; on success refreshes the data + versions */
   confirmRollback(): void {
     const version = this.pendingRollbackVersion;
     if (version === null) return;

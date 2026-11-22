@@ -1,11 +1,11 @@
 /**
- * Sayfalamada gösterilecek sayfa numaraları: en fazla 5'lik kayan pencere.
+ * Page numbers shown in pagination: a sliding window of at most 5.
  *
- * İlk ve son sayfa şablonda ayrıca (gerekirse "…" ile) çizilir; bu fonksiyon yalnız
- * ortadaki pencereyi döndürür. 7 ve daha az sayfada hepsi gösterilir.
+ * The first and last pages are drawn separately in the template (with "…" if needed); this function
+ * returns only the middle window. With 7 or fewer pages, all are shown.
  *
- * Eskiden model-data ve audit-log'da kopyaydı; role-detail ve user-permission-detail
- * ise TÜM sayfaları çiziyordu — 60+ modelde düğme satırı telefonda ekrandan taşıyordu.
+ * Previously duplicated in model-data and audit-log; role-detail and user-permission-detail
+ * drew ALL pages — with 60+ models the button row overflowed the screen on phones.
  */
 export function pageWindow(current: number, total: number): number[] {
   if (total <= 7) return Array.from({ length: Math.max(total, 0) }, (_, i) => i + 1);

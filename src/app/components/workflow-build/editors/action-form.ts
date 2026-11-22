@@ -2,14 +2,14 @@ import { WorkflowSetField, WorkflowSetMode, WorkflowStep } from '../../../models
 import { PublishedColumn } from '../../../services/published-model.service';
 
 /**
- * Alan güncelle düzenleyicisinin saf yardımcıları. Her biri adımın KOPYASINI
- * döner — düzenleyici değişikliği yayar, pop-up Kaydet'te belgeye yazar.
+ * Pure helpers of the field update editor. Each returns a COPY of the
+ * step — the editor emits the change, the pop-up writes it to the document on Save.
  */
 
-/** Akışın değer yazamayacağı kolon tipleri (içerik istemcide base64) — backend ile aynı. */
+/** Column types the flow cannot write values to (content is base64 on the client) — same as the backend. */
 const UNWRITABLE_TYPES: ReadonlySet<string> = new Set(['image', 'file']);
 
-/** Seçicide sunulan kolonlar: görsel/dosya hariç. (Salt okunur otomatik değer kolonunu sunucu yayında reddeder.) */
+/** Columns offered in the picker: excluding image/file. (The server rejects a read-only auto-value column on publish.) */
 export function writableColumns(columns: ReadonlyArray<PublishedColumn>): PublishedColumn[] {
   return columns.filter(column => !UNWRITABLE_TYPES.has(column.dataType));
 }
@@ -34,8 +34,8 @@ export function updateSet(step: WorkflowStep, index: number, patch: Partial<Work
 }
 
 /**
- * Değer kaynağını değiştirir. Eski değer taşınmaz: sabit "Onaylandı" formül
- * olarak geçersizdir, formül de sabit değer olarak anlamsızdır.
+ * Changes the value source. The old value is not carried over: a fixed "Onaylandı" (Approved) is
+ * invalid as a formula, and a formula is meaningless as a fixed value.
  */
 export function setMode(step: WorkflowStep, index: number, mode: WorkflowSetMode): WorkflowStep {
   const current = setsOf(step)[index];
@@ -43,14 +43,14 @@ export function setMode(step: WorkflowStep, index: number, mode: WorkflowSetMode
   return updateSet(step, index, { mode, value: mode === 'clear' ? null : '' });
 }
 
-/** Kolon değişince tipi farklı olabilir — değer sıfırlanır (formül korunur). */
+/** The type may differ when the column changes — the value is reset (the formula is kept). */
 export function setColumn(step: WorkflowStep, index: number, column: string): WorkflowStep {
   const current = setsOf(step)[index];
   if (!current || current.column === column) return step;
   return updateSet(step, index, { column, value: current.mode === 'formula' ? current.value : current.mode === 'clear' ? null : '' });
 }
 
-/** Birden çok satırda yazılan kolonlar (küçük harf) — sonuncu kazanırdı, kullanıcıya gösterilir. */
+/** Columns written by more than one row (lower case) — the last one would win; shown to the user. */
 export function duplicateColumns(step: WorkflowStep): Set<string> {
   const seen = new Set<string>();
   const duplicates = new Set<string>();

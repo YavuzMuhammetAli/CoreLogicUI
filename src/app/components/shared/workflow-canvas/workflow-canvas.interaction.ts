@@ -1,20 +1,20 @@
 import { GRID_STEP, Point } from './workflow-canvas.camera';
 
 /**
- * Tuval etkileşim kuralları — SAF fonksiyonlar, DOM yok.
+ * Canvas interaction rules — PURE functions, no DOM.
  *
- * Bileşen olayları dinler; "bu bir tıklama mı sürükleme mi", "düğüm nereye
- * yapışır", "çoklu sürüklemede kim nereye gider" kararları burada ve spec'li.
+ * The component listens to events; the "is this a click or a drag", "where does the node
+ * snap", "where does each node go in a multi-drag" decisions live here, with specs.
  */
 
 /**
- * Basıp bu kadar (ekran pikseli) kıpırdamadan bırakmak tıklamadır. Eşiksiz her
- * tıklama bir "taşıma" sayılıyor ve elin titremesi düğümü 1 px oynatıp geri al
- * geçmişine boş bir adım düşürüyordu.
+ * Pressing and releasing without moving this much (screen pixels) is a click. Without a threshold every
+ * click counted as a "move", and a shaky hand nudged the node by 1 px and dropped an empty step
+ * into the undo history.
  */
 export const DRAG_THRESHOLD = 4;
 
-/** Ok tuşuyla itme adımı (px); Shift ile ızgara adımı. */
+/** Arrow-key nudge step (px); a grid step with Shift. */
 export const NUDGE_STEP = 1;
 
 export function exceedsThreshold(dx: number, dy: number, threshold = DRAG_THRESHOLD): boolean {
@@ -22,23 +22,23 @@ export function exceedsThreshold(dx: number, dy: number, threshold = DRAG_THRESH
 }
 
 /**
- * Değeri ızgaraya yapıştırır. `Math.round` (floor değil): negatif ve pozitif
- * yönde simetrik — ızgara çizgisinin iki yanındaki düğüm en yakın çizgiye gider.
+ * Snaps the value to the grid. `Math.round` (not floor): symmetric in the negative and positive
+ * directions — a node on either side of a grid line goes to the nearest line.
  */
 export function snapValue(value: number, enabled: boolean, grid = GRID_STEP): number {
   if (!enabled || grid <= 0) return value;
-  // -0 yerine 0 (yuvarlamada -0.4 → -0 çıkıyor).
+  // 0 instead of -0 (rounding -0.4 gives -0).
   return Math.round(value / grid) * grid + 0;
 }
 
 /**
- * Sürüklenen düğümlerin yeni konumları.
+ * New positions of the dragged nodes.
  *
- * Ekran farkı dünya birimine çevrilir (`/ zoom`); aksi halde uzaklaşınca düğüm
- * imlecin gerisinde kalırdı. Yapıştırma her düğümün KENDİ konumuna uygulanır
- * (grubun ortak ofsetine değil) — zaten ızgaraya oturmuş düğümler birlikte
- * hizalı kalır. Negatif konum serbesttir: tuval her yöne kaydırılabildiği için
- * (kamera + "sığdır") çizimin soluna/üstüne de düğüm taşınabilmeli.
+ * The screen delta is converted to world units (`/ zoom`); otherwise when zoomed out the node
+ * would lag behind the cursor. Snapping is applied to each node's OWN position
+ * (not the group's shared offset) — nodes already on the grid stay aligned
+ * together. Negative positions are allowed: since the canvas can be panned in every direction
+ * (camera + "fit"), nodes must be movable to the left of/above the drawing too.
  */
 export function dragPositions(
   origins: ReadonlyMap<string, Point>,
@@ -60,7 +60,7 @@ export function dragPositions(
   return result;
 }
 
-/** Ok tuşu yönü → dünya kayması. Shift ızgara adımı kadar iter. */
+/** Arrow key direction → world offset. Shift nudges by a grid step. */
 export function nudgeDelta(direction: 'left' | 'right' | 'up' | 'down', large: boolean): Point {
   const step = large ? GRID_STEP : NUDGE_STEP;
   switch (direction) {
@@ -71,13 +71,13 @@ export function nudgeDelta(direction: 'left' | 'right' | 'up' | 'down', large: b
   }
 }
 
-/** Açılan menünün pencere kenarına bırakılan boşluk (px). */
+/** Gap left between an opened menu and the window edge (px). */
 export const MENU_MARGIN = 8;
 
 /**
- * Açılır menüyü pencereye sığdırır. Sağa sığmazsa imlecin soluna, alta
- * sığmazsa üstüne açılır (işletim sistemi menüleri gibi); o da sığmazsa
- * kenara yaslanır. Pencereden büyük menü sol-üst kenara oturur.
+ * Fits a dropdown menu inside the window. If it doesn't fit to the right it opens left of the cursor,
+ * if it doesn't fit below it opens above (like OS menus); if that doesn't fit either it
+ * leans against the edge. A menu larger than the window sits at the top-left edge.
  */
 export function clampToWindow(
   at: Point,
@@ -105,11 +105,11 @@ interface Box {
   height: number;
 }
 
-/** Yeni düğümle komşuları arasında bırakılacak asgari boşluk (px). */
+/** Minimum gap to leave between a new node and its neighbours (px). */
 export const PLACEMENT_MARGIN = 16;
-/** Yeni düğüm çıkışın bu kadar altına konur (katman aralığı — "onay" etiketi sığsın). */
+/** A new node is placed this far below the exit (layer gap — so the "onay" (approve) label fits). */
 export const PLACEMENT_ROW_GAP = 80;
-/** Yer aranırken en fazla kaç kez sağa kaydırılır — kötü durumda bile sonlansın. */
+/** Maximum number of shifts to the right when looking for space — so it terminates even in the worst case. */
 const PLACEMENT_MAX_TRIES = 24;
 
 function overlaps(a: Box, b: Box, margin: number): boolean {
@@ -118,9 +118,9 @@ function overlaps(a: Box, b: Box, margin: number): boolean {
 }
 
 /**
- * Bağlı eklenen düğümün yeri: kaynağın, bağlanan portun hizasında altı. Oradaki
- * yer doluysa düğüm genişliği kadar sağa kayarak boş yer aranır (aynı çıkış
- * sırasındaki kardeşler yan yana dizilir). Izgaraya oturur.
+ * Position of a node added as connected: below the source, aligned with the connected port. If that
+ * spot is taken, free space is searched by shifting right by the node width (siblings in the same exit
+ * order line up side by side). Snaps to the grid.
  */
 export function placeBelow(
   source: Box,
@@ -137,8 +137,8 @@ export function placeBelow(
 }
 
 /**
- * `start`tan başlayıp sağa doğru, hiçbir kutuya binmeyen ilk ızgara konumu.
- * Yer bulunamazsa başlangıç konumu döner (kullanıcı taşır; sonsuz döngü olmaz).
+ * The first grid position, starting from `start` and moving right, that overlaps no box.
+ * If none is found, the start position is returned (the user moves it; no infinite loop).
  */
 export function findFreeSpot(
   start: Point,
@@ -158,7 +158,7 @@ export function findFreeSpot(
   return { x: startX, y };
 }
 
-/** Bırakılan / sağ tıklanan noktaya ortalanmış, ızgaraya oturmuş düğüm konumu. */
+/** Node position centred on the dropped / right-clicked point, snapped to the grid. */
 export function centeredAt(point: Point, size: { width: number; height: number }, grid = GRID_STEP): Point {
   return {
     x: snapValue(point.x - size.width / 2, true, grid),
@@ -166,7 +166,7 @@ export function centeredAt(point: Point, size: { width: number; height: number }
   };
 }
 
-/** İki köşeden normalleştirilmiş dikdörtgen (lasso çizimi için). */
+/** Rectangle normalised from two corners (for drawing the lasso). */
 export function normalizedRect(a: Point, b: Point): { x: number; y: number; width: number; height: number } {
   return {
     x: Math.min(a.x, b.x),

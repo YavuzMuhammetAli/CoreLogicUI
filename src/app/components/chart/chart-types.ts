@@ -2,15 +2,15 @@ import { ChartType } from '../../models/report.model';
 import type { IconName } from '../shared/icon/icons.generated';
 
 /**
- * Grafik tipi seçici (report-build, dashboard-build) için paylaşılan metadata.
- * `icon` Material Symbols adıdır, `<app-icon>` ile çizilir; renk `currentColor`'dan gelir,
- * böylece seçili/hover durumunda CSS ile renklendirilebilir.
+ * Shared metadata for the chart type picker (report-build, dashboard-build).
+ * `icon` is a Material Symbols name, drawn with `<app-icon>`; the colour comes from `currentColor`,
+ * so it can be coloured via CSS in selected/hover states.
  */
 export interface ChartTypeMeta {
   value: ChartType;
-  /** i18n anahtarı — şablonlarda `| t` ile çevrilir (bkz. report.i18n.ts 'chart.type.*.label'). */
+  /** i18n key — translated in templates with `| t` (see report.i18n.ts 'chart.type.*.label'). */
   labelKey: string;
-  /** i18n anahtarı — şablonlarda `| t` ile çevrilir (bkz. report.i18n.ts 'chart.type.*.hint'). */
+  /** i18n key — translated in templates with `| t` (see report.i18n.ts 'chart.type.*.hint'). */
   hintKey: string;
   icon: IconName;
 }
@@ -76,5 +76,5 @@ export function chartTypeMeta(value: ChartType): ChartTypeMeta | undefined {
   return CHART_TYPE_META.find(m => m.value === value);
 }
 
-/** Tek aggregate gerektiren tipler — birden çok aggregate seçiliyse builder'da uyarı gösterilir. */
+/** Types requiring a single aggregate — the builder shows a warning if several aggregates are selected. */
 export const SINGLE_AGGREGATE_CHART_TYPES: ChartType[] = ['pie', 'donut', 'radialBar', 'kpi'];

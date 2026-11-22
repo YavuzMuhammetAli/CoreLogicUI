@@ -1,17 +1,17 @@
 /**
- * Topbar zilindeki uygulama içi bildirim — backend `UserNotificationDto`.
+ * In-app notification in the topbar bell — backend `UserNotificationDto`.
  *
- * `kind` akış kaynaklı bildirimlerde backend `WorkflowNotifyKinds` değeridir;
- * metin istemcide `notification.kind.<kind>` anahtarıyla çevrilir.
+ * For workflow-originated notifications `kind` is a backend `WorkflowNotifyKinds` value;
+ * the text is translated on the client with the `notification.kind.<kind>` key.
  */
 export interface UserNotification {
   id: number;
   kind: string;
-  /** Görev adı — çeviri metnine `{name}` olarak girer. */
+  /** Task name — goes into the translation text as `{name}`. */
   title: string;
-  /** Kayıt etiketi (ör. "Siparis #12"). */
+  /** Record label (e.g. "Siparis #12"). */
   body?: string | null;
-  /** Tıklanınca gidilecek uygulama içi yol (ör. "/tasks/12"). */
+  /** In-app path to navigate to on click (e.g. "/tasks/12"). */
   link?: string | null;
   taskId?: number | null;
   createdAt: string;

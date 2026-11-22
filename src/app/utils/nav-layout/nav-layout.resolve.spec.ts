@@ -14,7 +14,7 @@ const ctx: NavResolveContext = {
 };
 
 describe('nav-layout.resolve', () => {
-  it('bağlantıları rota, etiket ve ikona çevirir', () => {
+  it('maps links to route, label and icon', () => {
     const doc: NavLayout = {
       schemaVersion: 1, appendUnplaced: false, items: [
         { kind: 'page', id: 'p1', page: 'tasks' },
@@ -26,17 +26,17 @@ describe('nav-layout.resolve', () => {
         { kind: 'url', id: 'u1', url: 'https://destek.ornek.com', label: 'Destek' }
       ]
     };
-    const [tasks, dashboards, personel, izin, dash, report, url] = resolveNav(doc, ctx) as ResolvedNavLink[];
+    const [tasks, dashboards, personnel, leave, dash, report, url] = resolveNav(doc, ctx) as ResolvedNavLink[];
     expect(tasks).toEqual(jasmine.objectContaining({ label: '#tasks', route: ['/tasks'], isTasks: true }));
     expect(dashboards).toEqual(jasmine.objectContaining({ label: 'Panolar', route: ['/dashboard'], exact: true }));
-    expect(personel).toEqual(jasmine.objectContaining({ label: 'Personel Kartı', route: ['/models', 'Personel'], icon: { kind: 'model', name: 'badge' } }));
-    expect(izin.label).toBe('İzinler');
+    expect(personnel).toEqual(jasmine.objectContaining({ label: 'Personel Kartı', route: ['/models', 'Personel'], icon: { kind: 'model', name: 'badge' } }));
+    expect(leave.label).toBe('İzinler');
     expect(dash.route).toEqual(['/dashboard', 4]);
     expect(report.route).toEqual(['/reports', 9]);
     expect(url).toEqual(jasmine.objectContaining({ route: null, href: 'https://destek.ornek.com', icon: { kind: 'app', name: 'open_in_new' } }));
   });
 
-  it('görünmeyen modeli atar, boş klasörü gizler', () => {
+  it('drops an invisible model and hides an empty folder', () => {
     const doc: NavLayout = {
       schemaVersion: 1, appendUnplaced: false, items: [
         { kind: 'folder', id: 'f1', label: 'Gizli', children: [{ kind: 'model', id: 'm1', typeName: 'Maas' }] },
@@ -53,7 +53,7 @@ describe('nav-layout.resolve', () => {
     expect(folder.children.map(c => c.id)).toEqual(['m3']);
   });
 
-  it('yerleştirilmemiş modeller sona "Diğer modeller" klasöründe', () => {
+  it('unplaced models go at the end in the "Diğer modeller" (Other models) folder', () => {
     const doc: NavLayout = {
       schemaVersion: 1, appendUnplaced: true, items: [
         { kind: 'folder', id: 'f1', label: 'İK', children: [{ kind: 'model', id: 'm1', typeName: 'Personel' }] }
@@ -66,14 +66,14 @@ describe('nav-layout.resolve', () => {
     expect(other.children.map(c => c.label)).toEqual(['Izin', 'Araç']);
   });
 
-  it('hepsi yerleşmişse "Diğer" klasörü çıkmaz', () => {
+  it('no "Diğer" (Other) folder when everything is placed', () => {
     const doc = seedNavLayout({ models: ctx.models, navDashboards: [] });
     expect(resolveNav(doc, ctx).some(n => n.id === UNPLACED_FOLDER_ID)).toBeFalse();
   });
 });
 
 describe('nav-layout.seed', () => {
-  it('bugünkü menüyü geçerli bir belgeye çevirir', () => {
+  it('turns the current menu into a valid document', () => {
     const doc = seedNavLayout({
       models: [{ typeName: 'Personel' }, { typeName: 'Izin' }],
       navDashboards: [{ id: 3, name: 'Yönetim Paneli' }]
@@ -82,7 +82,7 @@ describe('nav-layout.seed', () => {
     expect(validateNavLayout(doc, null, 'publish')).toEqual([]);
   });
 
-  it('uzun dashboard adı etiket sınırına kırpılır', () => {
+  it('truncates a long dashboard name to the label limit', () => {
     const doc = seedNavLayout({ models: [], navDashboards: [{ id: 1, name: 'x'.repeat(80) }] });
     expect(validateNavLayout(doc, null, 'publish')).toEqual([]);
   });

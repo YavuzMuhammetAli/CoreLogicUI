@@ -3,15 +3,15 @@ import { ExitPort, exitsOf, mapRefs, sameKey, setExit } from '../../../utils/wor
 import { WorkflowDesignDoc, WorkflowDesignMeta } from './workflow-design.doc';
 
 /**
- * Tasarım belgesi komutları — SAF. Her komut yeni bir belge döner; girdiyi
- * değiştirmez. Bileşen yalnız hangi komutun ne zaman çağrılacağına karar verir,
- * kuralların hepsi burada ve spec'li.
+ * Design document commands — PURE. Each command returns a new document; the input
+ * is not mutated. The component only decides which command to call when;
+ * all the rules live here and are covered by specs.
  *
- * Anahtar karşılaştırmaları büyük/küçük harf duyarsız (backend FindStep ile aynı):
- * "Mudur" ile "mudur" aynı adımdır.
+ * Key comparisons are case-insensitive (same as backend FindStep):
+ * "Mudur" and "mudur" are the same step.
  */
 
-/** Değer aynıysa AYNI belge döner — boş değişiklik geri al geçmişine adım olarak düşmesin. */
+/** Returns the SAME document if the value is the same — an empty change should not land in undo history as a step. */
 export function setMeta(doc: WorkflowDesignDoc, patch: Partial<WorkflowDesignMeta>): WorkflowDesignDoc {
   const changed = (Object.keys(patch) as Array<keyof WorkflowDesignMeta>)
     .some(key => patch[key] !== doc.meta[key]);
@@ -35,14 +35,14 @@ export function findStep(doc: WorkflowDesignDoc, key: string): WorkflowStep | un
 }
 
 /**
- * Adım ekler ya da günceller.
+ * Adds or updates a step.
  *
- * - `originalKey` boşsa adım sona eklenir; başlangıç adımı yoksa o olur
- *   (kullanıcının ayrıca seçmesi gerekmesin).
- * - Anahtar değiştiyse diğer adımların çıkışları, başlangıç adımı ve durum
- *   etiketi yeni anahtara taşınır — aksi halde bağlantılar sessizce kopardı.
- * - `statusLabel` adımın `entityStatusMap` girdisidir; boşsa girdi silinir.
- *   Haritadaki diğer girdiler (bitiş etiketleri dahil) KORUNUR.
+ * - If `originalKey` is empty the step is appended; if there is no start step it becomes it
+ *   (so the user does not have to pick it separately).
+ * - If the key changed, other steps' exits, the start step and the status
+ *   label move to the new key — otherwise connections would silently break.
+ * - `statusLabel` is the step's `entityStatusMap` entry; if empty the entry is deleted.
+ *   Other entries in the map (end labels included) are KEPT.
  */
 export function upsertStep(
   doc: WorkflowDesignDoc, originalKey: string | null, step: WorkflowStep, statusLabel: string
@@ -73,8 +73,8 @@ export function upsertStep(
 }
 
 /**
- * Adımı siler. Ona bağlanan çıkışlar temizlenir (terminale düşer), başlangıç
- * adımıysa kalan ilk adım başlangıç olur, durum etiketi silinir.
+ * Deletes a step. Exits connected to it are cleared (fall to the terminal); if it was the start
+ * step the first remaining step becomes the start; the status label is deleted.
  */
 export function removeStep(doc: WorkflowDesignDoc, key: string): WorkflowDesignDoc {
   const removed = findStep(doc, key);
@@ -95,9 +95,9 @@ export function removeStep(doc: WorkflowDesignDoc, key: string): WorkflowDesignD
 }
 
 /**
- * Çıkışı bir hedefe bağlar. Kendine bağlantı ve kapalı çıkış (red kapalıyken
- * red) yok sayılır — doğrulayıcı ikisini de reddediyor; canvas'ta çizilen
- * bağlantı kayıtta sessizce kaybolmasın diye hiç yazılmaz.
+ * Connects an exit to a target. Self-connections and closed exits (reject while
+ * rejection is disabled) are ignored — the validator rejects both; so that a connection drawn on
+ * the canvas does not silently vanish on save, it is never written.
  */
 export function connect(doc: WorkflowDesignDoc, from: string, port: ExitPort, to: string | null): WorkflowDesignDoc {
   if (to && sameKey(from, to)) return doc;
@@ -111,14 +111,14 @@ export function connect(doc: WorkflowDesignDoc, from: string, port: ExitPort, to
   return replaceStep(doc, source, setExit(source, port, to));
 }
 
-/** Düğümün konumunu yazar (tam piksele yuvarlanır). */
+/** Writes the node's position (rounded to whole pixels). */
 export function moveStep(doc: WorkflowDesignDoc, key: string, x: number, y: number): WorkflowDesignDoc {
   return moveSteps(doc, [{ key, x, y }]);
 }
 
 /**
- * Birden çok düğümün konumunu TEK değişiklikte yazar — çoklu sürükleme ve
- * "ilk elle taşımada tüm konumları sabitle" tek geri al adımı olsun.
+ * Writes the positions of several nodes in A SINGLE change — so multi-drag and
+ * "pin all positions on the first manual move" are a single undo step.
  */
 export function moveSteps(
   doc: WorkflowDesignDoc, moves: ReadonlyArray<{ key: string; x: number; y: number }>
@@ -140,12 +140,12 @@ export function moveSteps(
   return changed ? { ...doc, graph: { ...doc.graph, steps } } : doc;
 }
 
-/** Birden çok adımı siler (her biri removeStep kurallarıyla). */
+/** Deletes several steps (each with removeStep rules). */
 export function removeSteps(doc: WorkflowDesignDoc, keys: ReadonlyArray<string>): WorkflowDesignDoc {
   return keys.reduce((current, key) => removeStep(current, key), doc);
 }
 
-/** Çıkışın bağlantısını kaldırır — akış o çıkışta biter (terminale düşer). */
+/** Removes the exit's connection — the flow ends at that exit (falls to the terminal). */
 export function disconnect(doc: WorkflowDesignDoc, from: string, port: ExitPort): WorkflowDesignDoc {
   const source = findStep(doc, from);
   if (!source) return doc;
@@ -157,9 +157,9 @@ export function disconnect(doc: WorkflowDesignDoc, from: string, port: ExitPort)
 }
 
 /**
- * "Otomatik düzenle": elle verilmiş konumlar silinir, canvas otomatik
- * yerleşime düşer. null yazılır (hesaplanmış koordinat değil) — sonradan
- * eklenen adımlar da aynı düzene katılsın.
+ * "Auto arrange": manually set positions are deleted, the canvas falls back to auto
+ * layout. null is written (not computed coordinates) — so steps added
+ * later join the same arrangement.
  */
 export function clearPositions(doc: WorkflowDesignDoc): WorkflowDesignDoc {
   if (doc.graph.steps.every(step => step.x == null && step.y == null)) return doc;
@@ -170,8 +170,8 @@ export function clearPositions(doc: WorkflowDesignDoc): WorkflowDesignDoc {
 }
 
 /**
- * Adımı yerinde dönüştürür (özellik panelinin alan değişiklikleri). Dönüşüm
- * aynı nesneyi döndürürse belge de aynı kalır — boş geri al adımı oluşmaz.
+ * Transforms a step in place (field changes from the inspector panel). If the transformation
+ * returns the same object the document stays the same too — no empty undo step is created.
  */
 export function patchStep(
   doc: WorkflowDesignDoc, key: string, transform: (step: WorkflowStep) => WorkflowStep
@@ -180,15 +180,15 @@ export function patchStep(
   return step ? replaceStep(doc, step, transform(step)) : doc;
 }
 
-/** Adımın durum etiketini yazar; boş metin etiketi siler. */
+/** Writes the step's status label; empty text deletes the label. */
 export function labelStep(doc: WorkflowDesignDoc, key: string, label: string): WorkflowDesignDoc {
   const step = findStep(doc, key);
   return step ? setStatusLabel(doc, step.key, label) : doc;
 }
 
 /**
- * Adımın anahtarını değiştirir; ona yapılan tüm referanslar (çıkışlar,
- * başlangıç, durum etiketi) taşınır. Geçerlilik ve tekillik çağıranın işi.
+ * Changes the step's key; all references to it (exits,
+ * start, status label) are moved. Validity and uniqueness are the caller's job.
  */
 export function renameStep(doc: WorkflowDesignDoc, oldKey: string, newKey: string): WorkflowDesignDoc {
   const step = findStep(doc, oldKey);
@@ -198,15 +198,15 @@ export function renameStep(doc: WorkflowDesignDoc, oldKey: string, newKey: strin
   return renameReferences({ ...doc, graph: { ...doc.graph, steps } }, step.key, newKey);
 }
 
-/** Yeni adıma çakışmayan bir anahtar önerir (adim1, adim2, …). */
-export function suggestKey(doc: WorkflowDesignDoc, prefix = 'adim'): string {
+/** Suggests a non-colliding key for a new step (step1, step2, …). */
+export function suggestKey(doc: WorkflowDesignDoc, prefix = 'step'): string {
   const existing = new Set(doc.graph.steps.map(step => step.key.toLowerCase()));
   let index = doc.graph.steps.length + 1;
   while (existing.has(`${prefix}${index}`)) index++;
   return `${prefix}${index}`;
 }
 
-// ── İç yardımcılar ──────────────────────────────────────────────────────────
+// ── Internal helpers ──────────────────────────────────────────────────────────
 
 function replaceStep(doc: WorkflowDesignDoc, oldStep: WorkflowStep, newStep: WorkflowStep): WorkflowDesignDoc {
   if (oldStep === newStep) return doc;
@@ -214,7 +214,7 @@ function replaceStep(doc: WorkflowDesignDoc, oldStep: WorkflowStep, newStep: Wor
   return { ...doc, graph: { ...doc.graph, steps } };
 }
 
-/** Eski anahtara yapılan tüm referansları (çıkışlar, başlangıç, durum etiketi) taşır. */
+/** Moves all references to the old key (exits, start, status label). */
 function renameReferences(doc: WorkflowDesignDoc, oldKey: string, newKey: string): WorkflowDesignDoc {
   const steps = doc.graph.steps.map(step =>
     mapRefs(step, target => sameKey(target, oldKey) ? newKey : target));

@@ -6,17 +6,17 @@ import { AiService } from './ai.service';
 import { AiStreamEvent } from '../models/ai.model';
 
 /**
- * Yapay Zeka SSE akışının ayrıştırılması.
+ * Parsing the AI SSE stream.
  *
- * Akış HttpClient'tan değil fetch'ten geçer (EventSource POST yapamaz); bu yüzden çerçeveleme,
- * başlıklar ve akış öncesi hata gövdesi elle işlenir — ve interceptor'lar baypas edildiği için
- * Accept-Language servis tarafından eklenmek zorunda. Kimlik çerezle kendiliğinden gider.
+ * The stream goes through fetch, not HttpClient (EventSource cannot POST); so framing,
+ * headers and the pre-stream error body are handled by hand — and since the interceptors are
+ * bypassed, the service has to add Accept-Language itself. Identity travels with the cookie.
  */
 describe('AiService.streamChat', () => {
   let service: AiService;
   let fetchSpy: jasmine.Spy;
 
-  /** Verilen parçaları sırayla akıtan bir SSE yanıtı. */
+  /** An SSE response that streams the given chunks in order. */
   function sse(...chunks: string[]): Response {
     const encoder = new TextEncoder();
     const body = new ReadableStream<Uint8Array>({
@@ -44,7 +44,7 @@ describe('AiService.streamChat', () => {
     localStorage.removeItem('lang');
   });
 
-  it('parçalara bölünmüş çerçeveleri birleştirip sırayla olay üretir', async () => {
+  it('joins frames split across chunks and emits events in order', async () => {
     fetchSpy.and.resolveTo(sse(
       'event: meta\ndata: {"conversationId":7}\n\nevent: te',
       'xt\ndata: {"text":"Mer"}\n\nevent: text\ndata: {"text":"haba"}\n\n',
@@ -59,7 +59,7 @@ describe('AiService.streamChat', () => {
     ]);
   });
 
-  it('akış ortasında biten kota "quota" olayı olarak gelir', async () => {
+  it('quota exhausted mid-stream arrives as a "quota" event', async () => {
     fetchSpy.and.resolveTo(sse(
       'event: quota\ndata: {"message":"Kota doldu"}\n\n',
       'event: usage\ndata: {"inputTokens":10,"outputTokens":5}\n\n'
@@ -71,7 +71,7 @@ describe('AiService.streamChat', () => {
     ]);
   });
 
-  it('tool olayı konuyu, status olayı yeniden deneme metnini taşır', async () => {
+  it('the tool event carries the subject, the status event carries the retry text', async () => {
     fetchSpy.and.resolveTo(sse(
       'event: tool\ndata: {"name":"propose_model","subject":"Musteri"}\n\n',
       'event: tool\ndata: {"name":"list_published_models","subject":null}\n\n',
@@ -85,7 +85,7 @@ describe('AiService.streamChat', () => {
     ]);
   });
 
-  it('tanınmayan olay ve bozuk JSON sessizce atlanır', async () => {
+  it('unknown events and malformed JSON are skipped silently', async () => {
     fetchSpy.and.resolveTo(sse(
       'event: gelecekte-eklenecek\ndata: {}\n\n',
       'event: text\ndata: {bozuk\n\n',
@@ -95,7 +95,7 @@ describe('AiService.streamChat', () => {
     expect(await collect()).toEqual([{ type: 'refusal' }]);
   });
 
-  it('akış başlamadan dönen hata gövdesinin mesajını tek hata olayı yapar', async () => {
+  it('turns the message of an error body returned before the stream starts into a single error event', async () => {
     fetchSpy.and.resolveTo(new Response(
       JSON.stringify({ success: false, message: 'Aylık kota doldu.' }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -104,7 +104,7 @@ describe('AiService.streamChat', () => {
     expect(await collect()).toEqual([{ type: 'error', message: 'Aylık kota doldu.' }]);
   });
 
-  it('interceptor baypas edildiği için dil başlığını kendisi ekler, token taşımaz', async () => {
+  it('adds the language header itself because the interceptors are bypassed, carries no token', async () => {
     localStorage.setItem('lang', 'en');
     fetchSpy.and.resolveTo(sse('event: done\ndata: {}\n\n'));
 

@@ -15,7 +15,7 @@ function sim(extra: Partial<WorkflowSimulation>): WorkflowSimulation {
 }
 
 describe('workflow-overlay', () => {
-  it('geçilen adımlar ve çıkılan portlar; bitiş işaretlenir', () => {
+  it('visited steps and exited ports; the end is marked', () => {
     const overlay = simulationOverlay(sim({}));
 
     expect(overlay.nodes).toEqual({ mudur: 'visited', tutar: 'visited', son: 'end' });
@@ -23,7 +23,7 @@ describe('workflow-overlay', () => {
     expect(edgeId('Mudur', 'approve')).toBe('mudur|approve');
   });
 
-  it('bekleyen adım current, olaydaki adım failed', () => {
+  it('waiting step is current, the incident step is failed', () => {
     expect(simulationOverlay(sim({ outcome: 'waiting', endStepKey: null, stopStepKey: 'son' })).nodes['son']).toBe('current');
     expect(simulationOverlay(sim({ outcome: 'incident', endStepKey: null, stopStepKey: 'tutar' })).nodes['tutar']).toBe('failed');
   });

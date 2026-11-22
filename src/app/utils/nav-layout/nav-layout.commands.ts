@@ -1,12 +1,12 @@
 import { NavFolder, NavLayout, NavLink, NavNode } from './nav-layout.model';
 
 /**
- * Navigasyon belgesi üzerinde SAF komutlar — tasarımcı her değişikliği bunlardan biriyle yapar,
- * böylece tek komut = tek geri al adımı. Geçersiz istek (bilinmeyen kimlik, klasörü klasöre
- * koymak) belgeyi AYNI referansla döndürür; geçmiş aynı referansı kaydetmez.
+ * PURE commands on the navigation document — the designer makes every change with one of these,
+ * so one command = one undo step. An invalid request (unknown id, putting a folder into a
+ * folder) returns the document with the SAME reference; history does not record the same reference.
  */
 
-/** Hedef konum: kök (`folderId: null`) ya da bir klasörün içi; `index` yoksa sona. */
+/** Target position: the root (`folderId: null`) or inside a folder; at the end if there is no `index`. */
 export interface NavTarget {
   readonly folderId: string | null;
   readonly index?: number;
@@ -14,7 +14,7 @@ export interface NavTarget {
 
 export interface NavLocation {
   readonly node: NavNode;
-  /** Kökteyse null. */
+  /** Null if at the root. */
   readonly folderId: string | null;
   readonly index: number;
 }
@@ -40,7 +40,7 @@ export function navIds(doc: NavLayout): Set<string> {
   return ids;
 }
 
-/** Tasarımda yer alan model adları. */
+/** Names of the models placed in the design. */
 export function placedNavModels(doc: NavLayout): Set<string> {
   const names = new Set<string>();
   const visit = (link: NavLink) => { if (link.kind === 'model') names.add(link.typeName); };
@@ -51,7 +51,7 @@ export function placedNavModels(doc: NavLayout): Set<string> {
   return names;
 }
 
-/** `n1`, `n2`… — belgede kullanılmayan ilk kimlik. */
+/** `n1`, `n2`… — the first id not used in the document. */
 export function nextNavId(doc: NavLayout, prefix = 'n'): string {
   let max = 0;
   for (const id of navIds(doc)) {
@@ -73,7 +73,7 @@ export function removeNavNode(doc: NavLayout, id: string): NavLayout {
   return detach(doc, at);
 }
 
-/** Düğümü hedefe taşır. Klasör yalnız köke gider; hedef indeksi taşınmadan ÖNCEKİ diziye göredir. */
+/** Moves the node to the target. A folder can only go to the root; the target index refers to the array BEFORE the move. */
 export function moveNavNode(doc: NavLayout, id: string, target: NavTarget): NavLayout {
   const at = findNavNode(doc, id);
   if (!at) return doc;
@@ -81,7 +81,7 @@ export function moveNavNode(doc: NavLayout, id: string, target: NavTarget): NavL
   if (target.folderId !== null && target.folderId === id) return doc;
   if (target.folderId !== null && findNavNode(doc, target.folderId)?.node.kind !== 'folder') return doc;
 
-  // Aynı kapta ileri taşırken kaldırma indeksleri bir kaydırır.
+  // When moving forward within the same container, the removal shifts indices by one.
   let index = target.index;
   if (index !== undefined && at.folderId === target.folderId && index > at.index) index--;
   if (index !== undefined && at.folderId === target.folderId && index === at.index) return doc;
@@ -89,7 +89,7 @@ export function moveNavNode(doc: NavLayout, id: string, target: NavTarget): NavL
   return insert(detach(doc, at), at.node, { folderId: target.folderId, index });
 }
 
-/** Aynı kap içinde bir yukarı/aşağı (klavye: Alt+↑/↓). */
+/** One up/down within the same container (keyboard: Alt+↑/↓). */
 export function moveNavNodeBy(doc: NavLayout, id: string, delta: -1 | 1): NavLayout {
   const at = findNavNode(doc, id);
   if (!at) return doc;
@@ -99,7 +99,7 @@ export function moveNavNodeBy(doc: NavLayout, id: string, delta: -1 | 1): NavLay
   return moveNavNode(doc, id, { folderId: at.folderId, index: delta > 0 ? to + 1 : to });
 }
 
-/** Bağlantıyı hemen üstündeki klasörün sonuna alır (klavye: Alt+→). */
+/** Moves the link to the end of the folder directly above it (keyboard: Alt+→). */
 export function indentNavNode(doc: NavLayout, id: string): NavLayout {
   const at = findNavNode(doc, id);
   if (!at || at.folderId !== null || at.node.kind === 'folder' || at.index === 0) return doc;
@@ -108,7 +108,7 @@ export function indentNavNode(doc: NavLayout, id: string): NavLayout {
   return moveNavNode(doc, id, { folderId: above.id });
 }
 
-/** Bağlantıyı klasöründen çıkarıp klasörün hemen altına koyar (klavye: Alt+←). */
+/** Takes the link out of its folder and puts it right below the folder (keyboard: Alt+←). */
 export function outdentNavNode(doc: NavLayout, id: string): NavLayout {
   const at = findNavNode(doc, id);
   if (!at || at.folderId === null) return doc;
@@ -116,7 +116,7 @@ export function outdentNavNode(doc: NavLayout, id: string): NavLayout {
   return moveNavNode(doc, id, { folderId: null, index: folderIndex + 1 });
 }
 
-/** Düğümün alanlarını değiştirir (tür ve kimlik değişmez). */
+/** Changes the node's fields (kind and id do not change). */
 export function updateNavNode(doc: NavLayout, id: string, patch: Partial<Omit<NavFolder, 'kind' | 'id' | 'children'>> | Partial<NavLink>): NavLayout {
   const at = findNavNode(doc, id);
   if (!at) return doc;
@@ -128,7 +128,7 @@ export function setAppendUnplaced(doc: NavLayout, value: boolean): NavLayout {
   return doc.appendUnplaced === value ? doc : { ...doc, appendUnplaced: value };
 }
 
-// ─── İç yardımcılar ─────────────────────────────────────────────────────────
+// ─── Internal helpers ───────────────────────────────────────────────────────
 
 function folderOf(doc: NavLayout, folderId: string): NavFolder | null {
   const node = doc.items.find(n => n.id === folderId);

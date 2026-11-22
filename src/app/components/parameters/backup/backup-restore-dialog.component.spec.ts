@@ -10,7 +10,7 @@ import { environment } from '../../../../environments/environment';
 import { BackupHistoryItem } from '../../../models/parameter.model';
 
 /**
- * Geri yükleme diyaloğu — yıkıcı işlem olduğu için çift onay ve bitince zorunlu yeniden giriş.
+ * Restore dialog — a destructive operation, hence double confirmation and a mandatory re-login when done.
  */
 describe('BackupRestoreDialogComponent', () => {
   const base = `${environment.apiBaseUrl}/Parameter`;
@@ -45,7 +45,7 @@ describe('BackupRestoreDialogComponent', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('şirket kodu aynen yazılmadan ve parola girilmeden gönderilemez', () => {
+  it('cannot be submitted until the company code is typed exactly and a password is entered', () => {
     expect(component.canSubmit()).toBeFalse();
     component.codeInput.set(' ACME ');
     expect(component.canSubmit()).toBeFalse();
@@ -55,7 +55,7 @@ describe('BackupRestoreDialogComponent', () => {
     expect(component.canSubmit()).toBeFalse();
   });
 
-  it('sunucu reddederse onay adımında kalır, parola temizlenir', () => {
+  it('stays on the confirm step if the server rejects; the password is cleared', () => {
     component.codeInput.set('acme');
     component.passwordInput.set('yanlis');
     component.submit();
@@ -67,7 +67,7 @@ describe('BackupRestoreDialogComponent', () => {
     expect(component.passwordInput()).toBe('');
   });
 
-  it('kuyruğa alınınca durumu yoklar, bitince özet gösterir ve yeniden girişe yollar', fakeAsync(() => {
+  it('once queued it polls the status, shows the summary when done and sends to re-login', fakeAsync(() => {
     const router = TestBed.inject(Router);
     spyOn(router, 'navigate').and.resolveTo(true);
     component.codeInput.set('acme');
@@ -93,7 +93,7 @@ describe('BackupRestoreDialogComponent', () => {
     });
     expect(component.step()).toBe('done');
 
-    // Bitmiş diyalog kapatılamaz — tek çıkış yeniden giriş.
+    // A finished dialog cannot be closed — the only way out is re-login.
     component.close();
     expect(component.step()).toBe('done');
 
@@ -103,7 +103,7 @@ describe('BackupRestoreDialogComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { reason: 'tenant_restored' } });
   }));
 
-  it('başarısız geri yüklemede hatayı gösterir ve kapatılabilir', fakeAsync(() => {
+  it('shows the error on a failed restore and can be closed', fakeAsync(() => {
     const closed = jasmine.createSpy('closed');
     component.closed.subscribe(closed);
     component.codeInput.set('acme');

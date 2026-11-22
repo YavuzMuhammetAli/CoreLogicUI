@@ -59,20 +59,20 @@ import { IconComponent } from '../shared/icon/icon.component';
 
 type DataRow = Record<string, unknown>;
 
-/** Bir alt model sekmesinin tüm durumu */
+/** Full state of a sub-model tab */
 interface TabState {
   typeName: string;
   columns: PublishedColumn[];
   fkColumn: string;
 
-  /** Sunucudan gelen KAYITLI satırlar (yalnızca mevcut kayıt modunda dolar). */
+  /** SAVED rows from the server (filled only in existing-record mode). */
   rows: DataRow[];
   loading: boolean;
   error: string | null;
 
   /**
-   * Henüz kaydedilmemiş VEYA kaydedilirken hata almış satırlar — kendi alt ağaçlarıyla.
-   * Kaydetme hatasında bu liste ASLA temizlenmez; kullanıcı düzeltip tekrar dener.
+   * Rows not yet saved OR that failed while saving — with their own subtrees.
+   * This list is NEVER cleared on a save error; the user fixes it and retries.
    */
   staged: StagedNode[];
 
@@ -82,36 +82,36 @@ interface TabState {
 
   fileNames: Record<string, string>;
 
-  /** Toplu silme için seçili KAYITLI satırların ID'leri. */
+  /** IDs of the selected SAVED rows for bulk delete. */
   selectedIds: Set<number>;
-  /** Toplu kaldırma için seçili BEKLEYEN satırların geçici localId'leri. */
+  /** Temporary localIds of the selected PENDING rows for bulk removal. */
   selectedStaged: Set<number>;
-  /** Toplu silmede silinemeyen satırların hata özeti (satırlar seçili kalır). */
+  /** Error summary of the rows that could not be deleted in bulk delete (rows stay selected). */
   bulkErrors: string[];
-  /** Son toplu silme denemesinde kaç kayıt gönderildi (özet metni için). */
+  /** How many records were sent in the last bulk delete attempt (for the summary text). */
   bulkTotal: number;
 
-  /** getDisplayRows() sonucunun önbelleği (bkz. display-rows.util). */
+  /** Cache of the getDisplayRows() result (see display-rows.util). */
   displayCache?: DisplayRowsCache;
 
-  // Admin tarafından yönetilen tablo kolon görünürlüğü — null = ayar yok, tümü görünür.
-  // Alt modelin kendi liste sayfasıyla ('list' viewType) AYNI ayarı paylaşır.
+  // Admin-managed table column visibility — null = no setting, all visible.
+  // Shares the SAME setting as the sub-model's own list page ('list' viewType).
   visibleColumnNames: string[] | null;
   savingColumnVisibility: boolean;
-  /** Alt modelin yayınlanmış liste yerleşimi (ekran tasarımı) — varsa kolon sırası ondan. */
+  /** The sub-model's published list layout (screen design) — column order comes from it if present. */
   listLayout: ListLayout | null;
 
-  /** Tablo kolonları/başlıkları önbelleği (bkz. ModelDetailComponent.tableColumns). */
+  /** Cache of the table columns/headers (see ModelDetailComponent.tableColumns). */
   colsMemo?: TabColumnsMemo;
 
-  /** Çizilen en fazla satır; "Daha fazla göster" artırır. */
+  /** Maximum number of rendered rows; "Daha fazla göster" (Show more) increases it. */
   renderLimit?: number;
 
-  /** renderedRows() dilimi — kaynak ve sınır aynıysa aynı dizi döner (@for her turda diff'lemesin). */
+  /** renderedRows() slice — returns the same array when source and limit are unchanged (so @for does not diff every turn). */
   renderCache?: { source: DataRow[]; limit: number; result: DataRow[] };
 }
 
-/** Bir sekmenin tablo kolonları — girdileri değişmedikçe aynı nesne. */
+/** A tab's table columns — the same object while the inputs do not change. */
 interface TabColumnsMemo {
   layout: ListLayout | null;
   columns: PublishedColumn[];
@@ -120,11 +120,11 @@ interface TabColumnsMemo {
   cols: PublishedColumn[];
   headers: { key: string; label: string }[];
   byName: Map<string, PublishedColumn>;
-  /** Aramada taranan kolon adları. */
+  /** Column names scanned by search. */
   searchable: string[];
 }
 
-/** Alt tablo ilk açılışta en fazla bu kadar satır çizer. */
+/** A child table renders at most this many rows on first open. */
 const TAB_RENDER_STEP = 100;
 
 @Component({
@@ -146,113 +146,113 @@ const TAB_RENDER_STEP = 100;
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ModelDetailComponent implements OnInit, OnDestroy {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly languageService = inject(LanguageService);
   private readonly metadata = inject(RecordMetadataService);
-  /** Tablo hücrelerindeki lookup FK id'lerini toplu şekilde etikete çevirir. */
+  /** Resolves lookup FK ids in table cells to labels in bulk. */
   private readonly lookupLabels = inject(LookupLabelService);
-  /** Adres çubuğunu sayfa yeniden yüklemeden güncellemek için (yeni → düzenleme geçişi). */
+  /** To update the address bar without reloading the page (new → edit transition). */
   private readonly location = inject(Location);
   private readonly taskService = inject(WorkflowTaskService);
   private readonly instanceService = inject(WorkflowInstanceService);
   private readonly notification = inject(NotificationService);
 
-  /** Üst formun yerleşimi — Kaydet geçersiz formda durunca hatalı alanı gösterir. */
+  /** Layout of the parent form — shows the invalid field when Save stops on an invalid form. */
   @ViewChild(RecordLayoutComponent) private recordLayout?: RecordLayoutComponent;
 
-  // ─── Form tabanlı iş akışı ──────────────────────────────────────────────────
+  // ─── Form-based workflow ────────────────────────────────────────────────────
   //
-  // Kaydedilmiş kayıtta sunucunun kilit kararı (recordState) tutulur: süreç
-  // sürerken yalnız sırası gelen kişi, yalnız kendi adımının kolonlarını
-  // düzenler. Kilit sunucuda da uygulanır; buradaki yalnızca ekrana yansıması.
+  // For a saved record the server's lock decision (recordState) is kept: while the
+  // process runs, only the person whose turn it is edits only their own step's
+  // columns. The lock is enforced on the server too; this is only its reflection on screen.
 
-  /** Kaydın süreç durumu; yeni kayıtta ya da modül kurulu değilse null. */
+  /** The record's process state; null for a new record or when the module is not installed. */
   wfState: RecordWorkflowState | null = null;
-  /** Yeni kayıtta elle başlatılabilen akışlar (kayıtlıda wfState.startable). */
+  /** Workflows that can be started manually on a new record (wfState.startable for saved ones). */
   private newStartable: StartableWorkflow[] = [];
-  /** Süren akış işlemi — basılan butonda spinner: 'start:{code}' | 'approve:{id}' | 'reject:{id}'. */
+  /** Running workflow action — spinner on the pressed button: 'start:{code}' | 'approve:{id}' | 'reject:{id}'. */
   wfBusy: string | null = null;
-  /** Kaydet başarıyla bitince başlatılacak akış kodu ("{Akış} Başlat"). */
+  /** Workflow code to start once Save completes successfully ("{Akış} Başlat" / Start {workflow}). */
   private pendingStart: string | null = null;
-  /** Adım eylem diyaloğu (ek karar alanları / red açıklaması). */
+  /** Step action dialog (extra decision fields / rejection note). */
   actionDialog: { task: MyRecordTask; decision: 'approve' | 'reject'; error: string | null } | null = null;
   /**
-   * Kaydın kullanıcıya görünen en yeni süreci (sürüyor ya da bitmiş) — "Akışı
-   * görüntüle" düğmesi (bkz. loadLatestInstance); görme kararı sunucuda
-   * (Okuma + Akışı görüntüle izni, başlatan ya da görevli).
+   * The newest process of the record visible to the user (running or finished) — the
+   * "Akışı görüntüle" (View workflow) button (see loadLatestInstance); the visibility decision is on the server
+   * (Read + View workflow permission, starter or assignee).
    */
   latestInstanceId: number | null = null;
-  /** Açık "Akışı görüntüle" diyaloğunun süreci; null → kapalı. */
+  /** Process of the open "Akışı görüntüle" (View workflow) dialog; null → closed. */
   viewInstanceId: number | null = null;
 
   typeName = '';
   recordId = 0;
-  /** Yeni kayıt ekleme modu (route data: { mode: 'new' }) */
+  /** New record mode (route data: { mode: 'new' }) */
   isNew = false;
 
-  // Üst kayıt
+  // Parent record
   record: DataRow | null = null;
   model: PublishedModel | null = null;
   loadingRecord = false;
   recordError: string | null = null;
 
-  // Üst kayıt silme durumu
+  // Parent record delete state
   deleting = false;
 
-  // Üst kayıt düzenleme / yeni kayıt formu (inline, modal değil)
+  // Parent record edit / new record form (inline, not a modal)
   showEditForm = false;
   editForm: FormGroup | null = null;
   editLoading = false;
   editMsg: string | null = null;
   editOk: boolean | null = null;
 
-  // Alt modeller (sekmeler)
+  // Sub-models (tabs)
   childModelNames: string[] = [];
   activeTab = '';
   allModels: PublishedModel[] = [];
   tabStates = new Map<string, TabState>();
   loadingChildren = false;
 
-  /** Üst modelin şema kuralları (regex/uzunluk/aralık) — istemci doğrulaması için. */
+  /** Schema rules of the parent model (regex/length/range) — for client-side validation. */
   private parentRules = new Map<string, PublishedColumnSchema>();
 
   /**
-   * Üst forma bağlı otomatik değer kuralları. Form her yeniden kurulduğunda (kurallar
-   * gelince, akış sonrası) eskisi bırakılıp yenisi bağlanır.
+   * Auto-value rules bound to the parent form. Whenever the form is rebuilt (rules
+   * arrive, after a workflow action) the old one is released and the new one bound.
    */
   private autoValues: AutoValueFormBinding | null = null;
 
-  /** Toplu kayıt sonrası kaydedilemeyenlerin listesi (satırlar ekranda KALIR, bu yalnızca özet) */
+  /** List of records that could not be saved after a bulk save (rows STAY on screen, this is just a summary) */
   childSaveErrors: string[] = [];
 
-  // ─── Kayıt pop-up'ı (alt model ekle/düzenle) ────────────────────────────────
+  // ─── Record pop-up (add/edit sub-model) ─────────────────────────────────────
 
   dialogOpen = false;
   dialogNode: StagedNode | null = null;
   dialogTabName = '';
   dialogIsEdit = false;
-  /** Açık dialogdaki tipin FK kolonu — formda gizlenmesi gereken tek `...Id` alanı. */
+  /** FK column of the type in the open dialog — the only `...Id` field that must be hidden in the form. */
   dialogFkColumn: string | null = null;
-  /** Düzenlenen satır sunucuda kayıtlıysa ID'si; null ise bellekte bekleyen bir satır. */
+  /** ID of the edited row if it is saved on the server; null for a row pending in memory. */
   private dialogSavedId: number | null = null;
 
-  // Admin tarafından yönetilen üst form kolon görünürlüğü — null = ayar yok, tümü görünür
+  // Admin-managed parent form column visibility — null = no setting, all visible
   visibleParentColumnNames: string[] | null = null;
   savingColumnVisibility = false;
 
-  // ─── Ekran tasarımı ─────────────────────────────────────────────────────────
+  // ─── Screen design ──────────────────────────────────────────────────────────
   //
-  // Yayınlanmış form yerleşimi varsa alanlar onun sekme/bölüm/ızgarasına çizilir ve
-  // "Kolonlar" ayarının yerini alır. Yerleşim bileşenine giden kümeler alan olarak
-  // tutulur (getter her turda yeni nesne üretip planı boşuna yeniden hesaplatırdı).
+  // If a published form layout exists, fields are drawn into its tab/section/grid and it
+  // replaces the "Kolonlar" (Columns) setting. The sets passed to the layout component are kept
+  // as fields (a getter would create a new object every turn and needlessly recompute the plan).
 
-  /** Yayındaki form yerleşimi; null → varsayılan görünüm. */
+  /** Published form layout; null → default view. */
   formLayout: FormLayout | null = null;
-  /** Sırası gelen görevlinin dolduracağı kolonlar (gerçek kolon adlarıyla). */
+  /** Columns the assignee whose turn it is will fill (with real column names). */
   stepColumnSet: ReadonlySet<string> = new Set();
-  /** Tasarımda gizli olsa da çizilmesi gereken kolonlar: zorunlular + adım kolonları. */
+  /** Columns that must be drawn even if hidden in the design: required ones + step columns. */
   forcedParentColumns: ReadonlySet<string> = new Set();
 
   private routeSub?: Subscription;
@@ -267,7 +267,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Route data'dan modu bir kez belirle (snapshot; yeni ve düzenle route'ları farklı)
+    // Determine the mode from route data once (snapshot; new and edit routes differ)
     this.isNew = this.route.snapshot.data['mode'] === 'new';
     this.routeSub = this.route.paramMap.pipe(markDirty(this.cdr)).subscribe(params => {
       this.typeName = params.get('typeName') ?? '';
@@ -283,7 +283,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.autoValues?.stop();
   }
 
-  // ─── Util delegasyonları ─────────────────────────────────────────────────────
+  // ─── Util delegations ────────────────────────────────────────────────────────
 
   isImage        = isImage;
   imageSrc       = imageSrc;
@@ -291,20 +291,20 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   fileUrl        = fileRefUrl;
 
   /**
-   * Hücredeki kayıtlı dosya/resim (sunucu içerik değil bağlantı gönderir); yoksa null.
-   * Kaydedilmemiş (bekleyen) alt satırlar dosyayı hâlâ base64 taşır — onlar eski yoldan çizilir.
+   * Saved file/image in the cell (the server sends a link, not the content); null otherwise.
+   * Unsaved (pending) child rows still carry the file as base64 — those are drawn the old way.
    */
   fileRefOf(row: DataRow, key: string): FileRef | null {
     return asFileRef(fieldValue(row, key));
   }
 
-  // ─── Lookup etiketleri (tablo hücreleri için) ───────────────────────────────
+  // ─── Lookup labels (for table cells) ────────────────────────────────────────
   //
-  // Dropdown artık tembel yükleniyor (app-lookup-picker), yani hedef tablonun tam
-  // listesi hiçbir yerde tutulmuyor. Hücrelerde etiket gösterebilmek için görünen
-  // satırlardaki benzersiz FK id'leri toplanıp kolon başına TEK istekle çözülür.
+  // The dropdown is now lazy-loaded (app-lookup-picker), so the full list of the target
+  // table is not kept anywhere. To show labels in cells, the unique FK ids in the visible
+  // rows are collected and resolved with ONE request per column.
 
-  /** Görünen satırlardaki lookup id'lerinin etiketlerini (eksik olanları) çözer. */
+  /** Resolves the labels of lookup ids in the visible rows (the missing ones). */
   private resolveLookupLabels(columns: PublishedColumn[], rows: DataRow[]): void {
     if (rows.length === 0) return;
 
@@ -324,7 +324,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Tablo hücresinde lookup FK ID'sini etikete çevirir (çözülmemişse ham ID gösterilir). */
+  /** Converts a lookup FK ID in a table cell to its label (shows the raw ID if unresolved). */
   lookupCellLabel(col: PublishedColumn, value: unknown): string {
     if (value == null || value === '') return '—';
     const target = col.lookupTargetTable;
@@ -336,7 +336,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     downloadFile(b64, colName, state.fileNames);
   }
 
-  // ─── Sıfırlama ──────────────────────────────────────────────────────────────
+  // ─── Reset ──────────────────────────────────────────────────────────────────
 
   private reset(): void {
     this.record = null;
@@ -371,15 +371,15 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.viewInstanceId = null;
   }
 
-  // ─── Veri yükleme ───────────────────────────────────────────────────────────
+  // ─── Data loading ───────────────────────────────────────────────────────────
 
   private loadAll(): void {
     this.loadingRecord = true;
 
     if (this.isNew) {
-      // Yeni kayıt modu: model şemasını yükle + alt sekmeleri hazırla
-      // Yerleşim de ilk yüklemede okunur: aksi halde form önce varsayılan görünümle çizilip
-      // ardından yerleşime "zıplardı".
+      // New record mode: load the model schema + prepare the sub tabs
+      // The layout is read on the first load too: otherwise the form would first be drawn with
+      // the default view and then "jump" to the layout.
       forkJoin({
         models: this.publishedModel.getModels(),
         layout: this.metadata.formLayout$(this.typeName)
@@ -394,7 +394,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
           this.refreshLayoutInputs();
           if (this.model) {
             this.buildNewForm();
-            // Şema mevcutsa alt sekmeleri de yükle (server'dan veri çekmeden)
+            // If the schema exists, load the sub tabs too (without fetching data from the server)
             this.loadChildrenForNew();
             this.loadStartable();
           } else {
@@ -410,7 +410,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Mevcut kayıt modu: model şeması + kayıt verisi
+    // Existing record mode: model schema + record data
     forkJoin({
       models: this.publishedModel.getModels(),
       record: this.publishedModel.get(this.typeName, this.recordId),
@@ -428,7 +428,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
         if (record.success && record.data) {
           this.record = record.data as DataRow;
-          // Kayıt geldi — doğrudan düzenleme formunu aç (salt-okunur modu yoktur)
+          // Record arrived — open the edit form directly (there is no read-only mode)
           this.openEditMode();
           this.loadWorkflowState();
           this.loadLatestInstance();
@@ -437,8 +437,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
         }
 
         this.loadChildren();
-        // Not: kısmi kayıt hataları artık route state'i ile taşınmıyor — kaydedilemeyen
-        // satırlar sayfadan hiç ayrılmadan `state.staged` içinde yerinde kalıyor.
+        // Note: partial record errors are no longer carried via route state — unsaved
+        // rows stay in place in `state.staged` without ever leaving the page.
       },
       error: err => {
         this.loadingRecord = false;
@@ -450,13 +450,13 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
   private loadChildren(): void {
     this.loadingChildren = true;
-    // Alt model adları önbellekten (RecordMetadataService; şema değişince düşer) — eskiden
-    // her kayıt açılışında yeniden isteniyordu.
+    // Sub-model names come from the cache (RecordMetadataService; dropped on schema change) — previously
+    // they were re-requested on every record open.
     this.metadata.childTypeNames$(this.typeName).pipe(markDirty(this.cdr)).subscribe({
       next: names => {
         this.loadingChildren = false;
-        // Okuma izni olmayan alt modelin sekmesi açılmaz: satırlarını çeken getall 403
-        // döner ve kullanıcıyı kayıttan /models'e atardı. Admin'de filtre hep true.
+        // A sub-model tab without read permission is not opened: the getall fetching its rows returns 403
+        // and would throw the user from the record to /models. For admin the filter is always true.
         const readable = names.filter(name => this.permission.can(name, 'read'));
         if (readable.length) {
           this.childModelNames = readable;
@@ -475,8 +475,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Yeni kayıt modunda alt sekmeleri hazırlar — şema yükler, satır çekmez.
-   * Kullanıcı burada staged satırlar biriktirir; kayıt anında FK atanır.
+   * Prepares the sub tabs in new record mode — loads the schema, fetches no rows.
+   * The user accumulates staged rows here; the FK is assigned at save time.
    */
   private loadChildrenForNew(): void {
     this.loadingChildren = true;
@@ -489,7 +489,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
           for (const name of res.data) {
             const meta = this.allModels.find(m => m.typeName === name);
             const state = this.buildTabState(name, meta?.columns ?? []);
-            // Yeni kayıt modunda server'dan veri çekilmez; rows boş kalır
+            // No data is fetched from the server in new record mode; rows stay empty
             this.tabStates.set(name, state);
             this.loadTabColumnVisibility(state);
           }
@@ -499,31 +499,31 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ─── Üst kayıt alanları ─────────────────────────────────────────────────────
+  // ─── Parent record fields ───────────────────────────────────────────────────
 
-  /** Üst kayda ait tüm kolonlar */
+  /** All columns of the parent record */
   get parentColumns(): PublishedColumn[] {
     return this.model?.columns ?? [];
   }
 
   /**
-   * Formda render edilecek kolonlar: admin ayarına göre filtrelenmiş, ancak zorunlu
-   * kolonlar her zaman dahil edilir — aksi halde form geçersiz kalır ve Kaydet, gizli
-   * alandaki hata yüzünden sessizce hiçbir şey yapmaz. Zorunluluk şema kuralından okunur
-   * (bkz. mustStayVisible): `isNullable` metin/dosya kolonlarında hep true gelir.
-   * Not: editForm her zaman TÜM kolonlarla kurulur (openEditMode/buildNewForm); bu getter
-   * sadece render'ı filtreler, form bütünlüğünü etkilemez.
+   * Columns to render in the form: filtered by the admin setting, but required
+   * columns are always included — otherwise the form stays invalid and Save silently
+   * does nothing because of the error in a hidden field. Requiredness is read from the schema rule
+   * (see mustStayVisible): `isNullable` is always true for text/file columns.
+   * Note: editForm is always built with ALL columns (openEditMode/buildNewForm); this getter
+   * only filters rendering, it does not affect form integrity.
    */
   get visibleParentColumns(): PublishedColumn[] {
     if (!this.visibleParentColumnNames) return this.parentColumns;
     const visible = new Set(this.visibleParentColumnNames);
-    // Adımın doldurulacak kolonları da her zaman görünür: admin detay görünümünden
-    // gizlemiş olsa bile görevli o alanı doldurmadan adımı ilerletemez.
+    // The step's columns to fill are always visible too: even if the admin hid them from the
+    // detail view, the assignee cannot advance the step without filling that field.
     return this.parentColumns.filter(c =>
       mustStayVisible(c, this.parentRules.get(c.columnName)) || visible.has(c.columnName) || this.isStepColumn(c));
   }
 
-  /** Kolon görünürlüğü popover'ı için kolon listesi — zorunlu alanlar gizlenemez */
+  /** Column list for the column visibility popover — required fields cannot be hidden */
   get parentColumnVisibilityItems(): ColumnVisibilityItem[] {
     return this.parentColumns.map(c => ({
       name: c.columnName,
@@ -531,26 +531,26 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     }));
   }
 
-  /** Popover'ın o anki etkin seçimi — ayar yoksa tüm kolonlar işaretli gösterilir */
+  /** The popover's current effective selection — all columns shown checked when there is no setting */
   get effectiveVisibleParentColumnNames(): string[] {
     return this.visibleParentColumnNames ?? this.parentColumns.map(c => c.columnName);
   }
 
-  /** Admin tarafından kayıtlı detay-görünümü kolon ayarını yükler */
+  /** Loads the admin's saved detail-view column setting */
   private loadColumnVisibility(): void {
     const typeName = this.typeName;
     this.modelColumnSetting.get(typeName, 'detail').pipe(markDirty(this.cdr)).subscribe({
       next: res => {
-        if (typeName !== this.typeName) return; // bu sırada başka modele geçilmiş olabilir
+        if (typeName !== this.typeName) return; // another model may have been opened meanwhile
         this.visibleParentColumnNames = (res.success && res.data?.visibleColumns?.length)
           ? res.data.visibleColumns
           : null;
       },
-      error: () => { /* ayar yüklenemezse tüm kolonlar görünür kalır */ }
+      error: () => { /* if the setting cannot be loaded all columns stay visible */ }
     });
   }
 
-  /** Admin kolon görünürlüğü ayarını kaydeder */
+  /** Saves the admin column visibility setting */
   onSaveColumnVisibility(names: string[]): void {
     this.savingColumnVisibility = true;
     const dto: ModelColumnSettingDto = { typeName: this.typeName, viewType: 'detail', visibleColumns: names };
@@ -563,33 +563,33 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Kayıttan belirli kolona ait ham değeri döndürür */
+  /** Returns the raw value of a given column from the record */
   recordRaw(col: PublishedColumn): unknown {
     if (!this.record) return null;
     return fieldValue(this.record, col.columnName);
   }
 
-  /** UI'da gösterilecek etiket — admin Label tanımlamışsa onu, yoksa ham columnName'i döner. */
+  /** Label to show in the UI — the admin-defined Label if any, otherwise the raw columnName. */
   colLabel(col: PublishedColumn): string {
     return col.label?.trim() || col.columnName;
   }
 
-  /** Başlıkta gösterilecek model adı — model etiketi (ör. "Teklif"), yoksa tablo adı. */
+  /** Model name shown in the header — the model label (e.g. "Teklif"), otherwise the table name. */
   get modelTitle(): string {
     return this.model?.label?.trim() || this.typeName;
   }
 
-  /** Alt model sekmesinde gösterilecek ad — etiketi varsa o, yoksa tablo adı. */
+  /** Name shown on the sub-model tab — its label if any, otherwise the table name. */
   childLabel(typeName: string): string {
     return this.allModels.find(m => m.typeName === typeName)?.label?.trim() || typeName;
   }
 
-  // ─── Üst kayıt formu ────────────────────────────────────────────────────────
+  // ─── Parent record form ─────────────────────────────────────────────────────
 
   /**
-   * Üst modelin şema kurallarını (regex/uzunluk/aralık) yükler ve formu yeniden kurar.
-   * Kurallar backend `ValidateDynamicEntity` ile AYNI kaynaktan gelir — böylece
-   * kullanıcı hataları sunucuya gitmeden alanın altında görür.
+   * Loads the parent model's schema rules (regex/length/range) and rebuilds the form.
+   * The rules come from the SAME source as backend `ValidateDynamicEntity` — so the
+   * user sees errors under the field before anything reaches the server.
    */
   private loadParentRules(rebuild: () => void): void {
     this.metadata.rules$(this.typeName).pipe(markDirty(this.cdr)).subscribe(rules => {
@@ -599,14 +599,14 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Bir üst-kayıt kolonunun doğrulayıcıları — şema kuralı varsa ona göre. */
+  /** Validators of a parent-record column — based on the schema rule if any. */
   private parentValidators(col: PublishedColumn) {
     return validatorsFor(col, this.parentRules.get(col.columnName));
   }
 
-  // ─── Otomatik değer ─────────────────────────────────────────────────────────
+  // ─── Auto value ─────────────────────────────────────────────────────────────
 
-  /** Kolonların otomatik değer kurallarını (şemadan) yeni kurulmuş forma bağlar. */
+  /** Binds the columns' auto-value rules (from the schema) to the newly built form. */
   private bindAutoValues(isNew: boolean): void {
     this.autoValues?.stop();
     this.autoValues = null;
@@ -627,9 +627,9 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Kayıttan sonra sunucunun hesapladığı değerleri (SEQ numarası, kaydederken çalışan
-   * ve salt okunur kurallar) forma yansıtır. Kural yoksa istek atılmaz.
-   * openEditMode mesajı sıfırladığı için kayıt sonucu mesajı korunur.
+   * Reflects the values the server computed after saving (SEQ number, rules that run
+   * on save and read-only rules) into the form. No request is sent when there are no rules.
+   * Since openEditMode resets the message, the save result message is preserved.
    */
   private reloadAfterAutoValues(): void {
     if (!this.autoValues || this.recordId <= 0) return;
@@ -645,46 +645,46 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
         this.editMsg = editMsg;
         this.editOk = editOk;
       },
-      error: () => { /* okunamazsa formdaki (istemci) değerler kalır */ }
+      error: () => { /* if unreadable, the (client) values in the form stay */ }
     });
   }
 
-  /** Mevcut kayıt ile düzenleme formunu oluştur */
+  /** Build the edit form from the existing record */
   openEditMode(): void {
     if (!this.model || !this.record) return;
     const build = () => {
       const controls: Record<string, unknown> = {};
       for (const col of this.parentColumns) {
-        // Ham ISO tarih değeri doğrudan bağlanırsa datetime-local kutusu onu sessizce
-        // atar ve alan BOŞ açılır; kullanıcı dokununca tarayıcı o anki zamanı yazar.
+        // If the raw ISO date value is bound directly, the datetime-local box silently
+        // drops it and the field opens EMPTY; when touched, the browser writes the current time.
         const v = toInputValue(col.dataType, this.recordRaw(col)) ?? '';
         controls[col.columnName] = [v, this.parentValidators(col)];
       }
       this.editForm = this.fb.group(controls);
       this.bindAutoValues(false);
-      // Form kurallar gelince YENİDEN kuruluyor; kilit her kurulumda uygulanmalı,
-      // yoksa ikinci kurulum disabled durumunu siler.
+      // The form is REBUILT when the rules arrive; the lock must be applied on every build,
+      // otherwise the second build clears the disabled state.
       this.applyWorkflowLock();
     };
-    build();                          // kurallar gelene kadar form kullanılabilir kalsın
-    this.loadParentRules(build);      // kurallar gelince doğrulayıcılarla yeniden kurulur
+    build();                          // keep the form usable until the rules arrive
+    this.loadParentRules(build);      // rebuilt with validators once the rules arrive
     this.editMsg = null;
     this.editOk = null;
     this.showEditForm = true;
   }
 
-  /** Yeni kayıt modu için boş form oluştur */
+  /** Build an empty form for new record mode */
   private buildNewForm(): void {
     const build = () => {
-      // getRawValue: salt okunur (disabled) otomatik alanların değeri de taşınsın
+      // getRawValue: carry the values of read-only (disabled) auto fields too
       const previous = this.editForm?.getRawValue() ?? {};
       const controls: Record<string, unknown> = {};
       for (const col of this.parentColumns) {
         controls[col.columnName] = [previous[col.columnName] ?? '', this.parentValidators(col)];
       }
       this.editForm = this.fb.group(controls);
-      // Açılış kuralları yalnız BOŞ alanlara yazar — kurallar gelip form yeniden
-      // kurulduğunda kullanıcının o ana dek yazdıkları ezilmez.
+      // Opening rules write only to EMPTY fields — when the rules arrive and the form is
+      // rebuilt, what the user has typed so far is not overwritten.
       this.bindAutoValues(true);
     };
     build();
@@ -694,32 +694,32 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.showEditForm = true;
   }
 
-  /** Üst modelin şema kuralları — yerleşim bileşenine geçirilir (referans kurallar gelince değişir). */
+  /** Schema rules of the parent model — passed to the layout component (the reference changes when the rules arrive). */
   get parentRuleMap(): ReadonlyMap<string, PublishedColumnSchema> {
     return this.parentRules;
   }
 
-  /** Forma bağlı otomatik değer kuralları — yerleşim bileşenine geçirilir. */
+  /** Auto-value rules bound to the form — passed to the layout component. */
   get autoValuesBinding(): AutoValueFormBinding | null {
     return this.autoValues;
   }
 
   /**
-   * Tasarımcı bağlantısının sorgu parametreleri: ekranda görünen tasarım (sunucu role göre seçti)
-   * açılsın — admin rollere özel bir tasarıma bakıyorsa varsayılanı değil onu düzenlesin.
+   * Query params of the designer link: open the design shown on screen (the server chose it by role)
+   * — if the admin is looking at a role-specific design, edit that one rather than the default.
    */
   designQuery(typeName: string, view: 'form' | 'list'): Record<string, string | number | null> {
     return { view: view === 'list' ? 'list' : null, layout: this.metadata.publishedLayoutId(typeName, view) };
   }
 
-  /** Admin'e tasarımcı bağlantısı (yerleşim bileşenindeki "güncel değil" uyarısı); diğerlerine null. */
+  /** Designer link for admins (the "out of date" warning in the layout component); null for others. */
   get designLink(): string[] | null {
     return this.permission.isAdmin() ? ['/build', this.typeName, 'screen'] : null;
   }
 
   /**
-   * Yerleşim bileşeninin kümelerini yeniden kurar: adım kolonları ve gizlenemeyecek kolonlar.
-   * Kurallar, model ya da iş akışı durumu değiştiğinde çağrılır.
+   * Rebuilds the layout component's sets: step columns and columns that cannot be hidden.
+   * Called when the rules, the model or the workflow state change.
    */
   private refreshLayoutInputs(): void {
     const byLower = new Map(this.parentColumns.map(c => [c.columnName.toLowerCase(), c.columnName]));
@@ -740,13 +740,13 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Kaydeder. `startCode` verilirse ("{Akış} Başlat") kayıt TAM başarıyla
-   * yazıldıktan sonra o akış başlatılır; kayıt hatasında süreç başlamaz.
+   * Saves. If `startCode` is given ("{Akış} Başlat" / Start {workflow}), that workflow is started
+   * after the record is FULLY written; on a save error the process does not start.
    */
   submitEdit(startCode?: string): void {
     if (!this.editForm || this.editForm.invalid || this.editLoading) {
       this.editForm?.markAllAsTouched();
-      // Hatalı alan kapalı bir sekmede/bölümde olabilir — kullanıcı "hiçbir şey olmadı" sanmasın.
+      // The invalid field may be in a closed tab/section — so the user does not think "nothing happened".
       if (this.editForm?.invalid && !this.editLoading) this.recordLayout?.revealFirstInvalid();
       return;
     }
@@ -754,32 +754,32 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.editLoading = true;
     this.editMsg = null;
     this.editOk = null;
-    // "Kaydedilirken" kuralları — sunucu da yeniden hesaplar; bu yalnız anında gösterim.
+    // "On save" rules — the server recomputes them too; this is only for immediate display.
     this.autoValues?.runSave();
 
     if (this.isNew) {
-      // Yeni kayıt: ana kayıt + tüm bekleyen alt ağaç TEK istekte, TEK transaction'da.
-      // Kök henüz yok → existingRootId null; sunucu ID'leri kendisi üretip döndürür.
+      // New record: main record + the whole pending subtree in ONE request, ONE transaction.
+      // The root does not exist yet → existingRootId null; the server generates and returns the IDs.
       this.saveTree(null);
     } else {
       if (this.recordLockedForUser) {
-        // Onay sürecindeki kayıt: yalnız adımın kolonları, görev yetkisiyle yazılır.
+        // Record in an approval process: only the step's columns, written with task authority.
         this.saveStepFields();
         return;
       }
 
-      // Mevcut kaydı güncelle — sayfada kal, başarı mesajı göster
+      // Update the existing record — stay on the page, show a success message
       const jsonData: DataRow = { ...sanitizePayload(this.parentColumns, this.editForm.getRawValue()), ID: this.recordId };
       this.publishedModel.update(this.typeName, jsonData).pipe(markDirty(this.cdr)).subscribe({
         next: res => {
           this.editOk = res.success;
           this.editMsg = res.message;
           if (res.success) {
-            // Kaydı optimistik güncelle, sayfada kal
+            // Optimistically update the record, stay on the page
             this.record = { ...this.record, ...jsonData };
           }
-          // Bekleyen alt kayıt varsa aynı "Kaydet" onları da gönderir. Kök zaten var:
-          // existingRootId ile geçilir, böylece ana kayıt İKİNCİ KEZ OLUŞTURULMAZ.
+          // If there are pending child records the same "Kaydet" (Save) sends them too. The root already exists:
+          // it is passed via existingRootId, so the main record is NOT CREATED A SECOND TIME.
           if (this.totalStagedCount > 0 && res.success) {
             this.saveTree(this.recordId);
           } else {
@@ -800,11 +800,11 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Sayfayı yeniden yüklemeden "yeni kayıt" modundan "düzenleme" moduna geçirir.
+   * Switches from "new record" mode to "edit" mode without reloading the page.
    *
-   * Route değiştirilirse component yeniden kurulur ve bellekteki staged ağaç yok olur —
-   * kullanıcının kaybettiği veri tam olarak buydu. Bu yüzden yalnızca adres çubuğu
-   * güncellenir (table-detail'deki oluşturma → düzenleme geçişiyle aynı desen).
+   * If the route changed, the component would be recreated and the staged tree in memory lost —
+   * which is exactly the data the user used to lose. So only the address bar is
+   * updated (same pattern as the create → edit transition in table-detail).
    */
   private switchToEditMode(newId: number): void {
     this.isNew = false;
@@ -813,10 +813,10 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.location.replaceState(`/models/${this.typeName}/${newId}`);
   }
 
-  /** Onay bekleyen üst-kayıt silme; true ise diyalog açıktır. */
+  /** Parent record delete awaiting confirmation; true means the dialog is open. */
   deleteRecordConfirmOpen = false;
 
-  /** Üst kaydı sil — yalnızca mevcut kayıt modunda kullanılır */
+  /** Delete the parent record — used only in existing-record mode */
   askDeleteRecord(): void {
     if (this.isNew || this.deleting) return;
     this.deleteRecordConfirmOpen = true;
@@ -844,18 +844,18 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ─── Sekme yönetimi ─────────────────────────────────────────────────────────
+  // ─── Tab management ─────────────────────────────────────────────────────────
 
   setTab(name: string): void {
     this.activeTab = name;
   }
 
-  /** Dar ekranda sekme çubuğu yatay kayar (kaydırma çubuğu gizli): seçilen sekme yarım görünmesin. */
+  /** On narrow screens the tab bar scrolls horizontally (scrollbar hidden): the selected tab should not be half visible. */
   revealTab(event: Event): void {
     (event.currentTarget as HTMLElement | null)?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
   }
 
-  /** Sıradaki adımlardan biri süresini aştıysa şeritte "Gecikmiş" rozeti gösterilir. */
+  /** If one of the upcoming steps is overdue, a "Gecikmiş" (Overdue) badge is shown on the strip. */
   get hasOverdueStep(): boolean {
     return this.myStepTasks.some(task => task.isOverdue);
   }
@@ -868,7 +868,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return this.tabStates.get(name)?.rows.length ?? 0;
   }
 
-  // ─── Sekme verisi ────────────────────────────────────────────────────────────
+  // ─── Tab data ────────────────────────────────────────────────────────────────
 
   private buildTabState(typeName: string, columns: PublishedColumn[]): TabState {
     return {
@@ -894,23 +894,23 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Sunucudaki KAYITLI satırları tazeler.
+   * Refreshes the SAVED rows from the server.
    *
-   * `state.staged` (bekleyen/hatalı satırlar) burada ASLA temizlenmez — eskiden
-   * sunucu yanıtı tüm satırları eziyor ve kaydedilemeyen kayıt ekrandan siliniyordu.
+   * `state.staged` (pending/failed rows) is NEVER cleared here — previously the
+   * server response overwrote all rows and the unsaved record disappeared from the screen.
    */
   loadTabRows(state: TabState): void {
-    if (this.isNew || !this.recordId) return;   // henüz üst kayıt yok, çekilecek satır da yok
+    if (this.isNew || !this.recordId) return;   // no parent record yet, so no rows to fetch either
     state.loading = true;
     state.error = null;
     this.publishedModel.getAll(state.typeName, state.fkColumn, this.recordId).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
         state.loading = false;
         state.rows = res.success ? (res.data ?? []) as DataRow[] : [];
-        // Satırlar geldi: bu sayfadaki lookup FK'lerinin etiketlerini kolon başına
-        // tek istekte çöz (dropdown artık tam listeyi tutmuyor).
+        // Rows arrived: resolve the labels of this page's lookup FKs with one request
+        // per column (the dropdown no longer keeps the full list).
         this.resolveLookupLabels(state.columns, state.rows);
-        // Artık var olmayan satırların ID'leri seçili kalmasın.
+        // Do not keep IDs of rows that no longer exist selected.
         const ids = new Set(state.rows.map(r => this.rowId(r)));
         state.selectedIds = new Set([...state.selectedIds].filter(id => ids.has(id)));
         if (!res.success) state.error = res.message ?? this.languageService.t('model.detail.recordsFetchFailed');
@@ -923,34 +923,34 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ─── Sekme filtreleme ve sıralama ────────────────────────────────────────────
+  // ─── Tab filtering and sorting ───────────────────────────────────────────────
 
-  /** FK kolonu dışındaki kolonlar — formlar (ekle/düzenle) bunu kullanır, ASLA filtrelenmez */
+  /** Columns other than the FK column — used by the (add/edit) forms, NEVER filtered */
   visibleCols(state: TabState): PublishedColumn[] {
     return state.columns.filter(c => c.columnName !== state.fkColumn);
   }
 
   /**
-   * Tabloda gösterilecek kolonlar: FK hariç + admin ayarına göre filtreli.
-   * Form bütünlüğünü etkilememesi için `visibleCols`'tan ayrı tutulur — admin tablo
-   * görünümünden bir kolonu gizlese de ekle/düzenle formunda o alan kaybolmaz.
+   * Columns to show in the table: FK excluded + filtered by the admin setting.
+   * Kept separate from `visibleCols` so form integrity is not affected — even if the admin
+   * hides a column from the table view, that field does not disappear from the add/edit form.
    */
   displayCols(state: TabState): PublishedColumn[] {
     return this.tableColumns(state).cols;
   }
 
-  /** Tablo başlıkları — key veri/sıralama anahtarı (ham columnName), label görünen metin. */
+  /** Table headers — key is the data/sort key (raw columnName), label the displayed text. */
   tableHeaders(state: TabState): { key: string; label: string }[] {
     return this.tableColumns(state).headers;
   }
 
   /**
-   * Sekmenin tablo kolonları, başlıkları ve kolon haritası — ÖNBELLEKLİ.
+   * The tab's table columns, headers and column map — CACHED.
    *
-   * Şablon bunları satır döngüsünün İÇİNDE (her satır, her hücre) çağırıyordu ve kayıt formundaki
-   * her tuş vuruşu tüm şablonu yeniden değerlendirdiği için 300 satırlık bir alt tabloda tek tuş
-   * yüzlerce kolon çözümlemesi ve binlerce `columns.find` demekti. Girdiler (yerleşim, kolonlar,
-   * görünürlük ayarı, dil) değişmedikçe aynı nesne döner.
+   * The template used to call these INSIDE the row loop (every row, every cell), and since every
+   * keystroke in the record form re-evaluates the whole template, a single key in a 300-row child
+   * table meant hundreds of column resolutions and thousands of `columns.find` calls. While the inputs (layout,
+   * columns, visibility setting, language) do not change, the same object is returned.
    */
   private tableColumns(state: TabState): TabColumnsMemo {
     const lang = this.languageService.lang();
@@ -960,7 +960,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       return memo;
     }
 
-    // Yayınlanmış liste yerleşimi varsa sıra ve görünürlük ondan (FK kolonu bu tabloda hiç yok).
+    // If a published list layout exists, order and visibility come from it (the FK column is never in this table).
     const cols = resolveListColumns(state.listLayout, this.visibleCols(state), state.visibleColumnNames)
       .map(r => r.column);
     state.colsMemo = {
@@ -976,20 +976,20 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return state.colsMemo;
   }
 
-  /** Kolon görünürlüğü popover'ı için kolon listesi — alt model tablosunda zorunlu zorlaması yok */
+  /** Column list for the column visibility popover — no required-field enforcement in the sub-model table */
   tabColumnVisibilityItems(state: TabState): ColumnVisibilityItem[] {
     return this.visibleCols(state).map(c => ({ name: c.columnName, required: false }));
   }
 
-  /** Popover'ın o anki etkin seçimi — ayar yoksa tüm kolonlar işaretli gösterilir */
+  /** The popover's current effective selection — all columns shown checked when there is no setting */
   effectiveTabVisibleColumnNames(state: TabState): string[] {
     return state.visibleColumnNames ?? this.visibleCols(state).map(c => c.columnName);
   }
 
   /**
-   * Alt modelin kendi liste sayfasıyla (`'list'` viewType) AYNI kolon ayarını yükler —
-   * admin bir modelin kolonlarını bir kez seçer, model nerede listelenirse listelensin
-   * (kendi liste sayfası + üst kaydın bu sekmesi) aynı görünür.
+   * Loads the SAME column setting as the sub-model's own list page (`'list'` viewType) —
+   * the admin picks a model's columns once, and wherever the model is listed
+   * (its own list page + this tab of the parent record) it looks the same.
    */
   private loadTabColumnVisibility(state: TabState): void {
     this.modelColumnSetting.get(state.typeName, 'list').pipe(markDirty(this.cdr)).subscribe({
@@ -998,15 +998,15 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
           ? res.data.visibleColumns
           : null;
       },
-      error: () => { /* ayar yüklenemezse tüm kolonlar görünür kalır */ }
+      error: () => { /* if the setting cannot be loaded all columns stay visible */ }
     });
-    // Ekran tasarımındaki liste yerleşimi "Kolonlar" ayarının yerini alır (okunamazsa null).
+    // The list layout from the screen design replaces the "Kolonlar" (Columns) setting (null if unreadable).
     this.metadata.listLayout$(state.typeName).pipe(markDirty(this.cdr)).subscribe(layout => {
       state.listLayout = layout;
     });
   }
 
-  /** Admin alt model tablosu için kolon görünürlüğü ayarını kaydeder ('list' ayarını günceller) */
+  /** Saves the admin column visibility setting for the sub-model table (updates the 'list' setting) */
   onSaveTabColumnVisibility(state: TabState, names: string[]): void {
     state.savingColumnVisibility = true;
     const dto: ModelColumnSettingDto = { typeName: state.typeName, viewType: 'list', visibleColumns: names };
@@ -1029,8 +1029,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Filtrelenmiş + sıralanmış satırlar. Hesap saf bir fonksiyonda
-   * (display-rows.util) durur; burada yalnızca önbellek saklanır.
+   * Filtered + sorted rows. The computation lives in a pure function
+   * (display-rows.util); only the cache is kept here.
    */
   getDisplayRows(state: TabState): DataRow[] {
     state.displayCache = selectDisplayRows(
@@ -1048,7 +1048,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return state.displayCache.result;
   }
 
-  /** Çizilecek satırlar: görünen satırların ilk `renderLimit` kadarı (sayım ve seçim tümüyle çalışır). */
+  /** Rows to render: the first `renderLimit` of the visible rows (counting and selection work on all). */
   renderedRows(state: TabState): DataRow[] {
     const rows = this.getDisplayRows(state);
     const limit = state.renderLimit ?? TAB_RENDER_STEP;
@@ -1059,7 +1059,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return state.renderCache.result;
   }
 
-  /** Çizilmeyen satır sayısı ("Daha fazla göster" düğmesi için). */
+  /** Number of rows not rendered (for the "Daha fazla göster" / Show more button). */
   hiddenRowCount(state: TabState): number {
     return Math.max(0, this.getDisplayRows(state).length - (state.renderLimit ?? TAB_RENDER_STEP));
   }
@@ -1079,7 +1079,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return String(v);
   }
 
-  /** Tablo hücresi için görüntülenecek değer — lookup kolonları FK ID yerine display değerini gösterir. */
+  /** Display value for a table cell — lookup columns show the display value instead of the FK ID. */
   tabCellDisplay(state: TabState, row: DataRow, columnName: string): string {
     const col = this.tableColumns(state).byName.get(columnName);
     if (col?.dataType === 'lookup') {
@@ -1093,9 +1093,9 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return typeof v === 'string' ? v : '';
   }
 
-  // ─── Satır seçimi (kayıtlı satırlar) ────────────────────────────────────────
-  // Seçim, arama filtresinden geçen GÖRÜNEN satırlar üzerinden yürür: kullanıcı
-  // "tümünü seç" derken ekranda gördüğünü kasteder, gizli satırları değil.
+  // ─── Row selection (saved rows) ─────────────────────────────────────────────
+  // Selection works over the VISIBLE rows that pass the search filter: when the user
+  // says "select all" they mean what they see on screen, not the hidden rows.
 
   isRowSelected(state: TabState, row: DataRow): boolean {
     return state.selectedIds.has(this.rowId(row));
@@ -1129,7 +1129,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ─── Satır seçimi (bekleyen satırlar) ───────────────────────────────────────
+  // ─── Row selection (pending rows) ───────────────────────────────────────────
 
   isStagedSelected(state: TabState, node: StagedNode): boolean {
     return state.selectedStaged.has(node.localId);
@@ -1157,11 +1157,11 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     else state.staged.forEach(n => state.selectedStaged.add(n.localId));
   }
 
-  // ─── Toplu silme / kaldırma ─────────────────────────────────────────────────
+  // ─── Bulk delete / remove ───────────────────────────────────────────────────
 
-  /** Onay diyaloğunun hedefi; null ise diyalog kapalı. */
+  /** Target of the confirm dialog; null means the dialog is closed. */
   bulkState: TabState | null = null;
-  /** 'saved' = sunucudan sil, 'staged' = bellekten kaldır. */
+  /** 'saved' = delete from the server, 'staged' = remove from memory. */
   bulkMode: 'saved' | 'staged' = 'saved';
   bulkBusy = false;
 
@@ -1198,11 +1198,11 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Onaylanan toplu işlemi uygular.
+   * Applies the confirmed bulk operation.
    *
-   * Sunucuda toplu silme ucu YOKTUR; her kayıt tek tek silinir. Kısmi başarı kabul edilir:
-   * silinenler listeden düşer, silinemeyenler SEÇİLİ KALIR ve hataları özetlenir — böylece
-   * kullanıcı yalnızca sorunlu satırlarla ilgilenir.
+   * The server has NO bulk delete endpoint; each record is deleted one by one. Partial success is accepted:
+   * deleted ones drop out of the list, the ones that could not be deleted STAY SELECTED and their errors
+   * are summarized — so the user deals only with the problematic rows.
    */
   confirmBulk(): void {
     const state = this.bulkState;
@@ -1242,11 +1242,11 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ─── Kayıt pop-up'ı (alt model ekle/düzenle) ───────────────────────────────
-  // Satır içi form kaldırıldı: ekleme/düzenleme artık app-record-form-dialog ile
-  // yapılır ve o dialog kendi alt modellerini de iç içe gösterir.
+  // ─── Record pop-up (add/edit sub-model) ────────────────────────────────────
+  // The inline form was removed: adding/editing is now done with app-record-form-dialog,
+  // and that dialog also shows its own sub-models nested.
 
-  /** Alt modele yeni kayıt — bellekte bekleyen bir düğüm açar, HTTP yapılmaz. */
+  /** New record for a sub-model — opens a node pending in memory, no HTTP. */
   openChildAdd(state: TabState): void {
     this.dialogTabName = state.typeName;
     this.dialogNode = createStagedNode(state.typeName, {});
@@ -1256,7 +1256,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.dialogOpen = true;
   }
 
-  /** Bekleyen (kaydedilmemiş veya hata almış) bir satırı düzenler. */
+  /** Edits a pending (unsaved or failed) row. */
   openStagedEdit(state: TabState, node: StagedNode): void {
     this.dialogTabName = state.typeName;
     this.dialogNode = node;
@@ -1266,11 +1266,11 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.dialogOpen = true;
   }
 
-  /** Sunucuda KAYITLI bir satırı düzenler — pop-up kapanınca doğrudan update edilir. */
+  /** Edits a row SAVED on the server — updated directly when the pop-up closes. */
   openSavedEdit(state: TabState, row: DataRow): void {
     const id = this.rowId(row);
-    // Sunucu satırı camelCase gelir; şema adlarına indirgenmeden forma da payload'a da
-    // güvenle verilemez (bkz. normalizeRow doc'u).
+    // The server row comes in camelCase; without reducing it to the schema names it cannot be
+    // safely given to the form or the payload (see the normalizeRow doc).
     const node = createStagedNode(state.typeName, normalizeRow(state.columns, row));
     node.savedId = id;
     this.dialogTabName = state.typeName;
@@ -1282,9 +1282,9 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Pop-up "Tamam" dedi. Kayıtlı bir satır düzenlendiyse hemen `update` edilir;
-   * bekleyen bir satırsa yalnızca belleğe yazılır — ağaç, üst modelde "Kaydet"e
-   * basılana kadar sunucuya gitmez.
+   * The pop-up said "Tamam" (OK). If a saved row was edited it is `update`d right away;
+   * if it is a pending row it is only written to memory — the tree does not reach the
+   * server until "Kaydet" (Save) is pressed on the parent model.
    */
   onRecordDialogSaved(node: StagedNode): void {
     const state = this.tabStates.get(this.dialogTabName);
@@ -1304,7 +1304,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
             node.dirty = false;
             this.saveNewDescendants(state, node, savedId);
           } else {
-            // Güncelleme reddedildi — satırı bekleyen listesine al ki değerler kaybolmasın.
+            // Update rejected — move the row to the pending list so the values are not lost.
             node.error = res.message;
             this.addStaged(state, node);
           }
@@ -1323,12 +1323,12 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Kayıtlı bir satır güncellendikten sonra, pop-up'ta ona EKLENEN yeni torun kayıtlarını
-   * yazar. `toTreeDto` `existingId` dolu olduğunda kökü yeniden EKLEMEZ, yalnızca
-   * çocukları mevcut kaydın altına bağlar. Torun yoksa istek gönderilmez.
+   * After a saved row is updated, writes the new grandchild records ADDED to it in the
+   * pop-up. `toTreeDto` does NOT re-ADD the root when `existingId` is set, it only
+   * attaches the children under the existing record. No request is sent if there are no grandchildren.
    */
   private saveNewDescendants(state: TabState, node: StagedNode, savedId: number): void {
-    // Kökün kendisi az önce `update` edildi; burada yalnızca torunlar kalır.
+    // The root itself was just `update`d; only the grandchildren remain here.
     node.dirty = false;
     const hasNewChildren = [...node.children.values()].some(list => list.some(n => n.savedId === null));
     const updates = dirtyNodes(node);
@@ -1359,7 +1359,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       }
       const failed = steps.find(s => !s.ok);
       if (failed) {
-        // Yazılamadı — satırı bekleyen listesine al ki girilenler kaybolmasın.
+        // Could not be written — move the row to the pending list so the input is not lost.
         node.error = failed.message;
         this.addStaged(state, node);
       }
@@ -1367,7 +1367,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Düğümü sekmenin bekleyen listesine ekler veya günceller. */
+  /** Adds or updates the node in the tab's pending list. */
   private addStaged(state: TabState, node: StagedNode): void {
     const idx = state.staged.findIndex(n => n.localId === node.localId);
     if (idx >= 0) state.staged = state.staged.map(n => (n.localId === node.localId ? node : n));
@@ -1384,12 +1384,12 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * "Kaydet"e basılınca sunucuya YAZILACAK satır sayısı — buton etiketi ve
-   * `submitEdit`'in `saveTree` çağırıp çağırmayacağı bu değere bakar.
+   * Number of rows to be WRITTEN to the server when "Kaydet" (Save) is pressed — the button label
+   * and whether `submitEdit` calls `saveTree` depend on this value.
    *
-   * Yalnızca eklenecekleri saymak yetmez: kaydedilmiş ama değiştirilmiş (dirty) bir satır
-   * da yazılacaktır. Eskiden sayılmadığı için, tek bekleyen satır o olduğunda "Kaydet"
-   * hiçbir istek göndermiyordu.
+   * Counting only the ones to add is not enough: a saved but modified (dirty) row
+   * will be written as well. Because it was not counted before, when that was the only pending row
+   * "Kaydet" sent no request at all.
    */
   get totalStagedCount(): number {
     let total = 0;
@@ -1403,7 +1403,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return total;
   }
 
-  /** Herhangi bir sekmede kaydetme hatası olan satır var mı. */
+  /** Whether any tab has a row with a save error. */
   get hasStagedErrors(): boolean {
     for (const [, state] of this.tabStates) {
       for (const node of state.staged) {
@@ -1413,34 +1413,34 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return false;
   }
 
-  // ─── Bekleyen ağacın toplu kaydedilmesi ────────────────────────────────────
+  // ─── Bulk save of the pending tree ─────────────────────────────────────────
 
   /**
-   * Ana kaydı ve bekleyen tüm alt ağacı TEK istekte gönderir.
+   * Sends the main record and the whole pending subtree in ONE request.
    *
-   * Sunucu hepsini TEK transaction içinde yazar ve her düğümün GERÇEK ID'sini
-   * (EF identity) döndürür — istemci hiçbir ID tahmin etmez. Eskiden kayıt
-   * eklendikten sonra liste çekilip `max(ID)` alınıyordu; eşzamanlı kullanıcılarda
-   * bu, alt kayıtların YABANCI bir üst kayda bağlanmasına yol açabiliyordu.
+   * The server writes them all in ONE transaction and returns each node's REAL ID
+   * (EF identity) — the client guesses no IDs. Previously, after adding a record the
+   * list was fetched and `max(ID)` taken; with concurrent users this could attach
+   * the child records to a FOREIGN parent record.
    *
-   * Semantik "hepsi ya da hiçbiri": bir alan bile geçersizse hiçbir kayıt oluşmaz
-   * ve hataların tamamı birden döner; bekleyen satırlar ekranda kalır.
+   * "All or nothing" semantics: if even one field is invalid no record is created
+   * and all errors are returned at once; pending rows stay on screen.
    *
-   * @param existingRootId Doluysa kök yeniden EKLENMEZ (mevcut kayda alt kayıt ekleme).
+   * @param existingRootId If set, the root is NOT re-ADDED (adding child records to an existing record).
    */
   private saveTree(existingRootId: number | null): void {
-    // getRawValue: salt okunur (disabled) otomatik alanlar da gitsin; `.value` onları atar.
+    // getRawValue: read-only (disabled) auto fields must be sent too; `.value` drops them.
     const rootNode = createStagedNode(this.typeName, this.editForm?.getRawValue() ?? {});
     for (const [childTypeName, state] of this.tabStates) {
       if (state.staged.length > 0) rootNode.children.set(childTypeName, state.staged);
     }
 
-    // Kök burada hiç `dirty` olmaz (yeni oluşturuldu) — üst form kendi `update`'ini
-    // `submitEdit` içinde zaten göndermiştir; buradaki update'ler yalnızca alt ağaç içindir.
+    // The root is never `dirty` here (just created) — the parent form has already sent its own
+    // `update` in `submitEdit`; the updates here are only for the subtree.
     const updates = dirtyNodes(rootNode);
 
-    // Ağaç isteği yalnızca gerçekten EKLENECEK bir şey varsa gönderilir; aksi halde
-    // sunucu tüm düğümleri `existingId` yüzünden atlayacağı için boşa istek olur.
+    // The tree request is sent only if there really is something to ADD; otherwise
+    // the server would skip all nodes because of `existingId`, making it a wasted request.
     const treeNeeded = existingRootId === null || hasInserts(rootNode);
 
     const requests: Observable<TreeStep>[] = [];
@@ -1467,7 +1467,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       this.editLoading = false;
 
       const tree = steps.find(s => s.kind === 'tree');
-      // Ağaç adımı yoksa önceki turun hataları taşınmasın diye liste sıfırlanır.
+      // Without a tree step the list is reset so errors from the previous round are not carried over.
       this.childSaveErrors = tree
         ? applyTreeResult(rootNode, tree.data ?? { savedIds: {}, errors: {} })
         : [];
@@ -1477,12 +1477,12 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
 
       const allOk = steps.every(s => s.ok);
       this.editOk = allOk;
-      // Ağaç adımı varsa onun mesajı; yoksa yalnızca hata durumunda yaz — aksi halde üst
-      // kaydın kendi "güncellendi" mesajı (submitEdit'te set edilir) ezilmemeli.
+      // With a tree step, its message; otherwise write only on error — otherwise the parent
+      // record's own "updated" message (set in submitEdit) must not be overwritten.
       if (tree) this.editMsg = tree.message;
       else if (!allOk) this.editMsg = errors[0] ?? this.editMsg;
 
-      // Kökün gerçek ID'si sunucudan geldi → yerinde düzenleme moduna geç.
+      // The root's real ID came from the server → switch to in-place edit mode.
       if (tree?.ok) {
         const rootId = existingRootId ?? tree.data?.savedIds?.[String(rootNode.localId)];
         if (rootId && this.isNew) this.switchToEditMode(rootId);
@@ -1491,8 +1491,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       if (allOk) this.editForm?.markAsPristine();
       this.afterSave(allOk && !this.isNew);
 
-      // Yazılan satırlar bekleyen listesinden düşer; yazılamayanlar HATASIYLA KALIR —
-      // kullanıcı düzeltip tekrar deneyebilsin diye asla sessizce silinmezler.
+      // Written rows drop out of the pending list; the ones that failed STAY WITH THEIR ERROR —
+      // they are never silently removed, so the user can fix them and retry.
       for (const [, state] of this.tabStates) {
         if (state.staged.length === 0) continue;
         const remaining = state.staged.filter(n => n.savedId === null || n.error);
@@ -1505,10 +1505,10 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Kaydedilmiş ve değiştirilmiş düğümler için `update()` istekleri üretir.
+   * Produces `update()` requests for the saved and modified nodes.
    *
-   * `addTree` mevcut bir kaydı GÜNCELLEYEMEZ — `existingId` dolu düğümü atlar — bu yüzden
-   * kullanıcının kayıtlı bir satırda yaptığı düzeltme ancak buradan sunucuya ulaşır.
+   * `addTree` CANNOT UPDATE an existing record — it skips nodes with `existingId` — so the
+   * user's correction on a saved row reaches the server only from here.
    */
   private updateRequests(nodes: StagedNode[]): Observable<TreeStep>[] {
     return nodes.map(node => {
@@ -1522,9 +1522,9 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       );
     });
   }
-  // ─── Form tabanlı iş akışı ──────────────────────────────────────────────────
+  // ─── Form-based workflow ────────────────────────────────────────────────────
 
-  /** Yeni kayıtta başlatılabilir akışlar; modül kurulu değilse sessizce boş. */
+  /** Workflows startable on a new record; silently empty if the module is not installed. */
   private loadStartable(): void {
     const typeName = this.typeName;
     this.instanceService.startable(typeName).pipe(markDirty(this.cdr)).subscribe({
@@ -1535,7 +1535,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Kaydın süreç durumu (kilit, adım butonları, başlatılabilir akışlar). */
+  /** The record's process state (lock, step buttons, startable workflows). */
   private loadWorkflowState(): void {
     const typeName = this.typeName;
     const id = this.recordId;
@@ -1548,7 +1548,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
         this.refreshLayoutInputs();
         this.applyWorkflowLock();
       },
-      // Modül kurulu değil / yetki yok: akış opsiyonel, kayıt ekranı normal çalışır.
+      // Module not installed / no permission: workflows are optional, the record screen works normally.
       error: () => {
         this.wfState = null;
         this.refreshLayoutInputs();
@@ -1557,7 +1557,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Sunucunun kilit kararını forma uygular (kilitli kolonlar disabled). */
+  /** Applies the server's lock decision to the form (locked columns disabled). */
   private applyWorkflowLock(): void {
     const form = this.editForm;
     if (!form) return;
@@ -1566,7 +1566,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     for (const col of this.parentColumns) {
       const control = form.get(col.columnName);
       if (!control) continue;
-      // Salt okunur otomatik alanlar kilitten bağımsız olarak hep kapalı kalır.
+      // Read-only auto fields always stay disabled regardless of the lock.
       if (locked.has(col.columnName) || this.autoValues?.isReadOnly(col.columnName)) {
         control.disable({ emitEvent: false });
       } else if (control.disabled) {
@@ -1575,22 +1575,22 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Başlıktaki "{Akış} Başlat" butonları — yeni kayıtta startable, kayıtlıda sunucu durumu. */
+  /** The "{Akış} Başlat" (Start {workflow}) buttons in the header — startable on a new record, server state on a saved one. */
   get startableWorkflows(): StartableWorkflow[] {
     return this.isNew ? this.newStartable : this.wfState?.startable ?? [];
   }
 
-  /** Kullanıcının bu kayıtta bekleyen adımları — Kaydet'in yanındaki butonlar. */
+  /** The user's pending steps on this record — the buttons next to Save. */
   get myStepTasks(): MyRecordTask[] {
     return this.wfState?.myTasks ?? [];
   }
 
-  /** Kayıt süreçte ve kullanıcı kilidi aşamıyor (admin değil). */
+  /** The record is in a process and the user cannot bypass the lock (not admin). */
   get recordLockedForUser(): boolean {
     return !!this.wfState?.isLocked && !this.wfState.canBypass;
   }
 
-  /** Başlıktaki Kaydet görünür mü — kilitliyken yalnız admin ya da adım kolonu olan görevli. */
+  /** Whether Save in the header is visible — when locked, only for admin or an assignee with step columns. */
   get canSaveRecord(): boolean {
     if (!this.editForm) return false;
     if (this.isNew) return this.permission.can(this.typeName, 'create');
@@ -1598,12 +1598,12 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return this.permission.can(this.typeName, 'update');
   }
 
-  /** Alt model sekmelerinde ekle/düzenle/sil — kilitli kayıtta yalnız admin. */
+  /** Add/edit/delete in the sub-model tabs — on a locked record only for admin. */
   canChild(typeName: string, action: 'create' | 'update' | 'delete'): boolean {
     return this.permission.can(typeName, action) && !this.recordLockedForUser;
   }
 
-  /** Kolon, kullanıcının bekleyen adımlarından birinin kayıt alanı mı (vurgu + görünürlük). */
+  /** Whether the column is a record field of one of the user's pending steps (highlight + visibility). */
   isStepColumn(col: PublishedColumn): boolean {
     const name = col.columnName.toLowerCase();
     return this.myStepTasks.some(t => t.recordFields.some(f => f.column.toLowerCase() === name));
@@ -1617,13 +1617,13 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return task.rejectLabel?.trim() || this.languageService.t('task.detail.reject');
   }
 
-  /** "{Akış} Başlat": gerekiyorsa önce kaydeder, sonra başlatır. */
+  /** "{Akış} Başlat" (Start {workflow}): saves first if needed, then starts. */
   onStartWorkflow(code: string): void {
     if (this.wfBusy || this.editLoading) return;
 
-    // Yeni kayıt önce oluşturulmalı; değişmiş kayıt önce kaydedilmeli (süreç
-    // kaydın SON halini görmeli). Güncelleme yetkisi olmayan kayıt sahibi
-    // kaydedemez ama başlatabilir — sunucu sahipliği ayrıca denetliyor.
+    // A new record must be created first; a changed record must be saved first (the process
+    // must see the record's LATEST state). A record owner without update permission
+    // cannot save but can start — the server checks ownership separately.
     const mustSave = this.isNew
       || (this.canSaveRecord && (!!this.editForm?.dirty || this.totalStagedCount > 0));
 
@@ -1634,18 +1634,18 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Kayıt işlemi bitti; bekleyen "{Akış} Başlat" varsa şimdi başlatılır. */
+  /** The save finished; a pending "{Akış} Başlat" (Start {workflow}) is started now if any. */
   private afterSave(ok: boolean): void {
     const code = this.pendingStart;
     this.pendingStart = null;
 
     if (ok && code && this.recordId > 0) {
-      this.startWorkflow(code);            // sonrasında kayıt zaten yeniden okunur
+      this.startWorkflow(code);            // the record is re-read afterwards anyway
       return;
     }
     if (ok && !this.wfState && this.recordId > 0) {
-      // Yeni kayıt az önce oluştu: artık kaydedilmiş kaydın durumu (başlatılabilir
-      // akışlar) okunabilir.
+      // The new record was just created: now the saved record's state (startable
+      // workflows) can be read.
       this.loadWorkflowState();
     }
     if (ok) this.reloadAfterAutoValues();
@@ -1662,7 +1662,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
             this.notification.success(res.message || this.languageService.t('workflow.panel.startSuccess'));
             this.refreshAfterWorkflow();
           } else {
-            // Kayıt kaydedildi, süreç başlamadı — buton görünür kalır, tekrar denenebilir.
+            // The record was saved, the process did not start — the button stays visible, it can be retried.
             this.notification.warn(this.languageService.t('workflow.record.savedButStartFailed', {
               message: res.message ?? ''
             }));
@@ -1679,7 +1679,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** Onay sürecindeki kayıtta Kaydet: yalnız adım kolonları, adım ilerlemeden. */
+  /** Save on a record in an approval process: only the step's columns, without advancing the step. */
   private saveStepFields(): void {
     const state = this.wfState;
     if (!this.editForm || !state) {
@@ -1688,7 +1688,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     }
 
     const values = buildRecordValues(state.editableColumns, this.editForm.getRawValue(), this.parentColumns);
-    // Adım kolonu olmayan hesaplanan alanlar gönderilmez; sunucu onları kendisi hesaplar.
+    // Computed fields that are not step columns are not sent; the server computes them itself.
 
     this.taskService.saveRecord({
       entityType: this.typeName,
@@ -1716,9 +1716,9 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Adım butonu. İlerletmede önce adımın zorunlu kayıt alanları ve formun geçerliliği
-   * denetlenir; ek karar alanı yoksa ARA DİYALOG OLMADAN gönderilir. Red her zaman
-   * diyalog açar (açıklama yazılabilsin, kaydedilmemiş değişiklik uyarısı görünsün).
+   * Step button. When advancing, the step's required record fields and the form's validity
+   * are checked first; if there are no extra decision fields it is sent WITHOUT AN INTERMEDIATE DIALOG.
+   * Rejection always opens a dialog (so a note can be written and the unsaved-changes warning shows).
    */
   onStepAction(task: MyRecordTask, decision: 'approve' | 'reject'): void {
     if (this.wfBusy || this.editLoading) return;
@@ -1767,9 +1767,9 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Kaydın en yeni süreci — başlıktaki "Akışı görüntüle" düğmesi. Liste sunucuda
-   * süzülür (IWorkflowAccessPolicy) ve en yeni önce gelir; modül kurulu değilse ya da
-   * kullanıcı göremiyorsa boş döner ve düğme çıkmaz.
+   * The record's newest process — the "Akışı görüntüle" (View workflow) button in the header. The list
+   * is filtered on the server (IWorkflowAccessPolicy) and newest comes first; empty if the module
+   * is not installed or the user cannot see it, and then the button does not appear.
    */
   private loadLatestInstance(): void {
     const typeName = this.typeName;
@@ -1793,19 +1793,19 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.viewInstanceId = null;
   }
 
-  /** Diyalog başlığı/butonu — adımın ilgili etiketi. */
+  /** Dialog title/button — the step's relevant label. */
   get actionDialogLabel(): string {
     const dialog = this.actionDialog;
     if (!dialog) return '';
     return dialog.decision === 'approve' ? this.approveLabelOf(dialog.task) : this.rejectLabelOf(dialog.task);
   }
 
-  /** Görevi kapatır; ilerletmede adımın kayıt alanları AYNI istekte (tek transaction) gider. */
+  /** Closes the task; when advancing, the step's record fields go in the SAME request (one transaction). */
   private completeStep(task: MyRecordTask, decision: 'approve' | 'reject', extra: TaskActionResult): void {
     this.wfBusy = decision + ':' + task.taskId;
     this.editMsg = null;
 
-    // Red kayda yazmaz (sunucu da yazmıyor) — değer göndermek yanıltıcı olurdu.
+    // Rejection does not write to the record (neither does the server) — sending values would be misleading.
     const recordValuesJson = decision === 'approve' && task.recordFields.length > 0
       ? JSON.stringify(buildRecordValues(
           task.recordFields.map(f => f.column),
@@ -1847,8 +1847,8 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Başlatma/adım sonrası: kayıt (akış ve alanlar değişti), süreç durumu ve en yeni
-   * süreç ("Akışı görüntüle") yeniden okunur. Form kayıttan yeniden kurulur; kilit yeni duruma göre uygulanır.
+   * After a start/step: the record (workflow and fields changed), the process state and the newest
+   * process ("Akışı görüntüle" / View workflow) are re-read. The form is rebuilt from the record; the lock is applied per the new state.
    */
   private refreshAfterWorkflow(): void {
     const typeName = this.typeName;
@@ -1865,11 +1865,11 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
           this.openEditMode();
         }
       },
-      error: () => { /* kayıt okunamazsa mevcut form kalır; durum yine tazelendi */ }
+      error: () => { /* if the record cannot be read the current form stays; the state was refreshed anyway */ }
     });
   }
 
-  /** Bir tipin kolonları (payload temizliği için). */
+  /** A type's columns (for payload sanitization). */
   private columnsOf(typeName: string): PublishedColumn[] {
     return this.allModels.find(m => m.typeName === typeName)?.columns ?? [];
   }
@@ -1879,7 +1879,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return e?.error?.message ?? e?.message ?? this.languageService.t('model.detail.operationFailed');
   }
 
-  /** Bekleyen bir satırın tabloda gösterilecek hücre değeri. */
+  /** Cell value of a pending row to show in the table. */
   stagedCell(node: StagedNode, columnName: string): string {
     const v = fieldValue(node.values, columnName);
     if (v === null || v === undefined || v === '') return '—';
@@ -1887,7 +1887,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     return String(v);
   }
 
-  /** Bekleyen bir satırın kendi alt ağacındaki toplam kayıt sayısı (rozet için). */
+  /** Total number of records in a pending row's own subtree (for the badge). */
   stagedChildTotal(node: StagedNode): number {
     return treePendingCount(node);
   }

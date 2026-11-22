@@ -17,9 +17,9 @@ import {
 import { IconComponent } from '../../shared/icon/icon.component';
 
 /**
- * Bildirim düğümünün düzenleyicisi: alıcılar, kanallar, konu/metin şablonu ve
- * sonraki adım. Metin düz yazıdır; yer tutucu düğmeleri imlecin olduğu alana
- * `{{record.Alan}}` vb. ekler. Adımın KOPYASIYLA çalışır (bkz. condition-editor).
+ * Editor of the notification node: recipients, channels, subject/body template and
+ * the next step. The body is plain text; placeholder buttons insert `{{record.Alan}}` etc.
+ * into the field holding the caret. Works on a COPY of the step (see condition-editor).
  */
 @Component({
     selector: 'app-notify-editor',
@@ -34,7 +34,7 @@ export class NotifyEditorComponent implements OnInit {
   readonly step = input.required<WorkflowStep>();
   readonly columns = input<PublishedColumn[]>([]);
   readonly targets = input<StepTarget[]>([]);
-  /** Görevlileri alıcı olabilecek insan adımları (onay, görev, paralel). */
+  /** Human steps whose assignees can be recipients (approval, task, parallel). */
   readonly humanSteps = input<StepTarget[]>([]);
   readonly roles = input<Role[]>([]);
   readonly users = input<AppUser[]>([]);
@@ -50,11 +50,11 @@ export class NotifyEditorComponent implements OnInit {
   readonly draft = signal<WorkflowStep>({ key: '', type: 'notify', name: '' });
   readonly notify = computed(() => notifyOf(this.draft()));
 
-  /** Eklenecek alıcı: tür + (rol/kişi/adım) seçimi. */
+  /** Recipient to add: type + (role/user/step) selection. */
   readonly newKind = signal<WorkflowRecipientKind>('creator');
   readonly newRef = signal('');
 
-  /** Yer tutucu düğmesinin yazacağı alan — en son odaklanan. */
+  /** Field the placeholder button writes into — the most recently focused one. */
   private lastField: 'subject' | 'body' = 'body';
 
   private readonly columnNames = computed(() => this.columns().map(c => c.columnName));
@@ -107,7 +107,7 @@ export class NotifyEditorComponent implements OnInit {
     this.apply(step => ({ ...step, next }));
   }
 
-  // ── Alıcılar ──────────────────────────────────────────────────────────────
+  // ── Recipients ──────────────────────────────────────────────────────────────
 
   onNewKind(event: Event): void {
     this.newKind.set((event.target as HTMLSelectElement).value as WorkflowRecipientKind);
@@ -142,13 +142,13 @@ export class NotifyEditorComponent implements OnInit {
     return recipientText(recipient, this.lookup());
   }
 
-  // ── Kanallar ve metin ─────────────────────────────────────────────────────
+  // ── Channels and text ─────────────────────────────────────────────────────
 
   isChannelChecked(channel: WorkflowNotifyChannel): boolean {
     return channelChecked(this.draft(), channel);
   }
 
-  /** Son açık kanal kapatılamaz (en az bir kanal). */
+  /** The last enabled channel cannot be turned off (at least one channel). */
   isLastChannel(channel: WorkflowNotifyChannel): boolean {
     return this.isChannelChecked(channel) && this.channels.filter(c => this.isChannelChecked(c)).length === 1;
   }
@@ -172,7 +172,7 @@ export class NotifyEditorComponent implements OnInit {
     this.lastField = field;
   }
 
-  /** Yer tutucuyu en son odaklanan alanın imlecine ekler ve odağı geri verir. */
+  /** Inserts the placeholder at the caret of the most recently focused field and restores focus. */
   insert(name: string, subject: HTMLInputElement, body: HTMLTextAreaElement): void {
     if (this.readonly()) return;
     const element = this.lastField === 'subject' ? subject : body;

@@ -4,7 +4,7 @@
   </div>
 
   <div class="panel-body">
-    <!-- Yükleniyor göstergesi -->
+    <!-- Loading indicator -->
     @if (loading()) {
       <div class="loading-row" aria-live="polite">
         <span class="spinner" aria-hidden="true"></span>
@@ -12,7 +12,7 @@
       </div>
     }
 
-    <!-- Sonuç mesajı -->
+    <!-- Result message -->
     @if (message().type !== 'idle') {
       @if (message().type === 'success') {
         <div class="alert alert-success" role="status">{{ message().text }}</div>
@@ -21,7 +21,7 @@
       }
     }
 
-    <!-- İşlem butonları -->
+    <!-- Action buttons -->
     <div class="action-group">
       <div class="action-card">
         <div class="action-card-info">

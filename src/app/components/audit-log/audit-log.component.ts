@@ -18,7 +18,7 @@ import { IconComponent } from '../shared/icon/icon.component';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AuditLogComponent implements OnInit {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   private auditLogService = inject(AuditLogService);
@@ -28,44 +28,44 @@ export class AuditLogComponent implements OnInit {
   loading = signal(true);
   loadError = signal('');
 
-  /** Genişletilmiş (eski/yeni değerleri açık) satırın ID'si; tek seferde bir satır açık olur. */
+  /** ID of the expanded row (old/new values open); only one row is open at a time. */
   expandedId = signal<number | null>(null);
 
-  // Filtre alanları — ngModel ile bağlanır, "Filtrele" butonuna basınca uygulanır
+  // Filter fields — bound with ngModel, applied when the "Filtrele" (Filter) button is pressed
   entityNameFilter = '';
   fromDateFilter = '';
   toDateFilter = '';
 
-  // Sayfalama SUNUCUDA yapılır. Eskiden backend tüm kayıtları döndürüyor ve dilimleme
-  // istemcide oluyordu; audit tablosu milyonlarca satıra ulaştığında ekran açılmıyordu.
+  // Pagination is done ON THE SERVER. The backend used to return all records and slicing
+  // happened on the client; once the audit table reached millions of rows the screen would not open.
   pageIndex = signal(1);
   pageSize = signal(20);
   readonly pageSizeOptions = [20, 50, 100];
 
-  /** Sunucudan gelen toplam kayıt sayısı (indirilen satır sayısı DEĞİL). */
+  /** Total record count from the server (NOT the number of downloaded rows). */
   total = signal(0);
   totalPages = computed(() => Math.ceil(this.total() / this.pageSize()) || 1);
 
-  /** Sunucu zaten sayfayı döndürüyor — istemcide dilimleme yok. */
+  /** The server already returns the page — no slicing on the client. */
   pagedRows = computed(() => this.rows());
 
   pageRangeStart = computed(() => this.total() === 0 ? 0 : (this.pageIndex() - 1) * this.pageSize() + 1);
   pageRangeEnd = computed(() => Math.min(this.pageIndex() * this.pageSize(), this.total()));
 
-  /** Sayfa numarası butonları için en fazla 5'lik kayan pencere (1 ve son sayfa her zaman gösterilir). */
+  /** Sliding window of at most 5 for page number buttons (page 1 and the last page are always shown). */
   visiblePages = computed(() => pageWindow(this.pageIndex(), this.totalPages()));
 
   ngOnInit(): void {
     this.load();
   }
 
-  /** Filtre değişiminde ilk sayfaya döner. */
+  /** Returns to the first page when filters change. */
   load(): void {
     this.pageIndex.set(1);
     this.fetch();
   }
 
-  /** Mevcut sayfa/filtre ile sunucudan veri çeker. */
+  /** Fetches data from the server with the current page/filters. */
   private fetch(): void {
     this.loading.set(true);
     this.loadError.set('');
@@ -110,7 +110,7 @@ export class AuditLogComponent implements OnInit {
   goToPage(p: number): void {
     if (p < 1 || p > this.totalPages() || p === this.pageIndex()) return;
     this.pageIndex.set(p);
-    this.fetch();   // sayfalama sunucuda — yeni sayfa istenmeli
+    this.fetch();   // pagination is server-side — a new page must be requested
   }
 
   prevPage(): void { this.goToPage(this.pageIndex() - 1); }
@@ -122,7 +122,7 @@ export class AuditLogComponent implements OnInit {
     this.fetch();
   }
 
-  /** Badge rengi: Added=success, Modified=warn, Deleted=danger */
+  /** Badge color: Added=success, Modified=warn, Deleted=danger */
   badgeClass(action: string): string {
     switch (action) {
       case 'Added': return 'badge-success';
@@ -132,7 +132,7 @@ export class AuditLogComponent implements OnInit {
     }
   }
 
-  /** JSON string'i okunaklı biçimde gösterir; geçersiz/boşsa olduğu gibi döner. */
+  /** Shows a JSON string in readable form; returns it as-is if invalid/empty. */
   formatJson(value: string | null): string {
     if (!value) return '—';
     try {

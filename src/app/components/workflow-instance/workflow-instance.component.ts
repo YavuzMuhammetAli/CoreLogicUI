@@ -20,16 +20,15 @@ import { formatDate, formatDateTime } from '../../utils/locale-format';
 import { IconComponent } from '../shared/icon/icon.component';
 
 /**
- * Süreç detayı — şema üstünde yol, zaman çizelgesi, görevler ve zincir doğrulama.
+ * Process detail — path on the diagram, timeline, tasks and chain verification.
  *
- * Şema sürecin BAŞLADIĞI sürümün tanımından çizilir (sonradan yayınlanan
- * sürüm bu süreci etkilemez); geçilen adımlar ve oklar olay günlüğünden
- * boyanır. Olaydaki (incident) süreçte yönetici "Yeniden dene" (o adıma
- * geri alma = otomatik adımı yeniden koşturma) ya da "Adımı atla" der.
+ * The diagram is drawn from the definition of the version the process STARTED with (a version
+ * published later doesn't affect this process); passed steps and arrows are painted from the
+ * event log. For a process in an incident, the admin says "Yeniden dene" (Retry: roll back to
+ * that step = rerun the automatic step) or "Adımı atla" (Skip step).
  *
- * Görevler adım anahtarına göre gruplanır: paralel adımda aynı StepKey altında
- * birden çok dal görevi bulunur ve düz bir liste "aynı adım iki kez açılmış" gibi
- * okunurdu.
+ * Tasks are grouped by step key: in a parallel step there are several branch tasks under the
+ * same StepKey, and a flat list would read like "the same step was opened twice".
  */
 @Component({
     selector: 'app-workflow-instance',
@@ -47,7 +46,7 @@ export class WorkflowInstanceComponent implements OnInit {
   private readonly permissionService = inject(PermissionService);
 
   instance: WorkflowInstance | null = null;
-  /** Adım anahtarına göre gruplanmış görevler — paralel dallar bir arada. */
+  /** Tasks grouped by step key — parallel branches kept together. */
   stepGroups: Array<{ stepKey: string; tasks: WorkflowTask[] }> = [];
   chain: WorkflowChain | null = null;
 
@@ -58,14 +57,14 @@ export class WorkflowInstanceComponent implements OnInit {
   pendingCancel = false;
 
   // ── Rollback ──────────────────────────────────────────────────────────────
-  /** Tanımdaki adımlar — rollback hedefi seçimi için. */
+  /** Steps in the definition — for choosing the rollback target. */
   steps: WorkflowStepInfo[] = [];
   rollbackTarget = '';
   rollingBack = false;
   pendingRollback = false;
 
-  // ── Şema ──────────────────────────────────────────────────────────────────
-  /** Şema hesapları dil değişiminde de yenilensin diye signal. */
+  // ── Diagram ───────────────────────────────────────────────────────────────
+  /** A signal so the diagram computations refresh on language change too. */
   private readonly loaded = signal<WorkflowInstance | null>(null);
   readonly graph = computed<WorkflowGraph | null>(() => parseDefinition(this.loaded()?.definitionJson));
   readonly overlay = computed<WorkflowOverlay | null>(() => {
@@ -80,7 +79,7 @@ export class WorkflowInstanceComponent implements OnInit {
     return instance && graph ? this.runtimeMeta(graph, instance, this.overlay()) : {};
   });
 
-  // ── Olay (incident) ───────────────────────────────────────────────────────
+  // ── Incident ──────────────────────────────────────────────────────────────
   retrying = false;
   skipping = false;
   pendingSkip = false;
@@ -94,9 +93,9 @@ export class WorkflowInstanceComponent implements OnInit {
   }
 
   /**
-   * Geri dönüş: yönetici akış listesine, diğerleri sürecin kaydına (yoksa
-   * Görevlerim'e). Akış listesi adminGuard'lı — oraya yönlendirilen sıradan
-   * kullanıcı /login'e atılırdı.
+   * Back navigation: admins go to the workflow list, others to the process's record (otherwise
+   * to Görevlerim / My tasks). The workflow list is behind adminGuard — a regular user
+   * redirected there would be sent to /login.
    */
   get backLink(): unknown[] {
     if (this.isAdmin) return ['/workflows'];
@@ -137,7 +136,7 @@ export class WorkflowInstanceComponent implements OnInit {
     });
   }
 
-  /** Görev sırası korunur; grup sırası ilk görevin oluşma sırasıdır. */
+  /** Task order is preserved; group order is the creation order of the first task. */
   private groupByStep(tasks: WorkflowTask[]): Array<{ stepKey: string; tasks: WorkflowTask[] }> {
     const groups = new Map<string, WorkflowTask[]>();
     for (const task of tasks) {
@@ -164,18 +163,18 @@ export class WorkflowInstanceComponent implements OnInit {
     });
   }
 
-  /** Rollback hedefleri instance'ın BAŞLADIĞI sürümün tanımından gelir. */
+  /** Rollback targets come from the definition of the version the instance STARTED with. */
   private loadSteps(instanceId: number): void {
     this.instanceService.steps(instanceId).pipe(markDirty(this.cdr)).subscribe({
       next: res => {
-        // Bitiş geri alma hedefi olamaz: o adıma girmek süreci hemen bitirirdi.
+        // End can't be a rollback target: entering that step would end the process immediately.
         if (res.success) this.steps = (res.data ?? []).filter(step => step.type !== 'end');
       },
       error: () => { this.steps = []; }
     });
   }
 
-  /** ngModel yerine düz change: bu ekranda reactive form yok, FormsModule getirmeye değmez. */
+  /** Plain change instead of ngModel: no reactive forms on this screen, not worth pulling in FormsModule. */
   onRollbackTargetChange(event: Event): void {
     this.rollbackTarget = (event.target as HTMLSelectElement).value;
   }
@@ -216,7 +215,7 @@ export class WorkflowInstanceComponent implements OnInit {
     return this.languageService.t('workflow.instance.rollbackConfirm', { step: this.rollbackTarget });
   }
 
-  /** Olaydaki adımın görünen adı — yoksa anahtarı. */
+  /** Display name of the step in the incident — otherwise its key. */
   get incidentStepName(): string {
     const key = this.instance?.currentStepKey ?? '';
     const step = this.graph()?.steps.find(s => s.key.toLowerCase() === key.toLowerCase());
@@ -224,10 +223,10 @@ export class WorkflowInstanceComponent implements OnInit {
   }
 
   /**
-   * Yeniden dene = olaydaki adıma geri alma: otomatik adım aynı transaction'da
-   * yeniden koşar. Kayıt düzeltildiyse ilerler, hata sürüyorsa sunucu yeni
-   * hatayı döner ve süreç olayda kalır. Onay istemez — geri alınacak bir
-   * ilerleme yok (süreç zaten o adımda).
+   * Retry = roll back to the step in the incident: the automatic step reruns in the same
+   * transaction. If the record was fixed it moves on; if the error persists the server returns the new
+   * error and the process stays in the incident. No confirmation needed — there is no
+   * progress to undo (the process is already at that step).
    */
   retryIncident(): void {
     const instance = this.instance;
@@ -301,11 +300,11 @@ export class WorkflowInstanceComponent implements OnInit {
     });
   }
 
-  // ── Görünüm yardımcıları ──────────────────────────────────────────────────
+  // ── View helpers ──────────────────────────────────────────────────────────
 
   /**
-   * Düğüm kartlarının alt satırı: tasarımcıdaki atama özeti yerine sürecin o
-   * adımdaki durumu (geçildi / bekliyor: kim / hata / ulaşılmadı).
+   * Bottom line of the node cards: instead of the designer's assignment summary, the process's
+   * state at that step (passed / waiting: who / error / not reached).
    */
   private runtimeMeta(
     graph: WorkflowGraph, instance: WorkflowInstance, overlay: WorkflowOverlay | null
@@ -345,7 +344,7 @@ export class WorkflowInstanceComponent implements OnInit {
     return meta;
   }
 
-  /** Bekleme adımının vadesi: o adımın son TimerScheduled olayından (yerel saatle). */
+  /** Due time of a wait step: from that step's last TimerScheduled event (in local time). */
   private waitingUntil(instance: WorkflowInstance, stepKey: string): string | null {
     const scheduled = [...(instance.timeline ?? [])].reverse()
       .find(event => event.eventType === 'TimerScheduled' && event.stepKey?.toLowerCase() === stepKey);
@@ -358,7 +357,7 @@ export class WorkflowInstanceComponent implements OnInit {
     }
   }
 
-  /** Adımda bekleyen görevlerin atandığı rol/kişi — paralelde birden çok. */
+  /** Role/person the step's pending tasks are assigned to — several in a parallel step. */
   private waitingFor(tasks: WorkflowTask[], stepKey: string): string {
     const names = tasks
       .filter(task => task.status === 'Pending' && task.stepKey.toLowerCase() === stepKey)
@@ -367,7 +366,7 @@ export class WorkflowInstanceComponent implements OnInit {
     return [...new Set(names)].join(', ');
   }
 
-  /** Görevin atandığı rol ya da kişi — ad yoksa kimlik. */
+  /** Role or person the task is assigned to — the id if there is no name. */
   assigneeOf(task: WorkflowTask): string {
     if (task.assignedRoleName) return task.assignedRoleName;
     if (task.assignedUserId) return task.assignedUserName || '#' + task.assignedUserId;
@@ -402,7 +401,7 @@ export class WorkflowInstanceComponent implements OnInit {
     }
   }
 
-  /** Paralel adım mı — aynı adımda birden çok dal görevi varsa. */
+  /** Is it a parallel step — if the same step has several branch tasks. */
   isParallelGroup(group: { tasks: WorkflowTask[] }): boolean {
     return group.tasks.some(t => !!t.branchKey);
   }

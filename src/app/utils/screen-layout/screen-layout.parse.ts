@@ -4,9 +4,9 @@ import {
 import { isStructural, validateLayoutText } from './screen-layout.validate';
 
 /**
- * Sunucudan gelen yerleşim metnini tipli belgeye çevirir; okunamıyor, şema sürümü
- * tanınmıyor ya da yapısal hata varsa null — çağıran varsayılan görünüme düşer.
- * Bilinmeyen alanlar atılır (yalnız tanınan özellikler taşınır).
+ * Converts the layout text from the server into a typed document; null if it is unreadable, the schema
+ * version is unrecognized or there is a structural error — the caller falls back to the default view.
+ * Unknown fields are dropped (only recognized properties are carried over).
  */
 export function parseFormLayout(json: string | null | undefined): FormLayout | null {
   if (!json) return null;
@@ -21,9 +21,9 @@ export function parseListLayout(json: string | null | undefined): ListLayout | n
 }
 
 /**
- * Belgeyi sabit anahtar sırasıyla, varsayılanları atlayarak metne çevirir — sunucunun
- * normalize ettiği biçimle aynı. Tasarımcı "kaydedilmemiş değişiklik var mı" sorusunu
- * bu metni karşılaştırarak cevaplar; anahtar sırası değişse kirli görünmez.
+ * Serializes the document with a fixed key order, omitting defaults — the same as the server's
+ * normalized form. The designer answers "are there unsaved changes" by comparing
+ * this text; a changed key order does not make it look dirty.
  */
 export function serializeLayout(layout: ScreenLayout): string {
   return JSON.stringify('tabs' in layout ? normalizeFormLayout(layout) : normalizeListLayout(layout));
@@ -53,7 +53,7 @@ function normalizeTab(tab: FormTab): FormTab {
 }
 
 function normalizeSection(section: FormSection): FormSection {
-  // Anahtar sırası ekleme sırasıdır: id, title?, collapsible?, collapsed?, items — sunucuyla aynı.
+  // Key order is insertion order: id, title?, collapsible?, collapsed?, items — same as the server.
   const head: { id: string; title?: string; collapsible?: boolean; collapsed?: boolean } = { id: section.id };
   if (section.title) head.title = section.title;
   if (section.collapsible) {

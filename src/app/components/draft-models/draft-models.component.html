@@ -56,10 +56,10 @@
   (cancelled)="cancelDelete()" />
 
 <!--
-  Ana model + alt modellerini iç içe (nested) gösteren recursive şablon.
-  form-build'deki model-node ağaç desenine benzer: her düğüm kendi alt modellerini
-  aynı şablonla render eder. Aksiyon butonları (Düzenle/Yayınla/Sil) yalnızca ana
-  (kök) modelde gösterilir; alt modeller salt-okunur.
+  Recursive template showing a root model and its sub-models nested.
+  Similar to the model-node tree pattern in form-build: each node renders its own sub-models
+  with the same template. Action buttons (Düzenle/Yayınla/Sil — Edit/Publish/Delete) are shown
+  only on the root model; sub-models are read-only.
 -->
 <ng-template #draftCard let-draft="draft" let-isRoot="isRoot">
   <div class="panel draft-card" [class.draft-card--sub]="!isRoot">
@@ -74,7 +74,7 @@
           }
         </div>
         @if (draft.isOrphanChild && draft.parentPath) {
-          <!-- Yarım kalmış yayınlama: ana model yayınlandı, bu alt model yayınlanamadı -->
+          <!-- Half-finished publish: the root model was published, this sub-model could not be -->
           <p class="draft-parent-path">{{ draft.parentPath }}</p>
         }
       </div>

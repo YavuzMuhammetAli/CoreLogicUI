@@ -3,13 +3,13 @@ import { placedNavModels } from './nav-layout.commands';
 import type { IconName } from '../../components/shared/icon/icons.generated';
 
 /**
- * Yayındaki navigasyon belgesini kenar çubuğunun çizeceği ağaca çevirir — SAF.
+ * Converts the published navigation document into the tree the sidebar draws — PURE.
  *
- * - Kullanıcının göremediği (ya da silinmiş) model bağlantısı atılır; izin sunucuda yine denetlenir,
- *   bu yalnız menüyü temiz tutar.
- * - Boş kalan klasör gösterilmez.
- * - `appendUnplaced` ise tasarımda olmayan görünür modeller sona "Diğer modeller" klasöründe eklenir —
- *   tasarımdan SONRA yayınlanan model menüden kaybolmasın.
+ * - A model link the user cannot see (or a deleted one) is dropped; permission is still checked on the server,
+ *   this only keeps the menu clean.
+ * - A folder left empty is not shown.
+ * - With `appendUnplaced`, visible models not in the design are appended at the end in a "Diğer modeller" (Other models) folder —
+ *   so a model published AFTER the design does not vanish from the menu.
  */
 
 export interface NavModelInfo {
@@ -19,15 +19,15 @@ export interface NavModelInfo {
 }
 
 export interface NavResolveContext {
-  /** Kullanıcının menüde görebildiği modeller (`PermissionService.canNavigate` süzülmüş), sıralı. */
+  /** Models the user can see in the menu (filtered by `PermissionService.canNavigate`), ordered. */
   readonly models: readonly NavModelInfo[];
-  /** Sayfanın varsayılan adı (çeviri). */
+  /** The page's default name (translated). */
   readonly pageLabel: (page: NavPage) => string;
-  /** "Diğer modeller" klasörünün adı (çeviri). */
+  /** Name of the "Diğer modeller" (Other models) folder (translated). */
   readonly otherModelsLabel: string;
 }
 
-/** Bağlantı ikonu: model ikon kataloğu (`app-model-icon`) ya da sabit uygulama ikonu (`app-icon`). */
+/** Link icon: from the model icon catalog (`app-model-icon`) or a fixed app icon (`app-icon`). */
 export type NavIconRef =
   | { readonly kind: 'model'; readonly name: string | null }
   | { readonly kind: 'app'; readonly name: IconName };
@@ -37,12 +37,12 @@ export interface ResolvedNavLink {
   readonly id: string;
   readonly label: string;
   readonly icon: NavIconRef;
-  /** Uygulama içi rota; dış bağlantıda null. */
+  /** In-app route; null for an external link. */
   readonly route: readonly (string | number)[] | null;
-  /** `/models` ve `/dashboard` gibi alt rotası olan sayfalarda tam eşleşme. */
+  /** Exact match for pages with child routes such as `/models` and `/dashboard`. */
   readonly exact: boolean;
   readonly href: string | null;
-  /** Görevlerim rozeti bu bağlantıya çizilir. */
+  /** The My Tasks badge is drawn on this link. */
   readonly isTasks: boolean;
 }
 
@@ -57,7 +57,7 @@ export interface ResolvedNavFolder {
 
 export type ResolvedNavNode = ResolvedNavFolder | ResolvedNavLink;
 
-/** "Diğer modeller" klasörünün kimliği — belge kimlik kalıbının dışında, çakışmaz. */
+/** Id of the "Diğer modeller" (Other models) folder — outside the document id pattern, so it cannot collide. */
 export const UNPLACED_FOLDER_ID = '$unplaced';
 
 const PAGE_ROUTES: Record<NavPage, { route: string[]; icon: IconName; exact: boolean }> = {

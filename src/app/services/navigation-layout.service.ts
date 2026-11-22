@@ -12,10 +12,10 @@ import {
 import { SKIP_FORBIDDEN_REDIRECT } from '../interceptors/error.interceptor';
 
 /**
- * /NavigationLayout — admin olmayan kullanıcıların kenar çubuğu tasarımı (migrasyon 026).
+ * /NavigationLayout — sidebar design for non-admin users (migration 026).
  *
- * `my` kabuğun YARDIMCI isteğidir: başarısız olursa kenar çubuğu otomatik menüyle çalışır
- * (SKIP_FORBIDDEN_REDIRECT). Sunucu tasarımı kullanıcının rolüne göre seçer. Diğer uçlar admin'e özeldir.
+ * `my` is an AUXILIARY request of the shell: if it fails, the sidebar falls back to the automatic menu
+ * (SKIP_FORBIDDEN_REDIRECT). The server picks the design by the user's role. The other endpoints are admin-only.
  */
 @Injectable({ providedIn: 'root' })
 export class NavigationLayoutService {
@@ -53,7 +53,7 @@ export class NavigationLayoutService {
     return this.http.post<DataResponseModel<NavigationLayoutSaveResultDto>>(`${this.baseUrl}/discardDraft`, dto);
   }
 
-  /** Ad, roller, varsayılan, etkin — belgeye dokunmaz; yeni kilit damgası `lastModifiedOn`'da döner. */
+  /** Name, roles, default, enabled — does not touch the document; the new lock stamp is returned in `lastModifiedOn`. */
   updateMeta(dto: UpdateNavigationLayoutMetaDto): Observable<DataResponseModel<NavigationLayoutSummaryDto>> {
     return this.http.post<DataResponseModel<NavigationLayoutSummaryDto>>(`${this.baseUrl}/updateMeta`, dto);
   }

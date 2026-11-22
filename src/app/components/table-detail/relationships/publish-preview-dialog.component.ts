@@ -6,15 +6,15 @@ import { EntityGraphComponent } from '../../shared/entity-graph/entity-graph.com
 import { PublishPreview } from '../../../models/relationship.model';
 import { markDirty } from '../../../utils/change-detection';
 
-/** Önizleme diyaloğunun sekmeleri. */
+/** Tabs of the preview dialog. */
 type PreviewTab = 'graph' | 'code' | 'sql';
 
 /**
- * Yayınlama önizlemesi — oluşacak entity graph'ını, üretilecek C# kodunu ve
- * migration SQL'ini assembly'e YAZMADAN gösterir.
+ * Publish preview — shows the entity graph to be created, the C# code to be generated and the
+ * migration SQL WITHOUT WRITING to the assembly.
  *
- * Veriyi kendisi çeker: diyalog açıldığında tek bir istek atar, kapanınca
- * sonucu bırakır. Böylece ana ekran önizleme durumunu hiç taşımaz.
+ * Fetches the data itself: sends a single request when the dialog opens and releases
+ * the result when it closes. So the main screen never carries the preview state.
  */
 @Component({
     selector: 'app-publish-preview-dialog',
@@ -28,7 +28,7 @@ export class PublishPreviewDialogComponent {
   private readonly relationshipService = inject(RelationshipService);
   private readonly languageService = inject(LanguageService);
 
-  /** Kaynak modelin PublishedTable.ID değeri. */
+  /** The source model's PublishedTable.ID value. */
   @Input() tableId: number | null = null;
 
   @Output() closed = new EventEmitter<void>();
@@ -39,7 +39,7 @@ export class PublishPreviewDialogComponent {
   activeTab: PreviewTab = 'graph';
   errorMessage: string | null = null;
 
-  /** Diyaloğu açar ve önizlemeyi çeker. Model kaydedilmemişse hiçbir şey yapmaz. */
+  /** Opens the dialog and fetches the preview. Does nothing if the model is not saved. */
   show(): void {
     if (this.tableId === null) return;
 

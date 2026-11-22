@@ -41,12 +41,12 @@
     }
   </div>
 
-  <!-- Model kaydedilmeden ilişki eklenemez -->
+  <!-- A relationship cannot be added before the model is saved -->
   @if (tableId === null && !isNew) {
     <div class="alert alert-info">{{ 'relationship.saveModelFirst' | t }}</div>
   }
 
-  <!-- Canlı doğrulama sonucu -->
+  <!-- Live validation result -->
   @if (validation && validation.errors.length > 0) {
     <div class="alert alert-danger" role="alert">
       <strong>{{ 'relationship.errorsTitle' | t }}</strong>
@@ -157,10 +157,10 @@
 </div>
 }
 
-<!-- Diyaloglar sekme kapalıyken de şablonda kalır: kendi `open` bayraklarıyla
-     gizlenirler, böylece @ViewChild referansları her zaman çözülür. -->
+<!-- Dialogs stay in the template even when the tab is closed: they are hidden with their own
+     `open` flags, so the @ViewChild references always resolve. -->
 
-<!-- İlişki ekleme/düzenleme popup'ı -->
+<!-- Relationship add/edit popup -->
 <app-relationship-dialog
   [publishedModelNames]="publishedModelNames"
   [currentModelName]="modelName"
@@ -169,10 +169,10 @@
   (save)="onDialogSave($event)"
   (typeHelpRequested)="typeHelpRequested.emit($event)" />
 
-<!-- Yayınlama önizlemesi -->
+<!-- Publish preview -->
 <app-publish-preview-dialog [tableId]="tableId" />
 
-<!-- İlişki silme onayı — native confirm() yerine tasarım sistemine uygun diyalog -->
+<!-- Relationship delete confirmation — a design-system dialog instead of native confirm() -->
 <app-confirm-dialog
   [open]="toRemove !== null"
   [title]="'relationship.deleteConfirmTitle' | t"

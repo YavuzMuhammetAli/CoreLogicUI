@@ -3,7 +3,7 @@ import { LanguageService } from './language.service';
 import { formatDate, formatNumber } from '../utils/locale-format';
 
 /**
- * Dil tercihi ve çeviri araması; locale-format'ın dile göre biçimlendirmesi.
+ * Language preference and translation lookup; language-aware formatting in locale-format.
  */
 describe('LanguageService', () => {
   beforeEach(() => localStorage.removeItem('lang'));
@@ -14,7 +14,7 @@ describe('LanguageService', () => {
     return TestBed.inject(LanguageService);
   }
 
-  it('seçim yoksa tr başlar, kayıtlı en seçimi okunur', () => {
+  it('starts as tr without a choice, reads a saved en choice', () => {
     expect(create().lang()).toBe('tr');
 
     TestBed.resetTestingModule();
@@ -22,7 +22,7 @@ describe('LanguageService', () => {
     expect(create().lang()).toBe('en');
   });
 
-  it('toggle dili değiştirir, saklar ve belgeye yazar', () => {
+  it('toggle switches the language, saves it and writes it to the document', () => {
     const service = create();
     service.toggle();
     expect(service.lang()).toBe('en');
@@ -33,7 +33,7 @@ describe('LanguageService', () => {
     expect(service.lang()).toBe('tr');
   });
 
-  it('t() aktif dilde döner, yer tutucuların her geçişini doldurur', () => {
+  it('t() returns the active language and fills every occurrence of the placeholders', () => {
     const service = create();
     expect(service.t('permission.guard.action.delete')).toBe('silme');
     expect(service.t('permission.guard.denied', { model: 'Siparis', action: 'okuma' }))
@@ -43,18 +43,18 @@ describe('LanguageService', () => {
     expect(service.t('permission.guard.action.delete')).toBe('delete');
   });
 
-  it('bilinmeyen anahtarda anahtarın kendisi döner', () => {
+  it('returns the key itself for an unknown key', () => {
     expect(create().t('olmayan.anahtar')).toBe('olmayan.anahtar');
   });
 });
 
 describe('locale-format', () => {
-  it('sayıyı dilin ayraçlarıyla biçimlendirir', () => {
+  it('formats numbers with the language\'s separators', () => {
     expect(formatNumber(1234.5, 'tr')).toBe('1.234,5');
     expect(formatNumber(1234.5, 'en')).toBe('1,234.5');
   });
 
-  it('tarihi dilin ay adlarıyla biçimlendirir', () => {
+  it('formats dates with the language\'s month names', () => {
     const date = new Date(2026, 7, 1);
     expect(formatDate(date, 'tr')).toContain('Ağu');
     expect(formatDate(date, 'en')).toContain('Aug');

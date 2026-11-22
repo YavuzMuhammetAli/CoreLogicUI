@@ -1,6 +1,6 @@
-// Sayfa iskeleti (.page-wrap / .page-head / .back-link / .eyebrow) global
-// tasarım sisteminde tanımlıdır — bkz. styles.scss. Burada yalnızca bu ekrana
-// özel kart yerleşimi kalır.
+// The page skeleton (.page-wrap / .page-head / .back-link / .eyebrow) is defined in the global
+// design system — see styles.scss. Only the card layout specific to this screen
+// remains here.
 
 .list-info {
   display: flex;
@@ -45,7 +45,7 @@
 }
 
 .deleted-name {
-  /* Uzun tablo/model adları (boşluksuz, mono) kartı taşırmasın */
+  /* Long table/model names (no spaces, mono) must not overflow the card */
   overflow-wrap: anywhere;
   min-width: 0;
   font-size: var(--text-base);

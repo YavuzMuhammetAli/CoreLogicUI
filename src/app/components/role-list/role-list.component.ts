@@ -12,7 +12,7 @@ import { markDirty } from '../../utils/change-detection';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { IconComponent } from '../shared/icon/icon.component';
 
-/** "İzinli model sayısı" sütununda gösterilen, üye sayısı zenginleştirilmiş rol satırı */
+/** Role row enriched with the member count, shown in the "İzinli model sayısı" (Permitted model count) column */
 interface RoleRow extends Role {
   permittedModelCount: number;
 }
@@ -25,7 +25,7 @@ interface RoleRow extends Role {
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoleListComponent implements OnInit {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly languageService = inject(LanguageService);
@@ -61,7 +61,7 @@ export class RoleListComponent implements OnInit {
           return;
         }
 
-        // İzinli model sayıları TEK istekte (eskiden rol başına ayrı permissions isteği).
+        // Permitted model counts in a SINGLE request (previously a separate permissions request per role).
         this.roleService.getPermittedModelCounts().pipe(
           map(countsRes => (countsRes.success ? countsRes.data ?? {} : {}) as Record<string, number>),
           catchError(() => of({} as Record<string, number>)),
@@ -78,7 +78,7 @@ export class RoleListComponent implements OnInit {
     });
   }
 
-  /** Onay bekleyen silme hedefi; null ise diyalog kapalıdır. */
+  /** Delete target awaiting confirmation; null means the dialog is closed. */
   readonly pendingDelete = signal<RoleRow | null>(null);
 
   askDeleteRole(row: RoleRow): void {

@@ -1,13 +1,13 @@
 <div class="regco-page">
   <div class="regco-card panel">
-    <!-- Başlık -->
+    <!-- Title -->
     <div class="regco-header">
       <span class="eyebrow">CoreLogic Platform</span>
       <h1>{{ 'regco.title' | t }}</h1>
       <p class="regco-subtitle">{{ 'regco.subtitle' | t }}</p>
     </div>
 
-    <!-- Adım göstergesi -->
+    <!-- Step indicator -->
     <ol class="regco-steps" [attr.aria-label]="'regco.stepLabel' | t:{ current: step(), total: totalSteps }">
       <li [class.active]="step() === 1" [class.done]="step() > 1">
         <span class="step-dot">@if (step() > 1) { <app-icon name="check" size="14" /> } @else { 1 }</span>
@@ -27,7 +27,7 @@
       </li>
     </ol>
 
-    <!-- Adım 1: Şirket Bilgileri -->
+    <!-- Step 1: Company details -->
     @if (step() === 1) {
       <form class="regco-form" [formGroup]="companyForm" (ngSubmit)="nextFromCompany()" novalidate>
         <div class="field">
@@ -72,7 +72,7 @@
       </form>
     }
 
-    <!-- Başvuru alındı: kurulum e-postadaki bağlantıyla başlar -->
+    <!-- Application received: setup starts with the link in the e-mail -->
     @if (verificationSent()) {
       <div class="regco-form regco-done" role="status">
         <div class="regco-done-icon" aria-hidden="true"><app-icon name="mail" size="32" /></div>
@@ -82,7 +82,7 @@
       </div>
     }
 
-    <!-- Adım 2: Yönetici Bilgileri -->
+    <!-- Step 2: Administrator details -->
     @if (step() === 2 && !verificationSent()) {
       <form class="regco-form" [formGroup]="adminForm" (ngSubmit)="startProvisioning()" novalidate>
         @if (startError()) {
@@ -146,7 +146,7 @@
       </form>
     }
 
-    <!-- Adım 3: Kurulum (gerçek ilerleme) -->
+    <!-- Step 3: Setup (real progress) -->
     @if (step() === 3 && verifyError()) {
       <div class="regco-form">
         <div class="alert alert-danger" role="alert">{{ verifyError() }}</div>
@@ -202,7 +202,7 @@
       </div>
     }
 
-    <!-- Adım 4: Tamamlandı -->
+    <!-- Step 4: Completed -->
     @if (step() === 4) {
       <div class="regco-form regco-done">
         <div class="regco-done-icon" aria-hidden="true"><app-icon name="check" size="32" /></div>

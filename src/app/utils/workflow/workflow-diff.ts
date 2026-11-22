@@ -3,25 +3,25 @@ import { exitsOf } from './workflow-exits';
 import { WorkflowOverlay, edgeId } from './workflow-overlay';
 
 /**
- * İki sürüm arasındaki fark — SAF. Konum (x/y) fark sayılmaz: düğümü sürüklemek
- * akışın davranışını değiştirmez.
+ * Difference between two versions — PURE. Position (x/y) is not a difference: dragging a node
+ * does not change the workflow's behaviour.
  */
 export interface WorkflowDiff {
-  /** Yeni sürümde eklenen adımlar. */
+  /** Steps added in the new version. */
   added: string[];
-  /** Eski sürümde olup yenide olmayanlar — şemada çizilemez, liste olarak gösterilir. */
+  /** Steps in the old version but not the new — cannot be drawn on the diagram, shown as a list. */
   removed: Array<{ key: string; name: string }>;
-  /** Her iki sürümde olup ayarı değişenler. */
+  /** Steps in both versions whose settings changed. */
   changed: string[];
-  /** Yeni sürümde eklenen ya da hedefi değişen kenarlar (`edgeId`). */
+  /** Edges added or retargeted in the new version (`edgeId`). */
   edgesChanged: string[];
-  /** Başlangıç adımı değişti mi. */
+  /** Whether the start step changed. */
   startChanged: boolean;
 }
 
 const POSITION_KEYS = new Set(['x', 'y']);
 
-/** Anahtarları sıralı, konumsuz JSON — alan sırası farkı "değişti" sayılmasın. */
+/** JSON with sorted keys and no position — so a difference in field order does not count as "changed". */
 function canonical(value: unknown): string {
   return JSON.stringify(value, (key, val) => {
     if (POSITION_KEYS.has(key)) return undefined;
@@ -86,7 +86,7 @@ export function hasDifferences(diff: WorkflowDiff): boolean {
   return diff.added.length + diff.removed.length + diff.changed.length + diff.edgesChanged.length > 0 || diff.startChanged;
 }
 
-/** Şemada: eklenen yeşil, değişen sarı; değişmeyenler soluk, değişen kenarlar vurgulu. */
+/** On the diagram: added in green, changed in yellow; unchanged faded, changed edges highlighted. */
 export function diffOverlay(diff: WorkflowDiff): WorkflowOverlay {
   const nodes: WorkflowOverlay['nodes'] = {};
   for (const key of diff.added) nodes[key.toLowerCase()] = 'added';

@@ -1,9 +1,9 @@
 import { NavIssue } from '../utils/nav-layout/nav-layout.model';
 
-// Backend Entities.DTOs.Navigation ile birebir. Belge API yüzeyinde HAM JSON METNİDİR;
-// tipli hali utils/nav-layout'ta (parseNavLayout).
+// One to one with the backend Entities.DTOs.Navigation. On the API surface the document is RAW JSON TEXT;
+// the typed form is in utils/nav-layout (parseNavLayout).
 
-/** Kenar çubuğunun okuduğu, kullanıcıya düşen yayındaki tasarım. */
+/** The published design that falls to the user, read by the sidebar. */
 export interface MyNavigationLayoutDto {
   layoutId: number;
   layoutJson: string;
@@ -24,7 +24,7 @@ export interface NavigationLayoutSummaryDto {
 }
 
 export interface NavigationLayoutListDto {
-  /** Tenant migrasyonu 026 uygulanmış mı. */
+  /** Whether tenant migration 026 is applied. */
   moduleInstalled: boolean;
   layouts: NavigationLayoutSummaryDto[];
 }
@@ -58,7 +58,7 @@ export interface UpdateNavigationLayoutMetaDto {
   isEnabled: boolean;
 }
 
-/** Yazma sonucu. Hata yanıtının gövdesinde de `data` dolu gelir (sorunlar / çakışma). */
+/** Write result. `data` is also filled in the body of an error response (issues / conflict). */
 export interface NavigationLayoutSaveResultDto {
   id: number;
   lastModifiedOn: string | null;

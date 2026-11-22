@@ -13,7 +13,7 @@ function input(partial: Partial<DisplayRowsInput> = {}): DisplayRowsInput {
 }
 
 describe('computeDisplayRows', () => {
-  it('girdi dizisini değiştirmez', () => {
+  it('does not mutate the input array', () => {
     const rows = [{ ID: 2, Ad: 'b' }, { ID: 1, Ad: 'a' }];
     const original = [...rows];
 
@@ -22,7 +22,7 @@ describe('computeDisplayRows', () => {
     expect(rows).toEqual(original);
   });
 
-  it('arama terimini görünür kolonlarda arar', () => {
+  it('searches the term in the visible columns', () => {
     const rows = [
       { ID: 1, Ad: 'Ankara', Not: 'zzz' },
       { ID: 2, Ad: 'İzmir', Not: 'ankara ofisi' }
@@ -35,7 +35,7 @@ describe('computeDisplayRows', () => {
     expect(result[0]['ID']).toBe(1);
   });
 
-  it('arama terimi ID ile de eşleşir', () => {
+  it('the search term also matches the ID', () => {
     const rows = [{ ID: 42, Ad: 'x' }, { ID: 7, Ad: 'y' }];
 
     const result = computeDisplayRows(
@@ -45,7 +45,7 @@ describe('computeDisplayRows', () => {
     expect(result[0]['ID']).toBe(42);
   });
 
-  it('sayısal kolonları metin olarak değil sayı olarak sıralar', () => {
+  it('sorts numeric columns as numbers, not as text', () => {
     const rows = [{ Adet: 10 }, { Adet: 9 }, { Adet: 100 }];
 
     const result = computeDisplayRows(input({ rows, sortCol: 'Adet' }));
@@ -53,7 +53,7 @@ describe('computeDisplayRows', () => {
     expect(result.map(r => r['Adet'])).toEqual([9, 10, 100]);
   });
 
-  it('desc yönünde sıralamayı ters çevirir', () => {
+  it('reverses the sort order in desc direction', () => {
     const rows = [{ Adet: 1 }, { Adet: 3 }, { Adet: 2 }];
 
     const result = computeDisplayRows(input({ rows, sortCol: 'Adet', sortDir: 'desc' }));
@@ -61,20 +61,20 @@ describe('computeDisplayRows', () => {
     expect(result.map(r => r['Adet'])).toEqual([3, 2, 1]);
   });
 
-  it('metin sıralamasında dili dikkate alır (TR i/ı ayrımı)', () => {
+  it('takes the language into account when sorting text (TR i/ı distinction)', () => {
     const rows = [{ Ad: 'ırmak' }, { Ad: 'istanbul' }];
 
     const tr = computeDisplayRows(input({ rows, sortCol: 'Ad', locale: 'tr' }));
     const en = computeDisplayRows(input({ rows, sortCol: 'Ad', locale: 'en' }));
 
-    // TR alfabesinde 'ı' 'i'den önce, EN'de sonra gelir.
+    // In the TR alphabet 'ı' comes before 'i'; in EN it comes after.
     expect(tr[0]['Ad']).toBe('ırmak');
     expect(en[0]['Ad']).toBe('istanbul');
   });
 });
 
 describe('selectDisplayRows', () => {
-  it('girdiler aynıysa AYNI önbelleği (ve dizi kimliğini) döner', () => {
+  it('returns the SAME cache (and array identity) when the inputs are equal', () => {
     const rows = [{ ID: 1 }];
     const first = selectDisplayRows(input({ rows }), undefined);
     const second = selectDisplayRows(input({ rows }), first);
@@ -83,16 +83,16 @@ describe('selectDisplayRows', () => {
     expect(second.result).toBe(first.result);
   });
 
-  it('satır referansı değişince yeniden hesaplar', () => {
+  it('recomputes when the row reference changes', () => {
     const first = selectDisplayRows(input({ rows: [{ ID: 1 }] }), undefined);
     const second = selectDisplayRows(input({ rows: [{ ID: 1 }] }), first);
 
     expect(second).not.toBe(first);
   });
 
-  it('DİL değişince yeniden hesaplar', () => {
-    // Regresyon: önbellek anahtarında dil yoktu; TR→EN geçişinde sıralama
-    // donuyor, kullanıcı listeyi eski dilin sırasıyla görmeye devam ediyordu.
+  it('recomputes when the LANGUAGE changes', () => {
+    // Regression: the cache key did not include the language; on TR→EN switch the sorting
+    // froze and the user kept seeing the list in the old language's order.
     const rows = [{ Ad: 'ırmak' }, { Ad: 'istanbul' }];
 
     const tr = selectDisplayRows(input({ rows, sortCol: 'Ad', locale: 'tr' }), undefined);

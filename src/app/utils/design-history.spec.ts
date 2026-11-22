@@ -1,7 +1,7 @@
 import { canRedo, canUndo, createHistory, record, redo, undo } from './design-history';
 
 describe('design-history', () => {
-  it('kayıt geri alınır ve yinelenir', () => {
+  it('a record can be undone and redone', () => {
     let h = createHistory('a');
     h = record(h, 'b', '', 1000);
     h = record(h, 'c', '', 2000);
@@ -18,7 +18,7 @@ describe('design-history', () => {
     expect(canRedo(h)).toBeFalse();
   });
 
-  it('aynı sebeple pencere içinde gelen kayıt öncekinin yerine geçer', () => {
+  it('a record with the same reason within the window replaces the previous one', () => {
     let h = createHistory('');
     h = record(h, 'S', 'form', 1000);
     h = record(h, 'Sa', 'form', 1300);
@@ -28,7 +28,7 @@ describe('design-history', () => {
     expect(h.past).toEqual(['']);
   });
 
-  it('pencere dolunca yeni adım açılır', () => {
+  it('opens a new step once the window has passed', () => {
     let h = createHistory('');
     h = record(h, 'S', 'form', 1000);
     h = record(h, 'Sa', 'form', 1000 + 601);
@@ -36,7 +36,7 @@ describe('design-history', () => {
     expect(h.past).toEqual(['', 'S']);
   });
 
-  it('farklı sebep ya da boş sebep birleşmez', () => {
+  it('a different or empty reason does not coalesce', () => {
     let h = createHistory(0);
     h = record(h, 1, 'form', 1000);
     h = record(h, 2, 'step', 1100);
@@ -46,7 +46,7 @@ describe('design-history', () => {
     expect(h.past).toEqual([0, 1, 2, 3]);
   });
 
-  it('yeni kayıt yineleme dalını temizler', () => {
+  it('a new record clears the redo branch', () => {
     let h = createHistory('a');
     h = record(h, 'b', '', 1000);
     h = undo(h);
@@ -56,7 +56,7 @@ describe('design-history', () => {
     expect(canRedo(h)).toBeFalse();
   });
 
-  it('geri almadan sonraki yazım geri alınan duruma birleşmez', () => {
+  it('typing after an undo does not coalesce into the undone state', () => {
     let h = createHistory('');
     h = record(h, 'ab', 'form', 1000);
     h = undo(h);
@@ -66,13 +66,13 @@ describe('design-history', () => {
     expect(h.present).toBe('x');
   });
 
-  it('aynı referans kaydedilmez (boş komut geçmişe adım düşürmez)', () => {
+  it('the same reference is not recorded (a no-op command adds no history step)', () => {
     const state = { a: 1 };
     const h = createHistory(state);
     expect(record(h, state, '', 1000)).toBe(h);
   });
 
-  it('sınır aşılınca en eski adım düşer', () => {
+  it('drops the oldest step when the limit is exceeded', () => {
     let h = createHistory(0);
     for (let i = 1; i <= 5; i++) h = record(h, i, '', i * 1000, 600, 3);
 

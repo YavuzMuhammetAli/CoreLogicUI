@@ -15,14 +15,14 @@
   width: 100%;
   max-width: 480px;
   max-height: calc(100vh - 2 * var(--space-4));
-  /* dvh = görünen alan; vh mobilde tarayıcı çubuklarını da sayar ve alttaki düğmeler kesilir */
+  /* dvh = visible area; on mobile vh also counts the browser bars and the bottom buttons get cut off */
   max-height: calc(100dvh - 2 * var(--space-4));
   overscroll-behavior: contain;
   overflow-y: auto;
   box-shadow: var(--elev-high);
 }
 
-/* Mesajdaki "\n\n" paragraf aralığı olarak korunur (taslak pasifleme metni bunu kullanır) */
+/* "\n\n" in the message is kept as a paragraph gap (the draft deactivation text uses it) */
 .dialog-message {
   white-space: pre-line;
 }
@@ -59,9 +59,9 @@
   }
 }
 
-/* `.panel-actions` global kuralı `.panel-head` içine yuvalanmış (styles.scss), burada
-   `.panel-body`'nin kardeşi olduğu için hiç uygulanmıyor — padding'i component vermeli.
-   Yatay değer `--space-6`: `.panel-head` ve `.panel-body` ile aynı hizada durur. */
+/* The global `.panel-actions` rule is nested inside `.panel-head` (styles.scss); here it is
+   a sibling of `.panel-body`, so it never applies — the component must provide the padding.
+   Horizontal value `--space-6`: aligns with `.panel-head` and `.panel-body`. */
 .dialog-panel .panel-actions {
   display: flex;
   justify-content: flex-end;

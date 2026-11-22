@@ -1,20 +1,20 @@
 import { Translations } from './translations.model';
 
 /**
- * İş akışı modülü çevirileri.
+ * Workflow module translations.
  *
- * Kapsanan bileşenler:
+ * Covered components:
  *   components/workflow-list      → workflow.list.*
  *   components/workflow-build     → workflow.build.*
  *   components/my-tasks           → task.list.*
  *   components/task-detail        → task.detail.*
- *   shared/task-decision-form     → task.detail.* (karar formu, görev + kayıt detayı)
- *   model-detail (form tabanlı)   → workflow.record.* (başlat / adım butonları, kilit)
+ *   shared/task-decision-form     → task.detail.* (decision form, task + record detail)
+ *   model-detail (form-based)     → workflow.record.* (start / step buttons, lock)
  *   shared/task-action-dialog     → task.detail.* + workflow.record.*
- *   ortak sözlükler               → workflow.status.*, workflow.trigger.*,
+ *   shared dictionaries           → workflow.status.*, workflow.trigger.*,
  *                                   workflow.assign.*, workflow.timeout.*,
  *                                   workflow.event.*
- *   silinenler ekranı             → deleted.workflows.*
+ *   deleted items screen          → deleted.workflows.*
  */
 export const WORKFLOW_I18N: Translations = {
   // ── workflow-list ─────────────────────────────────────────────────────────
@@ -111,7 +111,7 @@ export const WORKFLOW_I18N: Translations = {
     en: 'No steps yet. Drag a step here from the palette on the left, or click it.'
   },
 
-  // ── Doğrulama sorunları (workflow.issue.{kod} = backend WorkflowValidator kodları) ──
+  // ── Validation issues (workflow.issue.{code} = backend WorkflowValidator codes) ──
   'workflow.issues.title': { tr: 'Sorunlar', en: 'Issues' },
   'workflow.issues.none': { tr: 'Sorun yok — akış yayınlanabilir.', en: 'No issues — the workflow can be published.' },
   'workflow.issues.errors': { tr: '{n} hata', en: '{n} error(s)' },
@@ -325,7 +325,7 @@ export const WORKFLOW_I18N: Translations = {
     en: 'The trigger condition field "{field}" does not exist in the model.'
   },
 
-  // ── Koşul / Bitiş / Simülasyon (Faz 8b) ──────────────────────────────────
+  // ── Condition / End / Simulation (Phase 8b) ──────────────────────────────
   'workflow.canvas.edgeDefault': { tr: 'Diğer', en: 'Otherwise' },
   'workflow.canvas.portCase': { tr: '"{label}" yolu — hedefe sürükleyerek bağlayın', en: '"{label}" path — drag onto a step to connect' },
   'workflow.node.condition': { tr: 'Koşul', en: 'Condition' },
@@ -419,7 +419,7 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.issue.end.outcomeInvalid': { tr: 'Bitişin sonucu geçersiz: "{outcome}".', en: 'Invalid end outcome: "{outcome}".' },
   'workflow.issue.cycle.automatic': { tr: 'Bu adım yalnız otomatik adımlardan oluşan bir döngüde; süreç sonsuza dek dönerdi.', en: 'This step is in a loop of automatic steps only; the process would spin forever.' },
 
-  // ── Alan güncelle ve Bildirim düğümleri (Faz 10a) ─────────────────────────
+  // ── Update field and Notification nodes (Phase 10a) ───────────────────────
   'workflow.node.action': { tr: 'Alan güncelle', en: 'Update fields' },
   'workflow.node.actionHelp': { tr: 'Kayda sabit değer ya da formül sonucu yazar veya alanı temizler; sonra sıradaki adıma geçer.', en: 'Writes a fixed value or a formula result to the record, or clears a field; then moves to the next step.' },
   'workflow.node.actionName': { tr: 'Alanları güncelle', en: 'Update fields' },
@@ -509,7 +509,7 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.issue.notify.bodyTooLong': { tr: 'Metin en fazla {max} karakter olabilir.', en: 'The text can be at most {max} characters.' },
   'workflow.issue.notify.placeholderUnknown': { tr: 'Bilinmeyen yer tutucu: "{name}".', en: 'Unknown placeholder: "{name}".' },
 
-  // ── Bekleme düğümü (Faz 10b) ──────────────────────────────────────────────
+  // ── Wait node (Phase 10b) ─────────────────────────────────────────────────
   'workflow.node.timer': { tr: 'Bekleme', en: 'Wait' },
   'workflow.node.timerHelp': { tr: 'Belirli bir süre ya da kayıttaki bir tarihe kadar bekler; sonra sıradaki adıma geçer.', en: 'Waits for a period or until a date on the record; then moves to the next step.' },
   'workflow.node.timerName': { tr: 'Bekle', en: 'Wait' },
@@ -558,7 +558,7 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.issue.timer.onMissingInvalid': { tr: 'Tarih boşsa seçeneği geçersiz: "{value}".', en: 'Invalid "if the date is empty" option: "{value}".' },
   'workflow.issue.timer.unavailable': { tr: 'Bekleme bu şirkette kullanılamıyor: veritabanı güncellemesi (migrasyon 022) gerekli.', en: 'Wait is not available for this company: a database upgrade (migration 022) is required.' },
 
-  // ── Olgunlaştırma (Faz 11): paket, şablon, sürüm farkı, durdur, kota ───────
+  // ── Maturation (Phase 11): package, template, version diff, pause, quota ──
   'workflow.inspector.flowSettings': { tr: 'Akış ayarları', en: 'Workflow settings' },
   'workflow.inspector.trigger': { tr: 'Tetikleyici', en: 'Trigger' },
   'workflow.inspector.triggerConditions': { tr: 'Tetik koşulu', en: 'Trigger conditions' },
@@ -612,7 +612,7 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.usage.runs': { tr: 'Bu dönem başlatılan süreç', en: 'Processes started this period' },
   'workflow.usage.notEntitled': { tr: 'Mevcut planınız iş akışı modülünü kapsamıyor.', en: 'Your current plan does not include the workflow module.' },
 
-  // ── Özellik paneli ────────────────────────────────────────────────────────
+  // ── Properties panel ──────────────────────────────────────────────────────
   'workflow.inspector.aria': { tr: 'Seçimin özellikleri', en: 'Selection properties' },
   'workflow.inspector.title': { tr: 'Özellikler', en: 'Properties' },
   'workflow.inspector.empty': {
@@ -659,7 +659,7 @@ export const WORKFLOW_I18N: Translations = {
     en: 'You can move, duplicate or delete them together. Click a single step to see its settings.'
   },
 
-  // ── Düğüm türleri ve palet ────────────────────────────────────────────────
+  // ── Node types and palette ────────────────────────────────────────────────
   'workflow.build.typeApproval': { tr: 'Tekil onay', en: 'Single approval' },
   'workflow.build.typeParallel': { tr: 'Paralel onay', en: 'Parallel approval' },
   'workflow.node.approval': { tr: 'Onay', en: 'Approval' },
@@ -898,7 +898,7 @@ export const WORKFLOW_I18N: Translations = {
     en: 'This step requires fields on the record to be filled; advance it from the record screen.'
   },
 
-  // ── Kayıt ekranı: form tabanlı akış (başlat, adım butonları, kilit) ───────
+  // ── Record screen: form-based workflow (start, step buttons, lock) ────────
   'workflow.record.startNamed': { tr: '{name} Başlat', en: 'Start {name}' },
   'workflow.record.inProcess': { tr: 'Onay sürecinde', en: 'In approval' },
   'workflow.record.currentStep': { tr: '{workflow} · Adım: {step}', en: '{workflow} · Step: {step}' },
@@ -928,7 +928,7 @@ export const WORKFLOW_I18N: Translations = {
     en: 'Unsaved changes on the form are not saved by this action.'
   },
 
-  // ── workflow-instance (süreç detayı) ──────────────────────────────────────
+  // ── workflow-instance (instance detail) ───────────────────────────────────
   'workflow.instance.title': { tr: 'Süreç Detayı', en: 'Process Detail' },
   'workflow.instance.back': { tr: 'İş akışlarına dön', en: 'Back to workflows' },
   'workflow.instance.status': { tr: 'Durum', en: 'Status' },
@@ -966,7 +966,7 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.instance.loadFailed': { tr: 'Süreç yüklenemedi.', en: 'Process could not be loaded.' },
   'workflow.instance.serverError': { tr: 'Sunucuya ulaşılamadı.', en: 'Could not reach the server.' },
 
-  // ── Süreç şeması (çalışan süreç katmanı) ──────────────────────────────────
+  // ── Instance diagram (running instance overlay) ───────────────────────────
   'workflow.runtime.diagram': { tr: 'Süreç şeması', en: 'Process diagram' },
   'workflow.runtime.legend': { tr: 'Şema renkleri', en: 'Diagram colors' },
   'workflow.runtime.hint': {
@@ -981,7 +981,7 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.runtime.notReached': { tr: 'Ulaşılmadı', en: 'Not reached' },
   'workflow.runtime.takenPath': { tr: 'İzlenen yol', en: 'Path taken' },
 
-  // ── Olay (incident) bandı ─────────────────────────────────────────────────
+  // ── Incident band ─────────────────────────────────────────────────────────
   'workflow.incident.title': {
     tr: '"{step}" adımı hata verdi — süreç bekliyor',
     en: 'Step "{step}" failed — the process is waiting'
@@ -1000,7 +1000,7 @@ export const WORKFLOW_I18N: Translations = {
     en: 'Step "{step}" will be skipped without running and the process will continue on its next path (the default path for a condition).'
   },
 
-  // ── Süreç listesi (admin) ─────────────────────────────────────────────────
+  // ── Instance list (admin) ─────────────────────────────────────────────────
   'workflow.instances.title': { tr: 'Süreçler', en: 'Processes' },
   'workflow.instances.all': { tr: 'Tümü', en: 'All' },
   'workflow.instances.workflow': { tr: 'Akış', en: 'Workflow' },
@@ -1010,7 +1010,7 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.instances.empty': { tr: 'Bu filtreye uyan süreç yok.', en: 'No processes match this filter.' },
   'workflow.instances.count': { tr: 'Toplam {total} süreç', en: '{total} processes in total' },
 
-  // ── workflow-versions (sürüm geçmişi) ─────────────────────────────────────
+  // ── workflow-versions (version history) ───────────────────────────────────
   'workflow.versions.title': { tr: 'Sürüm Geçmişi', en: 'Version History' },
   'workflow.versions.colVersion': { tr: 'Sürüm', en: 'Version' },
   'workflow.versions.colStatus': { tr: 'Durum', en: 'Status' },
@@ -1023,7 +1023,7 @@ export const WORKFLOW_I18N: Translations = {
   },
   'workflow.versions.loadFailed': { tr: 'Sürümler yüklenemedi.', en: 'Versions could not be loaded.' },
 
-  // ── Ortak sözlükler ───────────────────────────────────────────────────────
+  // ── Shared dictionaries ───────────────────────────────────────────────────
   'workflow.status.Draft': { tr: 'Taslak', en: 'Draft' },
   'workflow.status.Published': { tr: 'Yayında', en: 'Published' },
   'workflow.status.Archived': { tr: 'Arşiv', en: 'Archived' },
@@ -1071,11 +1071,11 @@ export const WORKFLOW_I18N: Translations = {
   'workflow.event.InstanceFailed': { tr: 'Süreç hataya düştü', en: 'Process failed' },
   'workflow.event.RolledBack': { tr: 'Geri alındı', en: 'Rolled back' },
 
-  // ── Kayıt ekranları: süreç kolonu + başlatma bildirimi ────────────────────
+  // ── Record screens: instance column + start notification ──────────────────
   'workflow.panel.title': { tr: 'Süreç', en: 'Process' },
   'workflow.panel.startSuccess': { tr: 'Süreç başlatıldı.', en: 'Process started.' },
 
-  // ── Kayıt ekranı: Akışı görüntüle (yalnız ilerlenen yol) ─────────────────
+  // ── Record screen: View workflow (only the path taken) ────────────────────
   'workflow.view.open': { tr: 'Akışı görüntüle', en: 'View workflow' },
   'workflow.view.eyebrow': { tr: 'İş akışı', en: 'Workflow' },
   'workflow.view.startedBy': { tr: 'Başlatan: {who} · {date}', en: 'Started by {who} · {date}' },
@@ -1118,7 +1118,7 @@ export const WORKFLOW_I18N: Translations = {
     en: 'The process will be cancelled and open tasks closed.'
   },
 
-  // ── Silinenler ekranı (deleted-list ile paylaşılan sözleşme) ──────────────
+  // ── Deleted items screen (contract shared with deleted-list) ──────────────
   'deleted.workflows.backLink': { tr: 'İş akışlarına dön', en: 'Back to workflows' },
   'deleted.workflows.title': { tr: 'Silinmiş İş Akışları', en: 'Deleted Workflows' },
   'deleted.workflows.refresh': { tr: 'Yenile', en: 'Refresh' },

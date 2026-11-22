@@ -4,11 +4,11 @@ import { buildAssignment, buildSla, newStepGroup } from '../workflow-step.form';
 import { stepFromFormValue } from './workflow-step.mapper';
 
 /**
- * Tasarım ekranı FormArray'den tasarım belgesine taşınırken adım kurma kuralları
- * DEĞİŞMEMELİ. Aşağıdaki fonksiyon eski `WorkflowBuildComponent.buildGraph()`'ın
- * adım başına gövdesinin DONDURULMUŞ kopyasıdır; eşleyici aynı form değerinden
- * aynı adımı üretmeli. Bilinçli farklar (korunan alanlar, konumun kaynağı) ayrı
- * testlerde sabitlenir.
+ * Step building rules MUST NOT CHANGE while the design screen moves from a FormArray to
+ * the design document. The function below is a FROZEN copy of the per-step body of the old
+ * `WorkflowBuildComponent.buildGraph()`; the mapper must produce the same step from the
+ * same form value. Deliberate differences (preserved fields, source of the position) are pinned in
+ * separate tests.
  */
 function frozenBuildGraphStep(step: Record<string, unknown>): WorkflowStep {
   const key = String(step['key'] ?? '');
@@ -76,14 +76,14 @@ function frozenBuildGraphStep(step: Record<string, unknown>): WorkflowStep {
   };
 }
 
-/** undefined alanları atar — iki tarafın JSON'a giden hali karşılaştırılır. */
+/** Drops undefined fields — the JSON-bound form of both sides is compared. */
 function plain<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
 }
 
 const FIXTURES: Array<{ name: string; step: WorkflowStep; label: string }> = [
   {
-    name: 'rol atamalı, SLA\'lı, iki hedefli onay',
+    name: 'role-assigned approval with SLA and two targets',
     label: 'Müdür onayında',
     step: {
       key: 'mudur', type: 'approval', name: 'Müdür Onayı',
@@ -93,7 +93,7 @@ const FIXTURES: Array<{ name: string; step: WorkflowStep; label: string }> = [
     }
   },
   {
-    name: 'serbest alanlı, kayıt alanlı, red kapalı onay (red hedefi düşer)',
+    name: 'approval with free field, record field, rejection disabled (reject target dropped)',
     label: '',
     step: {
       key: 'kontrol', type: 'approval', name: 'Kontrol',
@@ -108,7 +108,7 @@ const FIXTURES: Array<{ name: string; step: WorkflowStep; label: string }> = [
     }
   },
   {
-    name: 'kaydı oluşturana atanmış, terminal hedefli onay',
+    name: 'approval assigned to the record creator, with terminal targets',
     label: '',
     step: {
       key: 'talep', type: 'approval', name: 'Talep sahibi',
@@ -117,7 +117,7 @@ const FIXTURES: Array<{ name: string; step: WorkflowStep; label: string }> = [
     }
   },
   {
-    name: 'herhangi biri kuralıyla paralel adım',
+    name: 'parallel step with the any rule',
     label: 'Paralel onayda',
     step: {
       key: 'onaylar', type: 'parallel', name: 'Onaylar', mode: 'any',
@@ -129,7 +129,7 @@ const FIXTURES: Array<{ name: string; step: WorkflowStep; label: string }> = [
     }
   },
   {
-    name: 'dal SLA\'lı, hepsi kuralıyla konumlu paralel adım',
+    name: 'positioned parallel step with branch SLA and the all rule',
     label: '',
     step: {
       key: 'kurul', type: 'parallel', name: 'Kurul', mode: 'all',
@@ -144,7 +144,7 @@ const FIXTURES: Array<{ name: string; step: WorkflowStep; label: string }> = [
     }
   },
   {
-    name: 'yalnız buton etiketli onay (form üretilir)',
+    name: 'approval with button labels only (form is produced)',
     label: 'Onaylandı',
     step: {
       key: 'son', type: 'approval', name: 'Son',
@@ -163,7 +163,7 @@ describe('stepFromFormValue', () => {
     newStepGroup(fb, step.key, step, label).getRawValue() as Record<string, unknown>;
 
   for (const fixture of FIXTURES) {
-    it(`eski buildGraph ile aynı adımı üretir: ${fixture.name}`, () => {
+    it(`produces the same step as the old buildGraph: ${fixture.name}`, () => {
       const raw = rawOf(fixture.step, fixture.label);
 
       const mapped = stepFromFormValue(raw, fixture.step);
@@ -174,7 +174,7 @@ describe('stepFromFormValue', () => {
     });
   }
 
-  it('iki kez uygulanınca aynı sonucu verir (normalleştirme kararlı)', () => {
+  it('applying twice gives the same result (normalisation is stable)', () => {
     for (const fixture of FIXTURES) {
       const once = stepFromFormValue(rawOf(fixture.step), fixture.step).step;
       const twice = stepFromFormValue(rawOf(once), once).step;
@@ -182,7 +182,7 @@ describe('stepFromFormValue', () => {
     }
   });
 
-  it('form alanının en fazla uzunluğunu korur (eskiden siliniyordu)', () => {
+  it('keeps the form field\'s maximum length (used to be deleted)', () => {
     const step: WorkflowStep = {
       key: 'a', type: 'approval', name: 'A', assignment: { mode: 'role', roleId: 1 },
       form: { fields: [{ name: 'not', dataType: 'string', isRequired: false, maxLength: 120 }] }
@@ -193,7 +193,7 @@ describe('stepFromFormValue', () => {
     expect(mapped.form?.fields[0].maxLength).toBe(120);
   });
 
-  it('paralel dalın formunu korur (eskiden siliniyordu)', () => {
+  it('keeps the parallel branch\'s form (used to be deleted)', () => {
     const step = { ...FIXTURES[3].step };
     step.branches = [
       { ...step.branches![0], form: { fields: [], recordFields: [{ column: 'Tutar', isRequired: true }] } },
@@ -206,7 +206,7 @@ describe('stepFromFormValue', () => {
     expect(mapped.branches?.[1].form).toBeUndefined();
   });
 
-  it('adımın tanımadığımız alanlarını korur', () => {
+  it('keeps fields of the step we do not know', () => {
     const step = { ...FIXTURES[0].step, aciklama: 'AI notu' } as WorkflowStep & { aciklama: string };
 
     const mapped = stepFromFormValue(rawOf(step), step).step as WorkflowStep & { aciklama?: string };
@@ -214,19 +214,19 @@ describe('stepFromFormValue', () => {
     expect(mapped.aciklama).toBe('AI notu');
   });
 
-  it('konumu pop-up\'tan değil asıl adımdan alır', () => {
+  it('takes the position from the original step, not the pop-up', () => {
     const step = FIXTURES[0].step;
     const mapped = stepFromFormValue({ ...rawOf(step), x: 1, y: 2 }, step).step;
 
     expect([mapped.x, mapped.y]).toEqual([120, 40]);
   });
 
-  it('yeni adım konumsuz başlar (otomatik yerleşim)', () => {
+  it('a new step starts without position (auto layout)', () => {
     const mapped = stepFromFormValue(rawOf(FIXTURES[0].step), null).step;
     expect([mapped.x, mapped.y]).toEqual([null, null]);
   });
 
-  it('paralele dönen adımdan onay alanları silinir', () => {
+  it('approval fields are deleted from a step turned parallel', () => {
     const original = FIXTURES[0].step;
     const raw = { ...rawOf(original), type: 'parallel', branches: [] };
 
@@ -237,7 +237,7 @@ describe('stepFromFormValue', () => {
     expect(mapped.onComplete).toBe('finans');
   });
 
-  it('onaya dönen adımdan paralel alanlar silinir (dal kalırsa yayın reddedilirdi)', () => {
+  it('parallel fields are deleted from a step turned approval (a leftover branch would fail publishing)', () => {
     const original = FIXTURES[3].step;
     const raw = { ...rawOf(original), type: 'approval' };
 

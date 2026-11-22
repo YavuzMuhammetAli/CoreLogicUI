@@ -28,7 +28,7 @@ describe('IconComponent', () => {
     fixture.detectChanges();
   });
 
-  it('adın path\'ini çizer, boyutu svg\'ye yazar', () => {
+  it('draws the path for the name and writes the size to the svg', () => {
     host.name.set('delete');
     host.size.set(14);
     fixture.detectChanges();
@@ -38,7 +38,7 @@ describe('IconComponent', () => {
     expect(svg.getAttribute('fill')).toBe('currentColor');
   });
 
-  it('filled: dolu varyant varsa onu, yoksa çizgisel path\'i kullanır', () => {
+  it('filled: uses the filled variant if present, otherwise the outlined path', () => {
     host.name.set('dashboard');
     host.filled.set(true);
     fixture.detectChanges();
@@ -51,7 +51,7 @@ describe('IconComponent', () => {
     expect(d()).toBe(ICONS.add);
   });
 
-  it('label yoksa süstür (aria-hidden), varsa role=img + aria-label', () => {
+  it('is decorative without a label (aria-hidden), role=img + aria-label with one', () => {
     expect(el().getAttribute('aria-hidden')).toBe('true');
     expect(el().getAttribute('role')).toBeNull();
 
@@ -62,7 +62,7 @@ describe('IconComponent', () => {
     expect(el().getAttribute('aria-label')).toBe('Uyarı');
   });
 
-  it('üretilen kayıt manifest ile eşit (npm run icons koşulmuş)', () => {
+  it('the generated registry matches the manifest (npm run icons has been run)', () => {
     expect(Object.keys(ICONS).sort()).toEqual([...manifest.outlined].sort());
     expect(Object.keys(ICONS_FILLED).sort()).toEqual([...manifest.filled].sort());
   });

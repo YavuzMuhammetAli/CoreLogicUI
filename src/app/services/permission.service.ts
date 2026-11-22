@@ -10,11 +10,11 @@ export interface ModelPermission {
   canCreate: boolean;
   canUpdate: boolean;
   canDelete: boolean;
-  /** Kullanıcı sidebar navigasyonunda görünsün mü? Read'den bağımsız bayrak. */
+  /** Should it appear in the user's sidebar navigation? A flag independent of Read. */
   canShowInNav: boolean;
-  /** Kullanıcı yalnızca kendi oluşturduğu (CreatedBy==userId) kayıtları görebilir/değiştirebilir. */
+  /** The user can see/change only the records they created (CreatedBy==userId). */
   canOwnOnly: boolean;
-  /** Kayıttaki iş akışını görebilir mi (karar sunucuda — IWorkflowAccessPolicy). */
+  /** Can see the record's workflow (decided on the server — IWorkflowAccessPolicy). */
   canViewWorkflow: boolean;
 }
 
@@ -24,7 +24,7 @@ export interface MyPermissionsResponse {
   data: {
     isAdmin: boolean;
     permissions: ModelPermission[];
-    /** Kullanıcının üye olduğu rollerden çözülen açılış sayfası; tanımlı değilse null. */
+    /** Landing page resolved from the roles the user belongs to; null if not defined. */
     landingPage: string | null;
   };
 }
@@ -35,13 +35,13 @@ export class PermissionService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly http = inject(HttpClient);
 
-  /** Kullanıcının yetki verisi — null ise henüz yüklenmedi */
+  /** The user's permission data — null means not loaded yet */
   private _data = signal<MyPermissionsResponse['data'] | null>(null);
 
   /**
-   * Model adı (küçük harf) → izin. can()/canNavigate() liste satırlarında satır başına birkaç kez
-   * çağrılır; her çağrıda tüm izin listesini toLowerCase ile taramak model sayısıyla büyüyordu.
-   * Harita yalnız izin verisi değişince kurulur.
+   * Model name (lower case) → permission. can()/canNavigate() is called several times per row in
+   * list rows; scanning the whole permission list with toLowerCase on each call grew with the model count.
+   * The map is built only when the permission data changes.
    */
   private readonly byModel = computed(() => {
     const map = new Map<string, ModelPermission>();
@@ -50,30 +50,30 @@ export class PermissionService {
   });
 
   /**
-   * Uçuştaki yükleme isteği — aynı anda birden fazla guard çalışırsa
-   * tek HTTP isteğiyle paylaşılır. clear() çağrısında sıfırlanır.
+   * In-flight load request — if several guards run at the same time
+   * it is shared as a single HTTP request. Reset on clear().
    */
   private _loadingRef: Observable<MyPermissionsResponse['data'] | null> | null = null;
 
   /**
-   * Yetki verisinin yüklü olmasını garantiler.
+   * Guarantees the permission data is loaded.
    *
-   * - Sinyal zaten doluysa anında mevcut veriyi emit eder (HTTP isteği atmaz).
-   * - Değilse `loadMyPermissions()` çağırır; aynı anda birden fazla guard
-   *   çalışırsa `shareReplay(1)` sayesinde tek HTTP isteği atılır.
-   * - Hata durumunda `null` emit eder; 401 `errorInterceptor` tarafından
-   *   login yönlendirmesiyle ele alınır.
+   * - If the signal is already filled, emits the current data immediately (no HTTP request).
+   * - Otherwise calls `loadMyPermissions()`; if several guards run at the same
+   *   time, `shareReplay(1)` ensures a single HTTP request.
+   * - On error emits `null`; a 401 is handled by `errorInterceptor`
+   *   with the login redirect.
    *
-   * Guard'larda kullanım: `permissions.ensureLoaded().pipe(map(() => ...))`
+   * Usage in guards: `permissions.ensureLoaded().pipe(map(() => ...))`
    */
   ensureLoaded(): Observable<MyPermissionsResponse['data'] | null> {
-    // Zaten dolduysa — anında dön, yeniden istek atma
+    // Already filled — return immediately, don't request again
     if (this._data() !== null) {
       return of(this._data());
     }
 
-    // Uçuştaki isteği paylaş; tamamlanınca referansı temizle. Temizlenmezse başarısız
-    // bir yüklemenin null sonucu çıkışa dek önbellekte kalır ve guard'lar hiç yeniden denemez.
+    // Share the in-flight request; clear the reference on completion. Otherwise the null result of a
+    // failed load stays cached until logout and the guards never retry.
     if (!this._loadingRef) {
       this._loadingRef = this.loadMyPermissions().pipe(
         map(() => this._data()),
@@ -87,9 +87,9 @@ export class PermissionService {
   }
 
   /**
-   * Kullanıcının yetkilerini backend'den yükler.
-   * SSR ortamında tarayıcı olmadığından çağırılmaz.
-   * Observable döndürür; subscribe eden çıkış (logout) akışında kullanabilir.
+   * Loads the user's permissions from the backend.
+   * Not called in SSR since there is no browser.
+   * Returns an Observable; a subscriber can use it in the logout flow.
    */
   loadMyPermissions(): Observable<MyPermissionsResponse> {
     return this.http
@@ -104,17 +104,17 @@ export class PermissionService {
   }
 
   /**
-   * Kullanıcının yönetici olup olmadığını senkron olarak döndürür.
-   * Signal tabanlı; yetki verisi henüz yüklenmediyse false döner.
+   * Synchronously returns whether the user is an administrator.
+   * Signal-based; returns false if the permission data is not loaded yet.
    */
   isAdmin(): boolean {
     return this._data()?.isAdmin ?? false;
   }
 
   /**
-   * Verilen model üzerinde belirtilen işlem yetkisini senkron kontrol eder.
-   * Yönetici ise her zaman true döner.
-   * @param modelName  Model / tablo adı (typeName)
+   * Synchronously checks the given action permission on the given model.
+   * Always returns true for an administrator.
+   * @param modelName  Model / table name (typeName)
    * @param action     'read' | 'create' | 'update' | 'delete'
    */
   can(
@@ -137,9 +137,9 @@ export class PermissionService {
   }
 
   /**
-   * Verilen modelin navigasyonda görünüp görünmeyeceğini senkron kontrol eder.
-   * Yönetici ise her zaman true döner (admin sidebar'ı farklı branch'te render edilir,
-   * bu metot admin görünürlüğünü etkilemez; yalnızca normal kullanıcı nav filtresi için).
+   * Synchronously checks whether the given model should appear in the navigation.
+   * Always returns true for an administrator (the admin sidebar is rendered in a different branch,
+   * this method does not affect admin visibility; it is only for the regular user's nav filter).
    */
   canNavigate(modelName: string): boolean {
     const data = this._data();
@@ -150,17 +150,17 @@ export class PermissionService {
   }
 
   /**
-   * Login sonrası yönlendirilecek açılış sayfasını döndürür. Kullanıcının rolünde tanımlı
-   * bir açılış sayfası yoksa (ya da yetki verisi henüz yüklenmediyse) varsayılan /models döner.
+   * Returns the landing page to redirect to after login. If the user's role has no landing page
+   * defined (or the permission data is not loaded yet), the default /models is returned.
    */
   getLandingPage(): string {
     return this._data()?.landingPage ?? '/models';
   }
 
-  /** Yetki verisini temizler (çıkış işleminde çağrılır). */
+  /** Clears the permission data (called on logout). */
   clear(): void {
     this._data.set(null);
-    this._loadingRef = null; // ensureLoaded uçuş referansını da sıfırla
+    this._loadingRef = null; // also reset the ensureLoaded in-flight reference
   }
 
 }

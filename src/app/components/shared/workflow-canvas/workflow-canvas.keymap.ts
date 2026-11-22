@@ -1,9 +1,9 @@
 /**
- * Tasarımcı klavye kısayolları — SAF eşleme, DOM yok.
+ * Designer keyboard shortcuts — PURE mapping, no DOM.
  *
- * Kısayol bir yazı alanında (input, textarea, select, contenteditable) basıldıysa
- * HİÇBİR komut çalışmaz: orada Ctrl+Z tarayıcının metin geri alması, Delete ve
- * oklar metin düzenlemesidir.
+ * If a shortcut is pressed in a text field (input, textarea, select, contenteditable)
+ * NO command runs: there Ctrl+Z is the browser's text undo, and Delete and the
+ * arrows are text editing.
  */
 export type DesignerCommand =
   | 'undo' | 'redo'
@@ -22,11 +22,11 @@ export interface KeyInput {
 
 export interface KeyCommand {
   command: DesignerCommand;
-  /** Ok tuşlarında Shift: ızgara adımı kadar it. */
+  /** Shift with arrow keys: nudge by a grid step. */
   large: boolean;
 }
 
-/** Tuş birleşimini komuta çevirir; tanınmayan birleşimde null. */
+/** Maps a key combination to a command; null for an unrecognised combination. */
 export function commandFor(event: KeyInput): KeyCommand | null {
   const mod = event.ctrlKey || event.metaKey;
   const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
@@ -64,9 +64,9 @@ export function commandFor(event: KeyInput): KeyCommand | null {
 }
 
 /**
- * Olay, Enter'ı kendisi kullanan bir öğeden mi geliyor (düğme, bağlantı, menü
- * öğesi)? Odak "Sığdır" düğmesindeyken Enter hem düğmeye basıp hem seçili
- * adımın pop-up'ını açmasın.
+ * Does the event come from an element that uses Enter itself (button, link, menu
+ * item)? With focus on the "Sığdır" (Fit) button, Enter must not both press the button and open the
+ * selected step's pop-up.
  */
 export function isActivationTarget(target: EventTarget | null): boolean {
   if (!target || typeof (target as Element).tagName !== 'string') return false;
@@ -79,7 +79,7 @@ export function isActivationTarget(target: EventTarget | null): boolean {
   return role === 'button' || role === 'menuitem' || role === 'link' || role === 'tab';
 }
 
-/** Olay bir yazı alanından mı geliyor? (Kısayollar orada devre dışı.) */
+/** Does the event come from a text field? (Shortcuts are disabled there.) */
 export function isTypingTarget(target: EventTarget | null): boolean {
   if (!target || typeof (target as Element).tagName !== 'string') return false;
 
@@ -87,7 +87,7 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   const tag = element.tagName.toLowerCase();
   if (tag === 'textarea' || tag === 'select') return true;
   if (tag === 'input') {
-    // Onay kutusu ve düğme benzeri girdiler yazı alanı değildir.
+    // Checkboxes and button-like inputs are not text fields.
     const type = (element.getAttribute('type') ?? 'text').toLowerCase();
     return !['checkbox', 'radio', 'button', 'submit', 'reset', 'range', 'color', 'file'].includes(type);
   }

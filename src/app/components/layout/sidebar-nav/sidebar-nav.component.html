@@ -32,7 +32,7 @@
 
 <ng-template #linkTpl let-link>
   @if (link.href) {
-    <!-- Dış bağlantı: yeni sekmede; adres iki tarafta yalnız http(s) olarak doğrulanır -->
+    <!-- External link: in a new tab; the address is validated as http(s) only on both sides -->
     <a class="nav-item" [href]="link.href" target="_blank" rel="noopener noreferrer"
        [attr.aria-label]="'layout.externalLinkAria' | t:{ name: link.label }">
       @if (link.icon.kind === 'model') { <app-model-icon [icon]="link.icon.name" /> } @else { <app-icon [name]="link.icon.name" /> }

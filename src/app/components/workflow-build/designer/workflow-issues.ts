@@ -3,26 +3,26 @@ import { sameKey } from '../../../utils/workflow/workflow-exits';
 import { WorkflowDesignDoc } from './workflow-design.doc';
 
 /**
- * Doğrulama bulgularının ekran hali — SAF.
+ * Screen form of validation findings — PURE.
  *
- * Sunucu her bulgu için bir `code` ve Türkçe yedek `message` döner; ekran metni
- * `workflow.issue.{code}` çevirisinden kurulur (dil değişimi ve adım ADI ile).
- * Çevirisi olmayan yeni bir kod gelirse sunucunun metni gösterilir — eksik
- * çeviri kullanıcıya ham anahtar olarak sızmasın.
+ * The server returns a `code` and a Turkish fallback `message` for each finding; the screen text
+ * is built from the `workflow.issue.{code}` translation (with language changes and the step NAME).
+ * If a new code without translation arrives, the server's text is shown — so a missing
+ * translation does not leak to the user as a raw key.
  */
 export interface IssueText {
   t(key: string, params?: Record<string, string | number>): string;
 }
 
-/** Sorun listesinin satırı. */
+/** Row of the issue list. */
 export interface IssueRow {
   severity: WorkflowIssueSeverity;
-  /** Konumsuz mesaj ("Atama tanımlı değil."). */
+  /** Message without location ("Atama tanımlı değil." — no assignment defined). */
   text: string;
-  /** "Müdür Onayı" ya da "Paralel onay / Finans"; akış geneli sorunda null. */
+  /** "Müdür Onayı" or "Paralel onay / Finans"; null for a flow-wide issue. */
   location: string | null;
   stepKey: string | null;
-  /** Tıklanınca nereye gidilir: adım, tetikleyici sekmesi ya da yalnız bilgi. */
+  /** Where a click leads: step, trigger tab or info only. */
   target: 'step' | 'trigger' | 'flow';
 }
 
@@ -31,12 +31,12 @@ export interface IssueCounts {
   warnings: number;
 }
 
-/** Bulgunun mesajı (konum hariç). */
+/** The finding's message (excluding location). */
 export function issueText(issue: WorkflowIssue, i18n: IssueText): string {
   const key = `workflow.issue.${issue.code}`;
   const params: Record<string, string | number> = { ...(issue.args ?? {}) };
   if (issue.port) {
-    // Koşul yolunun adı durumun etiketidir (sunucu "label" argümanında tırnaklı yollar).
+    // The name of a condition path is the case's label (the server sends it quoted in the "label" argument).
     params['port'] = issue.port.startsWith('case:')
       ? (issue.args?.['label'] ?? issue.port.slice(5)).replace(/"/g, '')
       : i18n.t(`workflow.inspector.exit.${issue.port}`);
@@ -46,7 +46,7 @@ export function issueText(issue: WorkflowIssue, i18n: IssueText): string {
   return text === key ? issue.message : text;
 }
 
-/** Bulgunun konumu: adımın (ve dalın) ADI; adım belgede yoksa anahtarı. */
+/** Location of the finding: the step's (and branch's) NAME; the key if the step is not in the document. */
 export function issueLocation(issue: WorkflowIssue, doc: WorkflowDesignDoc): string | null {
   if (!issue.stepKey) return null;
 
@@ -63,7 +63,7 @@ function targetOf(issue: WorkflowIssue): IssueRow['target'] {
   return issue.code.startsWith('trigger.') ? 'trigger' : 'flow';
 }
 
-/** Listeleme sırası: önce hatalar, sonra uyarılar; her grupta sunucunun sırası. */
+/** Listing order: errors first, then warnings; within each group the server's order. */
 export function issueRows(issues: ReadonlyArray<WorkflowIssue>, doc: WorkflowDesignDoc, i18n: IssueText): IssueRow[] {
   const rank = (issue: WorkflowIssue) => issue.severity === 'error' ? 0 : 1;
   return issues
@@ -87,7 +87,7 @@ export function countIssues(issues: ReadonlyArray<{ severity: WorkflowIssueSever
   return { errors, warnings };
 }
 
-/** Adım başına satırlar (anahtar küçük harfli) — düğüm rozeti ve özellik paneli. */
+/** Rows per step (lower-case key) — node badge and inspector panel. */
 export function rowsByStep(rows: ReadonlyArray<IssueRow>): Map<string, IssueRow[]> {
   const byStep = new Map<string, IssueRow[]>();
   for (const row of rows) {
@@ -98,7 +98,7 @@ export function rowsByStep(rows: ReadonlyArray<IssueRow>): Map<string, IssueRow[
   return byStep;
 }
 
-/** Rozet ipucu: ilk sorunun metni, fazlası "+N". */
+/** Badge tooltip: the first issue's text, more as "+N". */
 export function badgeTitle(rows: ReadonlyArray<IssueRow>, i18n: IssueText): string {
   if (rows.length === 0) return '';
   const first = rows[0].text;

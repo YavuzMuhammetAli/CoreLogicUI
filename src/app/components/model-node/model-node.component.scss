@@ -1,11 +1,11 @@
-/* ── Model düğümü kapsayıcı ────────────────────────────────────────────────── */
+/* ── Model node container ──────────────────────────────────────────────────── */
 
 .model-node {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
 
-  /* Alt model: görsel girinti + sol kenar çizgisi */
+  /* Sub-model: visual indent + left border line */
   &.model-node--sub {
     margin-top: var(--space-5);
     padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5);
@@ -13,14 +13,14 @@
     background: var(--surface-warm);
     border-radius: 0 var(--radius-md) var(--radius-md) 0;
 
-    /* Her iç içe seviye ~40px yiyordu: telefonda 3. seviyede alanlar ~165px'e iniyordu */
+    /* Each nesting level ate ~40px: on phones fields shrank to ~165px at level 3 */
     @media (max-width: 768px) {
       padding: var(--space-3) 0 var(--space-3) var(--space-3);
     }
   }
 }
 
-/* ── Düğüm başlığı ─────────────────────────────────────────────────────────── */
+/* ── Node header ───────────────────────────────────────────────────────────── */
 
 .node-head {
   display: flex;
@@ -60,7 +60,7 @@
   }
 }
 
-/* ── Sütunlar bölümü ───────────────────────────────────────────────────────── */
+/* ── Columns section ───────────────────────────────────────────────────────── */
 
 .columns-section {
   margin-top: var(--space-4);
@@ -94,9 +94,9 @@
   gap: var(--space-2);
 }
 
-/* Bir sütun kartı: alanlar global .field-row satırlarında (Etiket | Alan Adı,
-   Açıklama | Tip, kural alanları), en altta Nullable + Sil. Hizalama global
-   sınıflardan gelir — bkz. corelogic-design skill'i "Yan yana alanlar". */
+/* A column card: fields in global .field-row rows (Label | Field Name,
+   Description | Type, rule fields), Nullable + Delete at the bottom. Alignment comes from
+   global classes — see the corelogic-design skill "Yan yana alanlar" (Side-by-side fields). */
 .column-row {
   display: flex;
   flex-direction: column;
@@ -112,7 +112,7 @@
   border-radius: var(--radius-md);
 }
 
-/* Etiket satırındaki düğmeler (.field-head içinde): "↺ Etiketten üret", tip kılavuzu. */
+/* Buttons in the label row (inside .field-head): "↺ Etiketten üret" (Generate from label), type guide. */
 .help-btn {
   flex-shrink: 0;
   gap: var(--space-1);
@@ -123,7 +123,7 @@
   }
 }
 
-/* Solda Nullable, en sağda Sil. */
+/* Nullable on the left, Delete on the far right. */
 .col-row-footer {
   display: flex;
   align-items: center;
@@ -146,7 +146,7 @@
   }
 }
 
-/* ── Alt modeller bölümü ───────────────────────────────────────────────────── */
+/* ── Sub-models section ────────────────────────────────────────────────────── */
 
 .sub-models-section {
   display: flex;
@@ -155,7 +155,7 @@
   margin-top: var(--space-2);
 }
 
-/* ── Alt Model Oluştur butonu ──────────────────────────────────────────────── */
+/* ── "Create Sub-model" button ─────────────────────────────────────────────── */
 
 .add-sub-model-btn {
   margin-top: var(--space-4);

@@ -13,8 +13,8 @@ export class AuditLogService {
   constructor(private http: HttpClient) {}
 
   /**
-   * Denetim kayıtlarını filtreleyerek getirir (admin-only). Tüm parametreler opsiyoneldir;
-   * tenant filtresi backend'de ambient tenant scope üzerinden uygulanır.
+   * Fetches audit records with filters (admin-only). All parameters are optional;
+   * the tenant filter is applied on the backend through the ambient tenant scope.
    */
   getFiltered(entityName?: string, from?: Date | null, to?: Date | null): Observable<ListResponseModel<AuditLog>> {
     let params = new HttpParams();
@@ -26,8 +26,8 @@ export class AuditLogService {
   }
 
   /**
-   * Sayfalı denetim kaydı listesi. Audit tablosu milyonlarca satıra ulaşabildiği için
-   * ekran bunu kullanır; filtresiz `getFiltered` tüm tabloyu indirir.
+   * Paged audit record list. The screen uses this because the audit table can reach
+   * millions of rows; an unfiltered `getFiltered` downloads the whole table.
    */
   getFilteredPaged(
     page: number,

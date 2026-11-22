@@ -1,4 +1,4 @@
-// Sekme çubuğu — table-detail'deki desenle aynı görünüm.
+// Tab bar — same look as the pattern in table-detail.
 .tab-bar {
   display: flex;
   gap: var(--space-1);
@@ -40,8 +40,8 @@
   padding: var(--space-4);
 }
 
-// Boşluk .stack'ten geliyor; araç çubuğu kendi margin'ini taşımaz, yoksa
-// sekme içeriğine göre bir yapışık bir kopuk görünürdü.
+// Spacing comes from .stack; the toolbar carries no margin of its own, otherwise
+// depending on the tab content it would look stuck in one and detached in another.
 .tab-toolbar {
   display: flex;
   align-items: center;
@@ -53,8 +53,8 @@
 .tab-toolbar--end { justify-content: flex-end; }
 
 /*
- * align-items: start — aynı satırdaki alanlardan birinin altında yardım metni
- * olduğunda komşuları gerilmesin, input'lar tek çizgide dursun.
+ * align-items: start — when one of the fields in the same row has help text below it,
+ * its neighbours should not stretch; inputs stay on one line.
  */
 .form-grid {
   display: grid;
@@ -63,7 +63,7 @@
   align-items: start;
 }
 
-// Yayınlanmış sürüm: metin kutuları da seçim kutuları gibi kilitli görünsün.
+// Published version: text boxes should look locked like the select boxes.
 .input:disabled,
 .input[readonly] {
   background: var(--surface-warm);
@@ -72,7 +72,7 @@
   opacity: 1;
 }
 
-// Tek alanlık satır tüm genişliğe yayılmasın (tetikleyici seçimi).
+// A single-field row should not span the full width (trigger selection).
 .form-grid--single { grid-template-columns: minmax(0, 360px); }
 
 .input-mono {
@@ -80,7 +80,7 @@
   font-size: var(--text-sm);
 }
 
-// .checkbox-label global değil — her bileşen kendi tanımlıyor (table-detail ile aynı).
+// .checkbox-label is not global — each component defines its own (same as table-detail).
 .checkbox-label {
   display: inline-flex;
   align-items: center;
@@ -91,11 +91,11 @@
   cursor: pointer;
 }
 
-// ── Adım listesi ────────────────────────────────────────────────────────────
+// ── Step list ────────────────────────────────────────────────────────────
 
 .step-table .col-order { width: 48px; }
 
-// Adım sırası — şemadaki katmanla zihinsel bağ kursun.
+// Step order — a mental link to the layer in the diagram.
 .step-order {
   width: 26px;
   height: 26px;
@@ -114,7 +114,7 @@
   color: var(--fg-2);
 }
 
-// Satırın tamamı adım pop-up'ını açar.
+// The whole row opens the step pop-up.
 .clickable-row {
   cursor: pointer;
 
@@ -130,7 +130,7 @@
 
 .badge { margin-left: var(--space-2); }
 
-// ── Tetikleyici koşulları ───────────────────────────────────────────────────
+// ── Trigger conditions ───────────────────────────────────────────────────
 
 .conditions-section {
   display: grid;
@@ -144,7 +144,7 @@
   gap: var(--space-2);
 }
 
-// Sabit sütunlar: satırlar alt alta tam hizalı.
+// Fixed columns: rows fully aligned under each other.
 .condition-row {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.4fr) 36px;
@@ -172,10 +172,10 @@
   }
 }
 
-// ── Tasarımcı yerleşimi: palet | tuval ──────────────────────────────────────
+// ── Designer layout: palette | canvas ──────────────────────────────────────
 
-// Geniş ekranda palet | tuval | özellik paneli. Daralınca panel tuvalin altına,
-// tabletin altında palet tuvalin üstüne iner; telefonda panel yok (pop-up var).
+// On wide screens palette | canvas | inspector panel. When narrower the panel moves below the canvas,
+// below tablet width the palette moves above the canvas; on phones there is no panel (there is a pop-up).
 .designer {
   display: grid;
   grid-template-columns: 156px minmax(0, 1fr) 300px;
@@ -203,16 +203,16 @@
   .designer-inspector { display: none; }
 }
 
-// ── Tam ekran ───────────────────────────────────────────────────────────────
+// ── Full screen ───────────────────────────────────────────────────────────────
 
-// Yukarıdaki dar ekran kurallarından SONRA durur: tam ekranda palet | tuval | panel
-// her genişlikte yan yana. Katman üst çubuk (40), kenar çubuğu (100) ve zilin (200)
-// üstünde; sağ tık menüsü (900), diyaloglar (1000) ve yardım baloncuğunun (1200) altında.
+// Comes AFTER the narrow-screen rules above: in full screen palette | canvas | panel
+// sit side by side at every width. The layer is above the top bar (40), sidebar (100) and bell (200);
+// below the context menu (900), dialogs (1000) and help bubble (1200).
 .designer--fullscreen {
   position: fixed;
   inset: 0;
-  // .tab-panel'in .stack aralığı (margin-block-start) sabit kutuyu da aşağı itip
-  // üst çubuğu gösteriyordu.
+  // The .stack spacing of .tab-panel (margin-block-start) also pushed the fixed box down
+  // and revealed the top bar.
   margin: 0;
   z-index: 800;
   padding: var(--space-4);
@@ -227,7 +227,7 @@
   grid-template-columns: minmax(0, 1fr) 300px;
 }
 
-// Panel kutusu 640px yerine hücrenin tamamını kullanır (değişken panelin SCSS'inde).
+// The panel box uses the whole cell instead of 640px (the variable is in the panel's SCSS).
 .designer--fullscreen .designer-inspector {
   grid-column: auto;
   min-height: 0;
@@ -239,7 +239,7 @@
   overflow-y: auto;
 }
 
-// Layout'un bildirim banner'ının tam ekrandaki karşılığı — tuvalin üstünde ortada.
+// Full-screen counterpart of the layout's notification banner — centred above the canvas.
 .fullscreen-toast {
   position: fixed;
   top: var(--space-4);
@@ -250,13 +250,13 @@
   box-shadow: var(--elev-raised);
 }
 
-// Simüle et gibi: telefonda tuval yalnız bakmak için, tam ekran gerekmez.
+// Like Simulate: on phones the canvas is only for viewing, full screen is not needed.
 .fullscreen-btn {
   @media (max-width: 768px) { display: none; }
 }
 
-// Tuval dokunmatikte zor (küçük portlar, çift dokunuşla açma); aynı işler Adımlar
-// sekmesinden ve adım diyaloğundan yapılabildiği için telefonda yalnız yönlendirme notu.
+// The canvas is hard on touch (small ports, double-tap to open); the same tasks can be done from the
+// Steps tab and the step dialog, so on phones there is only a redirect note.
 .canvas-mobile-notice {
   display: none;
 
@@ -265,19 +265,19 @@
   }
 }
 
-// Simülasyon düğmesi telefonda gizli (tuval ve paneller geniş ekran işi).
+// The simulation button is hidden on phones (canvas and panels are wide-screen work).
 .simulate-btn {
   @media (max-width: 768px) { display: none; }
 }
 
 .simulate-btn--active { color: var(--accent); background: color-mix(in oklab, var(--accent) 10%, transparent); }
 
-// Başlıktaki doğrulama özeti: sorun yoksa sakin, hata varsa kırmızı.
+// Validation summary in the header: calm when there are no issues, red when there are errors.
 .issue-chip { color: var(--success); }
 .issue-chip--warn { color: var(--warn); }
 .issue-chip--error { color: var(--danger); }
 
-// Kaydedilmemiş değişiklik işareti — geri alıp kayıtlı hale dönünce kaybolur.
+// Unsaved-changes marker — disappears when undoing back to the saved state.
 .unsaved-dot {
   display: inline-block;
   width: 8px;
@@ -287,7 +287,7 @@
   flex: 0 0 auto;
 }
 
-// ── Şablon seçici (yeni, boş akış) ──────────────────────────────────────────
+// ── Template picker (new, empty flow) ──────────────────────────────────────────
 
 .template-grid {
   display: grid;

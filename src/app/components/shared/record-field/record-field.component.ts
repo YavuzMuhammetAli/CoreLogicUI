@@ -18,20 +18,20 @@ import { FieldWidget } from '../../../utils/screen-layout/screen-layout.model';
 import { IconComponent } from '../icon/icon.component';
 
 /**
- * RecordFieldComponent — dinamik kayıt formunun TEK bir alanı: etiket (zorunlu işareti,
- * açıklama, ƒx otomatik değer rozeti, tip etiketi), tipe uygun kontrol ve hata metni.
+ * RecordFieldComponent — a SINGLE field of the dynamic record form: label (required marker,
+ * description, ƒx auto-value badge, type tag), a control suited to the type, and the error text.
  *
- * Kayıt sayfası (model-detail) ile alt kayıt pop-up'ı (record-form-dialog) bu bloğu
- * eskiden birebir kopyalıyordu; ekran tasarımcısı da aynı alanı çizeceği için tek yere
- * toplandı. Form kontrolü çağıranındır — bileşen yalnız onu çizer ve dosya seçimini
- * kontrolün değerine yazar.
+ * The record page (model-detail) and the child record pop-up (record-form-dialog) used to
+ * copy this block verbatim; since the screen designer draws the same field too, it was
+ * consolidated in one place. The form control belongs to the caller — the component only draws it
+ * and writes file selections to the control's value.
  *
- * Host elementin kendisi `.field`'dır: üstteki ızgaranın doğrudan hücresi olur.
+ * The host element itself is `.field`: it becomes a direct cell of the parent grid.
  *
- * DEĞİŞİKLİK ALGILAMA BİLİNÇLİ OLARAK `Default`: çağıranlar OnPush ve Kaydet'te
- * `markAllAsTouched()` diyor — bu, girdilerin hiçbirini değiştirmez. OnPush olsaydı alan
- * hata metnini göstermezdi. Default bileşen, OnPush ata kontrol edildiği her turda
- * kontrol edilir; yani davranış alanların ata şablonda durduğu eski hâliyle aynıdır.
+ * CHANGE DETECTION IS DELIBERATELY `Default`: callers are OnPush and call `markAllAsTouched()`
+ * on Save — which changes none of the inputs. With OnPush the field wouldn't show
+ * its error text. A Default component is checked on every round its OnPush ancestor is
+ * checked; i.e. the behaviour matches the old state where the fields lived in the ancestor template.
  */
 @Component({
     selector: 'app-record-field',
@@ -48,28 +48,28 @@ export class RecordFieldComponent {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly languageService = inject(LanguageService);
 
-  /** Çizilecek kolon (tip, etiket, açıklama, enum/lookup hedefi). */
+  /** Column to draw (type, label, description, enum/lookup target). */
   readonly column = input.required<PublishedColumn>();
-  /** Kolonun form kontrolü — formu kuran çağırandır. */
+  /** The column's form control — the caller builds the form. */
   readonly control = input.required<AbstractControl>();
-  /** Şema kuralı (zorunluluk, regex mesajı, dosya sınırı); yüklenmemişse undefined. */
+  /** Schema rule (required, regex message, file limit); undefined if not loaded. */
   readonly rule = input<PublishedColumnSchema | undefined>(undefined);
-  /** Ekrandaki benzersiz id öneki — iç içe pop-up'larda aynı kolon adı çakışmasın. */
+  /** Unique id prefix on the screen — so the same column name doesn't collide in nested pop-ups. */
   readonly idPrefix = input('field-');
-  /** Sırası gelen görevlinin dolduracağı alan (iş akışı adımı) — vurgulanır. */
+  /** Field to be filled by the assignee whose turn it is (workflow step) — highlighted. */
   readonly step = input(false);
-  /** Kolonun otomatik değer kuralı — etiketteki ƒx rozeti. */
+  /** The column's auto-value rule — the ƒx badge in the label. */
   readonly autoValueRule = input<AutoValueRule | undefined>(undefined);
-  /** Numarası kayıtta verilecek alan (SEQ) — "Kaydedince atanır" ipucu. */
+  /** Field whose number is assigned on save (SEQ) — the "Kaydedince atanır" (Assigned on save) hint. */
   readonly autoValuePending = input(false);
-  /** Ekran tasarımındaki gösterim biçimi: çok satırlı metin ya da seçenek düğmeleri. */
+  /** Display widget from the screen design: multiline text or option buttons. */
   readonly widget = input<FieldWidget | null>(null);
-  /** Çok satırlı metinde görünen satır sayısı. */
+  /** Number of visible rows for multiline text. */
   readonly rows = input<number | null>(null);
 
-  /** Seçilen dosyanın adı — indirmede orijinal adla kaydedilsin. */
+  /** Name of the selected file — so a download saves it under its original name. */
   private readonly fileName = signal<string | null>(null);
-  /** Boyut sınırı nedeniyle reddedilen dosyanın hata metni. */
+  /** Error text for a file rejected because of the size limit. */
   readonly fileError = signal<string | null>(null);
 
   readonly formControl = computed(() => this.control() as FormControl);
@@ -82,10 +82,10 @@ export class RecordFieldComponent {
   readonly accept = computed(() => fileAccept(this.column().dataType, this.column().enumValues));
   readonly stepAttr = computed(() => stepFor(this.column().dataType));
   readonly description = computed(() => this.column().description?.trim() ?? '');
-  /** Gösterim biçimi yalnız uygun tipte uygulanır (tasarım doğrulaması da bunu ister). */
+  /** The widget is applied only to a suitable type (design validation requires this too). */
   readonly isMultiline = computed(() =>
     this.column().dataType === 'text' || (this.widget() === 'multiline' && this.column().dataType === 'string'));
-  /** Uzun metin alanı içeriğine yer açılmış başlar; tasarımcıdaki satır sayısı önceliklidir. */
+  /** A long text field starts with room for its content; the row count from the designer takes precedence. */
   readonly textareaRows = computed(() => this.rows() ?? (this.column().dataType === 'text' ? 6 : 3));
   readonly isRadio = computed(() => this.widget() === 'radio' && this.column().dataType === 'enum');
 
@@ -95,7 +95,7 @@ export class RecordFieldComponent {
   readonly fileUrl = fileRefUrl;
 
   constructor() {
-    // Form yeniden kurulunca (yeni kontrol) önceki dosya seçiminin izi taşınmasın.
+    // When the form is rebuilt (new control), traces of the previous file selection must not carry over.
     effect(() => {
       this.control();
       untracked(() => {
@@ -105,7 +105,7 @@ export class RecordFieldComponent {
     });
   }
 
-  /** Alan dokunulduysa gösterilecek hata metni. */
+  /** Error text to show if the field has been touched. */
   errorText(): string | null {
     const control = this.control();
     if (!control.touched) return null;
@@ -124,10 +124,10 @@ export class RecordFieldComponent {
   }
 
   /**
-   * Dosya seçimi. Boyut dosya OKUNMADAN denetlenir; aşıyorsa önceki değer korunur.
-   * Değer base64 olarak kontrole yazılır ve kontrol kirli işaretlenir — "{Akış} Başlat"
-   * kaydetme gereğini `form.dirty`'den okuyor; işaretlenmeseydi seçilen dosya kaydedilmeden
-   * süreç başlardı.
+   * File selection. The size is checked BEFORE reading the file; if it exceeds the limit the previous value is kept.
+   * The value is written to the control as base64 and the control is marked dirty — "{Akış} Başlat" (Start {workflow})
+   * reads whether a save is needed from `form.dirty`; if it weren't marked, the process would start
+   * without saving the selected file.
    */
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -151,7 +151,7 @@ export class RecordFieldComponent {
       const result = reader.result as string;
       control.setValue(result.split(',')[1] ?? result);
       control.markAsDirty();
-      // FileReader şablon olayı değildir: OnPush atalar kendiliğinden kontrol edilmez.
+      // FileReader is not a template event: OnPush ancestors aren't checked automatically.
       this.cdr.markForCheck();
     };
     reader.readAsDataURL(file);

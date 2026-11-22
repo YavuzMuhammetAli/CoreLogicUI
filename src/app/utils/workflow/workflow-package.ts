@@ -1,14 +1,14 @@
 import { WorkflowDefinition, WorkflowTriggerEvent } from '../../models/workflow.model';
 
 /**
- * Akış paketi — bir akışı dosyaya aktarıp başka bir şirkete/ortama taşımak için.
- * SAF: Angular yok.
+ * Workflow package — to export a workflow to a file and move it to another company/environment.
+ * PURE: no Angular.
  *
- * Paket tanımın TASARIMINI taşır (ad, kod, model, tetik, şema); kimlik, sürüm,
- * durum ve tarih taşınmaz — içe aktarılan akış hep yeni bir TASLAK olur ve
- * yayından önce hedef şirketin modeline karşı yeniden doğrulanır. Rol/kişi
- * atamaları kimlik taşıdığı için hedefte genelde boşa düşer; doğrulama bunları
- * eksik atama olarak gösterir.
+ * The package carries the definition's DESIGN (name, code, model, trigger, diagram); id, version,
+ * status and dates are not carried — an imported workflow always becomes a new DRAFT and
+ * is re-validated against the target company's model before publishing. Role/user
+ * assignments carry ids, so they usually end up empty in the target; validation shows them
+ * as missing assignments.
  */
 export const WORKFLOW_PACKAGE_FORMAT = 'corelogic.workflow';
 export const WORKFLOW_PACKAGE_VERSION = 1;
@@ -28,7 +28,7 @@ export interface WorkflowPackage {
   };
 }
 
-/** İçe aktarma sonucu: paket ya da hata kodu (`workflow.package.error.{code}`). */
+/** Import result: the package or an error code (`workflow.package.error.{code}`). */
 export type PackageParseResult =
   | { ok: true; workflow: WorkflowPackage['workflow'] }
   | { ok: false; error: 'json' | 'format' | 'version' | 'fields' | 'definition' };
@@ -52,13 +52,13 @@ export function toPackage(definition: Pick<WorkflowDefinition,
   };
 }
 
-/** Okunur JSON — dosyayı elle incelemek/karşılaştırmak kolay olsun. */
+/** Readable JSON — so the file is easy to inspect/compare by hand. */
 export function serializePackage(pack: WorkflowPackage): string {
   return JSON.stringify(pack, null, 2);
 }
 
 export function packageFileName(code: string): string {
-  return `akis-${code.replace(/[^A-Za-z0-9_-]/g, '_') || 'paket'}.json`;
+  return `workflow-${code.replace(/[^A-Za-z0-9_-]/g, '_') || 'package'}.json`;
 }
 
 export function parsePackage(text: string): PackageParseResult {
@@ -102,15 +102,15 @@ export function parsePackage(text: string): PackageParseResult {
 }
 
 /**
- * Hedefte kullanılmayan kod: aynı kod varsa `_2`, `_3`… eklenir. Kod akışın
- * sürümler arası kimliğidir; mevcut bir akışın üstüne yazılmamalı.
+ * A code unused in the target: if the same code exists, `_2`, `_3`… is appended. The code is the workflow's
+ * identity across versions; an existing workflow must not be overwritten.
  */
 export function freeCode(code: string, taken: ReadonlyArray<string>): string {
   const used = new Set(taken.map(c => c.toLowerCase()));
   if (!used.has(code.toLowerCase())) return code;
 
-  // Yalnız kısa sayaç soneki (_2 … _999) atılır: "satinalma_2" → "satinalma_3";
-  // kodun kendi uzun sayısal kuyruğu (ör. tarih damgası) korunur.
+  // Only a short counter suffix (_2 … _999) is stripped: "satinalma_2" → "satinalma_3";
+  // the code's own long numeric tail (e.g. a timestamp) is kept.
   const base = code.replace(/_\d{1,3}$/, '');
   for (let n = 2; ; n++) {
     const candidate = `${base}_${n}`;

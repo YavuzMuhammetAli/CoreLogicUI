@@ -11,7 +11,7 @@ import { LanguageService } from '../../services/language.service';
 import { markDirty } from '../../utils/change-detection';
 import { IconComponent } from '../shared/icon/icon.component';
 
-/** "İzinli model sayısı" sütununda gösterilen, izin sayısı zenginleştirilmiş kullanıcı satırı */
+/** User row enriched with the permission count, shown in the "İzinli model sayısı" (Permitted model count) column */
 interface UserRow extends AppUser {
   permittedModelCount: number;
 }
@@ -24,7 +24,7 @@ interface UserRow extends AppUser {
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserPermissionListComponent implements OnInit {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly languageService = inject(LanguageService);
@@ -59,7 +59,7 @@ export class UserPermissionListComponent implements OnInit {
           return;
         }
 
-        // İzinli model sayıları TEK istekte (eskiden kullanıcı başına ayrı forUser isteği).
+        // Permitted model counts in a SINGLE request (previously a separate forUser request per user).
         this.adminService.getPermittedModelCounts().pipe(
           map(countsRes => (countsRes.success ? countsRes.data ?? {} : {}) as Record<string, number>),
           catchError(() => of({} as Record<string, number>)),
@@ -76,7 +76,7 @@ export class UserPermissionListComponent implements OnInit {
     });
   }
 
-  /** Kullanıcının tam adı */
+  /** The user's full name */
   fullName(user: AppUser): string {
     return `${user.firstName} ${user.lastName}`.trim() || user.email;
   }

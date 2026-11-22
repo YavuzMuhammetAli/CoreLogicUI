@@ -8,14 +8,14 @@ import { loadAllModelIconPaths } from './model-icon-catalog';
 import { MODEL_ICON_CATEGORIES, ModelIconCategory } from './model-icons.generated';
 
 /**
- * Model ikonu seçici — kategorili, aranabilir ızgara (Material Symbols kataloğu).
+ * Model icon picker — categorised, searchable grid (Material Symbols catalog).
  *
- * İki kip:
- *  - `publish`: Yayınla'ya basınca açılır; onay düğmesi "Yayınla" — ikon seçmek opsiyoneldir.
- *  - `select` : şema ekranı başlığındaki ikon düğmesi; onay düğmesi "Seç".
- * Onay `confirmed`'e seçili adı (varsayılan için null) yayar; kaydetmek çağıranın işidir.
+ * Two modes:
+ *  - `publish`: opens when "Yayınla" (Publish) is pressed; the confirm button is "Yayınla" — picking an icon is optional.
+ *  - `select` : the icon button in the schema screen header; the confirm button is "Seç" (Select).
+ * Confirm emits the selected name (null for the default) via `confirmed`; saving is the caller's job.
  *
- * Kullanım:
+ * Usage:
  *   <app-model-icon-picker [open]="pickerOpen()" mode="publish" [current]="icon()" [busy]="publishing"
  *     (confirmed)="onIconConfirmed($event)" (cancelled)="pickerOpen.set(false)" />
  */
@@ -29,7 +29,7 @@ import { MODEL_ICON_CATEGORIES, ModelIconCategory } from './model-icons.generate
 export class ModelIconPickerComponent {
   open = input(false);
   mode = input<'publish' | 'select'>('select');
-  /** Modelin kayıtlı ikonu — açılışta seçili gelir. */
+  /** The model's saved icon — selected on open. */
   current = input<string | null | undefined>(null);
   busy = input(false);
 
@@ -43,7 +43,7 @@ export class ModelIconPickerComponent {
 
   private readonly searchBox = viewChild<ElementRef<HTMLInputElement>>('searchBox');
 
-  /** Aramaya uyan kategoriler (boş kategori gizlenir). Ad, "_"siz ad ve TR anahtar kelimede arar. */
+  /** Categories matching the search (empty categories are hidden). Searches the name, the name without "_" and TR keywords. */
   readonly visible = computed<ModelIconCategory[]>(() => {
     const q = this.query().trim().toLocaleLowerCase('tr');
     if (!q) return MODEL_ICON_CATEGORIES as ModelIconCategory[];
@@ -57,7 +57,7 @@ export class ModelIconPickerComponent {
   });
 
   constructor() {
-    // Her açılışta: seçimi kayıtlı ikona eşitle, aramayı temizle, kataloğu yükle, aramaya odaklan.
+    // On every opening: reset the selection to the saved icon, clear the search, load the catalog, focus the search.
     effect(() => {
       if (!this.open()) return;
       untracked(() => {
@@ -88,7 +88,7 @@ export class ModelIconPickerComponent {
     this.query.set(value);
   }
 
-  /** Izgarada ok tuşlarıyla gezinme: ←/→ sıradaki hücre, ↑/↓ aynı ızgarada bir satır. */
+  /** Arrow-key navigation in the grid: ←/→ next cell, ↑/↓ one row within the same grid. */
   onCellKey(event: KeyboardEvent): void {
     const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
     if (!keys.includes(event.key)) return;

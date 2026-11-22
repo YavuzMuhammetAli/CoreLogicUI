@@ -11,31 +11,31 @@ import { nodeKindOf } from '../../../utils/workflow/workflow-node-types';
 import { ValueInputKind, valueInputKind } from '../editors/condition-form';
 import { IconComponent } from '../../shared/icon/icon.component';
 
-/** Kararı sorulan insan adımı (paralelde her dal ayrı satır). */
+/** Human step whose decision is asked (in a parallel step each branch is a separate row). */
 interface DecisionRow {
   id: string;
   stepKey: string;
   branchKey: string | null;
   label: string;
-  /** Görev (reddi kapalı) yalnız tamamlanabilir. */
+  /** A task (rejection disabled) can only be completed. */
   canReject: boolean;
 }
 
-/** Simülasyonda geçilen adımın ekran satırı. */
+/** Screen row of a step passed in the simulation. */
 interface PathRow {
   seq: number;
   name: string;
   exit: string | null;
-  /** Otomatik eylemin özeti: yazılan alanlar ya da bildirim konusu. */
+  /** Summary of the automatic action: written fields or notification subject. */
   note: string | null;
 }
 
 /**
- * Tasarımcıdaki "Simüle et" paneli. Akış (kaydedilmemiş taslak olabilir) bir
- * örnek kayıt — ya da var olan bir kaydın değerleri — ve insan adımı
- * kararlarıyla SUNUCUDA bellekte koşturulur; gerçek motorun fonksiyonları
- * kullanıldığı için görülen yol, yayından sonra izlenecek yoldur. Hiçbir şey
- * yazılmaz. Sonuç şemada boyanır (overlay).
+ * The "Simüle et" (Simulate) panel in the designer. The flow (possibly an unsaved draft) is run
+ * in memory ON THE SERVER with a sample record — or the values of an existing record — and
+ * human step decisions; since the real engine's functions are used, the path shown is the
+ * path that will be followed after publishing. Nothing is
+ * written. The result is painted on the diagram (overlay).
  */
 @Component({
     selector: 'app-workflow-simulate-panel',
@@ -49,7 +49,7 @@ export class WorkflowSimulatePanelComponent {
   private readonly languageService = inject(LanguageService);
 
   readonly graph = input.required<WorkflowGraph>();
-  /** Kaydedilecek tanımın gövdesi (docToPayload). */
+  /** Body of the definition to be saved (docToPayload). */
   readonly payload = input.required<Partial<WorkflowDefinition>>();
   readonly columns = input<PublishedColumn[]>([]);
 
@@ -87,7 +87,7 @@ export class WorkflowSimulatePanelComponent {
     const steps = this.graph().steps;
     return result.path.map(entry => {
       const step = steps.find(s => s.key.toLowerCase() === entry.stepKey.toLowerCase());
-      // Alan güncelle / bildirimin tek çıkışı var; "→ Sonra" yerine ne yaptığı yazılır.
+      // Field update / notification has a single exit; instead of "→ Then", what it does is written.
       const automaticAction = entry.port === 'next';
       return {
         seq: entry.seq,
@@ -159,7 +159,7 @@ export class WorkflowSimulatePanelComponent {
     this.simulated.emit(null);
   }
 
-  /** Örnek kayıt: sayı kolonları sayı, mantıksal kolonlar bool, boşlar gönderilmez. */
+  /** Sample record: number columns as numbers, boolean columns as bool, empty ones are not sent. */
   private sampleRecord(): Record<string, string | number | boolean | null> {
     const record: Record<string, string | number | boolean | null> = {};
     for (const column of this.columns()) {

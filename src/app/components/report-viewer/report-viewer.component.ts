@@ -31,8 +31,8 @@ export class ReportViewerComponent implements OnInit {
 
   id = 0;
 
-  // Durum signal'lerde: OnPush altında HTTP callback'inden yapılan atamalar
-  // aksi hâlde yeniden render tetiklemez.
+  // State lives in signals: under OnPush, assignments made in an HTTP callback
+  // wouldn't trigger a re-render otherwise.
   readonly report = signal<ReportDefinition | null>(null);
   readonly result = signal<ReportRunResult | null>(null);
   readonly loading = signal(false);
@@ -40,18 +40,18 @@ export class ReportViewerComponent implements OnInit {
   readonly exporting = signal<'excel' | 'pdf' | null>(null);
   readonly exportError = signal<string | null>(null);
 
-  /** Grafik tipi 'table' değilse kullanıcı sonucu grafik veya tablo olarak görebilir. */
+  /** If the chart type isn't 'table', the user can view the result as a chart or a table. */
   readonly viewMode = signal<'chart' | 'table'>('chart');
 
-  // ── Sayfalama (yalnız tablo görünümünde) ──────────────────────────────────
+  // ── Pagination (table view only) ──────────────────────────────────────────
   readonly pageIndex = signal(1);
   readonly pageSize = signal(50);
   readonly pageSizeOptions = [25, 50, 100, 200];
 
   /**
-   * Tablo görünümünde miyiz? Rapor 'table' tipindeyse her zaman; değilse kullanıcı
-   * seçimine bağlı. Sayfalama YALNIZCA bu görünümde uygulanır — grafik ve KPI
-   * tüm satırlar üzerinden hesaplandığı için sayfalanmış veriyle yanlış sonuç verirdi.
+   * Are we in table view? Always if the report is of 'table' type; otherwise it depends
+   * on the user's choice. Pagination is applied ONLY in this view — charts and KPIs
+   * are computed over all rows, so paged data would give wrong results.
    */
   readonly isTableView = computed(() => {
     const chartType = this.report()?.chartType;
@@ -63,14 +63,14 @@ export class ReportViewerComponent implements OnInit {
     return Math.max(1, Math.ceil(total / this.pageSize()));
   });
 
-  /** Rapor tanımındaki aggregate'lerden türeyen büyük-sayı kartları — tr-TR formatlı. */
+  /** Big-number cards derived from the aggregates in the report definition — tr-TR formatted. */
   readonly kpiCards = computed<KpiCard[]>(() => {
     const report = this.report();
     const result = this.result();
     if (!report || !result) return [];
 
-    // Sayfalanmış veri üzerinden toplam almak yanıltıcı olur; tablo görünümünde
-    // yalnız o sayfa yüklüdür. KPI şeridi bu yüzden tablo görünümünde gizlenir.
+    // Summing over paged data would be misleading; in table view only that page
+    // is loaded. That's why the KPI strip is hidden in table view.
     if (this.isTableView() && (result.total ?? result.rows.length) > result.rows.length) return [];
 
     return report.aggregates
@@ -80,7 +80,7 @@ export class ReportViewerComponent implements OnInit {
         if (!column) return null;
 
         const total = result.rows.reduce((sum, row) => sum + Number(row[alias] ?? 0), 0);
-        // Başlık sunucudan ("Toplam Net Tutar"); eski sunucu göndermezse alias.
+        // Header comes from the server ("Toplam Net Tutar"); alias if an old server doesn't send it.
         return { label: column.label || alias, value: formatNumber(total, this.languageService.lang()) };
       })
       .filter((card): card is KpiCard => card !== null);
@@ -92,12 +92,12 @@ export class ReportViewerComponent implements OnInit {
   }
 
   /**
-   * Rapor tanımını (ad + grafik tipi) çözer, ardından veriyi çeker.
+   * Resolves the report definition (name + chart type), then fetches the data.
    *
-   * Eskiden list() ve run() forkJoin ile birlikte bekleniyordu: yalnızca bir AD için
-   * çekilen tüm tanım listesi, asıl veri yanıtının render'ını da geciktiriyordu.
-   * Artık liste önbelleklidir ve grafik tipini bilmek veriyi doğru modda (sayfalı /
-   * sayfasız) çekmemizi sağlar.
+   * list() and run() used to be awaited together with forkJoin: the whole definition list,
+   * fetched just for a NAME, also delayed rendering of the actual data response.
+   * Now the list is cached, and knowing the chart type lets us fetch the data in the right
+   * mode (paged / unpaged).
    */
   private loadDefinition(): void {
     this.loading.set(true);
@@ -118,8 +118,8 @@ export class ReportViewerComponent implements OnInit {
     this.loading.set(true);
     this.loadError.set(null);
 
-    // Tablo görünümü sayfalanır; grafik görünümü yalnız çizilebilecek kadar satır ister
-    // (KPI/radialBar tüm satırlardan hesapladığı için sunucu tavanıyla — 5000).
+    // The table view is paged; the chart view requests only as many rows as can be drawn
+    // (with the server cap — 5000 — since KPI/radialBar compute over all rows).
     const paged = this.isTableView();
     const req = paged
       ? this.reportService.run(this.id, this.pageIndex(), this.pageSize())

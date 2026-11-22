@@ -15,10 +15,10 @@ import {
 } from '../models/ai.model';
 
 /**
- * Yapay Zeka modülü (G4) — sohbet, öneri durumu ve kota.
+ * AI module (G4) — chat, proposal state and quota.
  *
- * Tenant istemciden GÖNDERİLMEZ: tüm uçlar çağıran admin'in JWT'sindeki ambient
- * tenant'ında çalışır.
+ * The tenant is NOT sent by the client: every endpoint runs in the ambient tenant
+ * of the calling admin's JWT.
  */
 @Injectable({ providedIn: 'root' })
 export class AiService {
@@ -49,26 +49,26 @@ export class AiService {
     return this.http.get<DataResponseModel<AiUsage>>(`${this.baseUrl}/usage`);
   }
 
-  // ── Öneri durumu ─────────────────────────────────────────────────────────
+  // ── Proposal state ───────────────────────────────────────────────────────
 
-  /** İçeri aktarma/yayınlama sonucunu backend'e geri yazar. */
+  /** Writes the import/publish result back to the backend. */
   updateProposalStatus(id: number, body: AiProposalStatusUpdate): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/proposals/${id}/status`, body);
   }
 
-  // ── Sohbet akışı (SSE) ───────────────────────────────────────────────────
+  // ── Chat stream (SSE) ────────────────────────────────────────────────────
 
   /**
-   * Yanıtı Server-Sent Events olarak akıtır.
+   * Streams the response as Server-Sent Events.
    *
-   * HttpClient yerine `fetch` kullanılır: `EventSource` POST yapamaz ve header
-   * ekleyemez, HttpClient ise yanıtı akıtmaz (tamamlanmasını bekler). Bunun
-   * bedeli, isteğin interceptor zincirini BAYPAS etmesidir — bu yüzden
-   * Authorization ve Accept-Language başlıkları burada elle eklenir
-   * (auth.interceptor.ts / language.interceptor.ts ile aynı anahtarlar).
+   * `fetch` is used instead of HttpClient: `EventSource` cannot POST or add
+   * headers, and HttpClient does not stream the response (it waits for completion). The
+   * cost is that the request BYPASSES the interceptor chain — so the
+   * Authorization and Accept-Language headers are added here by hand
+   * (same keys as auth.interceptor.ts / language.interceptor.ts).
    *
-   * Abonelik sonlandırıldığında istek iptal edilir (AbortController), böylece
-   * kullanıcı sayfadan ayrılınca sunucu tarafı akış da kapanır.
+   * When the subscription is torn down the request is aborted (AbortController), so
+   * the server-side stream also closes when the user leaves the page.
    */
   streamChat(request: AiChatRequest): Observable<AiStreamEvent> {
     return new Observable<AiStreamEvent>(subscriber => {
@@ -84,8 +84,8 @@ export class AiService {
           });
 
           if (!response.ok) {
-            // Kota/doğrulama hatası akış başlamadan döner: gövde normal
-            // ResponseModel'dir, SSE değil.
+            // A quota/validation error returns before the stream starts: the body is a plain
+            // ResponseModel, not SSE.
             const failure = await this.readErrorMessage(response);
             subscriber.next({ type: 'error', message: failure });
             subscriber.complete();
@@ -108,8 +108,8 @@ export class AiService {
 
             buffer += decoder.decode(value, { stream: true });
 
-            // SSE çerçeveleri boş satırla ayrılır. Son parça yarım kalmış
-            // olabileceğinden tampona geri konur.
+            // SSE frames are separated by a blank line. The last chunk may be
+            // incomplete, so it is put back into the buffer.
             const frames = buffer.split('\n\n');
             buffer = frames.pop() ?? '';
 
@@ -121,7 +121,7 @@ export class AiService {
 
           subscriber.complete();
         } catch (error) {
-          // Abort, aboneliğin sonlandırılmasıdır — hata değil.
+          // Abort means the subscription was torn down — not an error.
           if (controller.signal.aborted) {
             subscriber.complete();
             return;
@@ -151,7 +151,7 @@ export class AiService {
     return headers;
   }
 
-  /** Akış başlamadan dönen hata gövdesinden kullanıcıya gösterilecek mesajı çıkarır. */
+  /** Extracts the user-facing message from an error body returned before the stream starts. */
   private async readErrorMessage(response: Response): Promise<string> {
     try {
       const body = (await response.json()) as ResponseModel;
@@ -161,7 +161,7 @@ export class AiService {
     }
   }
 
-  /** Tek bir SSE çerçevesini (`event: X` + `data: {...}`) olaya çevirir. */
+  /** Turns a single SSE frame (`event: X` + `data: {...}`) into an event. */
   private parseFrame(frame: string): AiStreamEvent | null {
     let eventName = '';
     let data = '';

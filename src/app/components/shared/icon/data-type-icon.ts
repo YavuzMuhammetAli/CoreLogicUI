@@ -1,6 +1,6 @@
 import type { IconName } from './icons.generated';
 
-/** Kolon veri tipinin ikonu (ekran tasarımcısı paleti vb.). Bilinmeyen tip → metin. */
+/** Icon for a column data type (screen designer palette etc.). Unknown type → text. */
 export function dataTypeIcon(dataType: string | null | undefined): IconName {
   switch ((dataType ?? '').toLowerCase()) {
     case 'int': case 'long': case 'short': case 'byte':

@@ -1,22 +1,22 @@
 import { Observable, Subscription } from 'rxjs';
 
-/** Çalışan bir yoklama; `stop()` zamanlayıcıyı ve görünürlük dinleyicisini kaldırır. */
+/** A running poll; `stop()` removes the timer and the visibility listener. */
 export interface VisiblePoll {
   stop(): void;
 }
 
-/** Hatada aralık katlanarak bu üst sınıra kadar uzar. */
+/** On error the interval doubles up to this cap. */
 export const MAX_BACKOFF_MS = 5 * 60 * 1000;
 
 /**
- * Sekme GÖRÜNÜRKEN düzenli yoklama (rozet sayaçları vb.).
+ * Regular polling while the tab is VISIBLE (badge counters etc.).
  *
- * Görev rozeti ve bildirim zili her açık sekmede 30 sn'de bir, sekme arka planda olsa da istek
- * atıyordu: kullanıcı × sekme × saat başına 240 istek, hepsi sunucuda sorgu. Burada:
- *  - sekme gizlenince durur, görünür olunca HEMEN bir kez tazeler ve kaldığı yerden sürer;
- *  - görev hata verirse aralık ikiye katlanır (en fazla {@link MAX_BACKOFF_MS}), ilk başarıda düzelir;
- *  - bir istek sürerken yenisi başlatılmaz.
- * İlk çalıştırma hemen yapılır (sayfa açılışında rozet dolsun).
+ * The task badge and the notification bell sent a request every 30 s in every open tab, even with the tab
+ * in the background: 240 requests per user × tab × hour, each a server query. Here:
+ *  - it stops when the tab is hidden, refreshes once IMMEDIATELY when visible and continues from there;
+ *  - if the task errors the interval doubles (at most {@link MAX_BACKOFF_MS}), resetting on the first success;
+ *  - a new request is not started while one is in flight.
+ * The first run happens immediately (so the badge fills on page load).
  */
 export function startVisiblePoll(
   task: () => Observable<unknown>,
@@ -58,7 +58,7 @@ export function startVisiblePoll(
       },
       complete: finished
     });
-    // Senkron biten akışta geri çağrılar subscribe dönmeden çalıştı; kapalı aboneliği tutma.
+    // For a synchronously completing stream the callbacks ran before subscribe returned; don't keep a closed subscription.
     inFlight = busy ? subscription : null;
   };
 

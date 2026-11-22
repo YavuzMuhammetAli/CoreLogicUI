@@ -31,43 +31,43 @@ import { HelpHintComponent } from '../help-hint/help-hint.component';
 
 export type { CanvasEdge, CanvasNode, CanvasPort, PortKind } from './workflow-canvas.hit-test';
 
-/** Kenar etiketleri bu zoom seviyesinin altında okunamıyor, gizlenir. */
+/** Edge labels are unreadable below this zoom level, so they are hidden. */
 const EDGE_LABEL_MIN_ZOOM = 0.55;
 
-/** Hedefsiz çıkışın (akış burada biter) kısa uç çizgisinin boyu. */
+/** Length of the short end line of an exit without a target (the flow ends here). */
 const STUB_LENGTH = 22;
 
-/** Başlangıç hapının ölçüsü ve başlangıç adımının üstündeki boşluk. */
+/** Size of the start pill and the gap above the start step. */
 const START_WIDTH = 104;
 const START_HEIGHT = 28;
 const START_GAP = 36;
 
-/** Paletten tuvale sürüklenen düğüm türünün veri türü (HTML5 sürükle-bırak). */
+/** Data type of the node kind dragged from the palette onto the canvas (HTML5 drag-and-drop). */
 export const WORKFLOW_NODE_MIME = 'application/x-corelogic-workflow-node';
 
 /**
- * Düğüm kartının ekran bilgisi — tasarım ekranı hesaplar (tip etiketi, atama
- * özeti, sorun sayıları); tuval yalnız çizer. Anahtar küçük harfli adım anahtarı.
+ * Display info for a node card — computed by the design screen (type label, assignment
+ * summary, issue counts); the canvas only draws it. The key is the lower-case step key.
  */
 export interface CanvasNodeMeta {
   kindLabel: string;
   tone: NodeTone;
-  /** Düğüm tipinin ikonu (`NODE_KINDS`). */
+  /** Icon of the node type (`NODE_KINDS`). */
   icon: IconName;
   summary: string;
   errors: number;
   warnings: number;
-  /** Sorun rozetinin ipucu / ekran okuyucu metni. */
+  /** Tooltip / screen reader text of the issue badge. */
   issueTitle: string;
 }
 
-/** Yeni düğümün konumu verilirken otomatik yerleşimdeki komşuların sabitlenecek konumları. */
+/** Positions at which auto-laid-out neighbours are pinned when a new node's position is given. */
 export type CanvasMoves = Array<{ key: string; x: number; y: number }>;
 
-/** Bir çıkışın akışı bitirdiği yer: düğüm altındaki kısa çizgi + uç işareti. */
+/** Where an exit ends the flow: a short line under the node + end marker. */
 export interface CanvasStub {
   key: string;
-  /** Çıkışın sahibi adım ve portu — "+" ile bağlı düğüm eklemek için. */
+  /** The step owning the exit and its port — for adding a connected node via "+". */
   from: string;
   port: ExitPort;
   kind: PortKind;
@@ -76,17 +76,17 @@ export interface CanvasStub {
   y2: number;
 }
 
-/** Başlangıç hapı: başlangıç adımının üstünde, ona bağlı. */
+/** Start pill: above the start step, connected to it. */
 export interface CanvasStart {
   x: number;
   y: number;
   width: number;
   height: number;
-  /** Haptan başlangıç adımına inen çizgi. */
+  /** Line descending from the pill to the start step. */
   path: string;
 }
 
-/** Seçili kenarın kimliği: kaynak adım + çıkış portu. */
+/** Identity of the selected edge: source step + exit port. */
 export interface CanvasEdgeRef {
   from: string;
   port: ExitPort;
@@ -97,7 +97,7 @@ export interface CanvasSelection {
   edge: CanvasEdgeRef | null;
 }
 
-/** Sağ tık menüsünden tasarım ekranına giden, belgeyi ilgilendiren işlemler. */
+/** Document-related actions sent from the context menu to the design screen. */
 export type CanvasMenuAction =
   | { type: 'open'; key: string }
   | { type: 'setStart'; key: string }
@@ -106,16 +106,16 @@ export type CanvasMenuAction =
   | {
       type: 'addNode';
       kind: NodeKind;
-      /** null: konum verilmez, otomatik yerleşim yerleştirir (hiçbir düğüm sabit değilken). */
+      /** null: no position given, auto layout places it (while no node is pinned). */
       at: Point | null;
-      /** Doluysa yeni düğüm bu çıkışa bağlanır. */
+      /** If set, the new node is connected to this exit. */
       from: CanvasEdgeRef | null;
-      /** Konum verildiğinde otomatik yerleşimdeki düğümler de sabitlenir (zıplamasınlar). */
+      /** When a position is given, auto-laid-out nodes are pinned too (so they don't jump). */
       pins: CanvasMoves;
     }
   | { type: 'selectAll' };
 
-/** Yeni düğümün kaplayacağı kutu (paralel iki dalla başlar). */
+/** Box a new node will occupy (a parallel node starts with two branches). */
 function kindSize(kind: NodeKind): { width: number; height: number } {
   return {
     width: NODE_WIDTH,
@@ -126,20 +126,20 @@ function kindSize(kind: NodeKind): { width: number; height: number } {
 interface MenuItem {
   id: string;
   labelKey: string;
-  /** Çevrilmiş metin (parametreli etiketler için); varsa labelKey yerine gösterilir. */
+  /** Translated text (for parameterised labels); shown instead of labelKey if present. */
   label?: string;
   danger?: boolean;
   run: () => void;
 }
 
 interface MenuState {
-  /** Ekran (client) koordinatı — menü `position: fixed` ile açılır. */
+  /** Screen (client) coordinate — the menu opens with `position: fixed`. */
   x: number;
   y: number;
   items: MenuItem[];
 }
 
-/** Süren işaretçi jesti. Aynı anda yalnız biri olabilir. */
+/** The ongoing pointer gesture. Only one can exist at a time. */
 type Gesture =
   | {
       kind: 'node';
@@ -147,7 +147,7 @@ type Gesture =
       startX: number;
       startY: number;
       additive: boolean;
-      /** Birlikte taşınan düğümlerin başlangıç konumları. */
+      /** Start positions of the nodes being moved together. */
       origins: Map<string, Point>;
       moved: boolean;
     }
@@ -156,7 +156,7 @@ type Gesture =
       startX: number;
       startY: number;
       origin: Camera;
-      /** Basılan yerdeki kenar — sürüklenmezse seçilir. */
+      /** Edge at the pressed point — selected if no drag happens. */
       edge: CanvasEdge | null;
       moved: boolean;
     }
@@ -167,25 +167,25 @@ type Gesture =
     };
 
 /**
- * Sürükle-bırak akış tasarımcısı.
+ * Drag-and-drop workflow designer.
  *
- * Projede CDK, drag-drop ya da diyagram kütüphanesi YOK; her şey native Pointer
- * Events ile yazıldı — dashboard-build'in sürükleme desenindeki yaklaşım.
+ * The project has NO CDK, drag-drop or diagram library; everything is written with native Pointer
+ * Events — the same approach as the drag pattern in dashboard-build.
  *
- * Etkileşimler:
- *   - SEÇİM        — düğüme ya da kenara tıkla; Shift/Ctrl ile ekle/çıkar;
- *                    Shift + boş zemini sürükle = çerçeve (lasso) seçimi.
- *   - TAŞIMA       — seçili düğüm(ler)i gövdeden sürükle; 20 px ızgaraya
- *                    yapışır, Alt basılıyken serbest.
- *   - BAĞLANTI     — çıkış portundan sürükleyip hedef düğümde bırak.
- *   - KAYDIRMA     — boş zemini ya da orta tuşla sürükle; tekerlek.
- *   - YAKINLAŞTIRMA— Ctrl/Cmd + tekerlek (imlecin altındaki nokta sabit kalır).
- *   - SAĞ TIK      — düğüm/kenar/zemin menüsü.
- * Klavye kısayollarını tasarım ekranı dinler ve buradaki yöntemleri çağırır.
+ * Interactions:
+ *   - SELECT       — click a node or edge; add/remove with Shift/Ctrl;
+ *                    Shift + drag on empty background = frame (lasso) selection.
+ *   - MOVE         — drag the selected node(s) by the body; snaps to the 20 px
+ *                    grid, free while Alt is held.
+ *   - CONNECT      — drag from an exit port and drop on the target node.
+ *   - PAN          — drag the empty background or with the middle button; wheel.
+ *   - ZOOM         — Ctrl/Cmd + wheel (the point under the cursor stays fixed).
+ *   - RIGHT CLICK  — node/edge/background menu.
+ * Keyboard shortcuts are listened to by the design screen, which calls the methods here.
  *
- * Kamera tek bir CSS transform'dur (`.canvas-world`); dünya koordinatları hiç
- * değişmez. Geometri, kamera, isabet testi ve etkileşim kuralları saf
- * modüllerde — bu component yalnızca sinyal, DOM dinleyicisi ve output tutar.
+ * The camera is a single CSS transform (`.canvas-world`); world coordinates never
+ * change. Geometry, camera, hit testing and interaction rules live in pure
+ * modules — this component only holds signals, DOM listeners and outputs.
  */
 @Component({
     selector: 'app-workflow-canvas',
@@ -200,71 +200,71 @@ export class WorkflowCanvasComponent {
   readonly selectedNodes = input<string[]>([]);
   readonly selectedEdge = input<CanvasEdgeRef | null>(null);
   /**
-   * Salt-okunur mod: taşıma, bağlantı ve düzenleyen menü maddeleri kapalı;
-   * yakınlaştırma/kaydırma/seçim açık. Alan adı `locked`, çünkü `readonly` bir
-   * sınıf üyesi adı olarak kullanılamıyor.
+   * Read-only mode: moving, connecting and editing menu items are off;
+   * zoom/pan/selection are on. The field is named `locked` because `readonly` can't
+   * be used as a class member name.
    */
   readonly locked = input(false, { alias: 'readonly' });
 
   /**
-   * Kamera iki yönlü bağlanır (`[(camera)]`): tuval sekme değişiminde DOM'dan
-   * kalkıyor, dönüşte kaldığı yerden açılsın diye değer ekranda saklanır.
+   * The camera is two-way bound (`[(camera)]`): the canvas leaves the DOM on a tab switch,
+   * so the value is kept by the screen to reopen where it left off on return.
    */
   readonly camera = model<Camera>(IDENTITY_CAMERA);
 
-  /** İçerik ilk geldiğinde şema sığdırılsın mı (saklı kamera varsa hayır). */
+  /** Whether to fit the diagram when content first arrives (no if there's a saved camera). */
   readonly fitOnOpen = input(true);
 
-  /** Araç çubuğu ipucunun çeviri anahtarı — verilmezse düzenleme / salt-okunur varsayılanı. */
+  /** Translation key of the toolbar hint — if omitted, the edit / read-only default. */
   readonly hintKey = input<string | null>(null);
 
   /**
-   * Sabit 560px yerine bulunduğu hücreyi doldur (tasarımcının tam ekranı). Kamera
-   * etkilenmez: sığdırma/yakınlaştırma viewport ölçüsünü her çağrıda yeniden okur.
+   * Fill the containing cell instead of a fixed 560px (the designer's full screen). The camera
+   * isn't affected: fit/zoom re-read the viewport size on every call.
    */
   readonly fillHeight = input(false);
 
-  /** Kartların tip/özet/sorun bilgisi (anahtar küçük harfli). Yoksa kart anahtarı gösterir. */
+  /** Type/summary/issue info of the cards (lower-case keys). Without it the card shows the key. */
   readonly nodeMeta = input<Readonly<Record<string, CanvasNodeMeta>>>({});
 
   /**
-   * Yol katmanı (simülasyon, çalışan süreç): geçilen düğümler ve kenarlar
-   * vurgulanır, kalanlar soluklaşır. null → normal çizim.
+   * Path overlay (simulation, running process): traversed nodes and edges are
+   * highlighted, the rest are faded. null → normal drawing.
    */
   readonly overlay = input<WorkflowOverlay | null>(null);
 
   /**
-   * Yalnız yol: overlay'deki adımlar ve izlenen kenarlar çizilir, ulaşılmayanlar
-   * HİÇ çizilmez (kayıt ekranındaki "Akışı görüntüle"). Konumlar yine tüm grafiğin
-   * yerleşiminden gelir — şema tasarımcıdaki yerinde durur, yalnız eksik görünür.
+   * Path only: the steps in the overlay and traversed edges are drawn, unreached ones are
+   * NOT drawn at all ("Akışı görüntüle" (View workflow) on the record screen). Positions still come from
+   * the whole graph's layout — the diagram stays where it is in the designer, it just looks incomplete.
    */
   readonly pathOnly = input(false);
 
   private readonly overlayEdges = computed(() => new Set(this.overlay()?.edges ?? []));
 
-  /** Yalnız-yol modunda gösterilecek adımlar (küçük harfli); null → hepsi. */
+  /** Steps shown in path-only mode (lower-case); null → all. */
   private readonly visibleKeys = computed<ReadonlySet<string> | null>(() => {
     const overlay = this.overlay();
     return this.pathOnly() && overlay ? new Set(Object.keys(overlay.nodes)) : null;
   });
 
   /**
-   * Düğümler taşındı — konumlar tanıma TEK değişiklikte yazılmalı. İlk elle
-   * taşımada konumu otomatik yerleşimden gelen diğer düğümler de eklenir
-   * (bkz. pinAll): sonraki eklemelerde yerleşim değişince "zıplamasınlar".
+   * Nodes were moved — the positions must be written to the definition in a SINGLE change. On the first
+   * manual move, the other nodes whose positions come from auto layout are added too
+   * (see pinAll): so they don't "jump" when the layout changes on later additions.
    */
   readonly nodesMoved = output<Array<{ key: string; x: number; y: number }>>();
-  /** Bağlantı kuruldu — kaynak adımın ilgili çıkışı güncellenmeli. */
+  /** A connection was made — the source step's corresponding exit must be updated. */
   readonly edgeCreated = output<{ from: string; to: string; port: PortKind; exitPort: ExitPort }>();
   readonly selectionChange = output<CanvasSelection>();
-  /** Düğüme çift tıklandı — adım ayrıntı pop-up'ı açılmalı (salt-okunurda da). */
+  /** A node was double-clicked — the step detail pop-up should open (in read-only too). */
   readonly nodeOpened = output<string>();
-  /** "Otomatik düzenle" — elle verilmiş konumlar silinmeli. */
+  /** "Otomatik düzenle" (Auto arrange) — manually set positions must be cleared. */
   readonly layoutReset = output<void>();
   readonly menuAction = output<CanvasMenuAction>();
   /**
-   * Fare düğümün üstüne geldi (anahtar) / ayrıldı (null) — ayrıntı ipucu için.
-   * Yalnız fare: dokunmatikte hover yok, orada dokunuş seçimi (selectionChange) kullanılır.
+   * The mouse entered (key) / left (null) a node — for the detail tooltip.
+   * Mouse only: there's no hover on touch, where tap selection (selectionChange) is used.
    */
   readonly nodeHover = output<string | null>();
 
@@ -275,16 +275,16 @@ export class WorkflowCanvasComponent {
   private readonly menuRef = viewChild<ElementRef<HTMLElement>>('menu');
 
   /**
-   * Sürükleme sırasında konumlar burada tutulur ve her pointer olayında
-   * tanıma yazılmaz — tanım değişimi tüm grafiği yeniden kurar ve sürükleme
-   * takılırdı. Tanıma yazma yalnızca bırakışta (pointerup) yapılır.
+   * During a drag the positions are kept here and not written to the definition on every
+   * pointer event — a definition change rebuilds the whole graph and the drag would
+   * stutter. Writing to the definition happens only on release (pointerup).
    */
   private readonly liveOffsets = signal<Record<string, Point>>({});
 
-  /** Bağlantı çizilirken imcin bulunduğu nokta — geçici çizgi için. */
+  /** Cursor point while drawing a connection — for the temporary line. */
   readonly pendingEdge = signal<{ from: string; port: PortKind; exitPort: ExitPort; x: number; y: number } | null>(null);
 
-  /** Lasso çerçevesi (dünya koordinatı); çizilmiyorken null. */
+  /** Lasso frame (world coordinates); null when not drawing. */
   readonly lasso = signal<{ x: number; y: number; width: number; height: number } | null>(null);
 
   readonly menu = signal<MenuState | null>(null);
@@ -292,23 +292,23 @@ export class WorkflowCanvasComponent {
   readonly zoomPercent = computed(() => Math.round(this.camera().zoom * 100));
   readonly showEdgeLabels = computed(() => this.camera().zoom > EDGE_LABEL_MIN_ZOOM);
 
-  /** Viewport'taki noktalı ızgara — kamerayla birlikte ölçeklenir ve kayar. */
+  /** The dotted grid in the viewport — scales and shifts together with the camera. */
   readonly grid = computed(() => {
     const { step, offsetX, offsetY } = gridStyle(this.camera());
     return { size: `${step}px ${step}px`, position: `${offsetX}px ${offsetY}px` };
   });
 
   /**
-   * Otomatik yerleşim AYRI bir computed'de duruyor: sürükleme saniyede ~60 kez
-   * `liveOffsets`'i değiştiriyor; yerleşim aynı yerde okunsaydı her karede
-   * yeniden hesaplanırdı. Ayrılınca yalnızca grafik değiştiğinde hesaplanır.
+   * Auto layout lives in a SEPARATE computed: dragging changes `liveOffsets` ~60 times
+   * per second; if the layout were read in the same place it would be recomputed every
+   * frame. Separated, it is computed only when the graph changes.
    */
   private readonly autoLayout = computed(() => layoutWorkflow(this.graph()));
 
   private readonly positionedNodes = computed<CanvasNode[]>(() =>
     resolveNodePositions(this.graph(), this.autoLayout().nodes, this.liveOffsets()));
 
-  /** Çizilen düğümler — yalnız-yol modunda ulaşılmayanlar düşer (kenar/uç/sınır buradan türer). */
+  /** Drawn nodes — in path-only mode unreached ones drop out (edges/ends/bounds derive from this). */
   readonly nodes = computed<CanvasNode[]>(() => {
     const all = this.positionedNodes();
     const visible = this.visibleKeys();
@@ -322,11 +322,11 @@ export class WorkflowCanvasComponent {
     new Set(this.selectedNodes().map(key => key.toLowerCase())));
 
   /**
-   * Kenarlar düğüm konumlarından türetilir; sürüklerken canlı takip eder.
+   * Edges are derived from node positions; they follow live while dragging.
    *
-   * Dik açılı ve yuvarlak köşeli: her kenar kendi portundan çıkar, yatay bir
-   * kanalda hedefin hizasına gelir. Hedef kaynağın altında değilse (red → önceki
-   * adım) kenar kutuların sağından dolaştırılır (bkz. routeOrthogonal).
+   * Orthogonal with rounded corners: each edge leaves its own port and reaches the target's
+   * alignment in a horizontal channel. If the target isn't below the source (reject → previous
+   * step) the edge is routed around the right of the boxes (see routeOrthogonal).
    */
   readonly edges = computed<CanvasEdge[]>(() => {
     const nodes = this.nodes();
@@ -337,14 +337,14 @@ export class WorkflowCanvasComponent {
       neutral: this.languageService.t('workflow.canvas.edgeDefault')
     };
     const pending: Array<Omit<CanvasEdge, 'geometry'> & { request: EdgeRequest }> = [];
-    // Yalnız-yol modunda izlenmeyen kenar rotalamadan ÖNCE düşer: görünmeyen
-    // kenarlar kanal ayırıp görünenleri gereksiz yere dolaştırmasın.
+    // In path-only mode an untraversed edge drops out BEFORE routing: invisible
+    // edges must not reserve channels and make the visible ones detour needlessly.
     const takenOnly = this.visibleKeys() !== null;
     const taken = this.overlayEdges();
 
     for (const source of nodes) {
       for (const port of source.ports) {
-        // Hedefsiz çıkış kenar değil uç işaretidir (bkz. stubs).
+        // An exit without a target is an end marker, not an edge (see stubs).
         if (!port.target) continue;
         if (takenOnly && !taken.has(edgeId(source.key, port.port))) continue;
 
@@ -352,9 +352,9 @@ export class WorkflowCanvasComponent {
         if (!target) continue;
 
         pending.push({
-          // Port kimliği anahtarda: koşulun iki durumu aynı hedefe gidebilir.
+          // The port id is in the key: two cases of a condition may go to the same target.
           key: `${source.key}->${port.target}:${port.port}`,
-          // Otomatik eylemin tek "sonraki" çıkışı etiketsiz çizilir — "Diğer" yanıltırdı.
+          // An automatic action's single "next" exit is drawn unlabelled — "Diğer" (Other) would mislead.
           label: port.port === 'next' ? '' : port.kind === 'neutral' ? (port.label ?? labels.neutral) : labels[port.kind],
           isRejection: port.kind === 'reject',
           from: source.key,
@@ -372,12 +372,12 @@ export class WorkflowCanvasComponent {
   });
 
   /**
-   * Akışın bittiği çıkışlar: düğümün altında kısa bir çizgi ve uç işareti
-   * (onay/tamamlanma yeşil, red kırmızı). Hedefi silinmiş (bulunamayan) çıkış
-   * burada değil, doğrulama panelinde görünür.
+   * Exits where the flow ends: a short line under the node and an end marker
+   * (approve/complete green, reject red). An exit whose target was deleted (not found)
+   * shows up in the validation panel, not here.
    */
   readonly stubs = computed<CanvasStub[]>(() => {
-    // Yalnız-yol modunda yalnız sürecin bittiği uç (izlenen hedefsiz çıkış) çizilir.
+    // In path-only mode only the end where the process finished (the traversed target-less exit) is drawn.
     const takenOnly = this.visibleKeys() !== null;
     const taken = this.overlayEdges();
     return this.nodes().flatMap(node => node.ports
@@ -393,7 +393,7 @@ export class WorkflowCanvasComponent {
       })));
   });
 
-  /** Başlangıç hapı — başlangıç adımı varsa onun üstünde. */
+  /** Start pill — above the start step if there is one. */
   readonly start = computed<CanvasStart | null>(() => {
     const node = this.nodes().find(n => n.isStart);
     if (!node) return null;
@@ -408,7 +408,7 @@ export class WorkflowCanvasComponent {
     };
   });
 
-  /** Sürüklenen geçici bağlantının yolu — sürüklenen portun kendisinden başlar. */
+  /** Path of the temporary connection being dragged — starts at the dragged port itself. */
   readonly pendingPath = computed(() => {
     const pending = this.pendingEdge();
     if (!pending) return null;
@@ -425,8 +425,8 @@ export class WorkflowCanvasComponent {
   });
 
   /**
-   * Çizilen her şeyin dünya sınırı: düğümler, kenarlar (sağdan dolaşan geri
-   * dönüşler kutuların dışına taşar), uç işaretleri ve başlangıç hapı.
+   * World bounds of everything drawn: nodes, edges (loop-backs routed around the right
+   * overflow the boxes), end markers and the start pill.
    */
   private readonly contentBounds = computed(() => {
     const boxes: Array<{ x: number; y: number; width: number; height: number }> = [...this.nodes()];
@@ -445,9 +445,9 @@ export class WorkflowCanvasComponent {
   });
 
   /**
-   * Canvas yüzeyinin gerekli boyutu — içerik taşınınca büyür. Kenarlar da
-   * hesaba katılır: önceden yalnız düğümlere bakılıyordu ve sağdan dolaşan
-   * geri dönüş kenarları SVG'nin dışında kalıp kırpılıyordu.
+   * Required size of the canvas surface — grows when content is moved. Edges are
+   * taken into account too: previously only nodes were considered, and loop-back edges
+   * routed around the right ended up outside the SVG and were clipped.
    */
   readonly canvasSize = computed(() => {
     const bounds = this.contentBounds();
@@ -460,9 +460,9 @@ export class WorkflowCanvasComponent {
   });
 
   constructor() {
-    // Tanım değişince (bırakış sonrası yazım, geri alma, başka sekmeden düzenleme)
-    // canlı ofsetler bırakılır: aksi halde bir kez sürüklenmiş düğüm, tanımdaki
-    // konumunu sonsuza dek gölgelerdi.
+    // When the definition changes (write after release, undo, edit from another tab)
+    // the live offsets are dropped: otherwise a node dragged once would shadow its
+    // position in the definition forever.
     effect(() => {
       this.graph();
       untracked(() => {
@@ -470,36 +470,36 @@ export class WorkflowCanvasComponent {
       });
     });
 
-    // İçerik ilk geldiğinde şema görünüre sığdırılır. Başlangıç hapı ve sağdan
-    // dolaşan kenarlar dünya koordinatında negatif/uzak yerlere düşebiliyor;
-    // sabit (0,0) kamerayla açılışta ekran dışında kalırlardı.
+    // When content first arrives the diagram is fitted into view. The start pill and edges
+    // routed around the right can fall at negative/far world coordinates;
+    // with a fixed (0,0) camera they would be off-screen on open.
     effect(() => {
       if (this.fitted || this.nodes().length === 0) return;
       this.fitted = true;
       if (untracked(this.fitOnOpen)) this.fitAfterRender();
     });
 
-    // Jest yarıda kalırken bileşen kapanırsa (sekme değişimi) document
-    // dinleyicileri sızmasın.
+    // If the component closes mid-gesture (tab switch) the document
+    // listeners must not leak.
     inject(DestroyRef).onDestroy(() => this.detachAll());
   }
 
-  /** İlk sığdırma yapıldı mı — sonraki tanım değişiklikleri kamerayı oynatmaz. */
+  /** Whether the initial fit was done — later definition changes don't move the camera. */
   private fitted = false;
 
-  /** Viewport DOM'a yerleştikten sonra sığdırır (ölçüsü ancak o zaman bilinir). */
+  /** Fits once the viewport is laid out in the DOM (its size is known only then). */
   private fitAfterRender(): void {
     if (!isPlatformBrowser(this.platformId)) return;
     requestAnimationFrame(() => this.fitToScreen());
   }
 
-  // ── Kamera ────────────────────────────────────────────────────────────────
+  // ── Camera ────────────────────────────────────────────────────────────────
 
   /**
-   * Tekerlek: Ctrl/Cmd ile imce merkezli yakınlaştırma, düz tekerlekle kaydırma.
-   * Trackpad pinch hareketi de tarayıcıda `ctrlKey` ile geldiği için aynı yoldan
-   * geçer. Dinleyici şablondan bağlanıyor; sıradan bir div'de `wheel` passive
-   * değildir, `preventDefault()` çalışır.
+   * Wheel: cursor-centred zoom with Ctrl/Cmd, pan with a plain wheel.
+   * A trackpad pinch also arrives in the browser with `ctrlKey`, so it goes the same way.
+   * The listener is bound from the template; on an ordinary div `wheel` isn't passive,
+   * so `preventDefault()` works.
    */
   onWheel(event: WheelEvent): void {
     const rect = this.viewportRect();
@@ -530,9 +530,9 @@ export class WorkflowCanvasComponent {
   }
 
   /**
-   * %100'e döner, baktığı yeri kaybetmeden (viewport merkezi sabit). Eskiden
-   * kamera başlangıç noktasına zıplıyordu; şema ve başlangıç hapı görünürden
-   * kayboluyordu.
+   * Returns to 100% without losing the spot being viewed (the viewport centre stays fixed). Previously
+   * the camera jumped to the origin; the diagram and the start pill disappeared from
+   * view.
    */
   resetZoom(): void {
     const rect = this.viewportRect();
@@ -543,14 +543,14 @@ export class WorkflowCanvasComponent {
     this.camera.update(camera => zoomAtCenter(camera, 1 / camera.zoom, rect));
   }
 
-  /** Elle konumları bırakıp otomatik yerleşime döner; yeni yerleşim görünüre sığdırılır. */
+  /** Drops manual positions and returns to auto layout; the new layout is fitted into view. */
   autoArrange(): void {
     this.liveOffsets.set({});
     this.layoutReset.emit();
     this.fitAfterRender();
   }
 
-  /** Tüm şemayı (başlangıç hapı, geri dönüşler ve uç işaretleri dahil) görünüre sığdırır. */
+  /** Fits the whole diagram (including the start pill, loop-backs and end markers) into view. */
   fitToScreen(): void {
     const element = this.viewportRef()?.nativeElement;
     const bounds = this.contentBounds();
@@ -563,12 +563,12 @@ export class WorkflowCanvasComponent {
   }
 
   /**
-   * Yeni eklenen düğümü görünür alana getirir (en küçük kaydırmayla, zoom
-   * değişmez). Şemanın tamamı mevcut zoom'da sığıyorsa tamamı getirilir:
-   * otomatik yerleşim yeni düğüm için KOMŞULARI da kaydırabiliyor ve yalnız yeni
-   * düğüme bakmak onları ekran dışında bırakıyordu. `preferContent` false ise
-   * (sorun listesinden adıma gitmek) yalnız düğüm getirilir. Konum ancak
-   * çizimden sonra kesinleştiği için bir sonraki render'da çalışır.
+   * Brings a newly added node into view (with the smallest pan; zoom doesn't
+   * change). If the whole diagram fits at the current zoom, all of it is brought in:
+   * auto layout can shift the NEIGHBOURS too for a new node, and looking only at the new
+   * node left them off-screen. If `preferContent` is false
+   * (jumping to a step from the issue list) only the node is brought in. Since the position is only
+   * final after drawing, this runs on the next render.
    */
   reveal(key: string, preferContent = true): void {
     if (!isPlatformBrowser(this.platformId)) return;
@@ -593,7 +593,7 @@ export class WorkflowCanvasComponent {
     }, { injector: this.injector });
   }
 
-  /** Viewport merkezinin dünya koordinatı — klavyeyle eklenen adım için konum. */
+  /** World coordinate of the viewport centre — position for a step added via keyboard. */
   viewportCenter(): Point | null {
     const rect = this.viewportRect();
     if (!rect) return null;
@@ -614,15 +614,15 @@ export class WorkflowCanvasComponent {
     return screenToWorld(clientX, clientY, rect, this.camera());
   }
 
-  // ── Kare başına tek güncelleme ────────────────────────────────────────────
+  // ── One update per frame ────────────────────────────────────────────
 
   private frameRequest = 0;
   private frameJob: (() => void) | null = null;
 
   /**
-   * pointermove saniyede 60'tan fazla gelebilir (yüksek tazelemeli ekran,
-   * tablet kalemi); her biri sinyal yazıp kenarları yeniden yönlendirseydi
-   * sürükleme takılırdı. Kare başına yalnız EN SON hareket uygulanır.
+   * pointermove can fire more than 60 times per second (high refresh rate screen,
+   * tablet pen); if each wrote a signal and re-routed the edges the drag
+   * would stutter. Only the LATEST move per frame is applied.
    */
   private scheduleFrame(job: () => void): void {
     this.frameJob = job;
@@ -636,7 +636,7 @@ export class WorkflowCanvasComponent {
     });
   }
 
-  /** Bırakışta bekleyen son hareketi hemen uygular — bırakılan konum kaybolmasın. */
+  /** On release, applies the pending last move immediately — so the release position isn't lost. */
   private flushFrame(): void {
     if (this.frameRequest) cancelAnimationFrame(this.frameRequest);
     this.frameRequest = 0;
@@ -645,7 +645,7 @@ export class WorkflowCanvasComponent {
     pending?.();
   }
 
-  // ── Seçim yardımcıları ────────────────────────────────────────────────────
+  // ── Selection helpers ────────────────────────────────────────────────────
 
   isSelected(node: CanvasNode): boolean {
     return this.selectedSet().has(node.key.toLowerCase());
@@ -659,12 +659,12 @@ export class WorkflowCanvasComponent {
     return this.overlayEdges().has(edgeId(edge.from, edge.exitPort));
   }
 
-  /** Süreç bu hedefsiz çıkıştan bitti mi — uç işareti soluklaşmaz. */
+  /** Whether the process ended through this target-less exit — the end marker isn't faded. */
   isStubTaken(stub: CanvasStub): boolean {
     return this.overlayEdges().has(edgeId(stub.from, stub.port));
   }
 
-  // ── Düğüm üstü ipucu (salt-okunur görünümler) ─────────────────────────────
+  // ── Node hover tooltip (read-only views) ─────────────────────────────
 
   onNodePointerEnter(event: PointerEvent, node: CanvasNode): void {
     if (event.pointerType === 'mouse') this.nodeHover.emit(node.key);
@@ -674,7 +674,7 @@ export class WorkflowCanvasComponent {
     if (event.pointerType === 'mouse') this.nodeHover.emit(null);
   }
 
-  /** Düğüm kartının ekrandaki kutusu — ipucunu yanına konumlamak için; çizili değilse null. */
+  /** On-screen box of the node card — for positioning the tooltip next to it; null if not drawn. */
   nodeScreenRect(key: string): DOMRect | null {
     const viewport = this.viewportRef()?.nativeElement;
     if (!viewport) return null;
@@ -683,7 +683,7 @@ export class WorkflowCanvasComponent {
     return element?.getBoundingClientRect() ?? null;
   }
 
-  /** Port düğmesinin ekran okuyucu metni — koşul yolunda durumun etiketi. */
+  /** Screen reader text of the port button — the case label on a condition path. */
   portAria(port: CanvasPort): string {
     if (port.port === 'next') return this.languageService.t('workflow.canvas.portNext');
     if (port.kind === 'neutral') {
@@ -710,8 +710,8 @@ export class WorkflowCanvasComponent {
   }
 
   /**
-   * Düğüm seçimi: ek tuşla eklenir/çıkarılır; ek tuşsuz basışta düğüm zaten
-   * seçiliyse seçim korunur (birlikte sürüklensin diye), değilse yalnız o seçilir.
+   * Node selection: added/removed with a modifier key; on a press without a modifier, if the node is already
+   * selected the selection is kept (so they drag together), otherwise only it is selected.
    */
   private selectionAfterPress(key: string, additive: boolean): string[] {
     const current = this.selectedNodes();
@@ -725,12 +725,12 @@ export class WorkflowCanvasComponent {
     return isSelected ? current : [key];
   }
 
-  // ── Düğüm: seçim + taşıma ─────────────────────────────────────────────────
+  // ── Node: selection + moving ─────────────────────────────────────────────────
 
   onNodePointerDown(event: PointerEvent, node: CanvasNode): void {
     if (!isPlatformBrowser(this.platformId) || !event.isPrimary) return;
-    // Yalnız sol tuş: sağ/orta tuş düğümü sürüklemeye başlıyor ve menü açıldığı
-    // için pointerup hiç gelmeyince düğüm imleci izlemeye devam ediyordu.
+    // Left button only: the right/middle button started dragging the node, and since the menu opened
+    // no pointerup ever arrived and the node kept following the cursor.
     if (event.button !== 0) return;
 
     event.preventDefault();
@@ -742,8 +742,8 @@ export class WorkflowCanvasComponent {
     const selection = this.selectionAfterPress(node.key, additive);
     this.emitSelection(selection);
 
-    // Salt-okunurda seçim çalışır, taşıma çalışmaz. Ek tuşla seçimden çıkarılan
-    // düğüm de taşınmaz.
+    // In read-only, selection works but moving doesn't. A node removed from the selection
+    // with a modifier key isn't moved either.
     if (this.locked() || !selection.some(k => k.toLowerCase() === node.key.toLowerCase())) return;
 
     const byKey = this.nodesByKey();
@@ -760,16 +760,16 @@ export class WorkflowCanvasComponent {
     this.attach(this.onGestureMove, this.onGestureEnd);
   }
 
-  /** Düğüm çift tıklaması: ayrıntı pop-up'ı. */
+  /** Node double-click: detail pop-up. */
   onNodeDoubleClick(node: CanvasNode): void {
     this.nodeOpened.emit(node.key);
   }
 
-  // ── Zemin: kaydırma, kenar seçimi, lasso ──────────────────────────────────
+  // ── Background: pan, edge selection, lasso ──────────────────────────────────
 
   onSurfacePointerDown(event: PointerEvent): void {
     if (!isPlatformBrowser(this.platformId) || !event.isPrimary) return;
-    // Sağ tuş menüdür (contextmenu olayı); burada yalnız sol ve orta tuş.
+    // The right button is the menu (contextmenu event); only the left and middle buttons here.
     if (event.button !== 0 && event.button !== 1) return;
 
     event.preventDefault();
@@ -778,7 +778,7 @@ export class WorkflowCanvasComponent {
 
     const world = this.toWorld(event.clientX, event.clientY);
 
-    // Shift + sol tuş: çerçeveyle seçim.
+    // Shift + left button: frame selection.
     if (event.button === 0 && event.shiftKey) {
       this.gesture = { kind: 'lasso', start: world, additive: true };
       this.lasso.set({ x: world.x, y: world.y, width: 0, height: 0 });
@@ -825,7 +825,7 @@ export class WorkflowCanvasComponent {
 
     gesture.moved = true;
     const zoom = this.camera().zoom;
-    // Alt basılıyken ızgaraya yapışma kapalı (ince ayar).
+    // Grid snapping is off while Alt is held (fine-tuning).
     const positions = dragPositions(gesture.origins, dx, dy, zoom, !altKey);
     this.scheduleFrame(() => this.liveOffsets.update(current => {
       const next = { ...current };
@@ -860,7 +860,7 @@ export class WorkflowCanvasComponent {
 
     if (gesture.kind === 'surface') {
       if (gesture.moved || event.type === 'pointercancel') return;
-      // Sürüklenmeden bırakılan zemin tıklaması: kenar varsa onu seç, yoksa seçimi temizle.
+      // A background click released without dragging: select the edge if there is one, otherwise clear the selection.
       if (gesture.edge) {
         this.emitSelection([], { from: gesture.edge.from, port: gesture.edge.exitPort });
       } else {
@@ -869,9 +869,9 @@ export class WorkflowCanvasComponent {
       return;
     }
 
-    // Düğüm jesti.
+    // Node gesture.
     if (!gesture.moved) {
-      // Ek tuşsuz tıklama çoklu seçimi tek düğüme indirir (sürükleme başlamadıysa).
+      // A click without a modifier reduces a multi-selection to a single node (if no drag started).
       if (!gesture.additive && this.selectedNodes().length > 1) this.emitSelection([gesture.key]);
       return;
     }
@@ -887,10 +887,10 @@ export class WorkflowCanvasComponent {
   };
 
   /**
-   * Taşınan düğümlere, konumu otomatik yerleşimden gelen DİĞER düğümlerin
-   * mevcut konumlarını ekler. İlk elle taşımadan sonra tanım tamamen "elle
-   * yerleşim"e geçer: sonradan adım eklenince otomatik yerleşim değişse de
-   * kullanıcının yerleştirmediği kutular zıplamaz.
+   * Adds the current positions of the OTHER nodes, whose positions come from auto layout,
+   * to the moved nodes. After the first manual move the definition switches fully to "manual
+   * layout": even if auto layout changes when steps are added later,
+   * boxes the user didn't place don't jump.
    */
   private pinAll(moves: Array<{ key: string; x: number; y: number }>): Array<{ key: string; x: number; y: number }> {
     const movedKeys = new Set(moves.map(m => m.key.toLowerCase()));
@@ -901,7 +901,7 @@ export class WorkflowCanvasComponent {
     return [...moves, ...unpinned];
   }
 
-  /** Seçili düğümleri ok tuşuyla iter (Shift: ızgara adımı). */
+  /** Nudges the selected nodes with the arrow keys (Shift: grid step). */
   nudge(direction: 'left' | 'right' | 'up' | 'down', large: boolean): void {
     if (this.locked()) return;
 
@@ -915,10 +915,10 @@ export class WorkflowCanvasComponent {
       y: large ? snapValue(node.y + delta.y, true) : node.y + delta.y
     }));
 
-    // Yeni konum canlı ofsete de yazılır: değişiklik algılama sonraki kareye
-    // ertelendiği için (eventCoalescing) aynı karede gelen ikinci basış `graph`
-    // girdisini hâlâ eski görür ve itmeler birikmek yerine üst üste yazılırdı.
-    // Tanım güncellenince ofsetler zaten bırakılır (bkz. constructor).
+    // The new position is written to the live offset too: since change detection is deferred to the next
+    // frame (eventCoalescing), a second press in the same frame still sees the old `graph`
+    // input, and the nudges would overwrite each other instead of accumulating.
+    // The offsets are dropped anyway once the definition updates (see constructor).
     this.liveOffsets.update(current => {
       const next = { ...current };
       for (const move of moves) next[move.key] = { x: move.x, y: move.y };
@@ -928,7 +928,7 @@ export class WorkflowCanvasComponent {
     this.nodesMoved.emit(this.pinAll(moves));
   }
 
-  // ── Bağlantı çizme ────────────────────────────────────────────────────────
+  // ── Drawing connections ────────────────────────────────────────────────────────
 
   onPortDragStart(event: PointerEvent, node: CanvasNode, port: CanvasPort): void {
     if (!isPlatformBrowser(this.platformId) || this.locked() || !event.isPrimary) return;
@@ -959,23 +959,23 @@ export class WorkflowCanvasComponent {
     this.pendingEdge.set(null);
     this.detach(this.onPortDragMove, this.onPortDragEnd);
 
-    // İptal edilen jest bağlantı oluşturmaz — yalnız yarım çizgiyi temizler.
+    // A cancelled gesture creates no connection — it only clears the half-drawn line.
     if (!pending || event.type === 'pointercancel') return;
 
     const target = nodeAt(this.nodes(), this.toWorld(event.clientX, event.clientY));
-    // Kendine bağlantı yok sayılır: sonsuz döngü kurmanın en kolay yolu bu
-    // ve kullanıcının bunu isteyerek yaptığı bir senaryo yok.
+    // A self-connection is ignored: it's the easiest way to build an infinite loop
+    // and there's no scenario where the user does it on purpose.
     if (!target || target.key.toLowerCase() === pending.from.toLowerCase()) return;
 
     this.edgeCreated.emit({ from: pending.from, to: target.key, port: pending.port, exitPort: pending.exitPort });
   };
 
-  // ── Sağ tık menüsü ────────────────────────────────────────────────────────
+  // ── Context menu ────────────────────────────────────────────────────────
 
   /**
-   * Düğüm, kenar ya da zemin için bağlama duyarlı menü. Menü viewport'un
-   * KARDEŞİ olarak `position: fixed` ile çizilir: dönüştürülmüş (transform)
-   * bir atanın içindeki fixed eleman ekrana değil o ataya göre konumlanırdı.
+   * Context-sensitive menu for a node, edge or background. The menu is drawn as a
+   * SIBLING of the viewport with `position: fixed`: a fixed element inside a transformed
+   * ancestor would be positioned relative to that ancestor, not the screen.
    */
   onContextMenu(event: MouseEvent): void {
     event.preventDefault();
@@ -1054,9 +1054,9 @@ export class WorkflowCanvasComponent {
   }
 
   /**
-   * Menü çizildikten sonra ölçülür ve pencereye sığdırılır: ekranın alt/sağ
-   * kenarına yakın sağ tıkta menü pencereden taşıyordu (telefonda tümüyle).
-   * İlk madde odaklanır — klavyeyle Tab/Enter ve Escape çalışsın.
+   * The menu is measured after drawing and fitted into the window: on a right click near the
+   * bottom/right edge of the screen the menu overflowed the window (entirely on a phone).
+   * The first item is focused — so Tab/Enter and Escape work from the keyboard.
    */
   private placeMenu(): void {
     const menu = this.menu();
@@ -1072,15 +1072,15 @@ export class WorkflowCanvasComponent {
     element.querySelector<HTMLElement>('.canvas-menu-item')?.focus({ preventScroll: true });
   }
 
-  // ── Yeni düğüm: hızlı ekle, sürükle-bırak, palet ───────────────────────────
+  // ── New node: quick add, drag-and-drop, palette ───────────────────────────
 
   private addLabel(kindLabelKey: string): string {
     return this.languageService.t('workflow.canvas.menu.addKind', { kind: this.languageService.t(kindLabelKey) });
   }
 
   /**
-   * Bağlantısız çıkışın ucundaki "+": hangi türde düğüm ekleneceğini sorar,
-   * seçilen düğüm o çıkışa bağlı olarak eklenir.
+   * The "+" at the tip of an unconnected exit: asks what kind of node to add;
+   * the chosen node is added connected to that exit.
    */
   openQuickAdd(event: MouseEvent, stub: CanvasStub): void {
     event.stopPropagation();
@@ -1106,10 +1106,10 @@ export class WorkflowCanvasComponent {
   }
 
   /**
-   * Yeni düğümün yeri. Hiçbir düğüm elle konumlanmamışsa konum verilmez —
-   * otomatik yerleşim bağlı düğümü kendi katmanına koyar. Aksi halde bağlanan
-   * çıkışın altına (ya da görünür alanın ortasına), boş bir yere konur ve
-   * otomatik yerleşimdeki komşular sabitlenir.
+   * Position of the new node. If no node is manually positioned, no position is given —
+   * auto layout puts the connected node on its own layer. Otherwise it is placed in a free spot
+   * below the connected exit (or in the middle of the visible area), and the
+   * auto-laid-out neighbours are pinned.
    */
   placeNew(kind: NodeKind, from: CanvasEdgeRef | null): { at: Point | null; pins: CanvasMoves } {
     const nodes = this.nodes();
@@ -1134,7 +1134,7 @@ export class WorkflowCanvasComponent {
     event.dataTransfer.dropEffect = 'copy';
   }
 
-  /** Paletten bırakılan düğüm, bırakılan noktaya ortalanır. */
+  /** A node dropped from the palette is centred on the drop point. */
   onDrop(event: DragEvent): void {
     const kind = event.dataTransfer?.getData(WORKFLOW_NODE_MIME);
     if (this.locked() || !isNodeKind(kind)) return;
@@ -1158,19 +1158,19 @@ export class WorkflowCanvasComponent {
     }
   }
 
-  /** Menü dışına basış menüyü kapatır (menü maddesine basış kapatmaz). */
+  /** Pressing outside the menu closes it (pressing a menu item doesn't). */
   private readonly onOutsidePointerDown = (event: PointerEvent): void => {
     const target = event.target as Element | null;
     if (target?.closest?.('.canvas-menu')) return;
     this.closeMenu();
   };
 
-  // ── Dinleyici yönetimi ────────────────────────────────────────────────────
+  // ── Listener management ────────────────────────────────────────────────────
 
   private attach(move: (e: PointerEvent) => void, end: (e: PointerEvent) => void): void {
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', end);
-    // pointercancel: tarayıcı jesti devralırsa (sistem kaydırması) jest takılı kalmasın.
+    // pointercancel: if the browser takes over the gesture (system scroll), the gesture must not get stuck.
     document.addEventListener('pointercancel', end);
   }
 
@@ -1180,12 +1180,12 @@ export class WorkflowCanvasComponent {
     document.removeEventListener('pointercancel', end);
   }
 
-  /** Klavye kısayolları tuval odaktayken de çalışsın diye viewport odaklanır. */
+  /** The viewport is focused so keyboard shortcuts work while the canvas has focus too. */
   private focusViewport(): void {
     this.viewportRef()?.nativeElement.focus({ preventScroll: true });
   }
 
-  /** Bileşen kapanırken yarım kalan jestlerin document dinleyicilerini söker. */
+  /** Removes the document listeners of unfinished gestures when the component closes. */
   private detachAll(): void {
     if (this.frameRequest) cancelAnimationFrame(this.frameRequest);
     this.frameRequest = 0;

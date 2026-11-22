@@ -4,15 +4,15 @@
 }
 
 /**
- * Üç sütun: sohbetler · mesajlar · öneriler.
- * Panelleri grid + gap ile dizdiği için .flow KULLANILMAZ (çift boşluk olurdu).
+ * Three columns: conversations · messages · proposals.
+ * Panels are laid out with grid + gap, so .flow is NOT used (it would double the spacing).
  */
 .ai-layout {
   display: grid;
   grid-template-columns: 260px 1fr 320px;
   gap: var(--space-6);
-  // Topbar + sayfa başlığı çıkarıldıktan sonra kalan yükseklik: sütunlar
-  // kendi içinde kayar, sayfanın tamamı kaymaz.
+  // Height left after subtracting the topbar + page header: the columns
+  // scroll internally, not the whole page.
   height: calc(100vh - var(--topbar-h) - 140px);
   min-height: 480px;
 }
@@ -21,7 +21,7 @@
 .ai-main {
   display: flex;
   flex-direction: column;
-  min-height: 0; // grid çocuğunun taşmadan kısalabilmesi için
+  min-height: 0; // so the grid child can shrink without overflowing
   overflow: hidden;
 }
 
@@ -36,7 +36,7 @@
   margin: 0;
 }
 
-// ── Sohbet listesi ─────────────────────────────────────────────────────────
+// ── Conversation list ──────────────────────────────────────────────────────
 
 .ai-conversation-list {
   list-style: none;
@@ -91,7 +91,7 @@
   white-space: nowrap;
 }
 
-// ── Mesaj akışı ────────────────────────────────────────────────────────────
+// ── Message stream ─────────────────────────────────────────────────────────
 
 .ai-messages {
   flex: 1;
@@ -125,14 +125,14 @@
   margin: 0;
   color: var(--fg-2);
   line-height: var(--leading-body);
-  // Model yanıtı satır sonlarını taşır; düz metin olarak korunur.
+  // The model reply carries line breaks; preserved as plain text.
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
-// ── Canlı ilerleme (akış sırasında) ────────────────────────────────────────
+// ── Live progress (while streaming) ────────────────────────────────────────
 
-// Tamamlanan tool adımları: "Model önerildi: Musteri". Satırlar telefonda sarılır.
+// Completed tool steps: "Model önerildi: Musteri" (Model proposed). Rows wrap on phones.
 .ai-steps {
   display: flex;
   flex-direction: column;
@@ -157,7 +157,7 @@
   }
 }
 
-// Faz etiketi + yeniden deneme durumu + geçen süre.
+// Phase label + retry status + elapsed time.
 .ai-progress {
   display: flex;
   flex-wrap: wrap;
@@ -191,7 +191,7 @@
   }
 }
 
-// ── Yazma alanı ────────────────────────────────────────────────────────────
+// ── Composer ───────────────────────────────────────────────────────────────
 
 .ai-composer {
   border-top: 1px solid var(--border);
@@ -211,7 +211,7 @@
   justify-content: flex-end;
 }
 
-// ── Öneri kartları ─────────────────────────────────────────────────────────
+// ── Proposal cards ─────────────────────────────────────────────────────────
 
 .ai-card-list {
   list-style: none;
@@ -288,14 +288,14 @@
   padding: var(--space-4);
 }
 
-// ── Duyarlılık ─────────────────────────────────────────────────────────────
+// ── Responsiveness ─────────────────────────────────────────────────────────
 
 @media (max-width: 1100px) {
   .ai-layout {
     grid-template-columns: 220px 1fr;
     grid-template-rows: 1fr auto;
 
-    // Öneriler dar ekranda alta iner ve iki sütunu birden kaplar.
+    // On narrow screens proposals drop below and span both columns.
     .ai-side:last-of-type {
       grid-column: 1 / -1;
       max-height: 320px;
@@ -303,9 +303,9 @@
   }
 }
 
-/* Telefon: önce sohbet. Sohbet paneli ekran yüksekliğinde kalır — mesajlar kendi içinde
-   kayar, yazma kutusu hep görünür (eskiden sohbet listesinin altında, her yeni yanıtla
-   biraz daha aşağı itiliyordu). Sohbet listesi ve öneriler sohbetin altına iner. */
+/* Phone: conversation first. The chat panel stays at screen height — messages scroll
+   internally, the composer is always visible (it used to sit below the conversation list and
+   get pushed a bit further down with every new reply). Conversation list and proposals move below the chat. */
 @media (max-width: 768px) {
   :host {
     padding: 0;
@@ -328,7 +328,7 @@
       max-height: 280px;
     }
 
-    // Öneri kartları sayfayla birlikte kayar; iç içe ikinci bir kaydırma kutusu olmasın.
+    // Proposal cards scroll with the page; no nested second scroll box.
     .ai-side:last-of-type {
       grid-column: auto;
       max-height: none;

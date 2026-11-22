@@ -1,26 +1,26 @@
 import { WorkflowEvent, WorkflowGraph, WorkflowInstance, WorkflowStep, WorkflowTask } from '../../models/workflow.model';
 import { OverlayNodeState, WorkflowOverlay } from './workflow-overlay';
 
-/** Kapanmış görev: kim, ne karar verdi, ne zaman. */
+/** A closed task: who decided what, and when. */
 export interface StepDecisionEntry {
   kind: 'decision';
   outcome: 'approved' | 'rejected' | 'skipped' | 'expired';
-  /** Kararı veren; sistem kapattıysa (SLA) null. */
+  /** Who decided; null if the system closed it (SLA). */
   by: string | null;
   at: string | null;
   comment: string | null;
-  /** Paralel adımda dalın görünen adı. */
+  /** Display name of the branch in a parallel step. */
   branch: string | null;
 }
 
-/** Açık görev: kimin kararı bekleniyor. */
+/** An open task: whose decision is awaited. */
 export interface StepWaitingEntry {
   kind: 'waiting';
-  /** Kişiye atanmışsa kişinin adı. */
+  /** The user's name if assigned to a user. */
   user: string | null;
-  /** Rol havuzuna atanmışsa rolün adı. */
+  /** The role's name if assigned to a role pool. */
   role: string | null;
-  /** Rol havuzunun aktif üyeleri (sunucudan, ada göre sıralı). */
+  /** Active members of the role pool (from the server, sorted by name). */
   candidates: string[];
   branch: string | null;
   dueAt: string | null;
@@ -30,13 +30,13 @@ export interface StepWaitingEntry {
 export type StepEntry =
   | StepDecisionEntry
   | StepWaitingEntry
-  /** Koşul değerlendirildi — seçilen durumun etiketi; null → varsayılan yol. */
+  /** Condition evaluated — label of the chosen case; null → default path. */
   | { kind: 'condition'; caseLabel: string | null; at: string }
   | { kind: 'fields'; columns: string[]; at: string }
   | { kind: 'notified'; at: string }
-  /** Bekleme: vade ve (geçtiyse) ateşlenme anı. */
+  /** Timer: due time and (if passed) the firing moment. */
   | { kind: 'timer'; until: string | null; firedAt: string | null }
-  /** Yönetici hata veren otomatik adımı atladı. */
+  /** An admin skipped a failing automatic step. */
   | { kind: 'stepSkipped'; at: string }
   | { kind: 'failed'; message: string | null }
   | { kind: 'ended'; outcome: 'completed' | 'rejected'; at: string | null };
@@ -48,7 +48,7 @@ export interface StepHistory {
   entries: StepEntry[];
 }
 
-/** Adım geçmişi için gereken kadarı (tam süreç DTO'su da uyar). */
+/** Just what the step history needs (the full instance DTO also fits). */
 export type StepHistoryInstance =
   Pick<WorkflowInstance, 'status' | 'timeline' | 'tasks' | 'completedAt' | 'errorMessage'>;
 
@@ -75,7 +75,7 @@ const OUTCOMES: Partial<Record<WorkflowTask['status'], StepDecisionEntry['outcom
   Expired: 'expired'
 };
 
-/** Görevden geçmiş satırı; iptal edilen görev (dal iptali, geri alma) gösterilmez. */
+/** A history row from a task; cancelled tasks (branch cancellation, rollback) are not shown. */
 function taskEntry(step: WorkflowStep, task: WorkflowTask): StepEntry | null {
   const branch = branchName(step, task.branchKey);
 
@@ -104,7 +104,7 @@ function taskEntry(step: WorkflowStep, task: WorkflowTask): StepEntry | null {
   };
 }
 
-/** Otomatik adımın olaylarından geçmiş satırları (sırayla — döngüde her tur ayrı). */
+/** History rows from an automatic step's events (in order — each loop round separately). */
 function eventEntries(step: WorkflowStep, events: WorkflowEvent[]): StepEntry[] {
   const entries: StepEntry[] = [];
 
@@ -145,16 +145,16 @@ function eventEntries(step: WorkflowStep, events: WorkflowEvent[]): StepEntry[] 
 }
 
 /**
- * Sürecin şemada GÖRÜNEN adımları için "ne oldu" özeti — SAF, çevirisiz.
+ * A "what happened" summary for the steps of an instance VISIBLE on the diagram — PURE, untranslated.
  *
- * - İnsan adımları (onay/görev/paralel) görevlerden: kapanan görev karar
- *   (kim, ne zaman, açıklama, dal), açık görev "kimin onayı bekleniyor"
- *   (kişi ya da rol + rolün aktif üyeleri). Yeniden işleme turları sırayla.
- * - Otomatik adımlar olay günlüğünden (koşulun seçtiği yol, güncellenen alanlar,
- *   bildirim, bekleme vadesi).
- * - Hatadaki adıma sürecin hata metni, bitiş düğümüne sonuç ve bitiş anı eklenir.
+ * - Human steps (approval/task/parallel) from tasks: a closed task is a decision
+ *   (who, when, comment, branch), an open task is "whose approval is awaited"
+ *   (user or role + the role's active members). Rework rounds in order.
+ * - Automatic steps from the event log (path chosen by the condition, updated fields,
+ *   notification, timer due time).
+ * - The failed step gets the instance error text; the end node gets the outcome and finish time.
  *
- * Yalnız yol katmanındaki adımlar döner: ulaşılmayan adımın anlatacak geçmişi yok.
+ * Only steps in the path overlay are returned: an unreached step has no history to tell.
  */
 export function buildStepHistory(
   graph: WorkflowGraph, instance: StepHistoryInstance, overlay: WorkflowOverlay
@@ -190,7 +190,7 @@ export function buildStepHistory(
   return result;
 }
 
-/** Bekleyen kişi/rol adları (paralelde birden çok, tekrarsız) — kart özeti için. */
+/** Names of waiting users/roles (several in parallel, deduplicated) — for the card summary. */
 export function waitingNames(history: StepHistory | undefined): string[] {
   const names = (history?.entries ?? [])
     .filter((entry): entry is StepWaitingEntry => entry.kind === 'waiting')
@@ -199,7 +199,7 @@ export function waitingNames(history: StepHistory | undefined): string[] {
   return [...new Set(names)];
 }
 
-/** Adımdaki son karar — kart özeti "Onayladı · Ad" için. */
+/** The last decision on the step — for the card summary "Onayladı · Name" (Approved · Name). */
 export function lastDecision(history: StepHistory | undefined): StepDecisionEntry | null {
   const decisions = (history?.entries ?? []).filter((entry): entry is StepDecisionEntry => entry.kind === 'decision');
   return decisions[decisions.length - 1] ?? null;

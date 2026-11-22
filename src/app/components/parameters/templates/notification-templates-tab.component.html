@@ -21,7 +21,7 @@
 
       <div class="template-layout">
 
-        <!-- ── Tür listesi ────────────────────────────────────────────── -->
+        <!-- ── Kind list ──────────────────────────────────────────────── -->
         <nav class="kind-list" [attr.aria-label]="'parameter.templates.kindListAria' | t">
           @for (kind of kinds; track kind) {
             <button
@@ -41,7 +41,7 @@
           }
         </nav>
 
-        <!-- ── Düzenleyici ────────────────────────────────────────────── -->
+        <!-- ── Editor ─────────────────────────────────────────────────── -->
         <div class="editor">
           @if (loadError()) {
             <div class="alert alert-danger" role="alert">{{ loadError() }}</div>
@@ -138,7 +138,7 @@
     </div>
   </div>
 
-  <!-- ── Önizleme ──────────────────────────────────────────────────────── -->
+  <!-- ── Preview ───────────────────────────────────────────────────────── -->
   @if (template()) {
     <div class="panel">
       <div class="panel-head">
@@ -163,7 +163,7 @@
             <span class="preview-subject-text">{{ previewSubject() }}</span>
           </div>
           @if (previewHtml(); as html) {
-            <!-- sandbox="" : script/form/eklenti yok, opak origin — bkz. trustPreview() -->
+            <!-- sandbox="" : no scripts/forms/plugins, opaque origin — see trustPreview() -->
             <iframe
               class="preview-iframe"
               sandbox=""
@@ -175,7 +175,7 @@
       </div>
     </div>
 
-    <!-- ── Test maili ─────────────────────────────────────────────────── -->
+    <!-- ── Test mail ──────────────────────────────────────────────────── -->
     <div class="panel">
       <div class="panel-head">
         <h2>{{ 'parameter.templates.testTitle' | t }}</h2>

@@ -1,5 +1,5 @@
-/* ── Kolon görünürlüğü açılır kutusu ── */
-/* layout.component.scss .profile-menu-wrap/.profile-dropdown ile aynı token tabanlı desen */
+/* ── Column visibility popover ── */
+/* Same token-based pattern as layout.component.scss .profile-menu-wrap/.profile-dropdown */
 
 .col-vis-wrap {
   position: relative;
@@ -20,9 +20,9 @@
   display: flex;
   flex-direction: column;
 
-  /* Dar ekranda alttan açılan sayfa: düğme ekranın solunda kaldığı için right:0'lık
-     kutu sola, ekran dışına açılıyor; .panel'in overflow:hidden'ı da altını kesiyordu.
-     position:fixed her ikisinden de kurtulur. */
+  /* Bottom sheet on narrow screens: since the button sits at the left of the screen, a right:0
+     box opened to the left, off-screen; .panel's overflow:hidden also clipped its bottom.
+     position:fixed escapes both. */
   @media (max-width: 640px) {
     position: fixed;
     top: auto;

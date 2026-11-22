@@ -4,14 +4,14 @@ import { EntityGraph } from '../../../models/relationship.model';
 import { layoutGraph } from './entity-graph.layout';
 
 /**
- * Entity graph görselleştirmesi — elle yazılmış inline SVG.
+ * Entity graph visualisation — hand-written inline SVG.
  *
- * Neden kütüphane yok: projede graph çizen bir bağımlılık bulunmuyor
- * (ApexCharts yalnızca grafik/rapor içindir) ve tek bir yönlü katmanlı
- * diyagram için yeni bağımlılık eklemek gereksiz.
+ * Why no library: the project has no dependency that draws graphs
+ * (ApexCharts is only for charts/reports) and adding a new dependency for a single
+ * directed layered diagram is unnecessary.
  *
- * Yerleşim hesabı bu sınıfta DEĞİL, entity-graph.layout.ts içindeki saf
- * layoutGraph() fonksiyonundadır — bkz. o dosyanın başlığı.
+ * The layout computation is NOT in this class but in the pure layoutGraph()
+ * function in entity-graph.layout.ts — see that file's header.
  */
 @Component({
     selector: 'app-entity-graph',
@@ -30,9 +30,9 @@ export class EntityGraphComponent {
   readonly viewBox = computed(() => this.layout().viewBox);
 
   /**
-   * SVG'nin doğal genişliği (viewBox'tan). Genişlik verilmezse SVG kabın %100'üne
-   * küçülür: telefonda 13px'lik düğüm yazısı ~5px'e iner ve okunmaz. Doğal genişlikle
-   * çizilen şema sığmazsa .graph-scroll içinde yatay kayar.
+   * Natural width of the SVG (from the viewBox). Without a width the SVG shrinks to 100%
+   * of its container: on a phone the 13px node text drops to ~5px and is unreadable. A diagram
+   * drawn at natural width that doesn't fit scrolls horizontally inside .graph-scroll.
    */
   readonly naturalWidth = computed(() => Number(this.viewBox().split(/\s+/)[2]) || null);
   readonly isEmpty = computed(() => this.layout().nodes.length === 0);

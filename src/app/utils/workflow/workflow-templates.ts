@@ -1,13 +1,13 @@
 import { WorkflowGraph } from '../../models/workflow.model';
 
 /**
- * Hazır akış şablonları — yeni akışa boş tuval yerine tanıdık bir iskeletle
- * başlamak için. SAF: metinler dışarıdan çevrilir.
+ * Ready-made workflow templates — to start a new workflow from a familiar skeleton instead of
+ * an empty canvas. PURE: texts are translated by the caller.
  *
- * Şablon modelden bağımsızdır: rol/kişi atamaları ve kolon adları bilinçli
- * olarak BOŞ bırakılır; doğrulama bunları düğümde sorun olarak gösterir ve
- * kullanıcı kendi modeline göre tamamlar. Sessizce yanlış bir kolon ya da rol
- * seçmek, fark edilmeden yayına giden hatalı bir akış demek olurdu.
+ * A template is model-independent: role/user assignments and column names are deliberately
+ * left EMPTY; validation shows them as issues on the node and
+ * the user completes them for their own model. Silently picking a wrong column or role
+ * would mean a broken workflow going live unnoticed.
  */
 export type WorkflowTemplateId = 'purchase' | 'leave' | 'expense';
 
@@ -26,22 +26,22 @@ export const WORKFLOW_TEMPLATES: ReadonlyArray<WorkflowTemplate> = [
     nameKey: 'workflow.template.purchase.name',
     descriptionKey: 'workflow.template.purchase.description',
     build: t => ({
-      startStep: 'mudur',
+      startStep: 'manager',
       steps: [
-        { key: 'mudur', type: 'approval', name: t('workflow.template.purchase.manager'), assignment: role(), onApprove: 'tutar', onReject: 'red' },
+        { key: 'manager', type: 'approval', name: t('workflow.template.purchase.manager'), assignment: role(), onApprove: 'amountCheck', onReject: 'rejected' },
         {
-          key: 'tutar', type: 'condition', name: t('workflow.template.purchase.amountCheck'),
-          cases: [{ key: 'yuksek', label: t('workflow.template.purchase.highAmount'), match: 'all', when: [], to: 'finans' }],
-          defaultTo: 'haber'
+          key: 'amountCheck', type: 'condition', name: t('workflow.template.purchase.amountCheck'),
+          cases: [{ key: 'highAmount', label: t('workflow.template.purchase.highAmount'), match: 'all', when: [], to: 'finance' }],
+          defaultTo: 'notifyRequester'
         },
-        { key: 'finans', type: 'approval', name: t('workflow.template.purchase.finance'), assignment: role(), onApprove: 'haber', onReject: 'red' },
+        { key: 'finance', type: 'approval', name: t('workflow.template.purchase.finance'), assignment: role(), onApprove: 'notifyRequester', onReject: 'rejected' },
         {
-          key: 'haber', type: 'notify', name: t('workflow.template.notifyRequester'),
+          key: 'notifyRequester', type: 'notify', name: t('workflow.template.notifyRequester'),
           notify: { recipients: [{ kind: 'creator' }], channels: [], subject: t('workflow.template.approvedSubject'), body: '' },
-          next: 'son'
+          next: 'approved'
         },
-        { key: 'son', type: 'end', name: t('workflow.template.approved'), outcome: 'completed' },
-        { key: 'red', type: 'end', name: t('workflow.template.rejected'), outcome: 'rejected' }
+        { key: 'approved', type: 'end', name: t('workflow.template.approved'), outcome: 'completed' },
+        { key: 'rejected', type: 'end', name: t('workflow.template.rejected'), outcome: 'rejected' }
       ],
       entityStatusMap: {}
     })
@@ -51,20 +51,20 @@ export const WORKFLOW_TEMPLATES: ReadonlyArray<WorkflowTemplate> = [
     nameKey: 'workflow.template.leave.name',
     descriptionKey: 'workflow.template.leave.description',
     build: t => ({
-      startStep: 'yonetici',
+      startStep: 'manager',
       steps: [
-        { key: 'yonetici', type: 'approval', name: t('workflow.template.leave.manager'), assignment: role(), onApprove: 'ik', onReject: 'red' },
+        { key: 'manager', type: 'approval', name: t('workflow.template.leave.manager'), assignment: role(), onApprove: 'hr', onReject: 'rejected' },
         {
-          key: 'ik', type: 'approval', name: t('workflow.template.leave.hr'), assignment: role(),
-          form: { fields: [], allowReject: false, approveLabel: t('workflow.node.taskComplete') }, onApprove: 'haber'
+          key: 'hr', type: 'approval', name: t('workflow.template.leave.hr'), assignment: role(),
+          form: { fields: [], allowReject: false, approveLabel: t('workflow.node.taskComplete') }, onApprove: 'notifyRequester'
         },
         {
-          key: 'haber', type: 'notify', name: t('workflow.template.notifyRequester'),
+          key: 'notifyRequester', type: 'notify', name: t('workflow.template.notifyRequester'),
           notify: { recipients: [{ kind: 'creator' }], channels: [], subject: t('workflow.template.approvedSubject'), body: '' },
-          next: 'son'
+          next: 'approved'
         },
-        { key: 'son', type: 'end', name: t('workflow.template.approved'), outcome: 'completed' },
-        { key: 'red', type: 'end', name: t('workflow.template.rejected'), outcome: 'rejected' }
+        { key: 'approved', type: 'end', name: t('workflow.template.approved'), outcome: 'completed' },
+        { key: 'rejected', type: 'end', name: t('workflow.template.rejected'), outcome: 'rejected' }
       ],
       entityStatusMap: {}
     })
@@ -74,15 +74,15 @@ export const WORKFLOW_TEMPLATES: ReadonlyArray<WorkflowTemplate> = [
     nameKey: 'workflow.template.expense.name',
     descriptionKey: 'workflow.template.expense.description',
     build: t => ({
-      startStep: 'yonetici',
+      startStep: 'manager',
       steps: [
-        { key: 'yonetici', type: 'approval', name: t('workflow.template.expense.manager'), assignment: role(), onApprove: 'muhasebe', onReject: 'red' },
+        { key: 'manager', type: 'approval', name: t('workflow.template.expense.manager'), assignment: role(), onApprove: 'accounting', onReject: 'rejected' },
         {
-          key: 'muhasebe', type: 'approval', name: t('workflow.template.expense.accounting'), assignment: role(),
-          form: { fields: [], allowReject: false, approveLabel: t('workflow.node.taskComplete') }, onApprove: 'son'
+          key: 'accounting', type: 'approval', name: t('workflow.template.expense.accounting'), assignment: role(),
+          form: { fields: [], allowReject: false, approveLabel: t('workflow.node.taskComplete') }, onApprove: 'approved'
         },
-        { key: 'son', type: 'end', name: t('workflow.template.paid'), outcome: 'completed' },
-        { key: 'red', type: 'end', name: t('workflow.template.rejected'), outcome: 'rejected' }
+        { key: 'approved', type: 'end', name: t('workflow.template.paid'), outcome: 'completed' },
+        { key: 'rejected', type: 'end', name: t('workflow.template.rejected'), outcome: 'rejected' }
       ],
       entityStatusMap: {}
     })

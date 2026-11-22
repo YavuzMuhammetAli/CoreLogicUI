@@ -10,14 +10,14 @@ import { formatDate } from '../../utils/locale-format';
 import { IconComponent } from '../shared/icon/icon.component';
 
 /**
- * "Görevlerim" — kullanıcıya doğrudan atanmış veya üyesi olduğu rollerin
- * havuzundaki bekleyen onaylar.
+ * "Görevlerim" (My tasks) — pending approvals assigned directly to the user or in the pool
+ * of the roles they belong to.
  *
- * Bu ekran aynı zamanda uygulamanın görev GELEN KUTUSU'dur: projede SignalR
- * olmadığı için anlık bildirim yok, sidebar rozeti bu uçtan pollanıyor.
+ * This screen is also the app's task INBOX: there is no SignalR in the project,
+ * so there are no instant notifications; the sidebar badge polls this endpoint.
  *
- * Signal tabanlı (user-list deseni) — alanlar yerine sinyal kullanıldığı için
- * markDirty gerekmiyor.
+ * Signal-based (user-list pattern) — since signals are used instead of fields,
+ * markDirty isn't needed.
  */
 @Component({
     selector: 'app-my-tasks',
@@ -60,14 +60,14 @@ export class MyTasksComponent {
     });
   }
 
-  /** Vade tarihi — sabit 'tr-TR' değil, aktif dile göre biçimlenir. */
+  /** Due date — formatted for the active language, not a fixed 'tr-TR'. */
   dueLabel(task: WorkflowTask): string {
     return task.dueAt
       ? formatDate(new Date(task.dueAt), this.languageService.lang())
       : this.languageService.t('task.list.noDue');
   }
 
-  /** Atanan: doğrudan kullanıcı yoksa rol adı gösterilir. */
+  /** Assignee: if there is no direct user, the role name is shown. */
   assigneeLabel(task: WorkflowTask): string {
     if (task.assignedRoleName) return task.assignedRoleName;
     return task.assignedUserId ? `#${task.assignedUserId}` : '—';

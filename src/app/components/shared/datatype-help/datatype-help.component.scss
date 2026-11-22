@@ -1,6 +1,6 @@
-/* ── Kılavuz diyaloğu ─────────────────────────────────────────────────────────
-   Bu diyalog her zaman başka bir popup'ın (sütun/ilişki) ÜSTÜNDE açılır;
-   z-index diğer .dialog-overlay'lerden (1000) yüksek olmalıdır. */
+/* ── Guide dialog ─────────────────────────────────────────────────────────
+   This dialog always opens ON TOP of another popup (column/relationship);
+   its z-index must be higher than the other .dialog-overlays (1000). */
 
 .dialog-overlay {
   position: fixed;
@@ -19,23 +19,23 @@
   width: 100%;
   max-width: 560px;
   max-height: calc(100vh - 2 * var(--space-4));
-  /* dvh = görünen alan; vh mobilde tarayıcı çubuklarını da sayar ve alttaki düğmeler kesilir */
+  /* dvh = visible area; on mobile vh also counts the browser bars and the bottom buttons get cut off */
   max-height: calc(100dvh - 2 * var(--space-4));
   overscroll-behavior: contain;
   overflow-y: auto;
   box-shadow: var(--elev-high);
 
-  /* Regex hazır desen tablosu (ad + desen + örnek + düğme) yatayda kaymadan
-     sığsın diye önizleme diyaloğundan biraz geniştir. */
+  /* Slightly wider than the preview dialog so the regex preset table (name + pattern + example + button)
+     fits without horizontal scrolling. */
   &.dialog-panel--wide {
     max-width: 920px;
     width: 96vw;
   }
 }
 
-/* Global `.panel-actions` yalnızca `.panel-head` içinde tanımlı; burada `.panel-body`'nin
-   kardeşi olduğu için padding'i component vermeli — aksi halde butonlar panel kenarına
-   yapışır. Yatay değer `.panel-head`/`.panel-body` ile hizalı. */
+/* The global `.panel-actions` is only defined inside `.panel-head`; here it is a sibling of
+   `.panel-body`, so the component must provide the padding — otherwise the buttons stick to the
+   panel edge. The horizontal value aligns with `.panel-head`/`.panel-body`. */
 .dialog-panel .panel-actions {
   display: flex;
   justify-content: flex-end;
@@ -65,7 +65,7 @@
   gap: var(--space-5);
 }
 
-/* ── Bölümler ─────────────────────────────────────────────────────────────── */
+/* ── Sections ─────────────────────────────────────────────────────────────── */
 
 .help-section {
   display: grid;
@@ -111,7 +111,7 @@
   color: var(--fg-2);
 }
 
-/* ── Kural listesi ────────────────────────────────────────────────────────── */
+/* ── Rule list ────────────────────────────────────────────────────────── */
 
 .help-rules {
   margin: 0;
@@ -141,7 +141,7 @@
   }
 }
 
-/* ── Tablolar ─────────────────────────────────────────────────────────────── */
+/* ── Tables ─────────────────────────────────────────────────────────────── */
 
 .help-table-wrap {
   overflow-x: auto;
@@ -166,8 +166,8 @@
   vertical-align: middle;
 }
 
-/* Global `.data-table td` hücreyi 260px'te kesip "..." koyar; kılavuzdaki
-   desenler ve notlar kırpılmak yerine sarmalıdır. */
+/* The global `.data-table td` cuts the cell at 260px and adds "..."; the guide's
+   patterns and notes must wrap instead of being truncated. */
 .help-presets td,
 .help-syntax td,
 .help-samples td {
@@ -177,7 +177,7 @@
   white-space: normal;
 }
 
-/* Uyan/uymayan örnek tek hücrede alt alta — tablo yatayda taşmasın. */
+/* Matching/non-matching examples stacked in one cell — so the table doesn't overflow horizontally. */
 .preset-samples {
   display: flex;
   flex-direction: column;
@@ -189,7 +189,7 @@
   max-width: 480px;
 }
 
-/* ── Regex laboratuvarı ───────────────────────────────────────────────────── */
+/* ── Regex lab ───────────────────────────────────────────────────── */
 
 .regex-lab {
   display: grid;
@@ -206,7 +206,7 @@
   font-family: var(--font-mono);
   font-size: var(--text-sm);
 
-  /* iOS 16px altında odakta yakınlaştırır (global kural bu bileşen kuralına yenilir) */
+  /* iOS zooms on focus below 16px (the global rule loses to this component rule) */
   @media (max-width: 768px) {
     font-size: var(--text-base);
   }
@@ -217,7 +217,7 @@
   white-space: nowrap;
 }
 
-/* ── SVG şemalar ──────────────────────────────────────────────────────────── */
+/* ── SVG diagrams ──────────────────────────────────────────────────────────── */
 
 .help-diagram {
   padding: var(--space-4);
@@ -232,8 +232,8 @@
     height: auto;
   }
 
-  /* Dar ekranda diyagram küçülüp okunmaz hale gelmesin (9px yazı ~6px'e iner):
-     doğal boyutunda kalır, yatay kayar. */
+  /* On narrow screens the diagram must not shrink into illegibility (9px text drops to ~6px):
+     it stays at its natural size and scrolls horizontally. */
   @media (max-width: 640px) {
     overflow-x: auto;
     padding: var(--space-2);
@@ -244,7 +244,7 @@
   }
 }
 
-/* Şema öğeleri — tema token'ları kullanıldığı için koyu temada da doğru görünür. */
+/* Diagram elements — they use theme tokens, so they also look right in the dark theme. */
 
 .d-box {
   fill: var(--surface);

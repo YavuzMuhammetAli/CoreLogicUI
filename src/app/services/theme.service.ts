@@ -6,11 +6,11 @@ export type Theme = 'light' | 'dark';
 const THEME_KEY = 'theme';
 
 /**
- * Açık/koyu tema durumunu yönetir.
- * Kullanıcı seçimi localStorage'da saklanır; seçim yoksa işletim sistemi
- * tercihi (prefers-color-scheme) kullanılır. `index.html`'deki anti-FOUC
- * script tema attribute'unu Angular boot olmadan önce zaten uygular —
- * bu servis sonradan senkronize olur ve toggle/değiştirme API'sini sağlar.
+ * Manages the light/dark theme state.
+ * The user's choice is stored in localStorage; without a choice the operating system
+ * preference (prefers-color-scheme) is used. The anti-FOUC script in `index.html`
+ * already applies the theme attribute before Angular boots —
+ * this service syncs afterwards and provides the toggle/change API.
  */
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
@@ -27,7 +27,7 @@ export class ThemeService {
     return isPlatformBrowser(this.platformId) ? localStorage : null;
   }
 
-  /** localStorage'daki kullanıcı seçimi, yoksa OS tercihi */
+  /** The user's choice from localStorage, otherwise the OS preference */
   private resolveInitial(): Theme {
     if (!isPlatformBrowser(this.platformId)) return 'light';
 

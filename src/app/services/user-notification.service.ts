@@ -8,13 +8,13 @@ import { UserNotification } from '../models/userNotification';
 import { environment } from '../../environments/environment';
 
 /**
- * Uygulama içi bildirimler — backend UserNotificationController (`/UserNotification`).
+ * In-app notifications — backend UserNotificationController (`/UserNotification`).
  *
- * Toast gösteren `NotificationService` ile KARIŞTIRILMAMALI: o istemci tarafı
- * anlık uyarıdır, bu ise sunucuda kalıcı duran, okundu bilgisi olan bildirimdir.
+ * NOT TO BE CONFUSED with `NotificationService`, which shows toasts: that is a client-side
+ * instant alert, whereas this is a notification persisted on the server with read status.
  *
- * Tüm uçlar oturumdaki kullanıcının KENDİ bildirimleriyle sınırlı; kullanıcı
- * kimliği gönderilmez, sunucu token'dan okur.
+ * Every endpoint is limited to the session user's OWN notifications; no user
+ * ID is sent, the server reads it from the token.
  */
 @Injectable({ providedIn: 'root' })
 export class UserNotificationService {
@@ -26,7 +26,7 @@ export class UserNotificationService {
     return this.http.get<ListResponseModel<UserNotification>>(`${this.baseUrl}/my`, { params });
   }
 
-  /** Zil rozeti — tam listeyi çekmeden yalnız sayı. */
+  /** Bell badge — only the count, without fetching the full list. */
   unreadCount(): Observable<DataResponseModel<number>> {
     return this.http.get<DataResponseModel<number>>(`${this.baseUrl}/unreadCount`);
   }

@@ -9,7 +9,7 @@ describe('applyTreeResult', () => {
     return { root, child };
   }
 
-  it('sunucudan gelen gerçek ID leri localId üzerinden düğümlere yazar', () => {
+  it('writes the real IDs from the server to the nodes via localId', () => {
     const { root, child } = tree();
 
     const errors = applyTreeResult(root, {
@@ -22,7 +22,7 @@ describe('applyTreeResult', () => {
     expect(errors).toEqual([]);
   });
 
-  it('satır bazlı hatayı düğüme yazar ve özet satırı üretir', () => {
+  it('writes a row-level error to the node and produces a summary line', () => {
     const { root, child } = tree();
 
     const errors = applyTreeResult(root, {
@@ -34,7 +34,7 @@ describe('applyTreeResult', () => {
     expect(errors).toEqual(['OrderLine: Adet zorunludur.']);
   });
 
-  it('yanıtta hiç bulunmayan düğüme dokunmaz', () => {
+  it('does not touch a node missing from the response', () => {
     const { root, child } = tree();
     child.error = 'önceki hata';
 
@@ -50,7 +50,7 @@ describe('applyUpdateResults', () => {
     return { kind: 'update', ok, message, node: createStagedNode('OrderLine', {}) };
   }
 
-  it('başarılı update sonrası dirty bayrağını düşürür', () => {
+  it('clears the dirty flag after a successful update', () => {
     const step = updateStep(true, 'Güncellendi');
     step.node!.dirty = true;
 
@@ -61,7 +61,7 @@ describe('applyUpdateResults', () => {
     expect(errors).toEqual([]);
   });
 
-  it('başarısız update mesajını düğüme ve özete yazar', () => {
+  it('writes a failed update message to the node and the summary', () => {
     const step = updateStep(false, 'Kayıt kilitli');
 
     const { errors } = applyUpdateResults([step]);
@@ -70,7 +70,7 @@ describe('applyUpdateResults', () => {
     expect(errors).toEqual(['OrderLine: Kayıt kilitli']);
   });
 
-  it('tree adımlarını yok sayar', () => {
+  it('ignores tree steps', () => {
     const { errors } = applyUpdateResults([
       { kind: 'tree', ok: false, message: 'hata', data: { savedIds: {}, errors: {} } }
     ]);

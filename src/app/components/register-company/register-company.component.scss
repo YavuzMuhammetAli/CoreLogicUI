@@ -1,8 +1,8 @@
-// Kayıt sihirbazı — login ekranıyla aynı görsel dil (sayfa gradyanı, panel kartı)
+// Sign-up wizard — same visual language as the login screen (page gradient, panel card)
 
 .regco-page {
   min-height: 100vh;
-  /* Görünen alan: mobilde 100vh adres çubuğunu da sayar, kart aşağı kayardı */
+  /* Visible area: on mobile 100vh includes the address bar, the card shifted down */
   min-height: 100dvh;
   display: grid;
   place-items: center;
@@ -40,7 +40,7 @@
   color: var(--muted);
 }
 
-// ── Adım göstergesi ─────────────────────────────────────────────────────────
+// ── Step indicator ──────────────────────────────────────────────────────────
 
 .regco-steps {
   display: grid;
@@ -103,7 +103,7 @@
   text-align: center;
 }
 
-// ── Form gövdesi ────────────────────────────────────────────────────────────
+// ── Form body ───────────────────────────────────────────────────────────────
 
 .regco-form {
   display: grid;
@@ -132,7 +132,7 @@
   margin-top: var(--space-2);
 }
 
-// ── Kurulum (adım 3) ────────────────────────────────────────────────────────
+// ── Setup (step 3) ──────────────────────────────────────────────────────────
 
 .regco-provision-title {
   display: flex;
@@ -199,7 +199,7 @@
   word-break: break-word;
 }
 
-// ── Tamamlandı (adım 4) ─────────────────────────────────────────────────────
+// ── Completed (step 4) ──────────────────────────────────────────────────────
 
 .regco-done {
   justify-items: center;
@@ -230,6 +230,6 @@
   }
 
   .step-label {
-    display: none; // dar ekranda yalnızca numaralı noktalar
+    display: none; // on narrow screens only the numbered dots
   }
 }

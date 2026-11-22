@@ -1,9 +1,9 @@
-/** İşlem tipi — backend AuditSaveChangesInterceptor tarafından yazılır. */
+/** Operation type — written by the backend AuditSaveChangesInterceptor. */
 export type AuditAction = 'Added' | 'Modified' | 'Deleted';
 
 /**
- * Tüm CRUD işlemlerinin değişmez kaydı. Backend `Entities.Concrete.AuditLog` ile eşleşir.
- * Salt-okunur — yazma kanalı EF interceptor'dır, UI'dan oluşturulamaz/değiştirilemez.
+ * Immutable record of all CRUD operations. Matches the backend `Entities.Concrete.AuditLog`.
+ * Read-only — the write channel is the EF interceptor; it cannot be created/changed from the UI.
  */
 export interface AuditLog {
   id: number;

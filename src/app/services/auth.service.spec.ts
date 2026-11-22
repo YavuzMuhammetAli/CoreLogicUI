@@ -5,8 +5,8 @@ import { environment } from '../../environments/environment';
 import { AuthService, SessionInfo } from './auth.service';
 
 /**
- * Oturum HttpOnly çerezdedir: arayüz token'ı hiç görmez, oturumu ve kullanıcıyı /Auth/session'dan
- * öğrenir. Korunan kural: token tarayıcı depolamasına yazılmaz.
+ * The session lives in an HttpOnly cookie: the UI never sees the token and learns the session and
+ * user from /Auth/session. Rule under guard: the token is never written to browser storage.
  */
 describe('AuthService', () => {
   const base = `${environment.apiBaseUrl}/Auth`;
@@ -38,7 +38,7 @@ describe('AuthService', () => {
     localStorage.removeItem('access_token');
   });
 
-  it('çerezli girişi ister, başarıda oturumu sunucudan okur', () => {
+  it('requests a cookie login and reads the session from the server on success', () => {
     create();
     service.login({ email: 'a@b', password: 'x' }).subscribe();
 
@@ -51,7 +51,7 @@ describe('AuthService', () => {
     expect(localStorage.getItem('access_token')).toBeNull();
   });
 
-  it('başarısız girişte oturum açılmaz, session sorulmaz', () => {
+  it('a failed login opens no session and does not ask for the session', () => {
     create();
     service.login({ email: 'a@b', password: 'x' }).subscribe();
     httpMock.expectOne(r => r.url === `${base}/login`).flush({ success: false, message: 'Hatalı' });
@@ -59,7 +59,7 @@ describe('AuthService', () => {
     expect(service.isLoggedIn()).toBeFalse();
   });
 
-  it('kullanıcı bilgisi oturumdan gelir', () => {
+  it('user info comes from the session', () => {
     create();
     service.ensureSession().subscribe();
     flushSession(session);
@@ -72,7 +72,7 @@ describe('AuthService', () => {
     expect(service.getCurrentUserId()).toBe(42);
   });
 
-  it('ad yoksa e-postanın @ öncesi görünen ad olur', () => {
+  it('without a name, the part of the email before @ becomes the display name', () => {
     create();
     service.ensureSession().subscribe();
     flushSession({ ...session, name: '' });
@@ -80,7 +80,7 @@ describe('AuthService', () => {
     expect(service.getSessionUser()?.name).toBe('ayse');
   });
 
-  it('anonim ziyaretçide oturum yok', () => {
+  it('an anonymous visitor has no session', () => {
     create();
     service.ensureSession().subscribe();
     flushSession(anonymous);
@@ -90,7 +90,7 @@ describe('AuthService', () => {
     expect(service.sessionKey()).toBeNull();
   });
 
-  it('ensureSession aynı anda gelen çağrıları tek isteğe indirir, sonra yeniden sormaz', () => {
+  it('ensureSession collapses concurrent calls into one request, then does not ask again', () => {
     create();
     const seen: unknown[] = [];
     service.ensureSession().subscribe(s => seen.push(s));
@@ -102,7 +102,7 @@ describe('AuthService', () => {
     expect(seen.every(s => (s as SessionInfo).userId === 42)).toBeTrue();
   });
 
-  it('session hatasında anonim sayılır, guard takılmaz', () => {
+  it('a session error counts as anonymous, the guard does not hang', () => {
     create();
     let result: unknown = 'bekliyor';
     service.ensureSession().subscribe(s => (result = s));
@@ -111,7 +111,7 @@ describe('AuthService', () => {
     expect(result).toBeNull();
   });
 
-  it('çıkış sunucudan çerezi siler, yerel oturum hemen biter', () => {
+  it('logout deletes the cookie on the server, the local session ends immediately', () => {
     create();
     service.ensureSession().subscribe();
     flushSession(session);
@@ -124,7 +124,7 @@ describe('AuthService', () => {
     expect(done).toBeTrue();
   });
 
-  it('çıkış isteği başarısız olsa da akış tamamlanır', () => {
+  it('the flow completes even if the logout request fails', () => {
     create();
     let done = false;
     service.logout().subscribe(() => (done = true));
@@ -133,7 +133,7 @@ describe('AuthService', () => {
     expect(done).toBeTrue();
   });
 
-  it('clearSession oturumun açık olup olmadığını bildirir', () => {
+  it('clearSession reports whether the session was open', () => {
     create();
     service.ensureSession().subscribe();
     flushSession(session);
@@ -142,7 +142,7 @@ describe('AuthService', () => {
     expect(service.clearSession()).toBeFalse();
   });
 
-  it('önbellek sahibi kullanıcıya bağlıdır', () => {
+  it('the cache owner is bound to the user', () => {
     create();
     service.ensureSession().subscribe();
     flushSession(session);
@@ -156,7 +156,7 @@ describe('AuthService', () => {
     expect(service.sessionKey()).not.toBe(first);
   });
 
-  it('otomatik giriş oturumu sunucudan açar', () => {
+  it('auto-login opens the session from the server', () => {
     create();
     service.startProvisionSession('abc').subscribe();
     httpMock.expectOne(`${base}/provision-session/abc`).flush({ success: true, message: '' });
@@ -165,7 +165,7 @@ describe('AuthService', () => {
     expect(service.isLoggedIn()).toBeTrue();
   });
 
-  it('eski sürümün localStorage token\'ı silinir', () => {
+  it('removes the old version\'s localStorage token', () => {
     localStorage.setItem('access_token', 'eski');
     create();
 

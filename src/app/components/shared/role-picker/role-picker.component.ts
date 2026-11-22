@@ -1,4 +1,4 @@
-import '../../../i18n/lazy/design'; // design.* sözlüğü bu parçayla iner
+import '../../../i18n/lazy/design'; // the design.* dictionary loads with this chunk
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Role } from '../../../models/role';
@@ -6,9 +6,9 @@ import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { IconComponent } from '../icon/icon.component';
 
 /**
- * Rol seçici — tasarımın (ekran varyantı, navigasyon) atanacağı roller. Roller çağırandan gelir
- * (`RoleAdminService.getRoles`), bileşen istek atmaz. Çoklu seçim: dokunmatikte de rahat
- * basılan aç/kapa çipleri (`aria-pressed`).
+ * Role picker — the roles a design (screen variant, navigation) is assigned to. Roles come from the caller
+ * (`RoleAdminService.getRoles`); the component makes no requests. Multi-select: toggle chips
+ * that are easy to press on touch too (`aria-pressed`).
  */
 @Component({
     selector: 'app-role-picker',
@@ -54,13 +54,13 @@ export class RolePickerComponent {
   roles = input<readonly Role[]>([]);
   selected = input<readonly number[]>([]);
   disabled = input(false);
-  /** Grubun erişilebilir adı (boşsa "Roller"). */
+  /** Accessible name of the group ("Roller" (Roles) if empty). */
   label = input('');
 
   selectedChange = output<number[]>();
 
   private readonly selectedSet = computed(() => new Set(this.selected()));
-  /** Seçili ama artık var olmayan (silinmiş) roller — kayıtta düşer. */
+  /** Selected roles that no longer exist (deleted) — dropped on save. */
   readonly missing = computed(() => {
     const known = new Set(this.roles().map(r => r.id));
     return this.selected().filter(id => !known.has(id));
@@ -79,7 +79,7 @@ export class RolePickerComponent {
   }
 }
 
-/** Rol kimliklerini adlara çevirir (silinmiş rol atlanır). */
+/** Maps role ids to names (deleted roles are skipped). */
 export function roleNames(roles: readonly Role[], ids: readonly number[]): string[] {
   const byId = new Map(roles.map(r => [r.id, r.name]));
   return ids.map(id => byId.get(id)).filter((name): name is string => !!name);

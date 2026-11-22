@@ -12,11 +12,11 @@ import { formatDate, formatNumber } from '../../../utils/locale-format';
 import { IconComponent } from '../../shared/icon/icon.component';
 
 /**
- * Abonelik sekmesi — mevcut abonelik + satın alınabilir planlar.
+ * Subscription tab — current subscription + purchasable plans.
  *
- * Ödeme şu an backend'de stub sağlayıcıdan geçiyor (her tahsilat başarılı) ama
- * abonelik satırı gerçekten yazılıyor. Kullanıcıya bu durum açıkça bildirilir —
- * ücret alınmadığını bilmeden plan değiştirmesi yanıltıcı olurdu.
+ * Payment currently goes through a stub provider on the backend (every charge succeeds) but
+ * the subscription row is really written. The user is told this clearly —
+ * changing plans without knowing no fee is charged would be misleading.
  */
 @Component({
     selector: 'app-subscription-tab',
@@ -38,7 +38,7 @@ export class SubscriptionTabComponent implements OnInit {
   readonly plans = signal<TenantPlan[]>([]);
   readonly subscription = signal<TenantSubscription | null>(null);
 
-  /** Kullanıcı sayısı plan kartında seçilir; varsayılan mevcut abonelikten gelir. */
+  /** The user count is chosen on the plan card; the default comes from the current subscription. */
   readonly seats = signal(1);
 
   readonly pendingPlan = signal<TenantPlan | null>(null);
@@ -51,7 +51,7 @@ export class SubscriptionTabComponent implements OnInit {
   });
 
   constructor() {
-    // Özellik adları sunucuda isteğin dilinde üretilir: dil değişince planlar yeniden istenir.
+    // Feature names are produced on the server in the request's language: plans are re-requested when the language changes.
     let firstRun = true;
     effect(() => {
       this.languageService.lang();
@@ -70,8 +70,8 @@ export class SubscriptionTabComponent implements OnInit {
   load(): void {
     this.loadPlans();
 
-    // Aboneliği olmayan tenant hata değil, "henüz plan seçilmedi" durumudur —
-    // bu yüzden başarısız yanıt loadError'a yazılmaz.
+    // A tenant without a subscription is not an error but a "no plan selected yet" state —
+    // so a failed response is not written to loadError.
     this.parameterService.getCurrentSubscription().subscribe({
       next: res => {
         if (res.success && res.data) {
@@ -136,14 +136,14 @@ export class SubscriptionTabComponent implements OnInit {
     });
   }
 
-  // ── Görüntüleme yardımcıları ──────────────────────────────────────────────
+  // ── Display helpers ───────────────────────────────────────────────────────
 
-  /** Sunucu etiket göndermediyse (eski backend) ham anahtar gösterilir — anahtar uydurma yok. */
+  /** If the server sent no label (old backend) the raw key is shown — no made-up keys. */
   featureLabel(feature: TenantPlanFeature): string {
     return feature.label || feature.featureKey;
   }
 
-  /** Sayısal kota yoksa özellik bool'dur: varlığı "Dahil" demektir. */
+  /** Without a numeric quota the feature is a bool: its presence means "Dahil" (Included). */
   featureValue(feature: TenantPlanFeature): string {
     if (feature.limitValue === null || feature.limitValue === undefined || feature.limitValue === '') {
       return this.languageService.t('parameter.subscription.featureIncluded');

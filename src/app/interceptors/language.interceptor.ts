@@ -1,14 +1,14 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 
 /**
- * Her isteğe kullanıcının seçtiği arayüz dilini (TR/EN) Accept-Language header'ı
- * olarak ekler. Backend Program.cs'teki UseRequestLocalization bunu okuyup
- * CultureInfo.CurrentUICulture'a basar; Business.Constants.Messages bu culture'a
- * göre lokalize mesaj döner. LanguageService ile aynı localStorage anahtarını
- * ('lang') okur — auth.interceptor.ts'teki desenle simetrik, servis enjekte etmez.
+ * Adds the UI language chosen by the user (TR/EN) to every request as an Accept-Language
+ * header. UseRequestLocalization in the backend Program.cs reads it and sets
+ * CultureInfo.CurrentUICulture; Business.Constants.Messages returns localized messages
+ * for that culture. Reads the same localStorage key as LanguageService
+ * ('lang') — symmetric with the pattern in auth.interceptor.ts, it does not inject a service.
  */
 export const languageInterceptor: HttpInterceptorFn = (req, next) => {
-  // SSR (Node.js) ortamında localStorage yoktur; guard ile atla
+  // There is no localStorage in an SSR (Node.js) environment; skip with a guard
   if (typeof localStorage === 'undefined') return next(req);
 
   const lang = localStorage.getItem('lang') === 'en' ? 'en' : 'tr';

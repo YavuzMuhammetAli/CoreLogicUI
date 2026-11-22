@@ -20,16 +20,16 @@ type Session =
   | { kind: 'insert'; column: string; startX: number; startY: number; active: boolean }
   | { kind: 'resize'; column: string; startX: number; startWidth: number };
 
-/** Liste ekranının (model-data) sabit kolonları ve otomatik genişlik — aynı değerler. */
+/** Fixed columns and automatic width of the list screen (model-data) — the same values. */
 const AUTO_WIDTH = 160;
 const ID_WIDTH = 80;
 
 /**
- * ListDesignerComponent — liste ekranının kolon sırası ve genişliği.
+ * ListDesignerComponent — column order and width of the list screen.
  *
- * Önizleme modelin ilk 5 gerçek kaydıyla çizilir (genişliğin içeriğe uyup uymadığı ancak
- * böyle görülür). Başlık sürüklenerek sıralanır, başlığın sağ kenarı sürüklenerek genişlik
- * verilir (çift tık → otomatik). ID sabit ilk kolondur; tasarıma girmez.
+ * The preview is drawn with the model's first 5 real records (only then can you see whether the width
+ * fits the content). Headers are reordered by dragging; dragging a header's right edge sets the
+ * width (double-click → automatic). ID is the fixed first column; it is not part of the design.
  */
 @Component({
     selector: 'app-list-designer',
@@ -83,7 +83,7 @@ export class ListDesignerComponent {
   constructor() {
     inject(DestroyRef).onDestroy(() => this.detach());
 
-    // Önizleme satırları: modelin ilk 5 kaydı (okunamazsa boş tablo).
+    // Preview rows: the model's first 5 records (empty table if they cannot be read).
     effect(() => {
       const typeName = this.typeName();
       untracked(() => {
@@ -102,7 +102,7 @@ export class ListDesignerComponent {
     });
   }
 
-  // ─── Görünüm yardımcıları ──────────────────────────────────────────────────
+  // ─── View helpers ──────────────────────────────────────────────────────────
 
   label(name: string): string {
     return this.columnByName().get(name)?.label?.trim() || name;
@@ -141,7 +141,7 @@ export class ListDesignerComponent {
     this.store().selection.set(column);
   }
 
-  // ─── Komutlar ──────────────────────────────────────────────────────────────
+  // ─── Commands ──────────────────────────────────────────────────────────────
 
   private apply(command: (doc: ListLayout) => ListLayout, reason = ''): void {
     this.store().dispatch(reason, command);
@@ -171,7 +171,7 @@ export class ListDesignerComponent {
     this.apply(d => setColumnWidth(d, column, null));
   }
 
-  // ─── Sürükle-bırak ─────────────────────────────────────────────────────────
+  // ─── Drag and drop ─────────────────────────────────────────────────────────
 
   onHeaderPointerDown(event: PointerEvent, column: string): void {
     if (!event.isPrimary || event.button !== 0) return;
@@ -276,7 +276,7 @@ export class ListDesignerComponent {
     this.ghost.set(null);
   }
 
-  /** Bırakma sırası — imleç tablonun üstündeyse; taşınan başlık hesaba katılmaz. */
+  /** Drop index — when the pointer is over the table; the moved header is not counted. */
   private computeDrop(x: number, y: number, exclude: string | null): { index: number; line: { left: number; top: number; height: number } } | null {
     const host = this.canvas?.nativeElement;
     const table = host?.querySelector<HTMLElement>('table');

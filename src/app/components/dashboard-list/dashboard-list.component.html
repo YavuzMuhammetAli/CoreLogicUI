@@ -41,7 +41,7 @@
           <tbody>
             @for (dashboard of dashboards; track dashboard.id) {
               <tr>
-                <!-- Ad da açar: telefonda sağdaki "Görüntüle" yatay kaydırma gerektiriyor -->
+                <!-- The name opens it too: on phones the "Görüntüle" (View) button on the right needs horizontal scrolling -->
                 <td><a class="row-link" [routerLink]="['/dashboard', dashboard.id]">{{ dashboard.name }}</a></td>
                 <td><span class="badge badge-meta">{{ dashboard.widgets.length }}</span></td>
                 <td>

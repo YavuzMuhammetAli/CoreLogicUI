@@ -13,39 +13,39 @@ export class DashboardService {
 
   constructor(private http: HttpClient) {}
 
-  /** Yeni dashboard tanımı kaydeder; backend oluşturulan dashboard'un ID'sini döner. */
+  /** Saves a new dashboard definition; the backend returns the created dashboard's ID. */
   define(dashboard: Partial<DashboardDefinition>): Observable<DataResponseModel<number>> {
     return this.http.post<DataResponseModel<number>>(`${this.baseUrl}/define`, dashboard);
   }
 
-  /** Dashboard'u ve her widget'ın çalıştırılmış verisini getirir. */
+  /** Fetches the dashboard and the executed data of each widget. */
   get(id: number): Observable<DataResponseModel<DashboardRunResult>> {
     const params = new HttpParams().set('id', id);
     return this.http.get<DataResponseModel<DashboardRunResult>>(`${this.baseUrl}/get`, { params });
   }
 
-  /** Menüde gösterilecek dashboard'lar — yalnız kimlik + ad (widget'lar inmez). */
+  /** Dashboards to show in the menu — only ID + name (widgets are not loaded). */
   nav(): Observable<ListResponseModel<DashboardDefinition>> {
     return this.http.get<ListResponseModel<DashboardDefinition>>(`${this.baseUrl}/nav`);
   }
 
-  /** Tenant içindeki tüm dashboard tanımlarını (widget listeleri dahil) getirir. */
+  /** Fetches all dashboard definitions in the tenant (including widget lists). */
   list(): Observable<ListResponseModel<DashboardDefinition>> {
     return this.http.get<ListResponseModel<DashboardDefinition>>(`${this.baseUrl}/list`);
   }
 
-  /** Dashboard'u pasife alır (soft-delete). */
+  /** Deactivates the dashboard (soft-delete). */
   delete(id: number): Observable<ResponseModel> {
     const params = new HttpParams().set('id', id);
     return this.http.post<ResponseModel>(`${this.baseUrl}/delete`, null, { params });
   }
 
-  /** Tenant içinde pasiflenmiş (silinmiş) dashboard'ları getirir. */
+  /** Fetches the deactivated (deleted) dashboards in the tenant. */
   listDeleted(): Observable<ListResponseModel<DashboardDefinition>> {
     return this.http.get<ListResponseModel<DashboardDefinition>>(`${this.baseUrl}/deleted`);
   }
 
-  /** Silinmiş bir dashboard'u yeniden aktif eder (Active=true). */
+  /** Reactivates a deleted dashboard (Active=true). */
   restore(id: number): Observable<ResponseModel> {
     const params = new HttpParams().set('id', id);
     return this.http.post<ResponseModel>(`${this.baseUrl}/restore`, null, { params });

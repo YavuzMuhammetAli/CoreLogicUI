@@ -1,11 +1,11 @@
 import { Translations } from './translations.model';
 
 /**
- * Parametreler ekranı (admin) — yedekleme zamanlaması, sistem e-postası ve
- * abonelik sekmelerinin tüm metinleri.
+ * Parameters screen (admin) — all texts of the backup schedule, system email and
+ * subscription tabs.
  */
 export const PARAMETER_I18N: Translations = {
-  // ── parameters.component — kabuk + sekme çubuğu ──────────────────────────
+  // ── parameters.component — shell + tab bar ───────────────────────────────
   'parameter.title': { tr: 'Parametreler', en: 'Parameters' },
   'parameter.tablistAria': { tr: 'Parametre sekmeleri', en: 'Parameter tabs' },
   'parameter.backupTab': { tr: 'Yedekleme', en: 'Backup' },
@@ -71,7 +71,7 @@ export const PARAMETER_I18N: Translations = {
   },
   'parameter.backup.saveSchedule': { tr: 'Zamanlamayı Kaydet', en: 'Save Schedule' },
 
-  // ── backup-settings-tab — durum + geçmiş ─────────────────────────────────
+  // ── backup-settings-tab — status + history ───────────────────────────────
   'parameter.backup.statusTitle': { tr: 'Durum', en: 'Status' },
   'parameter.backup.nextDueAt': { tr: 'Sonraki çalışma', en: 'Next run' },
   'parameter.backup.lastRunAt': { tr: 'Son çalışma', en: 'Last run' },
@@ -395,6 +395,6 @@ export const PARAMETER_I18N: Translations = {
     en: 'The plan could not be purchased.'
   },
 
-  // Özellik adları burada TUTULMAZ — sunucu, isteğin dilinde backend MetricCatalog'dan gönderir.
+  // Feature names are NOT KEPT here — the server sends them from the backend MetricCatalog in the request's language.
   'parameter.subscription.featureIncluded': { tr: 'Dahil', en: 'Included' }
 };

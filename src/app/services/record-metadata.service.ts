@@ -8,29 +8,29 @@ import { AuthService } from './auth.service';
 import { FormLayout, ListLayout, ScreenViewType } from '../utils/screen-layout/screen-layout.model';
 import { parseFormLayout, parseListLayout } from '../utils/screen-layout/screen-layout.parse';
 
-/** Bir model tipinin form kurmak için gereken tüm meta verisi. */
+/** All the metadata of a model type needed to build a form. */
 export interface TypeMeta {
   typeName: string;
   /** Assembly'den okunan kolonlar (tip, nullable, enum/lookup hedefi, etiket). */
   columns: PublishedColumn[];
-  /** Şemadan okunan doğrulama kuralları: kolon adı → regex/uzunluk/aralık. */
+  /** Validation rules read from the schema: column name → regex/length/range. */
   rules: Map<string, PublishedColumnSchema>;
-  /** Bu tipin doğrudan alt model adları. */
+  /** Direct sub-model names of this type. */
   childTypeNames: string[];
 }
 
 /**
- * RecordMetadataService — kayıt formları için model meta verisini tek yerden,
- * ÖNBELLEKLİ olarak sağlar.
+ * RecordMetadataService — provides model metadata for record forms from a single place,
+ * CACHED.
  *
- * İç içe alt model pop-up'ı her seviyede kolon + kural + alt model listesi ister;
- * bu servis olmasa aynı istekler her seviyede tekrar atılırdı. Tüm akışlar
- * `shareReplay(1)` ile paylaşılır — aynı tip için ikinci bir HTTP isteği gitmez.
+ * The nested sub-model pop-up requests columns + rules + sub-model list at every level;
+ * without this service the same requests would be repeated at every level. All streams
+ * are shared with `shareReplay(1)` — no second HTTP request goes out for the same type.
  *
- * Doğrulama kuralları (regex/minLength/maxLength/min/max) `/PublishedModel/schema`
- * ucundan gelir; backend `ValidateDynamicEntity` de AYNI şemayı okur, böylece
- * istemci ve sunucu doğrulaması birebir örtüşür. Admin'e özel `/Published/getTable`
- * KULLANILMAZ — admin olmayan kullanıcı orada 403 alıp /models'e atılıyordu.
+ * Validation rules (regex/minLength/maxLength/min/max) come from the `/PublishedModel/schema`
+ * endpoint; the backend `ValidateDynamicEntity` reads the SAME schema, so client and server
+ * validation match one to one. The admin-only `/Published/getTable` is
+ * NOT USED — a non-admin user got a 403 there and was sent to /models.
  */
 @Injectable({ providedIn: 'root' })
 export class RecordMetadataService {
@@ -38,25 +38,25 @@ export class RecordMetadataService {
   private readonly screenLayouts = inject(ScreenLayoutService);
   private readonly auth = inject(AuthService);
 
-  /** typeName → kolonlar (tek bir /models yanıtından indekslenir; yanıtla birlikte yenilenir). */
+  /** typeName → columns (indexed from a single /models response; refreshed with the response). */
   private columnsIndex?: { source: Observable<unknown>; index$: Observable<Map<string, PublishedColumn[]>> };
   private readonly rulesCache = new Map<string, Observable<Map<string, PublishedColumnSchema>>>();
   private readonly childCache = new Map<string, Observable<string[]>>();
   private readonly metaCache = new Map<string, Observable<TypeMeta>>();
   /**
-   * `${typeName}|${viewType}` → yayındaki yerleşim (süreli önbellek, bkz. layout$). Sunucu tasarımı
-   * kullanıcının ROLÜNE göre seçer; bu yüzden girdi oturum token'ına bağlıdır — çıkış yapıp başka
-   * kullanıcıyla girilince öncekinin tasarımı gösterilmez.
+   * `${typeName}|${viewType}` → the published layout (time-limited cache, see layout$). The server picks
+   * the design by the user's ROLE; so the entry is bound to the session token — after logging out and in
+   * as another user, the previous user's design is not shown.
    */
   private readonly layoutCache = new Map<string, { at: number; owner: string | null; layout$: Observable<FormLayout | ListLayout | null> }>();
-  /** `${typeName}|${viewType}` → sunucunun seçtiği tasarımın kimliği (admin "Ekranı tasarla" ile aynısını açar). */
+  /** `${typeName}|${viewType}` → ID of the design the server picked (admin "Ekranı tasarla" (Design screen) opens the same one). */
   private readonly layoutIds = new Map<string, number>();
 
-  /** Model listesi geçersiz kılındı (bkz. PublishedModelService.invalidateModels). */
+  /** The model list was invalidated (see PublishedModelService.invalidateModels). */
   readonly modelsInvalidated$ = this.publishedModel.modelsInvalidated$.asObservable();
 
   constructor() {
-    // Model listesi değişince (yayın, şema düzenlemesi) ondan türeyen paketler de bayattır.
+    // When the model list changes (publish, schema edit), the bundles derived from it are stale too.
     this.publishedModel.modelsInvalidated$.subscribe(() => {
       this.metaCache.clear();
       this.childCache.clear();
@@ -65,11 +65,11 @@ export class RecordMetadataService {
   }
 
   /**
-   * Kullanıcının görebildiği yayınlanmış modeller (admin olmayanda yalnız Read izinliler).
-   * Okunamazsa boş liste — çağıranlar typeName'e düşer.
+   * Published models the user can see (for non-admins only those with Read permission).
+   * Empty list if unreadable — callers fall back to typeName.
    */
   models$(): Observable<PublishedModel[]> {
-    // Önbellek PublishedModelService'te (süreli, oturuma bağlı, şema değişince düşer).
+    // The cache is in PublishedModelService (time-limited, session-bound, dropped when the schema changes).
     return this.publishedModel.getModels().pipe(
       map(res => res.success ? res.data ?? [] : []),
       catchError(() => of<PublishedModel[]>([]))
@@ -77,11 +77,11 @@ export class RecordMetadataService {
   }
 
   /**
-   * Tüm modellerin kolonları. `/PublishedModel/models` tek çağrıda hepsini döndürdüğü
-   * için tip başına ayrı istek atılmaz.
+   * Columns of all models. `/PublishedModel/models` returns them all in one call,
+   * so no separate request is sent per type.
    */
   private allColumns$(): Observable<Map<string, PublishedColumn[]>> {
-    // Dizin, kaynağı olan /models yanıtı değişmedikçe yeniden kurulmaz.
+    // The index is not rebuilt unless its source, the /models response, changes.
     const source = this.publishedModel.getModels();
     if (this.columnsIndex?.source !== source) {
       this.columnsIndex = {
@@ -99,7 +99,7 @@ export class RecordMetadataService {
     return this.allColumns$().pipe(map(index => index.get(typeName) ?? []));
   }
 
-  /** Doğrulama kuralları — kolon adı → kural. Şema okunamazsa boş harita (engelleme yok). */
+  /** Validation rules — column name → rule. Empty map if the schema cannot be read (no blocking). */
   rules$(typeName: string): Observable<Map<string, PublishedColumnSchema>> {
     let cached = this.rulesCache.get(typeName);
     if (!cached) {
@@ -120,16 +120,16 @@ export class RecordMetadataService {
   }
 
   /**
-   * Bir tipin şema kurallarını önbellekten düşürür. Tasarımcı kolon kuralı (ör. otomatik
-   * değer) kaydettikten sonra çağırır; aksi halde açık oturumdaki formlar eski kuralı
-   * sayfa yenilenene kadar kullanmaya devam ederdi.
+   * Drops a type's schema rules from the cache. The designer calls it after saving a column rule
+   * (e.g. auto value); otherwise forms in the open session would keep using the old rule
+   * until the page is reloaded.
    */
   invalidate(typeName: string): void {
     this.rulesCache.delete(typeName);
     this.metaCache.delete(typeName);
   }
 
-  /** Bu tipin doğrudan alt model adları. */
+  /** Direct sub-model names of this type. */
   childTypeNames$(typeName: string): Observable<string[]> {
     let cached = this.childCache.get(typeName);
     if (!cached) {
@@ -143,7 +143,7 @@ export class RecordMetadataService {
     return cached;
   }
 
-  /** Kolonlar + kurallar + alt model adları tek pakette. */
+  /** Columns + rules + sub-model names in one bundle. */
   meta$(typeName: string): Observable<TypeMeta> {
     let cached = this.metaCache.get(typeName);
     if (!cached) {
@@ -160,26 +160,26 @@ export class RecordMetadataService {
     return cached;
   }
 
-  // ─── Ekran tasarımı (yayındaki yerleşim) ───────────────────────────────────
+  // ─── Screen design (published layout) ─────────────────────────────────────
 
   /**
-   * Yerleşim önbelleği süresi. Tasarım başka bir oturumda yayınlanabilir; sonsuz önbellek
-   * kullanıcıyı sayfa yenileyene dek eski düzende tutardı. Aynı oturumdaki yayın ise
-   * `invalidateLayout` ile anında düşürülür.
+   * Layout cache lifetime. A design may be published in another session; an infinite cache
+   * would keep the user on the old layout until a page reload. A publish in the same session is
+   * dropped immediately with `invalidateLayout`.
    */
   static readonly LAYOUT_TTL_MS = 5 * 60 * 1000;
 
-  /** Modelin yayındaki form yerleşimi; yoksa (ya da okunamazsa) null → varsayılan görünüm. */
+  /** The model's published form layout; null if none (or unreadable) → default view. */
   formLayout$(typeName: string): Observable<FormLayout | null> {
     return this.layout$(typeName, 'form') as Observable<FormLayout | null>;
   }
 
-  /** Modelin yayındaki liste yerleşimi; yoksa null → eski kolon görünürlüğü ayarı. */
+  /** The model's published list layout; null if none → the old column visibility setting. */
   listLayout$(typeName: string): Observable<ListLayout | null> {
     return this.layout$(typeName, 'list') as Observable<ListLayout | null>;
   }
 
-  /** Tasarımcı yayınladıktan / sıfırladıktan sonra çağırır — açık ekranlar yeni düzeni okusun. */
+  /** Called by the designer after publishing / resetting — so open screens read the new layout. */
   invalidateLayout(typeName: string): void {
     for (const view of ['form', 'list']) {
       this.layoutCache.delete(`${typeName}|${view}`);
@@ -187,7 +187,7 @@ export class RecordMetadataService {
     }
   }
 
-  /** Son okunan yayındaki tasarımın kimliği; tasarım yoksa null. */
+  /** ID of the last read published design; null if there is no design. */
   publishedLayoutId(typeName: string, viewType: ScreenViewType): number | null {
     return this.layoutIds.get(`${typeName}|${viewType}`) ?? null;
   }
@@ -207,7 +207,7 @@ export class RecordMetadataService {
         const json = dto?.layoutJson;
         return viewType === 'form' ? parseFormLayout(json) : parseListLayout(json);
       }),
-      // Modül kurulu değil / ağ hatası: ekran varsayılan görünümle çalışır.
+      // Module not installed / network error: the screen runs with the default view.
       catchError(() => of(null)),
       shareReplay(1)
     );
@@ -215,14 +215,14 @@ export class RecordMetadataService {
     return layout$;
   }
 
-  // NOT: Lookup dropdown önbelleği buradan KALDIRILDI.
+  // NOTE: The lookup dropdown cache was REMOVED from here.
   //
-  // Eski `lookupOptions$` hedef tablonun TÜM satırlarını çekip bellekte tutuyordu
-  // (Musteri: 12.025 satır / 5 MB). Artık seçenekler app-lookup-picker tarafından
-  // 50'şer, sunucu taraflı aramayla çekiliyor; liste hücrelerindeki etiketler ise
-  // LookupLabelService üzerinden toplu (?ids=) çözülüyor.
+  // The old `lookupOptions$` fetched ALL rows of the target table and kept them in memory
+  // (Musteri: 12,025 rows / 5 MB). Now options are fetched by app-lookup-picker
+  // 50 at a time with server-side search; labels in list cells are resolved
+  // in bulk (?ids=) through LookupLabelService.
   //
-  // Yan fayda: eski önbellek yalnız tablo adına göre anahtarlanıp displayColumn'u
-  // yok sayıyordu — aynı tabloya farklı etiket kolonuyla bakan iki kolon birbirinin
-  // etiketini gösteriyordu. LookupLabelService anahtarı (tablo|kolon) çiftidir.
+  // Side benefit: the old cache was keyed by table name only and ignored displayColumn
+  // — two columns looking at the same table with different label columns showed each other's
+  // labels. The LookupLabelService key is the (table|column) pair.
 }

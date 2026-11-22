@@ -18,7 +18,7 @@ import { ModelIconComponent } from '../shared/model-icon/model-icon.component';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ModelListComponent implements OnInit {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly languageService = inject(LanguageService);
@@ -26,7 +26,7 @@ export class ModelListComponent implements OnInit {
   models: PublishedModel[] = [];
   loading = false;
   loadError: string | null = null;
-  /** Normal kullanıcı hiçbir tabloya erişemediğinde true */
+  /** true when a regular user can access no table at all */
   noPermission = false;
 
   constructor(
@@ -39,7 +39,7 @@ export class ModelListComponent implements OnInit {
     this.load();
   }
 
-  /** "Silinmiş Modeller" butonu yalnızca admin'e gösterilir. */
+  /** The "Silinmiş Modeller" (Deleted models) button is shown only to admins. */
   get isAdmin(): boolean {
     return this.permissionService.isAdmin();
   }
@@ -49,9 +49,9 @@ export class ModelListComponent implements OnInit {
     this.loadError = null;
     this.noPermission = false;
 
-    // Yetki ve model listesini birlikte yükle — signal'in hazır olması için. İzinler açılışta
-    // (APP_INITIALIZER) zaten yüklendi: ensureLoaded yalnız yüklenmemişse ister. Eskiden her
-    // /models ziyaretinde yeniden isteniyor ve sinyal yeniden yazıldığı için her şey yeniden çiziliyordu.
+    // Load permissions and the model list together — so the signal is ready. Permissions were
+    // already loaded at startup (APP_INITIALIZER): ensureLoaded fetches only if not loaded. It used to
+    // be refetched on every /models visit, and since the signal was rewritten everything re-rendered.
     forkJoin([
       this.permissionService.ensureLoaded(),
       this.publishedModel.getModels()
@@ -65,18 +65,18 @@ export class ModelListComponent implements OnInit {
         const allModels = modelsRes.data ?? [];
 
         if (this.permissionService.isAdmin()) {
-          // Admin: tüm model kartlarını göster (mevcut davranış)
+          // Admin: show all model cards (existing behaviour)
           this.models = allModels;
         } else {
-          // Normal kullanıcı: "Modeller" listesini göstermez;
-          // okuma yetkili ilk tabloya doğrudan yönlendir
+          // Regular user: doesn't show the "Modeller" (Models) list;
+          // redirect straight to the first readable table
           const permitted = allModels.filter(m =>
             this.permissionService.can(m.typeName, 'read')
           );
           if (permitted.length > 0) {
             this.router.navigate(['/models', permitted[0].typeName], { replaceUrl: true });
           } else {
-            // Hiç erişim yoksa boş-yetki durumunu göster
+            // If there is no access at all, show the no-permission state
             this.noPermission = true;
           }
         }

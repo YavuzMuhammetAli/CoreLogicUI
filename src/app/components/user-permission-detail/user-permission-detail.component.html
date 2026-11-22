@@ -41,7 +41,7 @@
 
     <div class="panel-body">
 
-      <!-- ── Admin Rolü ── -->
+      <!-- ── Admin role ── -->
       <section class="section-block" aria-labelledby="admin-section-title">
         <h3 id="admin-section-title" class="section-title">{{ 'permission.detail.adminSectionTitle' | t }}</h3>
 
@@ -75,7 +75,7 @@
 
       <hr class="section-divider">
 
-      <!-- ── İzin Verilen Modeller ── -->
+      <!-- ── Permitted models ── -->
       <section class="section-block" aria-labelledby="perm-section-title">
         <h3 id="perm-section-title" class="section-title">
           {{ 'permission.detail.permSectionTitle' | t }}
@@ -108,7 +108,7 @@
 
           @if (!permLoading() && !permError() && permRows().length > 0) {
 
-            <!-- Model listesi (master) -->
+            <!-- Model list (master) -->
             @if (!selectedPermRow()) {
 
               <div class="search-box">
@@ -178,7 +178,7 @@
               }
             }
 
-            <!-- İzin detay paneli -->
+            <!-- Permission detail panel -->
             @if (selectedPermRow(); as row) {
               <div class="model-perm-detail">
                 <button class="btn btn-ghost btn-sm" type="button" (click)="clearModelPerm()">

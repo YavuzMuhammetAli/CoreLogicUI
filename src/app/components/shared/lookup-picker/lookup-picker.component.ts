@@ -11,30 +11,30 @@ import { markDirty } from '../../../utils/change-detection';
 import { closeOnOutsidePointer } from '../../../utils/outside-pointer';
 import { IconComponent } from '../icon/icon.component';
 
-/** Sayfa boyutu — açılışta ve her "daha fazla" isteğinde bu kadar kayıt gelir. */
+/** Page size — this many records arrive on open and on every "load more" request. */
 const PAGE_SIZE = 50;
 
-/** Yazma sonrası sunucuya gitmeden önce beklenen süre (ms). */
+/** Delay after typing before going to the server (ms). */
 const SEARCH_DEBOUNCE = 300;
 
-/** Aynı örneğin DOM id'lerini benzersizleştirmek için sayaç (aynı formda birden çok lookup olabilir). */
+/** Counter to make each instance's DOM ids unique (a form can have several lookups). */
 let instanceCounter = 0;
 
 /**
- * Lookup (FK) seçim kutusu — tembel yüklemeli, sunucu taraflı aramalı combobox.
+ * Lookup (FK) picker — lazily loaded combobox with server-side search.
  *
- * NEDEN VAR: eski `<select>` hedef tablonun TÜM satırlarını yüklüyordu (Musteri: 12.025
- * satır / 5 MB / ~3,9 sn). Burada açılışta 50 kayıt gelir, liste dibine kaydırıldıkça
- * 50'şer eklenir, arama sunucuda yapılır ve arama sonucunda da aynı kaydırma sürer.
+ * WHY IT EXISTS: the old `<select>` loaded ALL rows of the target table (Musteri: 12,025
+ * rows / 5 MB / ~3.9 s). Here 50 records arrive on open, 50 more are appended as the list
+ * is scrolled to the bottom, search runs on the server and the same scrolling continues in search results.
  *
- * KRİTİK — sessiz FK kaybı: kontrol değeri ham FK id'sidir ve seçili kayıt ilk 50 seçenek
- * arasında olmayabilir. `writeValue` bu yüzden etiketi ayrıca `?ids=` ile çözer. Aksi
- * hâlde kullanıcı boş bir kutu görür, forma dokunmadan kaydeder ve FK silinir.
+ * CRITICAL — silent FK loss: the control value is the raw FK id and the selected record may not
+ * be among the first 50 options. That's why `writeValue` resolves the label separately via `?ids=`.
+ * Otherwise the user sees an empty box, saves without touching the form and the FK is wiped.
  *
  * A11y: role="combobox" + aria-expanded/aria-controls/aria-activedescendant, listbox/option
- * rolleri, ↑/↓/Enter/Esc klavye desteği, aktif seçeneğin görünür alana kaydırılması.
- * (Desen `shared/model-autocomplete`'ten alındı; o component string listesi üzerine kurulu
- * olduğu ve DOM id'leri sabit olduğu için doğrudan kullanılamadı.)
+ * roles, ↑/↓/Enter/Esc keyboard support, scrolling the active option into view.
+ * (The pattern comes from `shared/model-autocomplete`; that component couldn't be used directly
+ * because it is built on a string list and its DOM ids are fixed.)
  */
 @Component({
     selector: 'app-lookup-picker',
@@ -56,16 +56,16 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
   private readonly lookupLabels = inject(LookupLabelService);
   private readonly host = inject(ElementRef<HTMLElement>);
 
-  /** Hedef model (lookupTargetTable). */
+  /** Target model (lookupTargetTable). */
   readonly typeName = input.required<string>();
-  /** Etiket kolonu (lookupDisplayColumn); boşsa sunucu ID'yi kullanır. */
+  /** Label column (lookupDisplayColumn); if empty the server uses the ID. */
   readonly displayColumn = input<string | null | undefined>(null);
   readonly placeholder = input('');
   readonly ariaLabel = input('');
   readonly invalid = input(false);
   readonly inputId = input<string>('');
 
-  // ── Durum ────────────────────────────────────────────────────────────────
+  // ── State ────────────────────────────────────────────────────────────────
   readonly options = signal<LookupOption[]>([]);
   readonly total = signal(0);
   readonly loading = signal(false);
@@ -74,12 +74,12 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
   readonly query = signal('');
   readonly disabled = signal(false);
 
-  /** Seçili kaydın etiketi — ilk 50 arasında olmasa bile ayrıca çözülür. */
+  /** Label of the selected record — resolved separately even if it isn't among the first 50. */
   readonly selectedLabel = signal<string | null>(null);
 
   private value: number | null = null;
   private page = 1;
-  /** Bu arama terimi için ilk sayfa yüklendi mi (odaklanınca tekrar istek atmamak için). */
+  /** Whether the first page for this search term is loaded (to avoid re-requesting on focus). */
   private loadedForQuery: string | null = null;
 
   private readonly uid = ++instanceCounter;
@@ -91,22 +91,22 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
   private readonly inputEl = viewChild<ElementRef<HTMLInputElement>>('lkInput');
 
   /**
-   * Açılan listenin viewport'a göre konumu. Liste `position: fixed` olduğu için
-   * (kırpan `.panel`/`.dialog-panel` atalarından kurtulmak zorunda) koordinatlar
-   * burada hesaplanıp inline stil olarak bağlanır.
+   * Position of the open list relative to the viewport. Since the list is `position: fixed`
+   * (it must escape the clipping `.panel`/`.dialog-panel` ancestors) the coordinates
+   * are computed here and bound as inline style.
    */
   readonly listPos = signal({ top: '0px', left: '0px', width: '0px', maxHeight: '260px' });
 
-  /** Liste açıkken kaydırma/boyut değişiminde konumu tazeleyen dinleyici. */
+  /** Listener that refreshes the position on scroll/resize while the list is open. */
   private readonly reposition = () => this.positionList();
 
   private onChange: (value: number | null) => void = () => {};
   private onTouched: () => void = () => {};
 
   constructor() {
-    // Dışarı dokununca kapat — dinleyici yalnız liste açıkken bağlı (bkz. utils/outside-pointer).
+    // Close on an outside tap — the listener is attached only while the list is open (see utils/outside-pointer).
     closeOnOutsidePointer(this.isOpen, () => this.host.nativeElement, () => this.close());
-    // Yazma → 300 ms bekle → aynı terimi tekrar sorma → önceki isteği iptal et.
+    // Typing → wait 300 ms → don't re-query the same term → cancel the previous request.
     this.subs.add(
       this.search$.pipe(
         debounceTime(SEARCH_DEBOUNCE),
@@ -136,7 +136,7 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
   ngOnDestroy(): void {
     this.subs.unsubscribe();
     this.observer?.disconnect();
-    // Liste açıkken component yok edilirse dinleyiciler sızmasın.
+    // If the component is destroyed while the list is open, the listeners must not leak.
     window.removeEventListener('scroll', this.reposition, true);
     window.removeEventListener('resize', this.reposition);
     window.visualViewport?.removeEventListener('resize', this.reposition);
@@ -155,17 +155,17 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
       return;
     }
 
-    // Seçili kaydın etiketi ortak etiket önbelleğinden (LookupLabelService): alt tablolar aynı
-    // hedefin etiketlerini zaten toplu çözer; form her yeniden kurulduğunda alan başına ayrı
-    // istek atılıyordu. Önbellekte yoksa tek istekle çözülür.
+    // The selected record's label comes from the shared label cache (LookupLabelService): child tables
+    // already resolve labels of the same target in bulk; every time the form was rebuilt a separate
+    // request was sent per field. If it's not cached it is resolved with a single request.
     const selected = this.value;
     const target = this.typeName();
     const column = this.displayColumn();
     this.lookupLabels.ensure(target, column, [selected])
       .pipe(markDirty(this.cdr))
       .subscribe(() => {
-        if (this.value !== selected) return;   // arada başka değer yazıldı
-        // Etiket çözülemezse (silinmiş kayıt vb.) ham id gösterilir — değer KORUNUR.
+        if (this.value !== selected) return;   // another value was written in the meantime
+        // If the label can't be resolved (deleted record etc.) the raw id is shown — the value is KEPT.
         this.selectedLabel.set(this.lookupLabels.label(target, column, selected) ?? String(selected));
       });
   }
@@ -174,9 +174,9 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
   registerOnTouched(fn: () => void): void { this.onTouched = fn; }
   setDisabledState(isDisabled: boolean): void { this.disabled.set(isDisabled); this.cdr.markForCheck(); }
 
-  // ── Etkileşim ────────────────────────────────────────────────────────────
+  // ── Interaction ────────────────────────────────────────────────────────────
 
-  /** Kutuda gösterilen metin: liste açıkken yazılan terim, kapalıyken seçili etiket. */
+  /** Text shown in the box: the typed term while the list is open, the selected label while closed. */
   displayText(): string {
     return this.isOpen() ? this.query() : (this.selectedLabel() ?? '');
   }
@@ -187,31 +187,31 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
     this.query.set('');
     this.activeIndex.set(-1);
 
-    // Boş arama için ilk sayfa daha önce yüklendiyse tekrar isteme.
+    // If the first page for an empty search was already loaded, don't request it again.
     if (this.loadedForQuery !== '') this.loadFirstPage('');
 
-    // Konum yalnızca input'un rect'ine bağlı; liste henüz render edilmemiş olsa da
-    // hesaplanabilir. Sentinel'e bağlanma ise render'ı beklemek zorunda — onu
-    // aşağıdaki effect yürütür (bkz. sentinelEffect).
+    // The position depends only on the input's rect; it can be computed even if the list
+    // isn't rendered yet. Attaching to the sentinel, however, must wait for the render — that
+    // is done by the effect below (see sentinelEffect).
     this.positionList();
 
-    // Sayfa ya da iç kaydırıcılardan biri kaydırılırsa liste input'tan kopmasın.
-    // capture: true — iç scroll konteynerleri de yakalanır (scroll balonlanmaz).
+    // If the page or one of the inner scrollers scrolls, the list must not detach from the input.
+    // capture: true — inner scroll containers are caught too (scroll doesn't bubble).
     window.addEventListener('scroll', this.reposition, true);
     window.addEventListener('resize', this.reposition);
-    // Mobilde klavye yalnız GÖRÜNEN alanı (visualViewport) küçültür; window resize gelmez.
+    // On mobile the keyboard only shrinks the VISIBLE area (visualViewport); no window resize fires.
     window.visualViewport?.addEventListener('resize', this.reposition);
     window.visualViewport?.addEventListener('scroll', this.reposition);
   }
 
   /**
-   * Sonsuz kaydırma gözlemcisini sentinel DOM'a girince bağlar, çıkınca bırakır.
+   * Attaches the infinite scroll observer when the sentinel enters the DOM and releases it when it leaves.
    *
-   * viewChild bir signal olduğu için render tamamlandığında tetiklenir; eskiden
-   * queueMicrotask kullanılıyordu ve o, change detection'dan ÖNCE koştuğu için
-   * sentinel'i çoğu zaman bulamıyordu (liste ilk 50'de takılı kalırdı).
-   * Sentinel yalnızca hasMore() iken render edilir; son sayfaya gelince gözlemci
-   * kendiliğinden çözülür.
+   * Since viewChild is a signal, it fires once rendering completes; previously
+   * queueMicrotask was used, and because it ran BEFORE change detection it often
+   * couldn't find the sentinel (the list stayed stuck at the first 50).
+   * The sentinel is rendered only while hasMore(); on reaching the last page the observer
+   * detaches by itself.
    */
   private readonly sentinelEffect = effect(() => {
     const el = this.sentinel()?.nativeElement;
@@ -222,7 +222,7 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
 
     this.observer = new IntersectionObserver(
       entries => { if (entries.some(e => e.isIntersecting)) this.loadMore(); },
-      { root: el.parentElement, rootMargin: '120px' }   // dibe varmadan biraz önce tetikle
+      { root: el.parentElement, rootMargin: '120px' }   // fire a little before reaching the bottom
     );
     this.observer.observe(el);
   });
@@ -240,14 +240,14 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
   }
 
   /**
-   * Listeyi input'un hemen altına (yer yoksa üstüne) konumlandırır.
+   * Positions the list right below the input (above it if there's no room).
    *
-   * Alta sığmıyorsa yukarı açılır; her iki durumda da yükseklik kalan boşluğa göre
-   * kısılır, böylece liste hiçbir zaman ekran dışına taşmaz.
+   * If it doesn't fit below it opens upwards; in both cases the height is trimmed to the
+   * remaining space, so the list never overflows the screen.
    *
-   * Sınırlar `visualViewport`'tan alınır: mobilde klavye açılınca `innerHeight` değişmez,
-   * yalnız görünen alan küçülür (ve iOS'ta kayar). innerHeight'a bakılsaydı liste
-   * klavyenin arkasına açılırdı.
+   * Bounds are taken from `visualViewport`: on mobile `innerHeight` doesn't change when the keyboard
+   * opens, only the visible area shrinks (and shifts on iOS). Had innerHeight been used, the list
+   * would open behind the keyboard.
    */
   private positionList(): void {
     const input = this.inputEl()?.nativeElement;
@@ -255,7 +255,7 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
 
     const rect = input.getBoundingClientRect();
     const gap = 4;
-    const margin = 8;                       // viewport kenarına bırakılan pay
+    const margin = 8;                       // margin left at the viewport edge
     const preferred = 260;
 
     const vv = window.visualViewport;
@@ -264,7 +264,7 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
     const spaceBelow = viewBottom - rect.bottom - gap - margin;
     const spaceAbove = rect.top - viewTop - gap - margin;
 
-    // Altta makul yer yoksa ve üstte daha fazlası varsa yukarı aç.
+    // Open upwards if there's no reasonable room below and more room above.
     const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
     const available = openUp ? spaceAbove : spaceBelow;
     const maxHeight = Math.max(120, Math.min(preferred, available));
@@ -303,7 +303,7 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
     return this.options().length < this.total();
   }
 
-  // ── Yükleme ──────────────────────────────────────────────────────────────
+  // ── Loading ──────────────────────────────────────────────────────────────
 
   private loadFirstPage(term: string): void {
     this.page = 1;
@@ -323,7 +323,7 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
       });
   }
 
-  /** Sonraki sayfayı mevcut listenin SONUNA ekler. */
+  /** Appends the next page to the END of the current list. */
   loadMore(): void {
     if (this.loading() || !this.hasMore()) return;
 
@@ -347,7 +347,7 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
       });
   }
 
-  // ── Klavye ───────────────────────────────────────────────────────────────
+  // ── Keyboard ───────────────────────────────────────────────────────────────
 
   onKeydown(event: KeyboardEvent): void {
     if (this.disabled()) return;
@@ -359,7 +359,7 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
         if (!this.isOpen()) { this.open(); return; }
         this.activeIndex.update(i => (list.length === 0 ? -1 : (i + 1) % list.length));
         this.scrollActiveIntoView();
-        // Sona yaklaşıldıysa bir sonraki sayfayı şimdiden iste (klavye ile de tembel yükleme).
+        // Near the end, request the next page ahead of time (lazy loading via keyboard too).
         if (this.activeIndex() >= list.length - 5) this.loadMore();
         break;
 
@@ -389,7 +389,7 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
     }
   }
 
-  /** 50+ seçenekte 220px'lik listede aktif satır kolayca ekran dışına çıkar. */
+  /** With 50+ options in a 220px list the active row easily goes out of view. */
   private scrollActiveIntoView(): void {
     const index = this.activeIndex();
     if (index < 0) return;
@@ -399,7 +399,7 @@ export class LookupPickerComponent implements ControlValueAccessor, OnDestroy {
     });
   }
 
-  // ── DOM id'leri (örnek başına benzersiz) ─────────────────────────────────
+  // ── DOM ids (unique per instance) ─────────────────────────────────
 
   optionId(index: number): string { return `lk-${this.uid}-opt-${index}`; }
   get listboxId(): string { return `lk-${this.uid}-listbox`; }

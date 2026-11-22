@@ -1,27 +1,27 @@
-import '../../../i18n/lazy/datatype-help'; // help.* sözlüğü bu parçayla iner
+import '../../../i18n/lazy/datatype-help'; // the help.* dictionary loads with this chunk
 import { ChangeDetectionStrategy, Component, computed, HostListener, inject, input, output, signal } from '@angular/core';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { LanguageService } from '../../../services/language.service';
 import { HelpTopic, HelpTopicId, resolveHelpTopic } from './datatype-help.data';
 import { REGEX_LAB_MAX_LENGTH, REGEX_PRESETS, REGEX_SYNTAX, RegexPreset } from './regex-presets';
 
-/** Canlı regex testinin sonucu. */
+/** Result of the live regex test. */
 type RegexTestResult = 'idle' | 'match' | 'nomatch' | 'invalid';
 
 /**
- * DatatypeHelpComponent — bir veri tipi, ilişki tipi veya kavram için
- * tam ekran kılavuz diyaloğu.
+ * DatatypeHelpComponent — full-screen guide dialog for a data type, relationship type
+ * or concept.
  *
- * Kolon popup'ındaki "Veri Tipi" ve ilişki popup'ındaki "İlişki Tipi"
- * seçicilerinin yanındaki "i" düğmesi ile açılır; sekme araç çubuklarındaki
- * "Nasıl çalışır?" düğmesi kavram konularını açar.
+ * Opened with the "i" button next to the "Veri Tipi" (Data Type) selector in the column popup and the
+ * "İlişki Tipi" (Relationship Type) selector in the relationship popup; the "Nasıl çalışır?"
+ * (How does it work?) button in the tab toolbars opens concept topics.
  *
- * Kısa, tek cümlelik ipuçları için bunun yerine `<app-help-hint>` kullanılır.
+ * For short, one-sentence hints `<app-help-hint>` is used instead.
  *
- * ÖNEMLİ: Bu diyalog her zaman mevcut bir popup'ın ÜSTÜNDE açılır. Bu yüzden
- * overlay z-index'i 1100'dür (diğer diyaloglar 1000) ve ESC olayı yakalanınca
- * `stopPropagation()` yapılır — aksi halde tek ESC basışı alttaki popup'ı da
- * kapatır (bkz. table-detail `onEscape()` zinciri).
+ * IMPORTANT: this dialog always opens ON TOP of an existing popup. That's why
+ * the overlay z-index is 1100 (other dialogs use 1000) and when the ESC event is caught
+ * `stopPropagation()` is called — otherwise a single ESC press would also close the
+ * popup underneath (see the table-detail `onEscape()` chain).
  */
 @Component({
     selector: 'app-datatype-help',
@@ -33,15 +33,15 @@ type RegexTestResult = 'idle' | 'match' | 'nomatch' | 'invalid';
 export class DatatypeHelpComponent {
   private readonly languageService = inject(LanguageService);
 
-  /** Diyalog açık mı. */
+  /** Whether the dialog is open. */
   open = input(false);
 
-  /** Gösterilecek konu: veri tipi anahtarı, 'subModels'/'relationships' veya 'rel:<Tip>'. */
+  /** Topic to show: a data type key, 'subModels'/'relationships' or 'rel:<Type>'. */
   topic = input.required<HelpTopicId>();
 
   closed = output<void>();
 
-  /** Kullanıcı bir hazır desende "Kullan"a bastığında — çağıran forma yazar. */
+  /** When the user presses "Kullan" (Use) on a preset — the caller writes it to the form. */
   patternPicked = output<RegexPreset>();
 
   readonly presets = REGEX_PRESETS;
@@ -49,9 +49,9 @@ export class DatatypeHelpComponent {
   readonly maxLabLength = REGEX_LAB_MAX_LENGTH;
 
   /**
-   * Üç FK mekanizmasının constraint ad kalıpları (fkMechanisms şemasında yazılır).
-   * Şablona düz metin olarak gömülemezler: Angular derleyicisi süslü parantezi
-   * ICU mesajı sanır, bu yüzden interpolasyonla basılırlar.
+   * Constraint name patterns of the three FK mechanisms (written in the fkMechanisms diagram).
+   * They can't be embedded in the template as plain text: the Angular compiler mistakes the curly
+   * braces for an ICU message, so they are printed via interpolation.
    */
   readonly fkNames = {
     tree: 'FK_{tablo}_{üst}',
@@ -59,18 +59,18 @@ export class DatatypeHelpComponent {
     relationship: 'FK_{tablo}_{kolon}_Rel'
   };
 
-  /** Aktif konunun içeriği; bilinmeyen anahtarda genel bir konuya düşer. */
+  /** Content of the active topic; falls back to a general topic for an unknown key. */
   content = computed<HelpTopic>(() => resolveHelpTopic(this.topic()));
 
-  // ─── Canlı regex testi ──────────────────────────────────────────────────────
+  // ─── Live regex test ──────────────────────────────────────────────────────
 
   testPattern = signal('');
   testValue = signal('');
 
   /**
-   * Deseni test değerine uygular. Kullanıcının yazdığı desen tarayıcıda çalıştığı
-   * için uzunluk sınırı (REGEX_LAB_MAX_LENGTH) katastrofik backtracking'e karşı
-   * kaba ama yeterli bir korumadır; geçersiz desen try/catch ile yakalanır.
+   * Applies the pattern to the test value. Since the user's pattern runs in the browser,
+   * the length limit (REGEX_LAB_MAX_LENGTH) is a crude but sufficient guard against
+   * catastrophic backtracking; an invalid pattern is caught with try/catch.
    */
   testResult = computed<RegexTestResult>(() => {
     const pattern = this.testPattern().trim();
@@ -94,8 +94,8 @@ export class DatatypeHelpComponent {
   }
 
   /**
-   * "Kullan" — deseni çağıran forma bildirir ve aynı deseni canlı test kutusuna
-   * da yazar, böylece kullanıcı çalıştığını anında görür.
+   * "Kullan" (Use) — reports the pattern to the calling form and also writes it into the
+   * live test box, so the user immediately sees it working.
    */
   usePreset(preset: RegexPreset): void {
     this.testPattern.set(preset.pattern);
@@ -103,14 +103,14 @@ export class DatatypeHelpComponent {
     this.patternPicked.emit(preset);
   }
 
-  /** "Kullan" düğmesinin erişilebilir etiketi — desen adını içerir. */
+  /** Accessible label of the "Kullan" (Use) button — includes the pattern name. */
   useAria(preset: RegexPreset): string {
     return this.languageService.t('help.regex.useAria', {
       name: this.languageService.t(`help.regex.preset.${preset.key}`)
     });
   }
 
-  // ─── Kapatma ────────────────────────────────────────────────────────────────
+  // ─── Closing ────────────────────────────────────────────────────────────────
 
   close(): void {
     this.closed.emit();
@@ -123,9 +123,9 @@ export class DatatypeHelpComponent {
   @HostListener('document:keydown.escape', ['$event'])
   onEscape(event: Event): void {
     if (!this.open()) return;
-    // Alttaki popup'ın ESC işleyicisi aynı basışla tetiklenmesin. Her iki
-    // işleyici de `document` üzerinde olduğundan stopPropagation yetmez —
-    // aynı hedefteki diğer dinleyicileri yalnızca bu durdurur.
+    // The ESC handler of the popup underneath must not fire on the same press. Since both
+    // handlers are on `document`, stopPropagation isn't enough —
+    // only this stops the other listeners on the same target.
     event.stopImmediatePropagation();
     this.close();
   }

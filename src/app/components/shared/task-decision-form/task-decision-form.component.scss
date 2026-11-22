@@ -1,4 +1,4 @@
-// .flow içindeki margin'in işlemesi için blok seviyesinde host.
+// Block-level host so the margin inside .flow takes effect.
 :host {
   display: block;
 }
@@ -14,7 +14,7 @@
   margin-left: 2px;
 }
 
-// Alan tipini gösteren küçük etiket (record-form-dialog ile aynı görünüm).
+// Small tag showing the field type (same look as record-form-dialog).
 .col-type-tag {
   margin-left: var(--space-2);
   font-size: var(--text-xs);
@@ -25,9 +25,9 @@
   margin-top: var(--space-4);
 }
 
-// Karar çubuğu. Global .panel-actions yalnızca .panel-head içinde stillendiği
-// için panelin altında kullanılınca butonlar kenara yapışıyordu; burada kendi
-// iç boşluğu ve ayırıcı çizgisi olan bir alt bant kullanılıyor.
+// Decision bar. Since the global .panel-actions is styled only inside .panel-head,
+// using it at the bottom of the panel stuck the buttons to the edge; here a bottom
+// band with its own padding and divider line is used.
 .decision-actions {
   display: flex;
   justify-content: flex-end;
@@ -39,7 +39,7 @@
   background: var(--surface-warm);
 }
 
-// Buton içindeki spinner: yazı boyutuna uysun ve buton rengini alsın.
+// Spinner inside the button: match the font size and take the button colour.
 .btn-spinner {
   width: 14px;
   height: 14px;

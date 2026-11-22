@@ -1,6 +1,6 @@
 <aside class="inspector" [attr.aria-label]="'workflow.inspector.aria' | t">
   @if (node(); as step) {
-    <!-- ── Tek adım ─────────────────────────────────────────────────────── -->
+    <!-- ── Single step ─────────────────────────────────────────────────────── -->
     <header class="inspector-head" [attr.data-tone]="kind()?.tone">
       @if (kind(); as k) { <app-icon [name]="k.icon" size="16" /> }
       <span class="eyebrow">{{ (kind()?.labelKey ?? '') | t }}</span>
@@ -207,7 +207,7 @@
     </footer>
   } @else if (edge()) {
     @if (edge(); as e) {
-      <!-- ── Bağlantı ─────────────────────────────────────────────────────── -->
+      <!-- ── Connection ─────────────────────────────────────────────────────── -->
       <header class="inspector-head">
         <span class="eyebrow">{{ 'workflow.inspector.edge' | t }}</span>
       </header>
@@ -235,7 +235,7 @@
       }
     }
   } @else if (multiCount() > 1) {
-    <!-- ── Çoklu seçim ──────────────────────────────────────────────────── -->
+    <!-- ── Multi-selection ──────────────────────────────────────────────────── -->
     <header class="inspector-head">
       <span class="eyebrow">{{ 'workflow.inspector.multi' | t: { n: multiCount() } }}</span>
     </header>
@@ -255,14 +255,14 @@
       </footer>
     }
   } @else {
-    <!-- ── Seçim yok ────────────────────────────────────────────────────── -->
+    <!-- ── No selection ────────────────────────────────────────────────────── -->
     <header class="inspector-head">
       <span class="eyebrow">{{ 'workflow.inspector.title' | t }}</span>
     </header>
     <div class="inspector-body">
       <p class="inspector-text">{{ (readonly() ? 'workflow.inspector.emptyReadonly' : 'workflow.inspector.empty') | t }}</p>
 
-      <!-- Akış ayarları: tetikleyici Başlangıç hapının "öncesi" — seçim yokken burada özetlenir. -->
+      <!-- Flow settings: the trigger is what comes "before" the Start pill — summarised here when nothing is selected. -->
       <div class="inspector-section">
         <span class="inspector-section-title">{{ 'workflow.inspector.flowSettings' | t }}</span>
         <ul class="inspector-list">

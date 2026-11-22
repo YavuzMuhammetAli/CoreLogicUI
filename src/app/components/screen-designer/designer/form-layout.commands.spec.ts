@@ -29,42 +29,42 @@ const order = (d: FormLayout, sectionId: string) =>
 
 describe('form-layout.commands', () => {
   describe('placeField', () => {
-    it('yerleştirilmemiş kolonu hedefe ekler, yeni kimlik çakışmaz', () => {
+    it('adds an unplaced column to the target; the new id does not collide', () => {
       const next = placeField(doc(), 'F', { sectionId: 's1', index: 1 });
       expect(order(next, 's1')).toEqual(['f1', 'f5', 'f2', 'f3']);
       expect(findField(next, 'F')?.item).toEqual({ kind: 'field', id: 'f5', column: 'F', span: 6 });
     });
 
-    it('gizli kolonu yerleştirince gizli listesinden çıkar', () => {
+    it('placing a hidden column removes it from the hidden list', () => {
       const next = placeField(doc(), 'E', { sectionId: 's3', index: 0 });
       expect(next.hiddenColumns).toEqual([]);
       expect(order(next, 's3').length).toBe(1);
     });
 
-    it('zaten yerleşik kolonu taşır — aynı alan iki kez durmaz', () => {
+    it('moves an already placed column — the same field never appears twice', () => {
       const next = placeField(doc(), 'A', { sectionId: 's3', index: 0 });
       expect(order(next, 's1')).toEqual(['f2', 'f3']);
       expect(order(next, 's3')).toEqual(['f1']);
     });
 
-    it('olmayan bölüme hiçbir şey yapmaz (aynı referans)', () => {
+    it('does nothing for a non-existent section (same reference)', () => {
       const d = doc();
       expect(placeField(d, 'F', { sectionId: 'yok', index: 0 })).toBe(d);
     });
   });
 
   describe('moveItem', () => {
-    it('aynı bölümde sıra değiştirir', () => {
+    it('reorders within the same section', () => {
       expect(order(moveItem(doc(), 'f3', { sectionId: 's1', index: 0 }), 's1')).toEqual(['f3', 'f1', 'f2']);
       expect(order(moveItem(doc(), 'f1', { sectionId: 's1', index: 2 }), 's1')).toEqual(['f2', 'f3', 'f1']);
     });
 
-    it('kendi yerine bırakmak aynı referansı döndürür', () => {
+    it('dropping onto its own place returns the same reference', () => {
       const d = doc();
       expect(moveItem(d, 'f2', { sectionId: 's1', index: 1 })).toBe(d);
     });
 
-    it('başka sekmedeki bölüme taşır; sıra sınırlanır', () => {
+    it('moves to a section in another tab; the index is clamped', () => {
       const next = moveItem(doc(), 'f2', { sectionId: 's3', index: 99 });
       expect(order(next, 's3')).toEqual(['f2']);
       expect(findItem(next, 'f2')?.tab.id).toBe('t2');
@@ -72,23 +72,23 @@ describe('form-layout.commands', () => {
   });
 
   describe('moveItemBy (Alt+↑/↓)', () => {
-    it('bölüm içinde bir adım', () => {
+    it('one step within a section', () => {
       expect(order(moveItemBy(doc(), 'f2', 1), 's1')).toEqual(['f1', 'f3', 'f2']);
     });
 
-    it('bölüm sonunda bir sonraki bölümün başına geçer, sekmeyi aşmaz', () => {
+    it('at the end of a section moves to the start of the next section, without leaving the tab', () => {
       const next = moveItemBy(doc(), 'f3', 1);
       expect(order(next, 's2')).toEqual(['f3', 'f4']);
       const d = doc();
       expect(moveItemBy(d, 'f4', 1)).toBe(d);
     });
 
-    it('bölüm başında bir önceki bölümün sonuna geçer', () => {
+    it('at the start of a section moves to the end of the previous section', () => {
       expect(order(moveItemBy(doc(), 'f4', -1), 's1')).toEqual(['f1', 'f2', 'f3', 'f4']);
     });
   });
 
-  it('setSpan 1–12 aralığına sıkıştırır; aynı değer aynı referans', () => {
+  it('setSpan clamps to the 1–12 range; same value returns the same reference', () => {
     expect(findItem(setSpan(doc(), 'f1', 20), 'f1')?.item).toEqual(jasmine.objectContaining({ span: 12 }));
     expect(findItem(setSpan(doc(), 'f1', 0), 'f1')?.item).toEqual(jasmine.objectContaining({ span: 1 }));
     const d = doc();
@@ -96,14 +96,14 @@ describe('form-layout.commands', () => {
   });
 
   describe('patchItem', () => {
-    it('varsayılanlar belgeye yazılmaz', () => {
+    it('defaults are not written to the document', () => {
       const withRow = patchItem(doc(), 'f1', { newRow: true });
       expect(findItem(withRow, 'f1')?.item).toEqual({ kind: 'field', id: 'f1', column: 'A', span: 6, newRow: true });
       const back = patchItem(withRow, 'f1', { newRow: false });
       expect(findItem(back, 'f1')?.item).toEqual({ kind: 'field', id: 'f1', column: 'A', span: 6 });
     });
 
-    it('satır sayısı yalnız çok satırlı gösterimde tutulur', () => {
+    it('row count is kept only for the multiline display', () => {
       let next = patchItem(doc(), 'f1', { rows: 5 });
       expect(findItem(next, 'f1')?.item).not.toEqual(jasmine.objectContaining({ rows: 5 }));
       next = patchItem(patchItem(doc(), 'f1', { widget: 'multiline' }), 'f1', { rows: 99 });
@@ -112,14 +112,14 @@ describe('form-layout.commands', () => {
       expect(findItem(next, 'f1')?.item).toEqual({ kind: 'field', id: 'f1', column: 'A', span: 6 });
     });
 
-    it('değişmeyen yama aynı referansı döndürür', () => {
+    it('an unchanged patch returns the same reference', () => {
       const d = doc();
       expect(patchItem(d, 'f1', { newRow: false })).toBe(d);
     });
   });
 
-  describe('öğe ekleme / kaldırma', () => {
-    it('boşluk, ayırıcı ve not kendi önekleriyle eklenir', () => {
+  describe('adding / removing items', () => {
+    it('spacer, divider and note are added with their own prefixes', () => {
       let next = insertElement(doc(), 'spacer', { sectionId: 's3', index: 0 });
       next = insertElement(next, 'divider', { sectionId: 's3', index: 1 });
       next = insertElement(next, 'note', { sectionId: 's3', index: 2 });
@@ -127,20 +127,20 @@ describe('form-layout.commands', () => {
       expect(findItem(next, 'n1')?.item).toEqual({ kind: 'note', id: 'n1', text: '', tone: 'info', span: 12 });
     });
 
-    it('alanı kaldırmak onu gizlemez — yerleştirilmemişe döner', () => {
+    it('removing a field does not hide it — it goes back to unplaced', () => {
       const next = removeItem(doc(), 'f1');
       expect(placedColumns(next).has('A')).toBeFalse();
       expect(next.hiddenColumns).toEqual(['E']);
     });
 
-    it('gizle / göster', () => {
+    it('hide / show', () => {
       const hidden = hideColumn(doc(), 'A');
       expect(placedColumns(hidden).has('A')).toBeFalse();
       expect(hidden.hiddenColumns).toEqual(['E', 'A']);
       expect(unhideColumn(hidden, 'A').hiddenColumns).toEqual(['E']);
     });
 
-    it('silinmiş kolonun tüm izi kalkar', () => {
+    it('every trace of a deleted column is removed', () => {
       const d = { ...doc(), hiddenColumns: ['A'] };
       const next = removeColumnEverywhere(d, 'A');
       expect(placedColumns(next).has('A')).toBeFalse();
@@ -148,8 +148,8 @@ describe('form-layout.commands', () => {
     });
   });
 
-  describe('bölümler', () => {
-    it('ekle, yamala, taşı, kaldır', () => {
+  describe('sections', () => {
+    it('add, patch, move, remove', () => {
       let next = addSection(doc(), 't2', 'Notlar');
       const added = next.tabs[1].sections[1];
       expect(added).toEqual({ id: 's4', title: 'Notlar', items: [] });
@@ -163,23 +163,23 @@ describe('form-layout.commands', () => {
       expect(next.tabs[1].sections.map(s => s.id)).toEqual(['s3']);
     });
 
-    it('katlanmayan bölüme kapalı bayrağı yazılmaz', () => {
+    it('a non-collapsible section does not get the collapsed flag', () => {
       const d = doc();
       expect(patchSection(d, 's1', { collapsed: true })).toBe(d);
     });
 
-    it('bölüm kaldırılınca alanları yerleştirilmemişe döner', () => {
+    it('removing a section returns its fields to unplaced', () => {
       expect(placedColumns(removeSection(doc(), 's2')).has('D')).toBeFalse();
     });
   });
 
-  describe('sekmeler', () => {
-    it('yeni sekme boş bir bölümle gelir', () => {
+  describe('tabs', () => {
+    it('a new tab comes with one empty section', () => {
       const next = addTab(doc(), 'Ekler');
       expect(next.tabs[2]).toEqual({ id: 't3', title: 'Ekler', sections: [{ id: 's4', items: [] }] });
     });
 
-    it('yeniden adlandır, taşı; son sekme kaldırılamaz', () => {
+    it('rename, move; the last tab cannot be removed', () => {
       let next = renameTab(doc(), 't2', 'Detay');
       expect(next.tabs[1].title).toBe('Detay');
       next = moveTabBy(next, 't2', -1);
@@ -189,13 +189,13 @@ describe('form-layout.commands', () => {
       expect(removeTab(next, 't1')).toBe(next);
     });
 
-    it('sekme sonu: son bölümün sonu', () => {
+    it('end of tab: the end of the last section', () => {
       expect(endOfTab(doc(), 't1')).toEqual({ sectionId: 's2', index: 1 });
       expect(endOfTab(doc(), 'yok')).toBeNull();
     });
   });
 
-  it('komut zinciri her zaman geçerli kimlikler üretir', () => {
+  it('a chain of commands always produces valid ids', () => {
     let next = doc();
     for (let i = 0; i < 5; i++) {
       next = addTab(next, 'S' + i);

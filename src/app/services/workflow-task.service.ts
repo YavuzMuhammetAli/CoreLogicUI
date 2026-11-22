@@ -21,22 +21,22 @@ import { PagedResponseModel } from './published-model.service';
 import { environment } from '../../environments/environment';
 
 /**
- * Görev servisi — backend WorkflowTaskController (`/WorkflowTask`).
+ * Task service — backend WorkflowTaskController (`/WorkflowTask`).
  *
- * Bu uçlar admin İSTEMEZ: yetkilendirme atamayla yapılır (görevi yalnızca atanan
- * kullanıcı ya da atanan rolün üyesi kapatabilir, kontrol sunucuda).
+ * These endpoints do NOT REQUIRE admin: authorization comes from the assignment (only the assigned
+ * user or a member of the assigned role can close the task; checked on the server).
  */
 @Injectable({ providedIn: 'root' })
 export class WorkflowTaskService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/WorkflowTask`;
 
-  /** Oturumdaki kullanıcının bekleyen görevleri (doğrudan atananlar + rol havuzu). */
+  /** Pending tasks of the session user (directly assigned + role pool). */
   my(): Observable<ListResponseModel<WorkflowTask>> {
     return this.http.get<ListResponseModel<WorkflowTask>>(`${this.baseUrl}/my`);
   }
 
-  /** Sidebar rozeti — tam listeyi çekmeden yalnız sayı. */
+  /** Sidebar badge — only the count, without fetching the full list. */
   myCount(): Observable<DataResponseModel<number>> {
     return this.http.get<DataResponseModel<number>>(`${this.baseUrl}/myCount`);
   }
@@ -51,22 +51,22 @@ export class WorkflowTaskService {
       `${this.baseUrl}/forInstance`, { params: new HttpParams().set('instanceId', instanceId) });
   }
 
-  /** Görevi onaylar veya reddeder ve akışı ilerletir. */
+  /** Approves or rejects the task and advances the workflow. */
   complete(request: CompleteTaskRequest): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/complete`, request);
   }
 
   /**
-   * Görevlinin adım alanlarını, adımı ilerletmeden kaydeder. Yetki görev
-   * atamasından gelir (model güncelleme izni gerekmez); yalnız adım kolonları yazılır.
+   * Saves the assignee's step fields without advancing the step. Authorization comes from the task
+   * assignment (no model update permission needed); only the step columns are written.
    */
   saveRecord(request: SaveTaskRecordRequest): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/saveRecord`, request);
   }
 
   /**
-   * Adımı atlar ve akışı ilerletir (admin).
-   * Tamamlamadan ayrı uç: audit'te "onaylandı" ile "atlandı" ayırt edilebilmeli.
+   * Skips the step and advances the workflow (admin).
+   * A separate endpoint from complete: the audit must distinguish "approved" from "skipped".
    */
   skip(id: number, reason?: string | null): Observable<ResponseModel> {
     let params = new HttpParams().set('id', id);
@@ -74,50 +74,50 @@ export class WorkflowTaskService {
     return this.http.post<ResponseModel>(`${this.baseUrl}/skip`, null, { params });
   }
 
-  /** Görevi başka bir kullanıcıya/role devreder (admin). */
+  /** Reassigns the task to another user/role (admin). */
   reassign(request: ReassignTaskRequest): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/reassign`, request);
   }
 }
 
 /**
- * Süreç servisi — backend WorkflowInstanceController (`/WorkflowInstance`).
+ * Instance service — backend WorkflowInstanceController (`/WorkflowInstance`).
  *
- * Görev servisiyle aynı dosyada duruyor çünkü ikisi de "çalışan süreç" alanına ait
- * ve ekranlar (görev detayı, kayıt detayındaki Süreç paneli) ikisini birlikte
- * kullanıyor. Tanım yönetimi ise ayrı bir yetki alanı olduğu için ayrı serviste.
+ * Lives in the same file as the task service because both belong to the "running instance" area
+ * and the screens (task detail, the Süreç (Instance) panel in record detail) use them
+ * together. Definition management is a separate permission area, so it has its own service.
  */
 @Injectable({ providedIn: 'root' })
 export class WorkflowInstanceService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/WorkflowInstance`;
 
-  /** Elle süreç başlatır. Yetki: kayıt üzerinde güncelleme izni (sunucuda denetlenir). */
+  /** Starts an instance manually. Permission: update permission on the record (checked on the server). */
   start(request: StartWorkflowRequest): Observable<DataResponseModel<number>> {
     return this.http.post<DataResponseModel<number>>(`${this.baseUrl}/start`, request);
   }
 
-  /** Yeni kayıt ekranı: modelde elle başlatılabilen akışlar ("{Akış} Başlat" butonları). */
+  /** New record screen: workflows that can be started manually on the model ("{Akış} Başlat" (Start {workflow}) buttons). */
   startable(entityType: string): Observable<ListResponseModel<StartableWorkflow>> {
     return this.http.get<ListResponseModel<StartableWorkflow>>(`${this.baseUrl}/startable`, {
       params: new HttpParams().set('entityType', entityType)
     });
   }
 
-  /** Kayıt ekranının süreç durumu: kilit, adım butonları, başlatılabilir akışlar. */
+  /** Instance state of the record screen: lock, step buttons, startable workflows. */
   recordState(entityType: string, entityId: number): Observable<DataResponseModel<RecordWorkflowState>> {
     return this.http.get<DataResponseModel<RecordWorkflowState>>(`${this.baseUrl}/recordState`, {
       params: new HttpParams().set('entityType', entityType).set('entityId', entityId)
     });
   }
 
-  /** Zaman çizelgesi ve görevleriyle birlikte tek süreç. */
+  /** A single instance with its timeline and tasks. */
   get(id: number): Observable<DataResponseModel<WorkflowInstance>> {
     return this.http.get<DataResponseModel<WorkflowInstance>>(
       `${this.baseUrl}/get`, { params: new HttpParams().set('id', id) });
   }
 
-  /** Süreç listesi — filtreli, sayfalı, en yeni önce (admin). */
+  /** Instance list — filtered, paged, newest first (admin). */
   listPaged(query: WorkflowInstanceQuery): Observable<PagedResponseModel<WorkflowInstance>> {
     let params = new HttpParams().set('page', query.page).set('pageSize', query.pageSize);
     if (query.status) params = params.set('status', query.status);
@@ -133,8 +133,8 @@ export class WorkflowInstanceService {
     return this.http.get<ListResponseModel<WorkflowInstance>>(`${this.baseUrl}/list`, { params });
   }
 
-  /** Kayıt detayındaki "Süreç" panelinin veri kaynağı. */
-  /** `latestOnly`: yalnız en yeni süreç, olay geçmişi olmadan (kayıt başlığı yalnız kimliği kullanır). */
+  /** Data source of the "Süreç" (Instance) panel in record detail. */
+  /** `latestOnly`: only the newest instance, without the event history (the record header only uses the ID). */
   forEntity(entityType: string, entityId: number, latestOnly = false): Observable<ListResponseModel<WorkflowInstance>> {
     let params = new HttpParams().set('entityType', entityType).set('entityId', entityId);
     if (latestOnly) params = params.set('latestOnly', true);
@@ -142,10 +142,10 @@ export class WorkflowInstanceService {
   }
 
   /**
-   * Olay günlüğü zincirini doğrular (denetim, admin).
+   * Verifies the event log chain (audit, admin).
    *
-   * Günlük salt-ekleme olduğu için normalde bozulamaz; bu uç veritabanına
-   * doğrudan müdahale edilip edilmediğini gösterir.
+   * The log is append-only so it normally cannot be corrupted; this endpoint shows
+   * whether the database was tampered with directly.
    */
   verifyChain(instanceId: number): Observable<DataResponseModel<WorkflowChain>> {
     return this.http.get<DataResponseModel<WorkflowChain>>(
@@ -153,8 +153,8 @@ export class WorkflowInstanceService {
   }
 
   /**
-   * Süreci önceki bir adıma geri alır (admin).
-   * Yalnızca akış konumu geri alınır; iş verisi korunur.
+   * Rolls the instance back to a previous step (admin).
+   * Only the workflow position is rolled back; business data is preserved.
    */
   rollback(id: number, targetStepKey: string): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.baseUrl}/rollback`, null, {
@@ -162,22 +162,22 @@ export class WorkflowInstanceService {
     });
   }
 
-  /** Rollback hedefi seçimi için tanımdaki adımlar (admin). */
+  /** Steps in the definition, for choosing the rollback target (admin). */
   steps(instanceId: number): Observable<ListResponseModel<WorkflowStepInfo>> {
     return this.http.get<ListResponseModel<WorkflowStepInfo>>(
       `${this.baseUrl}/steps`, { params: new HttpParams().set('instanceId', instanceId) });
   }
 
   /**
-   * Hata vermiş (olay) otomatik adımı atlar (admin) — koşulda varsayılan yoldan
-   * devam edilir. Düzeltip yeniden denemek için aynı adıma `rollback`.
+   * Skips a failed (incident) automatic step (admin) — on a condition the default path
+   * is taken. To fix and retry, `rollback` to the same step.
    */
   skipStep(id: number): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(
       `${this.baseUrl}/skipStep`, null, { params: new HttpParams().set('id', id) });
   }
 
-  /** Süreci iptal eder ve açık görevlerini kapatır (admin). */
+  /** Cancels the instance and closes its open tasks (admin). */
   cancel(id: number): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(
       `${this.baseUrl}/cancel`, null, { params: new HttpParams().set('id', id) });

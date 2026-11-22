@@ -118,7 +118,7 @@
         <span class="field-help" id="ntf-ph-help">{{ 'workflow.notify.placeholdersHelp' | t }}</span>
         <div class="placeholder-chips" role="group" aria-labelledby="ntf-ph-help">
           @for (name of placeholders(); track name) {
-            <!-- mousedown varsayılanı engellenir: odak metin alanında kalsın, imleç kaybolmasın. -->
+            <!-- mousedown default is prevented: focus stays in the text field and the caret is not lost. -->
             <button type="button" class="btn btn-ghost btn-sm" (mousedown)="$event.preventDefault()"
                     (click)="insert(name, subjectEl, bodyEl)">{{ placeholderLabel(name) }}</button>
           }

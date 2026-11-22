@@ -2,17 +2,17 @@ import { PublishedColumn } from '../../services/published-model.service';
 import { ListLayout } from './screen-layout.model';
 
 /**
- * Liste kolonlarının çözümü — SAF.
+ * Resolution of list columns — PURE.
  *
- * Yayınlanmış liste yerleşimi varsa sıra ve genişlik ondan gelir; yerleştirilen kolon
- * görünür sayılır (sonradan eklenen kolon kendiliğinden listeye girmez — "Kolonlar"
- * ayarıyla aynı davranış). Yerleşim yoksa eski görünürlük ayarı (`legacyVisible`, null =
- * hepsi) şema sırasıyla uygulanır. Şemada olmayan (silinmiş) kolonlar atlanır.
+ * If a published list layout exists, order and width come from it; a placed column
+ * counts as visible (a column added later does not join the list by itself — same behaviour as the
+ * "Kolonlar" (Columns) setting). Without a layout, the legacy visibility setting (`legacyVisible`, null =
+ * all) is applied in schema order. Columns not in the schema (deleted) are skipped.
  */
 
 export interface ResolvedListColumn {
   readonly column: PublishedColumn;
-  /** Piksel genişlik; null = otomatik. */
+  /** Width in pixels; null = automatic. */
   readonly width: number | null;
 }
 
@@ -40,7 +40,7 @@ export function resolveListColumns(
     .map(column => ({ column, width: null }));
 }
 
-/** Tablonun sabit düzende toplam genişliği (otomatik kolonlar varsayılan genişlikle sayılır). */
+/** Total width of the table in fixed layout (auto columns count with the default width). */
 export function totalListWidth(resolved: readonly ResolvedListColumn[], autoWidth: number, extra: number): number {
   return resolved.reduce((sum, c) => sum + (c.width ?? autoWidth), extra);
 }

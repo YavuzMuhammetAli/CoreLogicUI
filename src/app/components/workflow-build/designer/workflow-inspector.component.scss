@@ -1,10 +1,10 @@
 :host { display: block; }
 
-// Tuvalle aynı yükseklikte kaydırılabilir kutu — uzun adımda sayfa uzamasın.
+// Scrollable box the same height as the canvas — a long step does not stretch the page.
 .inspector {
   display: flex;
   flex-direction: column;
-  max-height: var(--wf-panel-max-height, 640px); // tam ekranda tasarımcı 100% verir
+  max-height: var(--wf-panel-max-height, 640px); // in full screen the designer sets 100%
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 10px);
   background: var(--surface);
@@ -76,7 +76,7 @@
 
 .inspector-muted { color: var(--muted); }
 
-// Seçili adımın sorunları — alanların üstünde, ne eksik olduğu ilk bakışta görünsün.
+// Issues of the selected step — above the fields, so what is missing is visible at a glance.
 .inspector-issues {
   list-style: none;
   margin: 0;

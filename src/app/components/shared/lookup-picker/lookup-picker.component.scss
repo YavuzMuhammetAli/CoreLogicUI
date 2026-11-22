@@ -1,4 +1,4 @@
-/* Lookup seçim kutusu — model-autocomplete ile aynı token seti ve görsel dil. */
+/* Lookup picker — same token set and visual language as model-autocomplete. */
 
 .lk-wrapper {
   position: relative;
@@ -13,7 +13,7 @@
 
 .lk-input {
   width: 100%;
-  padding-right: calc(var(--space-6) + var(--space-1));   /* temizle butonuna yer */
+  padding-right: calc(var(--space-6) + var(--space-1));   /* room for the clear button */
 }
 
 .lk-clear {
@@ -26,7 +26,7 @@
   height: 20px;
   padding: 0;
 
-  /* Görünüm 20px kalır, dokunma alanı ~32px — parmakla ıskalanmasın */
+  /* The visual stays 20px, the touch area is ~32px — so fingers don't miss it */
   &::before {
     content: '';
     position: absolute;
@@ -45,22 +45,22 @@
   &:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 }
 
-/* position: fixed — absolute DEĞİL.
+/* position: fixed — NOT absolute.
  *
- * Liste, kırpan iki atadan da kurtulmak zorunda:
- *   1) .panel { overflow: hidden }        (styles.scss — kart köşe yuvarlaması için)
- *   2) .dialog-panel { overflow-y: auto } (kayıt pop-up'ının kendi kaydırması)
- * absolute konumlandırmada liste bu kutuların içinde kalıp kesiliyor ve yalnızca
- * ilk satır görünüyordu. fixed ile viewport'a göre konumlanır; top/left/width/max-height
- * değerleri açılışta input'un getBoundingClientRect()'inden hesaplanıp inline yazılır
- * (bkz. positionList). Kaydırma/yeniden boyutlandırmada yeniden hesaplanır.
+ * The list must escape both clipping ancestors:
+ *   1) .panel { overflow: hidden }        (styles.scss — for the card's rounded corners)
+ *   2) .dialog-panel { overflow-y: auto } (the record pop-up's own scrolling)
+ * With absolute positioning the list stayed inside these boxes, got cut off and only the
+ * first row was visible. With fixed it is positioned relative to the viewport; top/left/width/max-height
+ * are computed on open from the input's getBoundingClientRect() and written inline
+ * (see positionList). They are recomputed on scroll/resize.
  *
- * Kayıt pop-up'ında .dialog-overlay'in backdrop-filter'ı fixed için içeren blok oluşturur;
- * o katman da tam ekran (inset: 0) olduğu için sonuç değişmez.
+ * In the record pop-up, .dialog-overlay's backdrop-filter forms the containing block for fixed;
+ * since that layer is also full-screen (inset: 0), the result doesn't change.
  */
 .lk-list {
   position: fixed;
-  z-index: 1200;            /* .dialog-overlay'in üstünde kalmalı */
+  z-index: 1200;            /* must stay above .dialog-overlay */
   margin: 0;
   padding: var(--space-1);
   overflow-y: auto;
@@ -82,7 +82,7 @@
   white-space: nowrap;
   transition: background var(--motion-fast) var(--ease-standard);
 
-  /* Dar ekranda uzun etiket kesilmesin: dokunmatikte title'ı görmenin yolu yok */
+  /* Don't truncate long labels on narrow screens: there's no way to see the title on touch */
   @media (max-width: 768px) {
     white-space: normal;
     overflow-wrap: anywhere;
@@ -115,8 +115,8 @@
   text-align: center;
 }
 
-/* Sonsuz kaydırma tetikleyicisi — görünmez ama düzende yer kaplar ki
-   IntersectionObserver dibe yaklaşıldığını algılayabilsin. */
+/* Infinite scroll trigger — invisible but takes up space in the layout so that
+   IntersectionObserver can detect approaching the bottom. */
 .lk-sentinel {
   height: 1px;
   margin: 0;

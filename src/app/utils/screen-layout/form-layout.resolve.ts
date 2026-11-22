@@ -2,17 +2,17 @@ import { PublishedColumn } from '../../services/published-model.service';
 import { DEFAULT_FIELD_SPAN, FieldWidget, FormLayout, FormItem, NoteTone } from './screen-layout.model';
 
 /**
- * Yerleşim + modelin kolonları → çizilecek plan. SAF.
+ * Layout + the model's columns → the plan to render. PURE.
  *
- * Belgeyle şemanın arasındaki farklar burada kapanır:
- *  - Belgede olmayan ve gizlenmemiş kolonlar (tasarımdan SONRA eklenen alanlar) ilk sekmenin
- *    sonunda başlıksız bir bölüme eklenir — zorunlu yeni bir kolon kaybolup formu kilitlemesin.
- *  - Gizli ama görünmesi gereken kolonlar (zorunlu, iş akışı adımı) da oraya eklenir.
- *  - Belgedeki ama şemada olmayan kolonlar (silinmiş) çalışma anında atlanır.
- *  - Pop-up'ta FK ve ID gibi hiç çizilmeyecek kolonlar `excluded` ile düşer.
+ * Differences between the document and the schema are reconciled here:
+ *  - Columns not in the document and not hidden (fields added AFTER the design) are appended in an
+ *    untitled section at the end of the first tab — so a new required column cannot vanish and lock the form.
+ *  - Hidden columns that must be visible (required, workflow step) are appended there too.
+ *  - Columns in the document but not in the schema (deleted) are skipped at runtime.
+ *  - Columns never to be drawn, such as FK and ID in the pop-up, are dropped via `excluded`.
  *
- * Tasarım modunda boş bölüm/sekme korunur (bırakma hedefi), sona ekleme yapılmaz
- * (yerleştirilmemiş alanlar paletten görünür) ve bilinmeyen alanlar işaretli çizilir.
+ * In design mode empty sections/tabs are kept (drop targets), nothing is appended
+ * (unplaced fields are visible in the palette) and unknown fields are drawn flagged.
  */
 
 export const APPENDED_SECTION_ID = '__appended';
@@ -26,7 +26,7 @@ export interface PlanField {
   readonly newRow: boolean;
   readonly widget: FieldWidget | null;
   readonly rows: number | null;
-  /** Şemada olmayan kolon (yalnız tasarım modunda çizilir). */
+  /** A column not in the schema (drawn only in design mode). */
   readonly unknown: boolean;
 }
 
@@ -59,7 +59,7 @@ export interface PlanSection {
   readonly collapsible: boolean;
   readonly collapsed: boolean;
   readonly items: readonly PlanItem[];
-  /** Otomatik eklenen kolonların başlıksız bölümü. */
+  /** The untitled section of automatically appended columns. */
   readonly appended: boolean;
 }
 
@@ -76,22 +76,22 @@ export interface PlanLocation {
 
 export interface FormRenderPlan {
   readonly tabs: readonly PlanTab[];
-  /** Sona eklenen kolonlar: tasarımda olmayanlar + gizli olup görünmesi gerekenler. */
+  /** Appended columns: those not in the design + hidden ones that must be visible. */
   readonly appended: readonly string[];
-  /** Tasarımda ne yerleştirilmiş ne gizlenmiş kolonlar (tasarımdan sonra eklenmiş) — "güncel değil" uyarısı. */
+  /** Columns neither placed nor hidden in the design (added after the design) — the "out of date" warning. */
   readonly unplaced: readonly string[];
-  /** Tasarımda olup şemada olmayan kolonlar. */
+  /** Columns in the design but not in the schema. */
   readonly unknown: readonly string[];
-  /** Kolon → bulunduğu sekme/bölüm (geçersiz alanı göstermek için). */
+  /** Column → its tab/section (to reveal an invalid field). */
   readonly location: ReadonlyMap<string, PlanLocation>;
 }
 
 export interface ResolveOptions {
-  /** Gizlense de görünmesi gereken kolonlar: zorunlu alanlar, iş akışı adımının alanları. */
+  /** Columns that must be visible even if hidden: required fields, the workflow step's fields. */
   readonly forcedVisible?: ReadonlySet<string>;
-  /** Hiç çizilmeyecek kolonlar (pop-up'ta FK, ID). */
+  /** Columns never drawn (FK, ID in the pop-up). */
   readonly excluded?: ReadonlySet<string>;
-  /** Tasarım modu (yukarıdaki farklar). */
+  /** Design mode (the differences above). */
   readonly design?: boolean;
 }
 
@@ -191,7 +191,7 @@ function planItem(
   }
 }
 
-/** Sona eklenen kolonlar ilk sekmenin sonunda başlıksız bölümde — açılışta görünsünler. */
+/** Appended columns go in an untitled section at the end of the first tab — so they are visible on open. */
 function appendSection(
   tabs: PlanTab[],
   names: readonly string[],
@@ -222,7 +222,7 @@ function appendSection(
   for (const name of names) location.set(name, { tabId: tab.id, sectionId: APPENDED_SECTION_ID });
 }
 
-/** Planda çizilen alan kolonları, çizim sırasıyla. */
+/** Field columns drawn in the plan, in render order. */
 export function planColumns(plan: FormRenderPlan): string[] {
   const out: string[] = [];
   for (const tab of plan.tabs) {

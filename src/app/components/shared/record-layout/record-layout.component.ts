@@ -23,22 +23,22 @@ import { IconComponent } from '../icon/icon.component';
 const NONE: ReadonlySet<string> = new Set();
 
 /**
- * RecordLayoutComponent — bir kayıt formunun alanlarını yerleşime göre çizer.
+ * RecordLayoutComponent — draws a record form's fields according to the layout.
  *
- * Yayınlanmış ekran tasarımı (`layout`) yoksa bugünkü görünüm aynen kalır: alanlar
- * `legacyColumns` sırasıyla otomatik dolan ızgarada. Varsa sekmeler, katlanır bölümler
- * ve 12 kolonluk ızgara çizilir; belgeyle şema arasındaki farkları (yeni/silinmiş kolon,
- * zorunlu ya da iş akışı adımı alanının gizlenmiş olması) `resolveFormLayout` kapatır.
+ * Without a published screen design (`layout`) the current view stays as is: fields in an
+ * auto-filling grid in `legacyColumns` order. With one, tabs, collapsible sections
+ * and a 12-column grid are drawn; `resolveFormLayout` reconciles differences between the document
+ * and the schema (new/deleted columns, a required or workflow-step field being hidden).
  *
- * Form kontrolleri çağıranındır ve TÜM kolonları içerir; burada yalnız çizim yapılır.
- * Pasif sekme ve kapalı bölüm `@if` ile değil `hidden` ile gizlenir: alanlar canlı kalır
- * (lookup seçici her sekme geçişinde yeniden istek atmaz, seçilen dosya kaybolmaz).
+ * Form controls belong to the caller and include ALL columns; only drawing happens here.
+ * Inactive tabs and collapsed sections are hidden with `hidden`, not `@if`: the fields stay alive
+ * (the lookup picker doesn't re-request on every tab switch, a selected file isn't lost).
  *
- * Genişlik kademesi ekranın değil bu bileşenin genişliğinden seçilir (ResizeObserver):
- * aynı form sayfada geniş, alt kayıt pop-up'ında daha dar çizilir.
+ * The width tier is chosen from this component's width, not the screen's (ResizeObserver):
+ * the same form is drawn wide on the page and narrower in the child record pop-up.
  *
- * DEĞİŞİKLİK ALGILAMA `Default`: çağıranlar OnPush ve Kaydet'te `markAllAsTouched()` diyor;
- * sekme hata rozetleri ve alan hataları bunu girdiler değişmeden görmeli (bkz. record-field).
+ * CHANGE DETECTION `Default`: callers are OnPush and call `markAllAsTouched()` on Save;
+ * tab error badges and field errors must see that without inputs changing (see record-field).
  */
 @Component({
     selector: 'app-record-layout',
@@ -53,34 +53,34 @@ export class RecordLayoutComponent {
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
 
-  /** Kaydın formu — tüm kolonların kontrolleri. */
+  /** The record's form — controls for all columns. */
   readonly form = input.required<FormGroup>();
-  /** Modelin tüm kolonları (şema sırası). */
+  /** All columns of the model (schema order). */
   readonly columns = input.required<readonly PublishedColumn[]>();
-  /** Şema kuralları (zorunluluk, regex mesajı …). */
+  /** Schema rules (required, regex message …). */
   readonly rules = input<ReadonlyMap<string, PublishedColumnSchema>>(new Map());
-  /** Yayınlanmış form yerleşimi; null → bugünkü varsayılan görünüm. */
+  /** Published form layout; null → the current default view. */
   readonly layout = input<FormLayout | null>(null);
-  /** Varsayılan görünümde çizilecek kolonlar (çağıranın "Kolonlar" ayarıyla süzdüğü). */
+  /** Columns drawn in the default view (filtered by the caller's "Kolonlar" (Columns) setting). */
   readonly legacyColumns = input<readonly PublishedColumn[]>([]);
-  /** Tasarımda gizli olsa da görünmesi gereken kolonlar (zorunlu, iş akışı adımı). */
+  /** Columns that must be visible even if hidden in the design (required, workflow step). */
   readonly forcedVisible = input<ReadonlySet<string>>(NONE);
-  /** Hiç çizilmeyecek kolonlar (pop-up'ta FK, ID). */
+  /** Columns never drawn (FK, ID in the pop-up). */
   readonly excluded = input<ReadonlySet<string>>(NONE);
-  /** Sırası gelen görevlinin alanları — vurgulanır, sekmesi açılışta seçilir. */
+  /** Fields of the assignee whose turn it is — highlighted, their tab is selected on open. */
   readonly stepColumns = input<ReadonlySet<string>>(NONE);
-  /** Ekrandaki benzersiz id öneki (iç içe pop-up'larda çakışmasın). */
+  /** Unique id prefix on the screen (so nested pop-ups don't collide). */
   readonly idPrefix = input('field-');
-  /** Forma bağlı otomatik değer kuralları (ƒx rozeti, "kaydedince atanır" ipucu). */
+  /** Auto-value rules bound to the form (ƒx badge, "kaydedince atanır" (assigned on save) hint). */
   readonly autoValues = input<AutoValueFormBinding | null>(null);
-  /** Admin'e "tasarım güncel değil" uyarısındaki tasarımcı bağlantısı; null → uyarı yok. */
+  /** Designer link in the admin's "design is out of date" warning; null → no warning. */
   readonly designLink = input<string[] | null>(null);
-  /** Kademeyi ölçmek yerine sabitle (tasarımcının önizleme seçicisi). */
+  /** Fix the tier instead of measuring it (the designer's preview selector). */
   readonly forceTier = input<WidthTier | null>(null);
 
   /**
-   * Geçersiz olduğu hâlde tasarımda gizli kalan kolonlar — Kaydet'te görünür yapılır
-   * (ör. eski kayıttaki değer sonradan eklenen regex'e uymuyor). Form yeniden kurulana dek kalır.
+   * Columns that are invalid yet hidden in the design — made visible on Save
+   * (e.g. an old record's value doesn't match a regex added later). They stay until the form is rebuilt.
    */
   private readonly revealed = signal<ReadonlySet<string>>(NONE);
 
@@ -104,17 +104,17 @@ export class RecordLayoutComponent {
   });
   readonly showTabBar = computed(() => (this.plan()?.tabs.length ?? 0) > 1);
 
-  /** Kullanıcının açıp kapattığı bölümler (kimlik → açık mı); yoksa tasarımdaki varsayılan. */
+  /** Sections the user toggled (id → open?); otherwise the design's default. */
   private readonly sectionOpen = signal<ReadonlyMap<string, boolean>>(new Map());
 
-  /** Kaydet denendi — sekme hata rozetleri ancak bundan sonra görünür. */
+  /** Save was attempted — tab error badges only appear after this. */
   private readonly submitted = signal(false);
 
   constructor() {
     afterNextRender(() => {
       const element = this.host.nativeElement;
       this.measuredTier.set(widthTier(element.clientWidth));
-      // ResizeObserver zone.js tarafından yamalanmaz: kademe değişince bölgeye girilir.
+      // ResizeObserver isn't patched by zone.js: the zone is entered when the tier changes.
       const observer = new ResizeObserver(entries => {
         const next = widthTier(entries[0]?.contentRect.width ?? element.clientWidth);
         if (next !== this.measuredTier()) this.zone.run(() => this.measuredTier.set(next));
@@ -123,7 +123,7 @@ export class RecordLayoutComponent {
       this.destroyRef.onDestroy(() => observer.disconnect());
     });
 
-    // Görevli kaydı açınca dolduracağı alanların sekmesi seçilir, bölümleri açılır.
+    // When the assignee opens the record, the tab of the fields they'll fill is selected and its sections opened.
     effect(() => {
       const plan = this.plan();
       const steps = this.stepColumns();
@@ -131,7 +131,7 @@ export class RecordLayoutComponent {
       untracked(() => this.revealColumns(plan, steps));
     });
 
-    // Form yeniden kurulunca önceki Kaydet denemesinin izi silinir.
+    // When the form is rebuilt, traces of the previous Save attempt are cleared.
     effect(() => {
       this.form();
       untracked(() => {
@@ -141,7 +141,7 @@ export class RecordLayoutComponent {
     });
   }
 
-  // ─── Şablon yardımcıları ────────────────────────────────────────────────────
+  // ─── Template helpers ────────────────────────────────────────────────────
 
   control(column: string): AbstractControl | null {
     return this.form().get(column);
@@ -155,7 +155,7 @@ export class RecordLayoutComponent {
     return visibleAtTier(item, this.tier());
   }
 
-  /** CSS grid-column: genişlik kademeye göre, "yeni satır" ilk kolondan başlar. */
+  /** CSS grid-column: width per tier, "new row" starts at the first column. */
   gridColumn(item: PlanItem): string {
     if (item.kind === 'divider') return '1 / -1';
     const span = itemSpan(item, this.tier());
@@ -175,7 +175,7 @@ export class RecordLayoutComponent {
     this.activeTab.set(tabId);
   }
 
-  /** WAI-ARIA sekme deseni: ok tuşları / Home / End sekmeler arasında gezer. */
+  /** WAI-ARIA tab pattern: arrow keys / Home / End move between tabs. */
   onTabKeydown(event: KeyboardEvent, index: number): void {
     const tabs = this.plan()?.tabs ?? [];
     if (tabs.length === 0) return;
@@ -190,19 +190,19 @@ export class RecordLayoutComponent {
     afterNextRender(() => this.focusById(this.idPrefix() + 'tab-' + tabs[next].id), { injector: this.injector });
   }
 
-  /** Sekmedeki geçersiz alan sayısı — yalnız Kaydet denendikten sonra. */
+  /** Number of invalid fields in the tab — only after Save was attempted. */
   tabErrorCount(tabId: string): number {
     const plan = this.plan();
     if (!plan || !this.submitted()) return 0;
     return invalidCountByTab(plan, this.invalidColumns()).get(tabId) ?? 0;
   }
 
-  // ─── Geçersiz alanı gösterme ────────────────────────────────────────────────
+  // ─── Revealing the invalid field ────────────────────────────────────────────────
 
   /**
-   * Kaydet geçersiz formda durduğunda çağrılır: ilk hatalı alanın sekmesine geçer, bölümünü
-   * açar, alanı ortalayıp odaklar. Tasarımda gizli kalmış hatalı alanı görünür yapar.
-   * Gösterecek alan yoksa false.
+   * Called when Save stops on an invalid form: switches to the first invalid field's tab, opens its
+   * section, centres and focuses the field. Makes an invalid field hidden in the design visible.
+   * Returns false if there's no field to show.
    */
   revealFirstInvalid(): boolean {
     this.submitted.set(true);
@@ -237,7 +237,7 @@ export class RecordLayoutComponent {
     return true;
   }
 
-  /** Geçersiz (ve etkin) kontrollerin kolon adları. Disabled kontrol hiçbir zaman geçersiz sayılmaz. */
+  /** Column names of invalid (and enabled) controls. A disabled control never counts as invalid. */
   private invalidColumns(): Set<string> {
     const out = new Set<string>();
     const controls = this.form().controls;

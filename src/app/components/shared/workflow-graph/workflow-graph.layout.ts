@@ -6,18 +6,18 @@ import {
 } from './workflow-edge.geometry';
 
 /**
- * Akış şeması geometrisi — SAF fonksiyon, Angular import'u YOK.
+ * Flow diagram geometry — PURE functions, NO Angular imports.
  *
- * entity-graph.layout.ts ile aynı ayrım (TestBed'siz test edilebilirlik) ama iki
- * önemli farkla:
- *   1) Şema YUKARIDAN AŞAĞI dizilir (entity-graph soldan sağa).
- *   2) Katman SUNUCUDAN GELMEZ. entity-graph'ta düğümlerin `depth` alanı sunucu
- *      tarafından hesaplanıyordu; akış tanımında böyle bir alan yok, bu yüzden
- *      katmanlar başlangıç adımından en uzun yol ile burada hesaplanıyor.
+ * Same separation as entity-graph.layout.ts (testability without TestBed) but with two
+ * important differences:
+ *   1) The diagram is laid out TOP TO BOTTOM (entity-graph goes left to right).
+ *   2) Layers DO NOT COME FROM THE SERVER. In entity-graph the nodes' `depth` field was
+ *      computed by the server; a flow definition has no such field, so
+ *      layers are computed here via the longest path from the start step.
  */
 
-// Geometri sabitleri ve kenar formulu workflow-edge.geometry.ts'te; buradan
-// yeniden disa aktariliyor ki mevcut ithal edenler (spec dahil) degismesin.
+// Geometry constants and the edge formula live in workflow-edge.geometry.ts; they are
+// re-exported from here so existing importers (spec included) do not change.
 export {
   NODE_WIDTH, NODE_HEIGHT, COLUMN_GAP, ROW_GAP,
   PADDING, TERMINAL_HEIGHT, LABEL_OFFSET, BRANCH_LINE_HEIGHT
@@ -34,19 +34,19 @@ export interface LayoutNode {
   width: number;
   height: number;
   isStart: boolean;
-  /** Terminal düğümler (tamamlandı/reddedildi) farklı çizilir. */
+  /** Terminal nodes (completed/rejected) are drawn differently. */
   isTerminal: boolean;
-  /** Reddedilme terminali kırmızı tonda. */
+  /** The rejection terminal is in a red tone. */
   isRejection: boolean;
-  /** Paralel adım — kutu içinde dal adları listelenir. */
+  /** Parallel step — branch names are listed inside the box. */
   isParallel: boolean;
   /**
-   * Paralel adımın dal etiketleri (ör. ["finans", "satinalma"]).
-   * Ayrı düğüm olarak çizilmezler: dallar aynı anda açılıp aynı adımda birleştiği
-   * için tek kutu içinde göstermek akışı daha okunur kılıyor ve şemayı yaymıyor.
+   * Branch labels of the parallel step (e.g. ["finans", "satinalma"]).
+   * They are not drawn as separate nodes: since branches open at the same time and join at the same
+   * step, showing them in a single box makes the flow more readable and does not spread the diagram.
    */
   branchLabels: string[];
-  /** Join kuralı rozeti: "tümü" | "herhangi biri". Tekil adımda boş. */
+  /** Join rule badge: "tümü" | "herhangi biri" (all | any). Empty for a single step. */
   joinLabel: string;
 }
 
@@ -56,7 +56,7 @@ export interface LayoutEdge {
   labelX: number;
   labelY: number;
   label: string;
-  /** Red kenarları kesikli ve kırmızı çizilir. */
+  /** Reject edges are drawn dashed and red. */
   isRejection: boolean;
   minX: number;
   minY: number;
@@ -71,8 +71,8 @@ export interface WorkflowLayout {
 }
 
 /**
- * Grafiği yerleşime çevirir. Girdi null/boşsa boş yerleşim döner —
- * bileşen bu durumu "önizleme için adım ekleyin" mesajıyla karşılar.
+ * Turns the graph into a layout. If the input is null/empty an empty layout is returned —
+ * the component handles this with an "add steps for a preview" message.
  */
 export function layoutWorkflow(graph: WorkflowGraph | null): WorkflowLayout {
   if (!graph || graph.steps.length === 0) {
@@ -88,20 +88,20 @@ export function layoutWorkflow(graph: WorkflowGraph | null): WorkflowLayout {
 }
 
 /**
- * Her adımın katmanını başlangıçtan EN UZUN yol ile hesaplar.
+ * Computes each step's layer via the LONGEST path from the start.
  *
- * En uzun yol (en kısa değil): bir adım birden çok yoldan ulaşılabiliyorsa, en
- * geç ulaşıldığı katmanda çizilmeli ki oklar hep aşağı doğru aksın.
+ * Longest path (not shortest): if a step is reachable via several paths it must be drawn
+ * at the layer where it is reached latest, so arrows always flow downward.
  *
- * Döngüler (red → önceki adıma dönüş) meşrudur ama en uzun yol döngülü grafikte
- * tanımsızdır. Önceki BFS ziyaret edilen düğümü "daha derin katman bulundukça"
- * yeniden kuyruğa sokuyordu; döngüde bu her turda doğruydu ve yalnız güvenlik
- * tavanı durduruyordu — başlangıç adımı bile en alt satıra düşebiliyordu.
- * Şimdi iki aşama var:
- *   1) Başlangıçtan derinlik öncelikli arama; YIĞINDAKİ bir düğüme giden kenar
- *      geri dönüş sayılır ve katmanlamaya katılmaz (geri kalanı döngüsüzdür).
- *   2) Döngüsüz kenarlarda topolojik sırayla en uzun yol. Başlangıç hep 0.
- * Geri dönüşler canvas'ta yandan dolaştırılır.
+ * Cycles (reject → back to a previous step) are legitimate, but the longest path is undefined
+ * in a cyclic graph. The previous BFS re-queued a visited node "whenever a deeper layer
+ * was found"; in a cycle this was true on every round and only the safety
+ * cap stopped it — even the start step could fall to the bottom row.
+ * Now there are two phases:
+ *   1) Depth-first search from the start; an edge to a node ON THE STACK
+ *      counts as a back edge and does not take part in layering (the rest is acyclic).
+ *   2) Longest path in topological order over the acyclic edges. The start is always 0.
+ * Back edges are routed around the side on the canvas.
  */
 function computeLayers(graph: WorkflowGraph): Map<string, number> {
   const byKey = new Map(graph.steps.map(step => [step.key.toLowerCase(), step]));
@@ -121,7 +121,7 @@ function computeLayers(graph: WorkflowGraph): Map<string, number> {
       if (!target || isTerminal(target) || !byKey.has(target)) continue;
 
       const seen = state.get(target);
-      if (seen === 'visiting') continue;       // geri dönüş — katmanlamaya katılmaz
+      if (seen === 'visiting') continue;       // back edge — does not take part in layering
       targets.push(target);
       if (seen === undefined) visit(target);
     }
@@ -133,7 +133,7 @@ function computeLayers(graph: WorkflowGraph): Map<string, number> {
 
   visit(startKey);
 
-  // Ters postorder döngüsüz kenarlar için geçerli bir topolojik sıradır.
+  // Reverse postorder is a valid topological order for the acyclic edges.
   const layers = new Map<string, number>([[startKey, 0]]);
   for (const key of postorder.reverse()) {
     const layer = layers.get(key) ?? 0;
@@ -142,8 +142,8 @@ function computeLayers(graph: WorkflowGraph): Map<string, number> {
     }
   }
 
-  // Ulaşılamayan adımlar da çizilmeli — kullanıcı kopukluğu görmeli.
-  // (Doğrulayıcı bunu hata sayar; şema o hatayı görünür kılar.)
+  // Unreachable steps must be drawn too — the user should see the disconnection.
+  // (The validator counts it as an error; the diagram makes that error visible.)
   let orphanLayer = Math.max(0, ...layers.values()) + 1;
   for (const step of graph.steps) {
     if (!layers.has(step.key.toLowerCase())) {
@@ -154,21 +154,21 @@ function computeLayers(graph: WorkflowGraph): Map<string, number> {
   return layers;
 }
 
-/** Yan yana iki kutunun merkezleri arası — onay/red dallanmasının yarısı bu kadar kayar. */
+/** Distance between the centres of two side-by-side boxes — half of an approve/reject branching shifts by this much. */
 const COLUMN_PITCH = NODE_WIDTH + COLUMN_GAP;
 
 /**
- * Düğümleri yerleştirir.
+ * Places the nodes.
  *
- * Dikey: her katmanın y'si bir önceki katmanın EN UZUN kutusunun altından
- * ROW_GAP kadar aşağıdadır. Sabit `layer * (NODE_HEIGHT + ROW_GAP)` paralel
- * kutuyu (dal başına uzar) hesaba katmıyor, alt satır onun üstüne biniyordu.
+ * Vertical: each layer's y is ROW_GAP below the bottom of the TALLEST box of the
+ * previous layer. A fixed `layer * (NODE_HEIGHT + ROW_GAP)` did not account for the parallel
+ * box (it grows per branch), and the row below overlapped it.
  *
- * Yatay: her düğüm, üst katmandaki ebeveynlerinin altına yerleşmek ister.
- * Ebeveyn İKİ ayrı adıma dallanıyorsa onay hedefi sola, red hedefi sağa yarım
- * sütun kayar — kutudaki yeşil/kırmızı portların sırasıyla aynı. Tek hedefte
- * kayma yok: onay zinciri dikey bir omurga olarak kalır. Aynı yeri isteyen
- * kutular soldan sağa itilir, sonra katman dengede kalsın diye geri ortalanır.
+ * Horizontal: each node wants to sit below its parents in the layer above.
+ * If the parent branches into TWO separate steps, the approve target shifts left and the reject target right by half a
+ * column — the same order as the green/red ports on the box. With a single target there is
+ * no shift: the approval chain stays a vertical spine. Boxes wanting the same spot
+ * are pushed left to right, then re-centred so the layer stays balanced.
  */
 function placeNodes(graph: WorkflowGraph, layers: Map<string, number>): LayoutNode[] {
   const nodes: LayoutNode[] = graph.steps.map(step => {
@@ -182,25 +182,25 @@ function placeNodes(graph: WorkflowGraph, layers: Map<string, number>): LayoutNo
       x: 0,
       y: 0,
       width: size.width,
-      // Paralel kutu dalları da listeliyor; yükseklik formülü nodeSize'da.
+      // The parallel box also lists its branches; the height formula is in nodeSize.
       height: size.height,
       isStart: eq(step.key, graph.startStep),
       isTerminal: false,
       isRejection: false,
       isParallel,
       branchLabels: isParallel ? (step.branches ?? []).map(b => b.name || b.key) : [],
-      joinLabel: isParallel ? (step.mode === 'any' ? 'herhangi biri' : 'tümü') : ''
+      joinLabel: isParallel ? (step.mode === 'any' ? 'any' : 'all') : ''
     };
   });
 
-  // Terminaller yalnızca gerçekten hedeflenmişse çizilir — her şemaya iki kutu
-  // eklemek gereksiz gürültü olurdu. Hep en alt katmanda.
+  // Terminals are drawn only if actually targeted — adding two boxes to every diagram
+  // would be needless noise. Always on the bottom layer.
   const terminalLayer = Math.max(...nodes.map(n => n.layer)) + 1;
 
   for (const terminal of collectUsedTerminals(graph)) {
     nodes.push({
       key: terminal,
-      label: terminal === WORKFLOW_TERMINAL_REJECTED ? 'Reddedildi' : 'Tamamlandı',
+      label: terminal === WORKFLOW_TERMINAL_REJECTED ? 'Rejected' : 'Completed',
       layer: terminalLayer,
       x: 0,
       y: 0,
@@ -221,7 +221,7 @@ function placeNodes(graph: WorkflowGraph, layers: Map<string, number>): LayoutNo
   return nodes;
 }
 
-/** Katman y'lerini birikimli hesaplar: satır yüksekliği = katmandaki en uzun kutu. */
+/** Computes layer y values cumulatively: row height = the tallest box in the layer. */
 function assignRows(nodes: LayoutNode[]): void {
   const layerHeights = new Map<number, number>();
   for (const node of nodes) {
@@ -241,15 +241,15 @@ function assignRows(nodes: LayoutNode[]): void {
 }
 
 /**
- * Katman katman, ebeveynler yerleştikten sonra x atar.
+ * Assigns x layer by layer, after the parents are placed.
  *
- * Yalnızca İLERİ kenarlar (üst katmandan alta) hesaba katılır; geri dönüşler
- * yerleşimi etkilemez, canvas'ta yandan dolaştırılır.
+ * Only FORWARD edges (from an upper layer to a lower one) are considered; back edges
+ * do not affect the layout, they are routed around the side on the canvas.
  */
 function assignColumns(graph: WorkflowGraph, nodes: LayoutNode[]): void {
   const byKey = new Map(nodes.map(node => [node.key.toLowerCase(), node]));
 
-  // Hedef → [ebeveyn, kayma yönü (-1 sol / 0 / +1 sağ)]
+  // Target → [parent, shift direction (-1 left / 0 / +1 right)]
   const parents = new Map<string, Array<{ parent: LayoutNode; bias: number }>>();
   const addParent = (targetKey: string, parent: LayoutNode, bias: number) => {
     const target = byKey.get(targetKey.toLowerCase());
@@ -268,8 +268,8 @@ function assignColumns(graph: WorkflowGraph, nodes: LayoutNode[]): void {
     const approveTarget = approve || WORKFLOW_TERMINAL_COMPLETED;
     const rejectTarget = reject || WORKFLOW_TERMINAL_REJECTED;
 
-    // Terminal hedefi dallanma sayılmaz: neredeyse her adımın reddi terminale
-    // gider ve bu sayılsaydı onay zinciri her katmanda yarım sütun sola kayardı.
+    // A terminal target does not count as branching: almost every step's reject goes to the terminal,
+    // and if it counted, the approval chain would shift half a column left on every layer.
     const forks = !isTerminal(approveTarget) && !isTerminal(rejectTarget)
       && !eq(approveTarget, rejectTarget)
       && isBelow(byKey, source, approveTarget) && isBelow(byKey, source, rejectTarget);
@@ -290,13 +290,13 @@ function assignColumns(graph: WorkflowGraph, nodes: LayoutNode[]): void {
         ? incoming.reduce((sum, p) => sum + center(p.parent) + p.bias * COLUMN_PITCH / 2, 0) / incoming.length
         : 0;
 
-      // Terminaller: tamamlandı solda, reddedildi sağda (portlarla aynı sıra).
+      // Terminals: completed on the left, rejected on the right (same order as the ports).
       if (node.isTerminal) wanted += (node.isRejection ? 1 : -1) * COLUMN_PITCH / 2;
 
       return { node, left: wanted - node.width / 2, order };
     });
 
-    // Sıralama kararlı: eşitlikte tanım sırası korunur.
+    // Sorting is stable: definition order is kept on ties.
     desired.sort((a, b) => a.left - b.left || a.order - b.order);
 
     let previousRight = -Infinity;
@@ -308,13 +308,13 @@ function assignColumns(graph: WorkflowGraph, nodes: LayoutNode[]): void {
       previousRight = left + item.node.width;
     }
 
-    // İtme hep sağa doğru; ortalama kayma geri alınır ki katman istediği
-    // merkezin etrafında dengeli dursun (aralıklar değişmez, hepsi birlikte kayar).
+    // Pushing is always to the right; the average shift is undone so the layer stays
+    // balanced around the centre it wants (gaps don't change, everything shifts together).
     const shift = drift / desired.length;
     for (const item of desired) item.node.x -= shift;
   }
 
-  // En soldaki kutu PADDING'den başlasın.
+  // The leftmost box should start at PADDING.
   const minX = Math.min(...nodes.map(n => n.x));
   for (const node of nodes) node.x += PADDING - minX;
 }
@@ -325,8 +325,8 @@ function isBelow(byKey: Map<string, LayoutNode>, source: LayoutNode, targetKey: 
 }
 
 /**
- * Şemada gösterilecek terminaller. Boş hedef de terminal sayılır: boş onApprove
- * "tamamla", boş onReject "reddet" varsayılanına düşer (motorla aynı kural).
+ * Terminals to show on the diagram. An empty target counts as a terminal too: an empty onApprove
+ * falls back to the "complete" default, an empty onReject to "reject" (same rule as the engine).
  */
 function collectUsedTerminals(graph: WorkflowGraph): string[] {
   const used = new Set<string>();
@@ -341,13 +341,13 @@ function collectUsedTerminals(graph: WorkflowGraph): string[] {
     }
   }
 
-  // Sıra sabit: tamamlandı solda, reddedildi sağda.
+  // Fixed order: completed on the left, rejected on the right.
   return [WORKFLOW_TERMINAL_COMPLETED, WORKFLOW_TERMINAL_REJECTED].filter(t => used.has(t));
 }
 
 /**
- * Onay kenarı yeşil porttan, red kenarı kırmızı porttan çıkar (canvas'taki port
- * konumlarıyla aynı formül); geri dönüşler routeEdges'te yandan dolaştırılır.
+ * The approve edge leaves from the green port, the reject edge from the red port (same formula as
+ * the port positions on the canvas); back edges are routed around the side in routeEdges.
  */
 function buildEdges(graph: WorkflowGraph, byKey: Map<string, LayoutNode>): LayoutEdge[] {
   const pending: Array<{ key: string; label: string; isRejection: boolean; request: EdgeRequest }> = [];
@@ -359,13 +359,13 @@ function buildEdges(graph: WorkflowGraph, byKey: Map<string, LayoutNode>): Layou
     const { approve, reject } = outgoingTargets(step);
     const [approvePort, rejectPort] = portPositions(2, source.width);
     const outgoing = [
-      { targetKey: approve || WORKFLOW_TERMINAL_COMPLETED, label: 'onay', isRejection: false, port: approvePort },
-      { targetKey: reject || WORKFLOW_TERMINAL_REJECTED, label: 'red', isRejection: true, port: rejectPort }
+      { targetKey: approve || WORKFLOW_TERMINAL_COMPLETED, label: 'approve', isRejection: false, port: approvePort },
+      { targetKey: reject || WORKFLOW_TERMINAL_REJECTED, label: 'reject', isRejection: true, port: rejectPort }
     ];
 
     for (const edge of outgoing) {
       const target = byKey.get(edge.targetKey.toLowerCase());
-      // Hedefi çizilmemiş kenar sessizce atlanır (entity-graph ile aynı davranış).
+      // An edge whose target is not drawn is silently skipped (same behaviour as entity-graph).
       if (!target) continue;
 
       pending.push({
@@ -398,9 +398,9 @@ function buildEdges(graph: WorkflowGraph, byKey: Map<string, LayoutNode>): Layou
 }
 
 /**
- * Görünüm kutusu. Sol üst köşe 0 0 OLAMAZ: geri dönen (rework) kenarlar düğümün
- * soluna taşabiliyor ve sabit bir başlangıç bu kısmı kırpardı — entity-graph'taki
- * self-loop taşmasıyla aynı gerekçe.
+ * View box. The top-left corner CANNOT be 0 0: returning (rework) edges can overflow
+ * to the left of a node and a fixed origin would clip that part — same rationale as
+ * the self-loop overflow in entity-graph.
  */
 function computeViewBox(nodes: LayoutNode[], edges: LayoutEdge[]): string {
   if (nodes.length === 0) return EMPTY_VIEW_BOX;
@@ -429,7 +429,7 @@ function computeViewBox(nodes: LayoutNode[], edges: LayoutEdge[]): string {
   return `${x} ${y} ${width} ${height}`;
 }
 
-// ── Yardımcılar ──────────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────
 
 function eq(a: string | null | undefined, b: string | null | undefined): boolean {
   return (a ?? '').toLowerCase() === (b ?? '').toLowerCase();

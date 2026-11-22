@@ -3,7 +3,7 @@
   min-width: 0;
 }
 
-/* ── Yerleşim: palet · tuval · inceleyici ──────────────────────────────────── */
+/* ── Layout: palette · canvas · inspector ─────────────────────────────────── */
 
 .form-designer {
   display: grid;
@@ -18,7 +18,7 @@
   }
 }
 
-/* ── Palet ─────────────────────────────────────────────────────────────────── */
+/* ── Palette ───────────────────────────────────────────────────────────────── */
 
 .palette {
   position: sticky;
@@ -99,7 +99,7 @@
   color: var(--muted);
 }
 
-/* ── Tuval ─────────────────────────────────────────────────────────────────── */
+/* ── Canvas ────────────────────────────────────────────────────────────────── */
 
 .canvas {
   position: relative;
@@ -202,7 +202,7 @@
   font-style: italic;
 }
 
-/* 12 kolonluk ızgara — kayıt ekranıyla aynı ölçüler (app-record-layout) */
+/* 12-column grid — same dimensions as the record screen (app-record-layout) */
 .canvas-grid {
   position: relative;
   display: grid;
@@ -212,7 +212,7 @@
   min-height: 64px;
 }
 
-/* Kolon kılavuzları: ızgaranın kendisiyle aynı şablon ve aralık — hizası birebir */
+/* Column guides: same template and gap as the grid itself — alignment is exact */
 .canvas-guides {
   position: absolute;
   inset: 0;
@@ -286,7 +286,7 @@
   transition: opacity var(--motion-fast) var(--ease-standard);
 }
 
-/* Sağ kenar tutamacı — sürüklenince genişlik kolon adımına oturur */
+/* Right-edge handle — while dragging, the width snaps to the column pitch */
 .canvas-resize {
   position: absolute;
   top: 0;
@@ -390,7 +390,7 @@
   pointer-events: none;
 }
 
-/* ── Önizleme ──────────────────────────────────────────────────────────────── */
+/* ── Preview ───────────────────────────────────────────────────────────────── */
 
 .preview-stage {
   display: flex;
@@ -411,7 +411,7 @@
   @media (max-width: 768px) { padding: var(--space-3); }
 }
 
-/* ── Telefon: yapı listesi ─────────────────────────────────────────────────── */
+/* ── Phone: structure list ─────────────────────────────────────────────────── */
 
 .structure-notice {
   margin-bottom: var(--space-4);

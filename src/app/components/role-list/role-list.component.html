@@ -1,4 +1,4 @@
-<!-- Sayfa başlığı -->
+<!-- Page header -->
 <div class="page-header">
   <span class="eyebrow">{{ 'role.list.title' | t }}</span>
 </div>
@@ -22,12 +22,12 @@
     </div>
   </div>
 
-  <!-- Hata -->
+  <!-- Error -->
   @if (loadError()) {
     <div class="alert alert-danger" style="margin: var(--space-4) var(--space-5)" role="alert">{{ loadError() }}</div>
   }
 
-  <!-- Yükleniyor -->
+  <!-- Loading -->
   @if (loading()) {
     <div class="empty-state">
       <span class="spinner" style="width: 32px; height: 32px;" [attr.aria-label]="'common.loading' | t"></span>
@@ -35,7 +35,7 @@
     </div>
   }
 
-  <!-- Boş -->
+  <!-- Empty -->
   @if (!loading() && !loadError() && rows().length === 0) {
     <div class="empty-state">
       <app-icon class="empty-icon" name="inbox" size="40" />
@@ -45,7 +45,7 @@
     </div>
   }
 
-  <!-- Tablo -->
+  <!-- Table -->
   @if (!loading() && !loadError() && rows().length > 0) {
     <div class="table-wrapper">
       <table class="data-table" [attr.aria-label]="'role.list.tableLabel' | t">
@@ -94,7 +94,7 @@
   }
 </div>
 
-<!-- Rol silme onayı — native confirm() yerine tasarım sistemine uygun diyalog -->
+<!-- Role delete confirmation — a design-system dialog instead of native confirm() -->
 <app-confirm-dialog
   [open]="pendingDelete() !== null"
   [title]="'role.list.deleteConfirmTitle' | t"

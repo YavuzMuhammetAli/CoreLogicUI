@@ -12,10 +12,10 @@ import { formatNumber } from '../../utils/locale-format';
 
 
 /**
- * Tüm zorunlu grafik tiplerinin (column/bar/line/area/pie/donut/radialBar/kpi) TEK render
- * noktası. ChartType + veri → `chart-mapping.ts`'teki `buildChartOptions`/`buildKpiOutput`
- * üzerinden ApexOptions'a eşlenir; bu component ad-hoc dönüşüm yapmaz. Tema değişince
- * (`ThemeService.theme`) palet `getComputedStyle` ile token'lardan yeniden okunur.
+ * The SINGLE render point for all required chart types (column/bar/line/area/pie/donut/radialBar/kpi).
+ * ChartType + data → mapped to ApexOptions via `buildChartOptions`/`buildKpiOutput` in
+ * `chart-mapping.ts`; this component does no ad-hoc conversion. When the theme changes
+ * (`ThemeService.theme`) the palette is re-read from the tokens with `getComputedStyle`.
  */
 @Component({
     selector: 'app-chart',
@@ -33,14 +33,14 @@ export class AppChartComponent {
   chartType = input.required<ChartType>();
   columns = input.required<ReportColumnInfo[]>();
   rows = input.required<Record<string, unknown>[]>();
-  /** Üst component'in async veri çekme durumu — chart kendi adına ayrıca veri çekmez. */
+  /** The parent component's async data-fetch state — the chart does not fetch data on its own. */
   loading = input<boolean>(false);
-  /** Üst component'ten gelen hata mesajı (örn. dashboard'da erişimi olmayan widget). */
+  /** Error message from the parent component (e.g. a widget the user has no access to on a dashboard). */
   error = input<string | null>(null);
 
   private readonly tokens = signal<ChartTokenColors | null>(null);
 
-  /** Tema değişince (light/dark) token'ları yeniden okur — grafik paleti otomatik güncellenir. */
+  /** Re-reads the tokens when the theme changes (light/dark) — the chart palette updates automatically. */
   private readonly syncTokens = effect(() => {
     this.themeService.theme();
     if (this.isBrowser) {
@@ -54,8 +54,8 @@ export class AppChartComponent {
 
     const mode = this.themeService.theme();
     const result = { columns: this.columns(), rows: this.rows() };
-    // Dil bağlamı: metin + sayı/tarih biçimi aynı kaynaktan gelir.
-    // lang() bir signal olduğu için dil değişince grafik otomatik yeniden kurulur.
+    // Language context: text + number/date format come from the same source.
+    // Since lang() is a signal, the chart is rebuilt automatically when the language changes.
     const locale = {
       t: this.languageService.t.bind(this.languageService),
       lang: this.languageService.lang()
@@ -66,7 +66,7 @@ export class AppChartComponent {
       : buildChartOptions(this.chartType(), result, tokens, mode, locale);
   });
 
-  /** Tek referans: `build` değişmedikçe grafik yeniden çizilmesin. */
+  /** Single reference: the chart must not be redrawn unless `build` changes. */
   readonly apexOptions = computed(() => {
     const build = this.build();
     if (!build) return null;

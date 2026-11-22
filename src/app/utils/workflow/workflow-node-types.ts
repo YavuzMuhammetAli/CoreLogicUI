@@ -2,35 +2,35 @@ import { WorkflowStep, WorkflowStepType } from '../../models/workflow.model';
 import type { IconName } from '../../components/shared/icon/icons.generated';
 
 /**
- * Akış düğümü tip kataloğu — SAF, Angular yok.
+ * Workflow node type catalog — PURE, no Angular.
  *
- * Palet, düğüm kartı ve özellik paneli düğümün "ne olduğunu" buradan okur.
- * Katalogdaki tür motor tipiyle bire bir değildir: **Görev**, reddi kapalı bir
- * onay adımıdır (motor `approval` olarak koşar); kullanıcı için ayrı bir kavram
- * olduğu için ayrı tür olarak sunulur.
+ * The palette, node card and properties panel read "what a node is" from here.
+ * A catalog kind is not one-to-one with the engine type: **Task** is an approval
+ * step with reject disabled (the engine runs it as `approval`); it is presented as a
+ * separate kind because it is a separate concept for the user.
  */
 export type NodeKind = 'approval' | 'task' | 'parallel' | 'condition' | 'action' | 'notify' | 'timer' | 'end';
 
-/** Kartın renk şeridi — tasarım sisteminin durum renkleri. */
+/** The card's colour stripe — the design system's status colours. */
 export type NodeTone = 'accent' | 'success' | 'warn' | 'danger' | 'neutral';
 
-/** Paletteki grup: insan adımları, otomatik eylemler ve akışı yönlendiren adımlar. */
+/** Palette group: human steps, automatic actions and flow-routing steps. */
 export type NodeCategory = 'human' | 'automation' | 'flow';
 
 export interface NodeKindInfo {
   kind: NodeKind;
-  /** Motorun gördüğü adım tipi. */
+  /** The step type the engine sees. */
   type: WorkflowStepType;
   labelKey: string;
-  /** Paletteki açıklama (ipucu + ekran okuyucu). */
+  /** Description in the palette (tooltip + screen reader). */
   descriptionKey: string;
-  /** Yeni düğümün varsayılan adı. */
+  /** Default name for a new node. */
   defaultNameKey: string;
   tone: NodeTone;
   category: NodeCategory;
-  /** Görev açmadan motorun ilerlettiği adım (koşul, alan güncelle, bildirim). */
+  /** A step the engine advances without opening a task (condition, update field, notification). */
   automatic: boolean;
-  /** Material Symbols ikon adı (`<app-icon>`). */
+  /** Material Symbols icon name (`<app-icon>`). */
   icon: IconName;
 }
 
@@ -133,14 +133,14 @@ export function isNodeKind(value: unknown): value is NodeKind {
   return NODE_KINDS.some(info => info.kind === value);
 }
 
-/** Var olan adımın türü: paralel/koşul/bitiş tipten; reddi kapalı onay → görev; diğerleri onay. */
+/** Kind of an existing step: parallel/condition/end from the type; approval with reject disabled → task; others approval. */
 export function nodeKindOf(step: WorkflowStep): NodeKind {
   if (step.type === 'parallel' || step.type === 'condition' || step.type === 'end'
       || step.type === 'action' || step.type === 'notify' || step.type === 'timer') return step.type;
   return step.form?.allowReject === false ? 'task' : 'approval';
 }
 
-/** Kartın rengi: Bitiş sonucuna göre (reddedildi kırmızı), diğerleri türün rengi. */
+/** Card colour: End by outcome (rejected is red), others the kind's colour. */
 export function nodeTone(step: WorkflowStep): NodeTone {
   if (step.type === 'end') return step.outcome === 'rejected' ? 'danger' : 'success';
   return nodeKindInfo(nodeKindOf(step)).tone;
@@ -149,43 +149,43 @@ export function nodeTone(step: WorkflowStep): NodeTone {
 export interface NewStepOptions {
   key: string;
   name: string;
-  /** Görevin ilerletme düğmesi metni ("Tamamla"). */
+  /** Text of the task's advance button ("Tamamla" / Complete). */
   completeLabel?: string;
-  /** Paralel adımın iki varsayılan dalının adları. */
+  /** Names of the parallel step's two default branches. */
   branchNames?: [string, string];
-  /** Koşulun ilk durumunun etiketi ("Evet"). */
+  /** Label of the condition's first case ("Evet" / Yes). */
   caseLabel?: string;
-  /** Bildirimin varsayılan konusu. */
+  /** Default subject of the notification. */
   subject?: string;
 }
 
 /**
- * Paletten eklenen yeni adım. Atama bilerek EKSİK bırakılır (rol modu, rol
- * seçilmemiş): doğrulama bunu düğümde sorun olarak gösterir ve kullanıcı özellik
- * panelinden seçer — sessizce "kaydı oluşturana" atamak yanlış kişiye görev
- * düşürebilirdi.
+ * A new step added from the palette. The assignment is deliberately left INCOMPLETE (role mode, no role
+ * selected): validation shows it as an issue on the node and the user picks one in the properties
+ * panel — silently assigning to the "record creator" could drop a task on the wrong
+ * person.
  */
 export function createStep(kind: NodeKind, options: NewStepOptions): WorkflowStep {
   const { key, name } = options;
 
   switch (kind) {
     case 'condition':
-      // Bir durum + varsayılan yol; satır ve hedefler kullanıcıdan (eksikler sorun olarak görünür).
+      // One case + default path; rows and targets come from the user (missing ones show as issues).
       return {
         key, type: 'condition', name,
-        cases: [{ key: 'durum1', label: options.caseLabel || null, match: 'all', when: [], to: null }],
+        cases: [{ key: 'case1', label: options.caseLabel || null, match: 'all', when: [], to: null }],
         defaultTo: null
       };
     case 'end':
       return { key, type: 'end', name, outcome: 'completed' };
     case 'action':
-      // Tek boş satır: alan ve değer kullanıcıdan (eksikler sorun olarak görünür).
+      // A single empty row: field and value come from the user (missing ones show as issues).
       return { key, type: 'action', name, sets: [{ column: '', mode: 'value', value: '' }], next: null };
     case 'timer':
-      // Bir günlük bekleme; tarih alanına kadar beklemek düzenleyiciden seçilir.
+      // A one-day wait; waiting until a date field is chosen in the editor.
       return { key, type: 'timer', name, timer: { mode: 'duration', amount: 1, unit: 'days' }, next: null };
     case 'notify':
-      // Varsayılan alıcı kaydı oluşturan; konu kullanıcıdan.
+      // Default recipient is the record creator; the subject comes from the user.
       return {
         key, type: 'notify', name,
         notify: { recipients: [{ kind: 'creator' }], channels: [], subject: options.subject ?? '', body: '' },
@@ -196,8 +196,8 @@ export function createStep(kind: NodeKind, options: NewStepOptions): WorkflowSte
       return {
         key, type: 'parallel', name, mode: 'all',
         branches: [
-          { key: 'dal1', name: first, assignment: { mode: 'role', roleId: null } },
-          { key: 'dal2', name: second, assignment: { mode: 'role', roleId: null } }
+          { key: 'branch1', name: first, assignment: { mode: 'role', roleId: null } },
+          { key: 'branch2', name: second, assignment: { mode: 'role', roleId: null } }
         ],
         onComplete: null,
         onAnyReject: null

@@ -10,12 +10,12 @@ import { ModelPermission } from './permission.service';
 import { DataResponseModel } from '../models/dataResponseModel';
 
 /**
- * İsimli rol (RBAC) yönetimi servisi.
- * Endpoint'ler yalnızca 'admin' rolüne sahip kullanıcılar tarafından çağrılabilir.
+ * Named role (RBAC) management service.
+ * The endpoints can only be called by users with the 'admin' role.
  *
- * 'admin' rolü bu servisin kapsamı dışındadır — o, PermissionAdminService.setAdmin
- * üzerinden ayrı bir akıştır. Bu servis yöneticilerin isimli roller oluşturup model
- * izinleri tanımlayıp kullanıcıları role üye yapabildiği genel RBAC akışını kapsar.
+ * The 'admin' role is outside the scope of this service — it is a separate flow through
+ * PermissionAdminService.setAdmin. This service covers the general RBAC flow where admins create
+ * named roles, define model permissions and make users members of roles.
  */
 @Injectable({ providedIn: 'root' })
 export class RoleAdminService {
@@ -23,17 +23,17 @@ export class RoleAdminService {
 
   private readonly http = inject(HttpClient);
 
-  /** Kiracıdaki tüm isimli rolleri (üye sayısıyla) listeler. GET /Role/getall */
+  /** Lists all named roles in the tenant (with member counts). GET /Role/getall */
   getRoles(): Observable<ListResponseModel<Role>> {
     return this.http.get<ListResponseModel<Role>>(`${this.roleUrl}/getall`);
   }
 
-  /** Yeni isimli rol oluşturur. POST /Role/add?name= */
+  /** Creates a new named role. POST /Role/add?name= */
   createRole(name: string): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(`${this.roleUrl}/add`, null, { params: { name } });
   }
 
-  /** Rolün adını değiştirir. POST /Role/rename?id=&name= */
+  /** Renames the role. POST /Role/rename?id=&name= */
   renameRole(roleId: number, name: string): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(
       `${this.roleUrl}/rename`,
@@ -43,7 +43,7 @@ export class RoleAdminService {
   }
 
   /**
-   * Role üye kullanıcıların login sonrası açılış sayfasını ayarlar (boş string → kaldırılır).
+   * Sets the post-login landing page for the role's members (empty string → removed).
    * POST /Role/setLandingPage?roleId=&page=
    */
   setLandingPage(roleId: number, page: string | null): Observable<ResponseModel> {
@@ -54,7 +54,7 @@ export class RoleAdminService {
     );
   }
 
-  /** Rolü siler (üyelik ve izin kayıtları dahil). POST /Role/delete?id= */
+  /** Deletes the role (including membership and permission records). POST /Role/delete?id= */
   deleteRole(roleId: number): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(
       `${this.roleUrl}/delete`,
@@ -63,8 +63,8 @@ export class RoleAdminService {
     );
   }
 
-  /** Rolün tüm model izinlerini döndürür. GET /Role/permissions?roleId= */
-  /** Rol başına izinli model sayısı (roleId → sayı) — TEK istek. GET /Role/permittedModelCounts */
+  /** Returns all model permissions of the role. GET /Role/permissions?roleId= */
+  /** Number of permitted models per role (roleId → count) — ONE request. GET /Role/permittedModelCounts */
   getPermittedModelCounts(): Observable<DataResponseModel<Record<string, number>>> {
     return this.http.get<DataResponseModel<Record<string, number>>>(`${this.roleUrl}/permittedModelCounts`);
   }
@@ -77,8 +77,8 @@ export class RoleAdminService {
   }
 
   /**
-   * Rol için model izni atar veya günceller.
-   * action: bitwise int (örn. 7 = Read+Create+Update, 15 = All). toActionInt() ile hesaplanır.
+   * Assigns or updates a model permission for the role.
+   * action: bitwise int (e.g. 7 = Read+Create+Update, 15 = All). Computed with toActionInt().
    * POST /Role/setPermission?roleId=&modelName=&action=
    */
   setRolePermission(roleId: number, modelName: string, action: number): Observable<ResponseModel> {
@@ -89,7 +89,7 @@ export class RoleAdminService {
     );
   }
 
-  /** Role üye olan kullanıcıları listeler. GET /Role/members?roleId= */
+  /** Lists the users who are members of the role. GET /Role/members?roleId= */
   getRoleMembers(roleId: number): Observable<ListResponseModel<AppUser>> {
     return this.http.get<ListResponseModel<AppUser>>(
       `${this.roleUrl}/members`,
@@ -97,7 +97,7 @@ export class RoleAdminService {
     );
   }
 
-  /** Kullanıcıyı role üye yapar. POST /Role/addUser?roleId=&userId= */
+  /** Makes the user a member of the role. POST /Role/addUser?roleId=&userId= */
   addUserToRole(roleId: number, userId: number): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(
       `${this.roleUrl}/addUser`,
@@ -106,7 +106,7 @@ export class RoleAdminService {
     );
   }
 
-  /** Kullanıcıyı rolden çıkarır. POST /Role/removeUser?roleId=&userId= */
+  /** Removes the user from the role. POST /Role/removeUser?roleId=&userId= */
   removeUserFromRole(roleId: number, userId: number): Observable<ResponseModel> {
     return this.http.post<ResponseModel>(
       `${this.roleUrl}/removeUser`,

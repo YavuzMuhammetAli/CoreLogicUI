@@ -1,9 +1,9 @@
 import { Translations } from './translations.model';
 
 /**
- * `components/shared/*` altındaki paylaşılan component'lere özel statik metinler
- * (örn. column-visibility popover'ı). `common.i18n.ts`'de zaten tanımlı genel
- * anahtarlar (kaydet, vazgeç, sil vb.) burada tekrar tanımlanmaz.
+ * Static texts specific to the shared components under `components/shared/*`
+ * (e.g. the column-visibility popover). General keys already defined in `common.i18n.ts`
+ * (save, cancel, delete etc.) are not redefined here.
  */
 export const SHARED_I18N: Translations = {
   // column-visibility.component.html/.ts

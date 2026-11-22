@@ -7,10 +7,10 @@ import { environment } from '../../../../environments/environment';
 import { LookupPickerComponent } from './lookup-picker.component';
 
 /**
- * Kırpılma regresyonu: liste kırpan bir kapsayıcının (`.panel { overflow: hidden }`)
- * içinde açıldığında ekranda yalnız ilk satır görünüyordu.
+ * Clipping regression: when the list opened inside a clipping container (`.panel { overflow: hidden }`)
+ * only the first row was visible on screen.
  *
- * Host burada o durumu birebir taklit eder: dar, `overflow: hidden` bir kutu.
+ * The host here mimics that situation exactly: a narrow `overflow: hidden` box.
  */
 @Component({
     imports: [LookupPickerComponent, ReactiveFormsModule],
@@ -61,7 +61,7 @@ describe('LookupPickerComponent', () => {
     return (fixture.nativeElement as HTMLElement).querySelector('.lk-list');
   }
 
-  it('acilista 50 kayit ister (tum tabloyu DEGIL)', () => {
+  it('requests 50 records on open (NOT the whole table)', () => {
     fixture.componentInstance.picker.open();
     fixture.detectChanges();
 
@@ -72,7 +72,7 @@ describe('LookupPickerComponent', () => {
     req.flush({ success: true, message: '', data: { items: [], total: 0, page: 1, pageSize: 50 } });
   });
 
-  it('KIRPILMA REGRESYONU: liste position:fixed ile konumlanir', () => {
+  it('CLIPPING REGRESSION: the list is positioned with position:fixed', () => {
     openAndRespond([
       { id: 1, label: 'Adana Depo' },
       { id: 2, label: 'Ankara Bölge Depo' },
@@ -80,26 +80,26 @@ describe('LookupPickerComponent', () => {
     ]);
 
     const list = listEl();
-    expect(list).withContext('liste render edilmeli').toBeTruthy();
+    expect(list).withContext('the list should be rendered').toBeTruthy();
 
-    // position:absolute olsaydı overflow:hidden host tarafından kesilir ve
-    // yalnızca ilk satır görünürdü — bildirilen hata tam olarak buydu.
+    // With position:absolute it would be cut off by the overflow:hidden host and
+    // only the first row would be visible — exactly the reported bug.
     expect(getComputedStyle(list!).position).toBe('fixed');
 
-    // Koordinatlar JS'ten inline yazılır; sıfır/boş kalmamalı.
+    // Coordinates are written inline from JS; they must not stay zero/empty.
     expect(list!.style.top).toMatch(/px$/);
     expect(list!.style.left).toMatch(/px$/);
     expect(list!.style.width).toMatch(/px$/);
     expect(parseFloat(list!.style.maxHeight)).toBeGreaterThan(0);
 
-    // Tüm seçenekler DOM'da olmalı (yalnız ilki değil).
+    // All options must be in the DOM (not just the first).
     expect(list!.querySelectorAll('.lk-option').length).toBe(3);
   });
 
-  it('altta yer yoksa yukari acilir', () => {
+  it('opens upwards when there is no room below', () => {
     const picker = fixture.componentInstance.picker;
 
-    // Input'u viewport'un en altına taşı: aşağıda yer kalmaz.
+    // Move the input to the very bottom of the viewport: no room is left below.
     const input = (fixture.nativeElement as HTMLElement).querySelector('input')!;
     spyOn(input, 'getBoundingClientRect').and.returnValue({
       top: window.innerHeight - 30, bottom: window.innerHeight - 10,
@@ -109,13 +109,13 @@ describe('LookupPickerComponent', () => {
 
     openAndRespond([{ id: 1, label: 'Adana Depo' }]);
 
-    // Yukarı açıldıysa listenin üst kenarı input'un üstünde kalır.
+    // If it opened upwards, the list's top edge is above the input.
     const top = parseFloat(listEl()!.style.top);
     expect(top).toBeLessThan(window.innerHeight - 30);
     expect(picker.isOpen()).toBeTrue();
   });
 
-  it('arama sunucuya gider ve sayfa 1e doner', fakeAsync(() => {
+  it('search goes to the server and returns to page 1', fakeAsync(() => {
     openAndRespond([{ id: 1, label: 'Adana Depo' }], 12);
 
     const input = (fixture.nativeElement as HTMLElement).querySelector('input')!;
@@ -133,8 +133,8 @@ describe('LookupPickerComponent', () => {
     expect(fixture.componentInstance.picker.options().length).toBe(1);
   }));
 
-  it('SESSIZ FK KAYBI REGRESYONU: secili id ilk sayfada olmasa da etiketi cozulur', () => {
-    // Kontrole ilk 50 arasında olmayan bir id yazılır (writeValue → ?ids=).
+  it('SILENT FK LOSS REGRESSION: the selected id label is resolved even if not on the first page', () => {
+    // An id that is not among the first 50 is written to the control (writeValue → ?ids=).
     fixture.componentInstance.control.setValue(9999);
     fixture.detectChanges();
 
@@ -145,14 +145,14 @@ describe('LookupPickerComponent', () => {
     });
     fixture.detectChanges();
 
-    // Kutuda etiket görünür; kullanıcı boş kutu görüp FK'yi silmez.
+    // The label shows in the box; the user doesn't see an empty box and wipe the FK.
     expect(fixture.componentInstance.picker.selectedLabel()).toBe('Uzak Depo');
     const input = (fixture.nativeElement as HTMLElement).querySelector('input') as HTMLInputElement;
     expect(input.value).toBe('Uzak Depo');
     expect(fixture.componentInstance.control.value).toBe(9999);
   });
 
-  it('secim form kontrolune ID yazar', () => {
+  it('selection writes the ID to the form control', () => {
     openAndRespond([{ id: 7, label: 'Transit Depo' }]);
 
     const option = (fixture.nativeElement as HTMLElement).querySelector('.lk-option') as HTMLElement;
@@ -160,6 +160,6 @@ describe('LookupPickerComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.control.value).toBe(7);
-    expect(listEl()).withContext('secimden sonra liste kapanmali').toBeNull();
+    expect(listEl()).withContext('the list should close after selection').toBeNull();
   });
 });

@@ -1,5 +1,5 @@
-/* Kullanıcı listesi — görsel dilin tamamı global styles.scss'ten gelir;
-   burada yalnızca bu ekrana özgü birkaç yardımcı sınıf var. */
+/* User list — the entire visual language comes from the global styles.scss;
+   only a few helper classes specific to this screen live here. */
 
 .clickable-row {
   cursor: pointer;
@@ -10,7 +10,7 @@
   }
 }
 
-/* "(siz)" etiketi — kendi hesabını ayırt etmek için */
+/* "(siz)" (you) label — to distinguish one's own account */
 .self-tag {
   margin-left: var(--space-1);
   font-size: var(--text-xs);

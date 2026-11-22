@@ -1,11 +1,11 @@
 import { Translations } from './translations.model';
 
 /**
- * Model ilişkileri (G1) — table-detail "Relationships" sekmesi, ilişki popup'ı,
- * önizleme diyaloğu ve entity graph görselleştirmesi.
+ * Model relationships (G1) — the table-detail "Relationships" tab, the relationship popup,
+ * the preview dialog and the entity graph visualization.
  */
 export const RELATIONSHIP_I18N: Translations = {
-  // ── Sekme ve liste ────────────────────────────────────────────────────────
+  // ── Tab and list ──────────────────────────────────────────────────────────
   'relationship.tab': { tr: 'İlişkiler', en: 'Relationships' },
   'relationship.tablistAria': { tr: 'Model sekmeleri', en: 'Model tabs' },
   'relationship.panelAria': { tr: 'İlişkiler paneli', en: 'Relationships panel' },
@@ -22,7 +22,7 @@ export const RELATIONSHIP_I18N: Translations = {
     en: 'Save the model first to add relationships.'
   },
 
-  // ── Tablo başlıkları ──────────────────────────────────────────────────────
+  // ── Table headers ─────────────────────────────────────────────────────────
   'relationship.colTarget': { tr: 'Hedef Model', en: 'Target Model' },
   'relationship.colType': { tr: 'İlişki Tipi', en: 'Relationship Type' },
   'relationship.colProperty': { tr: 'Property Adı', en: 'Property Name' },
@@ -33,7 +33,7 @@ export const RELATIONSHIP_I18N: Translations = {
   'relationship.colOrder': { tr: 'Sıra', en: 'Order' },
   'relationship.colDepth': { tr: 'Derinlik', en: 'Depth' },
 
-  // ── İlişki tipleri ────────────────────────────────────────────────────────
+  // ── Relationship types ────────────────────────────────────────────────────
   'relationship.type.oneToOne': { tr: 'Bire Bir (One To One)', en: 'One To One' },
   'relationship.type.oneToMany': { tr: 'Bire Çok (One To Many)', en: 'One To Many' },
   'relationship.type.manyToOne': { tr: 'Çoka Bir (Many To One)', en: 'Many To One' },
@@ -95,7 +95,7 @@ export const RELATIONSHIP_I18N: Translations = {
     en: 'The inverse property is required for this relationship type.'
   },
 
-  // ── Doğrulama / durum ─────────────────────────────────────────────────────
+  // ── Validation / status ───────────────────────────────────────────────────
   'relationship.depthBadge': { tr: 'Derinlik {depth}/{max}', en: 'Depth {depth}/{max}' },
   'relationship.errorsTitle': { tr: 'Hatalar', en: 'Errors' },
   'relationship.warningsTitle': { tr: 'Uyarılar', en: 'Warnings' },
@@ -116,7 +116,7 @@ export const RELATIONSHIP_I18N: Translations = {
     en: 'The model was saved but its table was not found — pending relationships could not be submitted. Refresh and try again.'
   },
 
-  // ── Önizleme diyaloğu ─────────────────────────────────────────────────────
+  // ── Preview dialog ────────────────────────────────────────────────────────
   'relationship.previewTitle': { tr: 'Yayınlama Önizlemesi', en: 'Publish Preview' },
   'relationship.previewSubtitle': {
     tr: 'Aşağıdakiler henüz uygulanmadı — yalnızca yayınlandığında oluşacakları gösterir.',
@@ -132,7 +132,7 @@ export const RELATIONSHIP_I18N: Translations = {
   },
   'relationship.previewLoading': { tr: 'Önizleme hazırlanıyor…', en: 'Preparing preview…' },
 
-  // ── Entity graph görselleştirmesi ─────────────────────────────────────────
+  // ── Entity graph visualization ────────────────────────────────────────────
   'relationship.graphAria': { tr: 'Entity ilişki grafiği', en: 'Entity relationship graph' },
   'relationship.graphEmpty': { tr: 'Gösterilecek ilişki yok.', en: 'No relationships to display.' },
   'relationship.graphLevel': { tr: 'Seviye {depth}', en: 'Level {depth}' },

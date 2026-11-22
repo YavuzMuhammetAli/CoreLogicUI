@@ -14,11 +14,11 @@ import { formatDate } from '../../utils/locale-format';
 import { IconComponent } from '../shared/icon/icon.component';
 
 /**
- * Bir akış kodunun sürüm geçmişi.
+ * Version history of a workflow code.
  *
- * Yayınlanan sürüm DEĞİŞMEZ: her yayın yeni bir satır ekler, öncekini arşivler.
- * Bu ekran o zinciri gösterir — "hangi süreç hangi kurallarla koştu" sorusu
- * denetimde sıkça sorulur ve arşiv satırları silinmediği için cevaplanabilir.
+ * A published version is IMMUTABLE: every publish adds a new row and archives the previous one.
+ * This screen shows that chain — "which process ran under which rules" is a frequent
+ * audit question, and it can be answered because archived rows aren't deleted.
  */
 @Component({
     selector: 'app-workflow-versions',
@@ -66,7 +66,7 @@ export class WorkflowVersionsComponent implements OnInit {
 
   busy = false;
 
-  /** Açık karşılaştırma: seçilen sürüm, bir öncekiyle farkı şemada. */
+  /** Open comparison: the selected version, its diff from the previous one on the diagram. */
   comparison: {
     version: WorkflowDefinition;
     previous: WorkflowDefinition;
@@ -76,7 +76,7 @@ export class WorkflowVersionsComponent implements OnInit {
     empty: boolean;
   } | null = null;
 
-  /** Bir önceki sürüm: daha küçük numaralı en yüksek yayın (taslakta en son yayın). */
+  /** The previous version: the highest publish with a smaller number (for a draft, the latest publish). */
   previousOf(version: WorkflowDefinition): WorkflowDefinition | null {
     const candidates = this.versions.filter(v =>
       v.id !== version.id && v.version > 0 && (version.version === 0 || v.version < version.version));
@@ -106,7 +106,7 @@ export class WorkflowVersionsComponent implements OnInit {
       : this.languageService.t('workflow.list.draftVersion', { n: this.nextVersion });
   }
 
-  /** Yeni sürümdeki adların listesi ("Müdür Onayı, Finans"). */
+  /** List of names in the new version ("Müdür Onayı, Finans"). */
   namesOf(keys: ReadonlyArray<string>): string {
     const steps = this.comparison?.graph.steps ?? [];
     return keys.map(key => steps.find(s => s.key.toLowerCase() === key.toLowerCase())?.name || key).join(', ');
@@ -116,12 +116,12 @@ export class WorkflowVersionsComponent implements OnInit {
     return diff.removed.map(step => step.name || step.key).join(', ');
   }
 
-  /** Açık taslak varsa yeni sürüm butonu gizlenir; taslağın "Düzenle"si yeterli. */
+  /** If there is an open draft the new version button is hidden; the draft's "Düzenle" (Edit) is enough. */
   get hasDraft(): boolean {
     return this.versions.some(v => v.status === 'Draft');
   }
 
-  /** Taslağın yayınlanınca alacağı sürüm numarası. */
+  /** Version number the draft will get once published. */
   get nextVersion(): number {
     return Math.max(0, ...this.versions.map(v => v.version)) + 1;
   }

@@ -1,6 +1,6 @@
 import { Translations } from './translations.model';
 
-/** login.component.html / .ts — giriş ve kayıt formu statik metinleri. */
+/** login.component.html / .ts — static texts of the login and sign-up form. */
 export const LOGIN_I18N: Translations = {
   'login.welcome': { tr: 'Hoş Geldiniz', en: 'Welcome' },
   'login.subtitle': { tr: 'Dinamik model yayınlama platformuna giriş yapın.', en: 'Sign in to the dynamic model publishing platform.' },

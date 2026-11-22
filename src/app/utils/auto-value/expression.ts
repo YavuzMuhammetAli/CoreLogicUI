@@ -1,35 +1,35 @@
 /**
- * Otomatik değer formül dili — ayrıştırıcı + değerlendirici (saf, DOM/Angular bağımsız).
+ * Auto-value formula language — parser + evaluator (pure, independent of DOM/Angular).
  *
- * ⚠️ Backend'de birebir ikizi var: `Business/Concrete/Dynamic/AutoValue/AutoValueExpression.cs`.
- * Sunucu kaydederken AYNI formülü yeniden hesaplar; iki taraf farklı sonuç üretirse
- * kullanıcı ekranda bir değer görür, kayıtta başka bir değer bulur. Davranışı değiştiren
- * her düzenleme iki dosyaya birlikte yapılmalı ve `auto-value.vectors.json`'a (backend'de
- * kopyası `Tests/Business.Tests/AutoValue/auto-value.vectors.json`) bir vektör eklenmeli.
+ * ⚠️ It has an exact twin in the backend: `Business/Concrete/Dynamic/AutoValue/AutoValueExpression.cs`.
+ * The server recomputes the SAME formula on save; if the two sides produce different results
+ * the user sees one value on screen and finds another in the record. Every edit that changes behaviour
+ * must be made to both files together and a vector added to `auto-value.vectors.json` (its backend
+ * copy is `Tests/Business.Tests/AutoValue/auto-value.vectors.json`).
  *
- * Sözdizimi (Excel benzeri, küçük):
- *   alan         [KolonAdı]
- *   değişmez     12  12.5  'metin'  "metin"  TRUE  FALSE  NULL
- *   aritmetik    + - * / %   (tekli -)
- *   birleştirme  &
- *   karşılaştırma = != <> < <= > >=
- *   mantıksal    AND  OR  NOT
- *   fonksiyon    IF COALESCE MIN MAX ROUND ABS CONCAT UPPER LOWER TRIM LEFT RIGHT LEN
+ * Syntax (Excel-like, small):
+ *   field        [ColumnName]
+ *   literal      12  12.5  'text'  "text"  TRUE  FALSE  NULL
+ *   arithmetic   + - * / %   (unary -)
+ *   concatenate  &
+ *   comparison   = != <> < <= > >=
+ *   logical      AND  OR  NOT
+ *   function     IF COALESCE MIN MAX ROUND ABS CONCAT UPPER LOWER TRIM LEFT RIGHT LEN
  *                TODAY NOW FORMAT_DATE ADD_DAYS SEQ
  *
- * Anlam kuralları (iki tarafta aynı):
- *   - Boş alan aritmetikte 0, metinde '' sayılır.
- *   - Sıfıra bölme / sayı olmayan metinle aritmetik → çalışma hatası; kural sonucu boş kalır.
- *   - Sayılar double; kayan nokta gürültüsü metne çevrilirken 10 ondalığa yuvarlanarak atılır.
- *   - Yuvarlama "yarımlar sıfırdan uzağa" ve Math.round/Math.Round KULLANILMADAN elle yapılır
- *     (bkz. `roundAway`) — iki dilin kütüphane yuvarlaması farklı davranır.
+ * Semantic rules (same on both sides):
+ *   - An empty field counts as 0 in arithmetic and '' in text.
+ *   - Division by zero / arithmetic with non-numeric text → runtime error; the rule result stays empty.
+ *   - Numbers are doubles; floating-point noise is dropped by rounding to 10 decimals when converting to text.
+ *   - Rounding is "half away from zero" and done by hand WITHOUT Math.round/Math.Round
+ *     (see `roundAway`) — the two languages' library rounding behaves differently.
  */
 
-// ─── Değer tipleri ──────────────────────────────────────────────────────────
+// ─── Value types ────────────────────────────────────────────────────────────
 
 /**
- * Saat dilimi taşımayan tarih(/saat). `ms`, duvar saatinin UTC gibi okunmuş karşılığıdır
- * — böylece biçimlendirme ve gün ekleme tarayıcının yerel saat dilimine hiç dokunmaz.
+ * A date(/time) without a time zone. `ms` is the wall-clock time read as if it were UTC
+ * — so formatting and adding days never touch the browser's local time zone.
  */
 export class DateValue {
   constructor(readonly ms: number, readonly hasTime: boolean) {}
@@ -37,14 +37,14 @@ export class DateValue {
 
 export type Value = number | string | boolean | DateValue | null;
 
-// ─── Hatalar ────────────────────────────────────────────────────────────────
+// ─── Errors ─────────────────────────────────────────────────────────────────
 
 export type ExpressionErrorCode =
   | 'empty' | 'tooLong' | 'tooDeep'
   | 'unterminatedString' | 'unterminatedField' | 'emptyField'
   | 'unexpectedChar' | 'unexpectedToken' | 'unexpectedEnd'
   | 'unknownFunction' | 'argCount' | 'bareIdentifier'
-  // çalışma zamanı
+  // runtime
   | 'notNumber' | 'notDate' | 'divideByZero' | 'overflow' | 'argRange' | 'unknownField'
   | 'sequencePending';
 
@@ -70,7 +70,7 @@ export type ExprNode =
 export const MAX_EXPRESSION_LENGTH = 1000;
 const MAX_DEPTH = 64;
 
-/** Fonksiyon adı → [en az, en çok] argüman. */
+/** Function name → [min, max] arguments. */
 export const FUNCTIONS: Readonly<Record<string, readonly [number, number]>> = {
   IF: [2, 3],
   COALESCE: [1, Infinity],
@@ -118,7 +118,7 @@ function tokenize(src: string): Token[] {
       continue;
     }
     if (ch === '\'' || ch === '"') {
-      // Tırnak içinde tırnak: iki kez yazılır ('Ali''nin'). Ters bölü kaçışı yok.
+      // A quote inside quotes is written twice ('Ali''nin'). No backslash escaping.
       let text = '';
       i++;
       for (;;) {
@@ -165,7 +165,7 @@ function isIdentPart(ch: string): boolean {
   return isIdentStart(ch) || (ch >= '0' && ch <= '9');
 }
 
-// ─── Parser (öncelik: OR < AND < NOT < karşılaştırma < & < + - < * / % < tekli) ──
+// ─── Parser (precedence: OR < AND < NOT < comparison < & < + - < * / % < unary) ──
 
 class Parser {
   private i = 0;
@@ -191,7 +191,7 @@ class Parser {
   }
 
   private enter(pos: number): void {
-    // Sunucuda derin özyineleme süreci düşürür (StackOverflow yakalanamaz) — iki tarafta aynı sınır.
+    // Deep recursion crashes the process on the server (StackOverflow cannot be caught) — same limit on both sides.
     if (++this.depth > MAX_DEPTH) throw new ExpressionError('tooDeep', pos);
   }
   private leave(): void { this.depth--; }
@@ -298,7 +298,7 @@ class Parser {
 
 const astCache = new Map<string, ExprNode>();
 
-/** Formülü ayrıştırır (önbellekli). Hatalıysa `ExpressionError` fırlatır. */
+/** Parses the formula (cached). Throws `ExpressionError` if invalid. */
 export function parseExpression(src: string): ExprNode {
   const cached = astCache.get(src);
   if (cached) return cached;
@@ -310,14 +310,14 @@ export function parseExpression(src: string): ExprNode {
   return ast;
 }
 
-/** Formülde geçen alan adları — yazıldığı gibi, tekrarsız. */
+/** Field names used in the formula — as written, deduplicated. */
 export function referencedFields(ast: ExprNode): string[] {
   const out = new Set<string>();
   walk(ast, n => { if (n.t === 'field') out.add(n.name); });
   return [...out];
 }
 
-/** Formül SEQ() kullanıyor mu — numara yalnız sunucuda, kayıt anında verilir. */
+/** Whether the formula uses SEQ() — the number is assigned only on the server, at save time. */
 export function usesSequence(ast: ExprNode): boolean {
   let found = false;
   walk(ast, n => { if (n.t === 'call' && n.fn === 'SEQ') found = true; });
@@ -331,14 +331,14 @@ function walk(n: ExprNode, visit: (n: ExprNode) => void): void {
   else if (n.t === 'call') n.args.forEach(a => walk(a, visit));
 }
 
-// ─── Değerlendirme ──────────────────────────────────────────────────────────
+// ─── Evaluation ─────────────────────────────────────────────────────────────
 
 export interface EvalContext {
-  /** Alan değeri (tipli). Bilinmeyen alan için `ExpressionError('unknownField')` fırlatmalı. */
+  /** Field value (typed). Must throw `ExpressionError('unknownField')` for an unknown field. */
   field(name: string): Value;
-  /** TODAY/NOW için "şimdi" (duvar saati). */
+  /** "Now" for TODAY/NOW (wall-clock time). */
   now: DateValue;
-  /** SEQ(kapsam) → sıradaki numara. Yoksa (istemci) SEQ `sequencePending` fırlatır. */
+  /** SEQ(scope) → the next number. If absent (client), SEQ throws `sequencePending`. */
   sequence?: (scope: string) => number;
 }
 
@@ -413,7 +413,7 @@ function call(fn: string, args: ExprNode[], ctx: EvalContext): Value {
       let result: number | null = null;
       for (let i = 0; i < args.length; i++) {
         const v = arg(i);
-        if (isBlank(v)) continue;             // Excel gibi: boşlar yok sayılır
+        if (isBlank(v)) continue;             // Like Excel: blanks are ignored
         const x = toNumber(v);
         if (result === null || (fn === 'MIN' ? x < result : x > result)) result = x;
       }
@@ -470,7 +470,7 @@ function call(fn: string, args: ExprNode[], ctx: EvalContext): Value {
   throw new ExpressionError('unknownFunction', -1, fn);
 }
 
-// ─── Dönüşümler (backend ikiziyle AYNI olmalı) ──────────────────────────────
+// ─── Conversions (must be IDENTICAL to the backend twin) ────────────────────
 
 export function isBlank(v: Value): boolean {
   return v === null || v === '';
@@ -478,7 +478,7 @@ export function isBlank(v: Value): boolean {
 
 const NUMBER_TEXT = /^[+-]?(\d+([.,]\d*)?|[.,]\d+)$/;
 
-/** Metni sayıya çevirir; ondalık ayracı nokta ya da virgül (binlik ayracı YOK). */
+/** Converts text to a number; the decimal separator is a dot or comma (NO thousands separator). */
 export function parseNumberText(s: string): number | null {
   const t = trimText(s);
   if (t === '') return null;
@@ -523,10 +523,10 @@ export function toText(v: Value): string {
 }
 
 /**
- * Sayıyı kültürden bağımsız metne çevirir. Rakamlar en kısa gidiş-dönüş gösteriminden
- * gelir (`String(n)` ≡ C# `ToString("R")` — ikisi de aynı rakamları üretir), ama
- * üstel yazımları farklıdır (1e-7 ↔ 1E-07); bu yüzden üstel gösterim elle düz
- * ondalığa açılır. `toFixed` kullanılmaz: ikilik gürültüyü basar (1234567.8910000001).
+ * Converts a number to culture-independent text. The digits come from the shortest round-trip
+ * representation (`String(n)` ≡ C# `ToString("R")` — both produce the same digits), but
+ * their exponent notation differs (1e-7 ↔ 1E-07); so exponent notation is expanded by hand
+ * into a plain decimal. `toFixed` is not used: it prints binary noise (1234567.8910000001).
  */
 export function formatNumber(n: number): string {
   const x = normalizeZero(roundAway(n, 10));
@@ -534,7 +534,7 @@ export function formatNumber(n: number): string {
   return expandExponent(String(x));
 }
 
-/** '1.5e-7' / '1.5E-07' / '1e+21' → düz ondalık metin. */
+/** '1.5e-7' / '1.5E-07' / '1e+21' → plain decimal text. */
 export function expandExponent(s: string): string {
   const m = /^(-?)(\d+)(?:\.(\d+))?[eE]([+-]?\d+)$/.exec(s);
   if (!m) return s;
@@ -553,15 +553,15 @@ export function expandExponent(s: string): string {
 const POW10 = [1, 10, 100, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10];
 
 /**
- * Yarımları sıfırdan uzağa yuvarlar. `+1e-9` payı, 1.005 gibi ikilik tabanda
- * 1.00499999… olarak saklanan değerlerin aşağı yuvarlanmasını önler.
- * Yalnız IEEE temel işlemleri kullanılır → C# tarafıyla bit düzeyinde aynı sonuç.
+ * Rounds halves away from zero. The `+1e-9` margin prevents values like 1.005, stored in binary
+ * as 1.00499999…, from rounding down.
+ * Only basic IEEE operations are used → bit-for-bit the same result as the C# side.
  */
 export function roundAway(x: number, digits: number): number {
   if (!Number.isFinite(x)) return x;
   const p = POW10[digits];
   const a = Math.abs(x) * p;
-  if (a >= 2 ** 52) return x;               // zaten tam sayı hassasiyetinde
+  if (a >= 2 ** 52) return x;               // already at integer precision
   const r = Math.floor(a + 0.5 + 1e-9) / p;
   return r === 0 ? 0 : (x < 0 ? -r : r);
 }
@@ -575,12 +575,12 @@ function finite(n: number): number {
   return n;
 }
 
-/** Yalnız ASCII/Latin boşluklar — `String.trim` ile .NET `Trim` Unicode kümesi farklı. */
+/** Only ASCII/Latin whitespace — the Unicode sets of `String.trim` and .NET `Trim` differ. */
 function trimText(s: string): string {
   return s.replace(/^[ \t\r\n ]+|[ \t\r\n ]+$/g, '');
 }
 
-/** Karşılaştırma: -1/0/1, karşılaştırılamazsa null. */
+/** Comparison: -1/0/1, null if not comparable. */
 export function compare(a: Value, b: Value): number | null {
   if (a === null && b === null) return 0;
 
@@ -611,11 +611,11 @@ function numberOrNull(v: Value): number | null {
   return null;
 }
 
-// ─── Tarih yardımcıları ─────────────────────────────────────────────────────
+// ─── Date helpers ───────────────────────────────────────────────────────────
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/;
 
-/** 'YYYY-MM-DD' / 'YYYY-MM-DDTHH:mm(:ss)' → DateValue; çözülemezse null. */
+/** 'YYYY-MM-DD' / 'YYYY-MM-DDTHH:mm(:ss)' → DateValue; null if it cannot be parsed. */
 export function parseIsoDate(s: string): DateValue | null {
   const m = ISO_DATE.exec(s);
   if (!m) return null;
@@ -637,7 +637,7 @@ function dateOnly(d: DateValue): DateValue {
   return new DateValue(d.ms - (((d.ms % 86_400_000) + 86_400_000) % 86_400_000), false);
 }
 
-/** Desteklenen işaretler: yyyy yy MM dd HH mm ss — diğer her karakter olduğu gibi yazılır. */
+/** Supported tokens: yyyy yy MM dd HH mm ss — every other character is written as is. */
 export function formatDate(d: DateValue, fmt: string): string {
   const date = new Date(d.ms);
   const parts: Record<string, string> = {
@@ -659,7 +659,7 @@ export function formatDate(d: DateValue, fmt: string): string {
   return out;
 }
 
-/** Tarayıcının yerel duvar saati — istemci önizlemesi için "şimdi". */
+/** The browser's local wall-clock time — "now" for the client preview. */
 export function clientNow(): DateValue {
   const d = new Date();
   return new DateValue(

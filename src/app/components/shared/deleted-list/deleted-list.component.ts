@@ -7,15 +7,15 @@ import { DeletedItem, DeletedListSource } from './deleted-list.model';
 import { IconComponent } from '../icon/icon.component';
 
 /**
- * "Silinenler" ekranlarının ortak gövdesi: listeleme, hata gösterimi, onaylı
- * geri yükleme ve başarıdan sonra satırın listeden düşürülmesi.
+ * Shared body of the "Silinenler" (Deleted) screens: listing, error display, confirmed
+ * restore and dropping the row from the list after success.
  *
- * NEDEN ORTAK: deleted-models / deleted-drafts / deleted-reports / deleted-dashboards
- * dört ayrı component olarak yazılmıştı ve toplam ~1160 satırın büyük kısmı birebir
- * aynıydı (iki SCSS dosyası karakterine kadar aynıydı). Bir düzeltme dört yerde
- * tekrarlanmak zorundaydı; pratikte biri unutuluyordu.
+ * WHY SHARED: deleted-models / deleted-drafts / deleted-reports / deleted-dashboards
+ * were written as four separate components and most of the ~1160 lines in total were
+ * identical (two SCSS files were identical down to the character). A fix had to be
+ * repeated in four places; in practice one was forgotten.
  *
- * Ekranlar artık yalnızca bir <see cref="DeletedListSource"/> sağlar.
+ * Screens now only provide a <see cref="DeletedListSource"/>.
  */
 @Component({
     selector: 'app-deleted-list',
@@ -25,7 +25,7 @@ import { IconComponent } from '../icon/icon.component';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DeletedListComponent implements OnInit {
-  /** Başarılı geri yüklemeden sonra satırın listede kalma süresi (ms). */
+  /** How long the row stays in the list after a successful restore (ms). */
   private static readonly RemoveAfterRestoreMs = 1500;
 
   private readonly languageService = inject(LanguageService);
@@ -36,20 +36,20 @@ export class DeletedListComponent implements OnInit {
   readonly loading = signal(false);
   readonly loadError = signal<string | null>(null);
 
-  /** Geri yükleme sürerken kilitlenen kaydın id'si; null ise işlem yok. */
+  /** Id of the record locked while restoring; null means no operation in progress. */
   readonly restoringId = signal<number | null>(null);
 
-  /** Onay bekleyen kayıt; null ise diyalog kapalı. */
+  /** Record awaiting confirmation; null means the dialog is closed. */
   readonly pendingRestore = signal<DeletedItem | null>(null);
 
-  /** Satır bazlı geri bildirim: id → { message, success }. */
+  /** Per-row feedback: id → { message, success }. */
   readonly feedback = signal<Record<number, { message: string; success: boolean }>>({});
 
   ngOnInit(): void {
     this.load();
   }
 
-  /** Ekrana özel çeviri anahtarını tam hâline çevirir. */
+  /** Expands a screen-specific translation key to its full form. */
   key(suffix: string): string {
     return `${this.source().i18nPrefix}.${suffix}`;
   }
@@ -104,7 +104,7 @@ export class DeletedListComponent implements OnInit {
         });
 
         if (res.success) {
-          // Kullanıcı başarı mesajını görebilsin diye satır kısa bir süre kalır.
+          // The row stays briefly so the user can see the success message.
           setTimeout(
             () => this.items.update(list => list.filter(i => i.id !== item.id)),
             DeletedListComponent.RemoveAfterRestoreMs);

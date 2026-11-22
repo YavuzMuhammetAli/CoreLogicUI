@@ -22,8 +22,8 @@
 
 @if (!loading() && !loadError()) {
   @if (hasTasks()) {
-    <!-- Geniş ekran: tablo. Telefonda gizlenir — "Aç" 6. sütunda kalıp ekran dışına
-         düşüyordu; onun yerine aşağıdaki kart listesi gösterilir. -->
+    <!-- Wide screen: table. Hidden on phones — "Aç" (Open) sat in the 6th column and fell
+         off screen; the card list below is shown instead. -->
     <div class="panel tasks-table">
       <div class="table-wrapper">
         <table class="data-table">
@@ -65,7 +65,7 @@
       </div>
     </div>
 
-    <!-- Telefon: kart listesi — önce görev ve vade, sonra akış/kayıt, en altta tam genişlikte "Aç" -->
+    <!-- Phone: card list — task and due date first, then workflow/record, full-width "Aç" (Open) at the bottom -->
     <ul class="task-cards">
       @for (task of tasks(); track task.id) {
         <li class="panel task-card">

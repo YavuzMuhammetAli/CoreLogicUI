@@ -1,9 +1,9 @@
 <div class="model-node" [class.model-node--sub]="depth > 1" [attr.data-depth]="depth">
 
-  <!-- Düğüm başlığı -->
+  <!-- Node header -->
   <div class="node-head">
     <div class="node-head-left">
-      <span class="eyebrow depth-badge">{{ derinlikEtiketi(depth) }}</span>
+      <span class="eyebrow depth-badge">{{ depthLabel(depth) }}</span>
       @if (depth > 1) {
         <span class="muted-hint">{{ 'model.node.parentFkHint' | t }}</span>
       }
@@ -30,9 +30,9 @@
 
   <div [formGroup]="group">
 
-    <!-- Model etiketi | model adı — yan yana (.field-row) -->
+    <!-- Model label | model name — side by side (.field-row) -->
     <div class="field-row">
-      <!-- Model etiketi — kullanıcı bunu yazar, model adı bundan üretilir -->
+      <!-- Model label — the user types this, the model name is generated from it -->
       <div class="field">
         <label [attr.for]="'entity-label-' + depth">
           {{ 'model.node.modelLabelLabel' | t }} <span class="req">*</span>
@@ -51,7 +51,7 @@
         }
       </div>
   
-      <!-- Model adı — etiketten üretilir, elle değiştirilebilir -->
+      <!-- Model name — generated from the label, can be changed manually -->
       <div class="field">
         <div class="field-head">
           <label [attr.for]="'entity-' + depth">
@@ -82,7 +82,7 @@
       </div>
     </div>
 
-    <!-- Sütunlar bölümü -->
+    <!-- Columns section -->
     <div class="columns-section">
       <div class="columns-header">
         <h4 class="columns-title">{{ 'model.node.columnsTitle' | t }}</h4>
@@ -99,9 +99,9 @@
           @for (col of columns.controls; track $index) {
             <div class="column-row" [formGroupName]="$index">
 
-              <!-- Etiket | Alan adı -->
+              <!-- Label | Field name -->
               <div class="field-row">
-                <!-- Etiket (zorunlu) — kullanıcı bunu yazar, alan adı bundan üretilir -->
+                <!-- Label (required) — the user types this, the field name is generated from it -->
                 <div class="field col-label-field">
                   <label [attr.for]="'col-label-' + depth + '-' + $index">
                     {{ 'model.node.labelLabel' | t }} <span class="req">*</span>
@@ -121,7 +121,7 @@
                   }
                 </div>
   
-                <!-- Alan adı — etiketten üretilir, elle değiştirilebilir -->
+                <!-- Field name — generated from the label, can be changed manually -->
                 <div class="field col-name-field">
                   <div class="field-head">
                     <label [attr.for]="'col-name-' + depth + '-' + $index">
@@ -151,9 +151,9 @@
                 </div>
               </div>
 
-              <!-- Açıklama | Veri tipi -->
+              <!-- Description | Data type -->
               <div class="field-row">
-                <!-- Açıklama (opsiyonel) — detay sayfasında "i" baloncuğunda gösterilir -->
+                <!-- Description (optional) — shown in the "i" bubble on the detail page -->
                 <div class="field col-description-field">
                   <label [attr.for]="'col-description-' + depth + '-' + $index">
                     {{ 'model.node.descriptionLabel' | t }}
@@ -167,7 +167,7 @@
                     [attr.placeholder]="'model.node.descriptionPlaceholder' | t">
                 </div>
   
-                <!-- Veri tipi -->
+                <!-- Data type -->
                 <div class="field col-type-field">
                   <div class="field-head">
                     <label [attr.for]="'col-type-' + depth + '-' + $index">{{ 'model.node.typeLabel' | t }}</label>
@@ -196,7 +196,7 @@
                 </div>
               </div>
 
-              <!-- Metne özel: MinLength, MaxLength, Regex -->
+              <!-- Text-specific: MinLength, MaxLength, Regex -->
               @if (isTextColumn(getColumnGroup($index).get('dataType')!.value)) {
                 <div class="field-row">
                   <div class="field">
@@ -230,7 +230,7 @@
                 </div>
               }
 
-              <!-- Sayısal tiplere özel: Min, Max -->
+              <!-- Numeric-type-specific: Min, Max -->
               @if (isNumericType(getColumnGroup($index).get('dataType')!.value)) {
                 <div class="field-row">
                   <div class="field">
@@ -250,7 +250,7 @@
                 </div>
               }
 
-              <!-- Enum'a özel: izinli değerler -->
+              <!-- Enum-specific: allowed values -->
               @if (getColumnGroup($index).get('dataType')!.value === 'enum') {
                 <div class="field-row">
                   <div class="field field--full">
@@ -269,7 +269,7 @@
                 </div>
               }
 
-              <!-- Lookup'a özel: hedef model + gösterilecek kolon -->
+              <!-- Lookup-specific: target model + column to display -->
               @if (getColumnGroup($index).get('dataType')!.value === 'lookup') {
                 <div class="field-row">
                   <div class="field">
@@ -304,7 +304,7 @@
                 </div>
               }
 
-              <!-- Image/File'a özel: dosya boyutu sınırı -->
+              <!-- Image/File-specific: file size limit -->
               @if (isFileType(getColumnGroup($index).get('dataType')!.value)) {
                 <div class="field-row">
                   <div class="field">
@@ -333,7 +333,7 @@
                 </div>
               }
 
-              <!-- Alt satır: solda Nullable, en sağda Sil -->
+              <!-- Bottom row: Nullable on the left, Delete on the far right -->
               <div class="col-row-footer">
                 <label class="checkbox-label" [attr.for]="'col-null-' + depth + '-' + $index">
                   <input
@@ -360,7 +360,7 @@
       }
     </div>
 
-    <!-- Alt Modeller (recursive) -->
+    <!-- Sub-models (recursive) -->
     @if (subModels.length > 0) {
       <div class="sub-models-section" formArrayName="subModels">
         @for (sub of subModels.controls; track $index) {
@@ -375,7 +375,7 @@
       </div>
     }
 
-    <!-- Alt Model Oluştur butonu — max 4 derinlikte kilitleniyor -->
+    <!-- "Create Sub-model" button — locked at max depth 4 -->
     @if (depth < MAX_DEPTH) {
       <button
         type="button"
@@ -388,7 +388,7 @@
 
   </div>
 
-  <!-- Veri tipi / kural kılavuzu — her düğüm kendi örneğini render eder. -->
+  <!-- Data type / rule guide — each node renders its own instance. -->
   <app-datatype-help
     [open]="helpOpen()"
     [topic]="helpTopic()"

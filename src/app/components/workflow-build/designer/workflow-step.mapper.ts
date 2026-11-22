@@ -8,32 +8,32 @@ import {
 } from '../../../models/workflow.model';
 import { StepFieldValue, buildAssignment, buildSla } from '../workflow-step.form';
 
-/** Pop-up formunun ham değeri (newStepGroup şekli, getRawValue). */
+/** Raw value of the pop-up form (newStepGroup shape, getRawValue). */
 export type StepFormValue = Record<string, unknown>;
 
 export interface MappedStep {
   step: WorkflowStep;
-  /** Adımın `entityStatusMap` girdisi; boş = girdi yok. */
+  /** The step's `entityStatusMap` entry; empty = no entry. */
   statusLabel: string;
 }
 
-/** Yalnız paralel adıma ait alanlar — onay adımına dönüşünce silinir. */
+/** Fields that belong only to a parallel step — deleted when it turns into an approval step. */
 const PARALLEL_ONLY = ['branches', 'mode', 'onComplete', 'onAnyReject'] as const;
-/** Yalnız onay adımına ait alanlar — paralel adıma dönüşünce silinir. */
+/** Fields that belong only to an approval step — deleted when it turns into a parallel step. */
 const APPROVAL_ONLY = ['onApprove', 'onReject'] as const;
 
 /**
- * Pop-up form değerini adım nesnesine çevirir.
+ * Converts the pop-up form value into a step object.
  *
- * Kurallar eski `buildGraph()` ile AYNI (spec'te dondurulmuş kopyasıyla
- * karşılaştırılıyor); iki bilinçli fark var:
- *  1) Sonuç asıl adımın (`original`) ÜZERİNE kurulur: formda karşılığı olmayan
- *     alanlar (bilinmeyen özellikler, paralel dalın formu, form alanının
- *     maxLength'i) korunur. Eskiden her kayıtta siliniyorlardı.
- *  2) Konum (x/y) pop-up'ın değil canvas'ındır; asıl adımdan alınır.
+ * The rules are the SAME as the old `buildGraph()` (compared against a frozen copy
+ * in the spec); there are two deliberate differences:
+ *  1) The result is built ON TOP of the original step (`original`): fields without a
+ *     counterpart in the form (unknown properties, the parallel branch's form, the form field's
+ *     maxLength) are preserved. They used to be deleted on every save.
+ *  2) Position (x/y) belongs to the canvas, not the pop-up; it is taken from the original step.
  *
- * Tip değişince eski tipe ait alanlar silinir: paralelden onaya dönen adımda
- * `branches` kalsaydı doğrulayıcı "tekil adım dal tanımlayamaz" derdi.
+ * When the type changes, fields of the old type are deleted: if `branches` remained on a step
+ * turned from parallel into approval, the validator would say "a single step cannot define branches".
  */
 export function stepFromFormValue(raw: StepFormValue, original?: WorkflowStep | null): MappedStep {
   const key = String(raw['key'] ?? '');
@@ -59,8 +59,8 @@ export function stepFromFormValue(raw: StepFormValue, original?: WorkflowStep | 
         name,
         mode: (raw['mode'] as WorkflowJoinMode) ?? 'all',
         branches: branches.map(branchFromFormValue),
-        // Paralel adımın KENDİ ataması/formu gönderilmez — doğrulayıcı bunu
-        // reddediyor; görevler dallardan doğar.
+        // The parallel step's OWN assignment/form is not sent — the validator
+        // rejects it; tasks are created from the branches.
         assignment: null,
         sla: null,
         form: null,
@@ -77,8 +77,8 @@ export function stepFromFormValue(raw: StepFormValue, original?: WorkflowStep | 
   const allowReject = raw['allowReject'] !== false;
   const rejectLabel = allowReject ? String(raw['rejectLabel'] ?? '').trim() : '';
 
-  // Form, serbest alan YA DA kayıt alanı/buton ayarı varsa üretilir; aksi halde
-  // null kalır ve görev şeması kopyası da boş olur (eski davranış).
+  // The form is produced if there is a free field OR a record field/button setting; otherwise
+  // it stays null and the task schema copy is empty too (old behaviour).
   const hasForm = fields.length > 0 || recordFields.length > 0
     || !!approveLabel || !!rejectLabel || !allowReject;
 
@@ -107,7 +107,7 @@ export function stepFromFormValue(raw: StepFormValue, original?: WorkflowStep | 
       sla: buildSla(raw),
       form,
       onApprove: approveTarget,
-      // Red kapalıyken hedef gönderilmez — doğrulayıcı ölü kenarı reddediyor.
+      // With rejection disabled the target is not sent — the validator rejects the dead edge.
       onReject: allowReject ? rejectTarget : null,
       ...position
     }
@@ -121,7 +121,7 @@ function branchFromFormValue(raw: Record<string, unknown>): WorkflowBranch {
     name: String(raw['name'] ?? ''),
     assignment: buildAssignment(raw),
     sla: buildSla(raw),
-    // Dal formu pop-up'ta düzenlenmiyor; gizli kontrolde taşınıp aynen geri yazılır.
+    // The branch form is not edited in the pop-up; it is carried in a hidden control and written back unchanged.
     ...(form ? { form } : {})
   };
 }

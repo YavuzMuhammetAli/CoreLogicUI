@@ -9,19 +9,19 @@ import {
 } from './condition-form';
 import { IconComponent } from '../../shared/icon/icon.component';
 
-/** Hedef seçicideki adım. */
+/** Step in the target picker. */
 export interface StepTarget {
   key: string;
   label: string;
 }
 
 /**
- * Koşul (karar) düğümünün tam düzenleyicisi — adım pop-up'ında açılır.
+ * Full editor of the condition (decision) node — opens in the step pop-up.
  *
- * Adımın KOPYASIYLA çalışır; her değişiklikte yeni hali yayar, pop-up Kaydet'te
- * belgeye yazar (İptal hiçbir şey değiştirmez). Durumlar sırayla denenir — sıra
- * düğmeleri bu yüzden var. Formül modu otomatik değer dilini kullanır ve
- * yazarken istemcide denetlenir (sözdizimi, SEQ, bilinmeyen alan).
+ * Works on a COPY of the step; emits the new state on every change, the pop-up writes it to the
+ * document on Save (Cancel changes nothing). Cases are tried in order — hence the
+ * ordering buttons. Formula mode uses the auto-value language and is
+ * checked on the client while typing (syntax, SEQ, unknown field).
  */
 @Component({
     selector: 'app-condition-editor',
@@ -35,9 +35,9 @@ export class ConditionEditorComponent implements OnInit {
 
   readonly step = input.required<WorkflowStep>();
   readonly columns = input<PublishedColumn[]>([]);
-  /** Gidilebilecek adımlar (kendisi hariç). */
+  /** Reachable steps (excluding itself). */
   readonly targets = input<StepTarget[]>([]);
-  /** Tüm adım anahtarları — formülde "adim.alan" denetimi için. */
+  /** All step keys — for checking "step.field" in formulas. */
   readonly stepKeys = input<string[]>([]);
   readonly readonly = input(false);
 
@@ -51,7 +51,7 @@ export class ConditionEditorComponent implements OnInit {
 
   private readonly columnNames = computed(() => this.columns().map(c => c.columnName));
 
-  /** Durum başına formül denetimi (formül modundakiler). */
+  /** Per-case formula check (cases in formula mode). */
   readonly checks = computed<Array<ExpressionCheck | null>>(() =>
     this.cases().map(c => c.expression == null
       ? null
@@ -68,7 +68,7 @@ export class ConditionEditorComponent implements OnInit {
     this.stepChange.emit(next);
   }
 
-  // ── Genel ─────────────────────────────────────────────────────────────────
+  // ── General ─────────────────────────────────────────────────────────────────
 
   onName(event: Event): void {
     const name = (event.target as HTMLInputElement).value;
@@ -85,7 +85,7 @@ export class ConditionEditorComponent implements OnInit {
     this.apply(step => ({ ...step, defaultTo: value }));
   }
 
-  // ── Durumlar ──────────────────────────────────────────────────────────────
+  // ── Cases ──────────────────────────────────────────────────────────────
 
   addCase(): void {
     this.apply(step => addCase(step, this.languageService.t('workflow.case.newLabel', { n: (step.cases ?? []).length + 1 })));
@@ -123,7 +123,7 @@ export class ConditionEditorComponent implements OnInit {
     this.apply(step => updateCase(step, index, { expression }));
   }
 
-  // ── Satırlar ──────────────────────────────────────────────────────────────
+  // ── Rows ──────────────────────────────────────────────────────────────
 
   addRow(caseIndex: number): void {
     this.apply(step => addRow(step, caseIndex, this.columns()[0]?.columnName ?? ''));
@@ -150,7 +150,7 @@ export class ConditionEditorComponent implements OnInit {
     this.apply(step => updateRow(step, caseIndex, rowIndex, { value }));
   }
 
-  // ── Görünüm yardımcıları ──────────────────────────────────────────────────
+  // ── View helpers ──────────────────────────────────────────────────
 
   needsValue(operator: string | null | undefined): boolean {
     return !VALUELESS_OPERATORS.has(operator ?? '');
@@ -161,7 +161,7 @@ export class ConditionEditorComponent implements OnInit {
     return valueInputKind(column?.dataType);
   }
 
-  /** Kolon listesinde olmayan (önceki adımın alanı vb.) değer de seçicide kalsın. */
+  /** A value not in the column list (a previous step's field etc.) stays in the picker too. */
   isKnownColumn(field: string): boolean {
     return this.columns().some(c => c.columnName.toLowerCase() === field.toLowerCase());
   }

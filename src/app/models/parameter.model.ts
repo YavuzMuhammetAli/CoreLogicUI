@@ -1,78 +1,78 @@
 /**
- * Parametreler ekranının (yedekleme · e-posta · abonelik) veri modelleri.
- * Backend `Entities.DTOs.ParameterDtos` ile bire bir eşleşir.
+ * Data models of the Parameters screen (backup · email · subscription).
+ * Match the backend `Entities.DTOs.ParameterDtos` one to one.
  *
- * Tenant hiçbir istekte GÖNDERİLMEZ — backend her zaman JWT'deki ambient
- * tenant'ı kullanır.
+ * The tenant is NOT SENT in any request — the backend always uses the ambient
+ * tenant from the JWT.
  */
 
 // ── Yedekleme ──────────────────────────────────────────────────────────────
 
-/** GET/PUT /Parameter/backup/schedule — BackupScheduleDto karşılığı. */
+/** GET/PUT /Parameter/backup/schedule — counterpart of BackupScheduleDto. */
 export interface BackupSchedule {
   enabled: boolean;
-  /** 5 alanlı cron ifadesi; `utils/cron-builder.ts` üretir. */
+  /** 5-field cron expression; produced by `utils/cron-builder.ts`. */
   cronExpression: string;
-  /** Cron'un yorumlanacağı saat dilimi; boşsa UTC. */
+  /** Time zone the cron is interpreted in; UTC if empty. */
   timeZoneId?: string | null;
-  /** Yedeklerin saklanma süresi (gün). 0 = süresiz. */
+  /** Backup retention period (days). 0 = indefinite. */
   retentionDays: number;
 
-  // Salt-okunur durum — PUT gövdesinde yok sayılır.
+  // Read-only state — ignored in the PUT body.
   nextDueAt?: string | null;
   lastRunAt?: string | null;
   lastOutcome?: string | null;
 }
 
-/** GET /Parameter/backup/history satırı. */
+/** A GET /Parameter/backup/history row. */
 export interface BackupHistoryItem {
   id: number;
   /** Manual | Scheduled | PreMigration | PrePurge | PreRestore */
   type: string;
-  /** Queued | Running | Completed | Failed — "Şimdi Yedek Al" kuyruğa alır, iş ilerletir. */
+  /** Queued | Running | Completed | Failed — "Şimdi Yedek Al" (Back up now) queues it, the job advances it. */
   status: string;
   sizeBytes: number;
   startedAt: string;
   completedAt?: string | null;
-  /** RESTORE VERIFYONLY başarı zamanı — geri yüklenebilirlik kanıtı. */
+  /** Time RESTORE VERIFYONLY succeeded — proof of restorability. */
   verifiedAt?: string | null;
   error?: string | null;
-  /** Saklama sonu — bu tarihten sonra otomatik silinir; null = süresiz. */
+  /** End of retention — deleted automatically after this date; null = indefinite. */
   expiresAt?: string | null;
-  /** Yedeğin alındığı şema sürümü; null = bilinmiyor. */
+  /** Schema version the backup was taken at; null = unknown. */
   databaseVersion?: number | null;
-  /** Dosyası diskte duran tamamlanmış yedek — indirilebilir. */
+  /** A completed backup whose file is on disk — downloadable. */
   canDownload?: boolean;
-  /** Geri yüklenebilir mi — sunucunun kararı; arayüz kendi kuralını tutmaz. */
+  /** Is it restorable — the server's decision; the UI keeps no rule of its own. */
   canRestore?: boolean;
   /** not_completed | file_missing | version_unknown | version_newer */
   restoreBlockedReason?: string | null;
 }
 
-/** POST /Parameter/backup/{id}/download-link — kısa ömürlü (2 dk), tek amaçlı bağlantı. */
+/** POST /Parameter/backup/{id}/download-link — a short-lived (2 min), single-purpose link. */
 export interface BackupDownloadLink {
-  /** API köküne göre yol (ör. "Parameter/backup/download?token=…"). */
+  /** Path relative to the API root (e.g. "Parameter/backup/download?token=…"). */
   url: string;
   expiresAt: string;
   fileName: string;
 }
 
-/** POST /Parameter/backup/{id}/restore gövdesi — çift onay. */
+/** Body of POST /Parameter/backup/{id}/restore — double confirmation. */
 export interface RestoreBackupRequest {
   companyCodeConfirmation: string;
   password: string;
 }
 
-/** Master kullanıcı uzlaştırmasının sonucu. */
+/** Result of the master user reconciliation. */
 export interface RestoreReconcileSummary {
   updated: number;
   created: number;
   removed: number;
-  /** E-postası başka bir şirkette kayıtlı — dokunulmadı, giriş yapamaz. */
+  /** Email registered in another company — left untouched, cannot log in. */
   conflicts: string[];
 }
 
-/** Geri yükleme durumu — GET /Parameter/backup/restore/{id} ve /active. */
+/** Restore status — GET /Parameter/backup/restore/{id} and /active. */
 export interface TenantRestore {
   id: number;
   backupId: number;
@@ -89,12 +89,12 @@ export interface TenantRestore {
   reconcile?: RestoreReconcileSummary | null;
 }
 
-/** Geri yüklemenin bitip bitmediği — diyalog yoklamayı bırakır. */
+/** Whether the restore has finished — the dialog stops polling. */
 export function isRestoreFinished(restore: Pick<TenantRestore, 'status'>): boolean {
   return restore.status === 'Completed' || restore.status === 'Failed';
 }
 
-/** Kuyrukta ya da sürmekte olan yedek — geçmiş bu durumdayken yoklanır. */
+/** A queued or running backup — the history is polled while in this state. */
 export function isBackupActive(item: Pick<BackupHistoryItem, 'status'>): boolean {
   return item.status === 'Queued' || item.status === 'Running';
 }
@@ -102,10 +102,10 @@ export function isBackupActive(item: Pick<BackupHistoryItem, 'status'>): boolean
 // ── E-posta ────────────────────────────────────────────────────────────────
 
 /**
- * GET/PUT /Parameter/mail — MailSettingDto karşılığı.
+ * GET/PUT /Parameter/mail — counterpart of MailSettingDto.
  *
- * `password` okumada maskeli (`MASKED_PASSWORD`) gelir. Kullanıcı dokunmazsa
- * aynı maske geri gönderilir ve backend mevcut parolayı korur.
+ * `password` comes masked (`MASKED_PASSWORD`) on read. If the user does not touch it,
+ * the same mask is sent back and the backend keeps the existing password.
  */
 export interface MailSetting {
   enabled: boolean;
@@ -116,28 +116,28 @@ export interface MailSetting {
   from: string;
   fromName?: string | null;
   useSsl: boolean;
-  /** Bildirim e-postasındaki bağlantıların kökü (http/https); boşsa mailde buton çıkmaz. */
+  /** Root of the links in notification emails (http/https); if empty, no button appears in the mail. */
   appUrl?: string | null;
-  /** Bildirim e-postası başlığındaki logo adresi (isteğe bağlı). */
+  /** Logo address in the notification email header (optional). */
   logoUrl?: string | null;
-  /** Dil tercihi olmayan kullanıcıların bildirim dili. */
+  /** Notification language for users without a language preference. */
   defaultLanguage: NotificationLanguage;
 }
 
 /**
- * Backend'in kayıtlı parola yerine döndürdüğü maske (PlatformConfigManager ile aynı).
- * Bu değer forma olduğu gibi yüklenir; değişmeden geri giderse parola korunur.
+ * The mask the backend returns instead of the saved password (same as PlatformConfigManager).
+ * This value is loaded into the form as is; if it goes back unchanged, the password is kept.
  */
 export const MASKED_PASSWORD = '••••••';
 
-// ── Bildirim şablonları ────────────────────────────────────────────────────
+// ── Notification templates ─────────────────────────────────────────────────
 
-/** Bildirim e-postası dili — UI'daki TR/EN ile aynı küme. */
+/** Notification email language — the same set as TR/EN in the UI. */
 export type NotificationLanguage = 'tr' | 'en';
 
 /**
- * Şablonu özelleştirilebilen bildirim türleri — backend `WorkflowNotifyKinds`
- * ile birebir (ekrandaki sırayla). Yeniden atama `TaskAssigned` türünü kullanır.
+ * Notification kinds whose template can be customized — one to one with the backend `WorkflowNotifyKinds`
+ * (in on-screen order). Reassignment uses the `TaskAssigned` kind.
  */
 export const NOTIFICATION_TEMPLATE_KINDS = [
   'TaskAssigned',
@@ -149,15 +149,15 @@ export const NOTIFICATION_TEMPLATE_KINDS = [
 
 export type NotificationTemplateKind = (typeof NOTIFICATION_TEMPLATE_KINDS)[number];
 
-/** GET /Parameter/mail/templates satırı. */
+/** A GET /Parameter/mail/templates row. */
 export interface NotificationTemplateSummary {
   kind: NotificationTemplateKind;
   language: NotificationLanguage;
-  /** Admin bu tür+dil için kendi şablonunu kaydetmiş mi. */
+  /** Has the admin saved their own template for this kind+language. */
   isCustom: boolean;
 }
 
-/** GET /Parameter/mail/templates/{kind} — etkin şablon + gömülü varsayılan. */
+/** GET /Parameter/mail/templates/{kind} — effective template + embedded default. */
 export interface NotificationTemplate {
   kind: NotificationTemplateKind;
   language: NotificationLanguage;
@@ -166,17 +166,17 @@ export interface NotificationTemplate {
   html: string;
   defaultSubject: string;
   defaultHtml: string;
-  /** Kullanılabilir yer tutucu adları — şablonda `{{ad}}` olarak yazılır. */
+  /** Available placeholder names — written as `{{name}}` in the template. */
   placeholders: string[];
 }
 
-/** PUT .../{kind} ve POST .../{kind}/preview gövdesi. */
+/** Body of PUT .../{kind} and POST .../{kind}/preview. */
 export interface NotificationTemplateContent {
   subject: string;
   html: string;
 }
 
-/** POST .../{kind}/test gövdesi. */
+/** Body of POST .../{kind}/test. */
 export interface NotificationTemplateTestRequest extends NotificationTemplateContent {
   to: string;
 }
@@ -184,9 +184,9 @@ export interface NotificationTemplateTestRequest extends NotificationTemplateCon
 // ── Abonelik ───────────────────────────────────────────────────────────────
 
 /**
- * Plan özelliği/limiti. `limitValue` null ise bool özellik (varlığı = açık).
- * Etiket ve birim adı sunucuda, isteğin dilinde backend `MetricCatalog`'dan gelir; liste de
- * katalog sırasıyla döner — arayüz anahtar listesi ya da etiket tablosu tutmaz.
+ * Plan feature/limit. If `limitValue` is null it is a bool feature (presence = enabled).
+ * The label and unit name come from the backend `MetricCatalog` on the server, in the request's language; the list
+ * also comes in catalog order — the UI keeps no key list or label table.
  */
 export interface TenantPlanFeature {
   featureKey: string;
@@ -197,7 +197,7 @@ export interface TenantPlanFeature {
   kind: 'flag' | 'quota' | 'metric';
 }
 
-/** GET /Parameter/subscription/plans satırı. */
+/** A GET /Parameter/subscription/plans row. */
 export interface TenantPlan {
   id: number;
   code: string;
@@ -221,7 +221,7 @@ export interface TenantSubscription {
   trialEndsAt?: string | null;
 }
 
-/** POST /Parameter/subscription/purchase gövdesi. */
+/** Body of POST /Parameter/subscription/purchase. */
 export interface PurchasePlanRequest {
   planId: number;
   seats: number;

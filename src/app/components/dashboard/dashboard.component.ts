@@ -8,7 +8,7 @@ import { AppChartComponent } from '../chart/chart.component';
 import { LanguageService } from '../../services/language.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 
-/** Render için widget sonucu + rapor adı (dashboard.get yalnızca reportDefinitionId taşır). */
+/** Widget result + report name for rendering (dashboard.get carries only reportDefinitionId). */
 export interface DashboardWidgetView {
   result: DashboardWidgetResult;
   reportName: string;
@@ -36,17 +36,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private routeSub?: Subscription;
 
   /**
-   * Tablo widget'ının tasarım yüksekliği (px): grid satırı 64px + satır arası boşluk 24px
-   * (bkz. .widget-grid). Grafik kartları içeriğe göre büyürken tablo kartı bu yükseklikte
-   * sabit kalır; taşan satırlar kartın içinde kaydırılır.
+   * Design height of the table widget (px): grid row 64px + row gap 24px
+   * (see .widget-grid). While chart cards grow with their content, the table card stays
+   * fixed at this height; overflowing rows scroll inside the card.
    */
   tableMaxHeight(widget: DashboardWidget): number {
     return widget.h * 64 + (widget.h - 1) * 24;
   }
 
   ngOnInit(): void {
-    // Sidebar'dan dashboard'lar arası geçişte component yeniden oluşturulmaz;
-    // paramMap aboneliği her :id değişiminde veriyi yeniden yükler.
+    // The component is not recreated when switching between dashboards from the sidebar;
+    // the paramMap subscription reloads the data on every :id change.
     this.routeSub = this.route.paramMap.subscribe(params => {
       const id = Number(params.get('id'));
       this.load(id);
@@ -63,9 +63,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.dashboard.set(null);
     this.widgetViews.set([]);
 
-    // listCached(): rapor tanımları yalnızca widget başlığındaki ADI çözmek için
-    // gerekiyor. Eskiden her dashboard geçişinde tüm liste yeniden çekiliyordu;
-    // artık shareReplay ile önbellekli.
+    // listCached(): report definitions are needed only to resolve the NAME in the
+    // widget header. The whole list used to be refetched on every dashboard switch;
+    // now it is cached with shareReplay.
     forkJoin([this.dashboardService.get(id), this.reportService.listCached()]).subscribe({
       next: ([dashRes, listRes]) => {
         this.loading.set(false);
@@ -83,10 +83,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
           for (const r of listRes.data ?? []) reportNames.set(r.id, r.name);
         }
 
-        // Tasarımdaki sıraya (önce satır, sonra sütun) diz. Masaüstünde konum zaten
-        // grid-column/row ile verilir; ama dar ekranda widget'lar alt alta DOM sırasıyla
-        // akar ve dizi, raporların tasarımcıda işaretlenme sırasıdır — sürükleme onu
-        // değiştirmez. Sıralanmasaydı en üstteki KPI'lar telefonda en alta düşebilirdi.
+        // Sort in design order (row first, then column). On desktop the position is already
+        // given by grid-column/row; but on narrow screens widgets flow top-down in DOM order
+        // and the array is the order in which reports were checked in the designer — dragging
+        // does not change it. Without sorting, the top KPIs could end up at the bottom on phones.
         const ordered = [...dash.widgets].sort((a, b) =>
           a.widget.y - b.widget.y || a.widget.x - b.widget.x);
 

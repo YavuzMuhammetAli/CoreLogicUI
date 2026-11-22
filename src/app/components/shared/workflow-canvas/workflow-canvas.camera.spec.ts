@@ -4,8 +4,8 @@ import {
 } from './workflow-canvas.camera';
 
 /**
- * Kamera saf bir fonksiyon kümesi olduğu için TestBed'e gerek yok
- * (workflow-graph.layout.spec.ts ile aynı yaklaşım).
+ * The camera is a set of pure functions, so no TestBed is needed
+ * (same approach as workflow-graph.layout.spec.ts).
  */
 const RECT: ViewportRect = { left: 100, top: 50, width: 800, height: 600 };
 
@@ -14,24 +14,24 @@ function camera(zoom: number, panX = 0, panY = 0): Camera {
 }
 
 describe('clampZoom', () => {
-  it('alt ve üst sınırlara kelepçeler', () => {
+  it('clamps to the lower and upper limits', () => {
     expect(clampZoom(0.01)).toBe(MIN_ZOOM);
     expect(clampZoom(99)).toBe(MAX_ZOOM);
   });
 
-  it('sınırlar arasındaki değeri olduğu gibi bırakır', () => {
+  it('leaves a value within the limits as is', () => {
     expect(clampZoom(1.4)).toBe(1.4);
   });
 
-  it('NaN gelirse 1 döner', () => {
-    // Bölme sonucu kameraya sızarsa tüm şema kaybolurdu.
+  it('returns 1 for NaN', () => {
+    // If a division result leaked into the camera, the whole diagram would vanish.
     expect(clampZoom(NaN)).toBe(1);
     expect(clampZoom(Infinity)).toBe(MAX_ZOOM);
   });
 });
 
 describe('screenToWorld / worldToScreen', () => {
-  it('gidiş-dönüş aynı noktayı verir', () => {
+  it('a round trip gives the same point', () => {
     const cam = camera(1.7, -40, 22);
 
     const world = screenToWorld(300, 200, RECT, cam);
@@ -41,14 +41,14 @@ describe('screenToWorld / worldToScreen', () => {
     expect(back.y).toBeCloseTo(200, 6);
   });
 
-  it('birim kamerada yalnızca viewport konumunu düşer', () => {
+  it('with the identity camera only the viewport position is subtracted', () => {
     const world = screenToWorld(160, 90, RECT, IDENTITY_CAMERA);
 
     expect(world.x).toBe(60);
     expect(world.y).toBe(40);
   });
 
-  it('kaydırma ekran koordinatını öteler', () => {
+  it('panning offsets the screen coordinate', () => {
     const world = screenToWorld(160, 90, RECT, camera(1, 25, -15));
 
     expect(world.x).toBe(35);
@@ -57,7 +57,7 @@ describe('screenToWorld / worldToScreen', () => {
 });
 
 describe('zoomAt', () => {
-  it('imcin altındaki dünya noktasını sabit tutar', () => {
+  it('keeps the world point under the cursor fixed', () => {
     const cam = camera(1, 30, -10);
     const anchorX = 420;
     const anchorY = 310;
@@ -70,7 +70,7 @@ describe('zoomAt', () => {
     expect(after.y).toBeCloseTo(before.y, 6);
   });
 
-  it('uzaklaştırmada da çapayı sabit tutar', () => {
+  it('keeps the anchor fixed when zooming out too', () => {
     const cam = camera(2, -120, 44);
 
     const before = screenToWorld(250, 180, RECT, cam);
@@ -80,7 +80,7 @@ describe('zoomAt', () => {
     expect(after.y).toBeCloseTo(before.y, 6);
   });
 
-  it('üst sınırdayken daha fazla yakınlaştırmaz ve kaydırmayı bozmaz', () => {
+  it('does not zoom further at the upper limit and does not disturb the pan', () => {
     const cam = camera(MAX_ZOOM, 17, -3);
 
     const next = zoomAt(cam, 1.5, 400, 300, RECT);
@@ -90,11 +90,11 @@ describe('zoomAt', () => {
     expect(next.panY).toBeCloseTo(-3, 6);
   });
 
-  it('alt sınırda kelepçelenir', () => {
+  it('is clamped at the lower limit', () => {
     expect(zoomAt(camera(MIN_ZOOM), 0.1, 400, 300, RECT).zoom).toBe(MIN_ZOOM);
   });
 
-  it('zoomAtCenter viewport merkezini çapa alır', () => {
+  it('zoomAtCenter anchors on the viewport centre', () => {
     const cam = camera(1);
     const centerX = RECT.left + RECT.width / 2;
     const centerY = RECT.top + RECT.height / 2;
@@ -108,7 +108,7 @@ describe('zoomAt', () => {
 });
 
 describe('panBy', () => {
-  it('yakınlaştırmayı değiştirmeden kaydırır', () => {
+  it('pans without changing the zoom', () => {
     const next = panBy(camera(1.6, 10, 20), -30, 45);
 
     expect(next).toEqual({ zoom: 1.6, panX: -20, panY: 65 });
@@ -118,7 +118,7 @@ describe('panBy', () => {
 describe('fitToView', () => {
   const viewport = { width: 800, height: 600 };
 
-  it('sınırları viewport içine sokar', () => {
+  it('brings the bounds inside the viewport', () => {
     const bounds = { minX: 0, minY: 0, maxX: 2000, maxY: 1000 };
 
     const cam = fitToView(bounds, viewport, 32);
@@ -127,7 +127,7 @@ describe('fitToView', () => {
     expect((bounds.maxY - bounds.minY) * cam.zoom).toBeLessThanOrEqual(viewport.height - 64 + 0.001);
   });
 
-  it('içeriği ortalar', () => {
+  it('centres the content', () => {
     const bounds = { minX: 0, minY: 0, maxX: 400, maxY: 200 };
 
     const cam = fitToView(bounds, viewport, 32);
@@ -138,7 +138,7 @@ describe('fitToView', () => {
     expect(centerY).toBeCloseTo(viewport.height / 2, 6);
   });
 
-  it('negatif başlangıçlı sınırları da ortalar', () => {
+  it('centres bounds with a negative origin too', () => {
     const bounds = { minX: -300, minY: -120, maxX: 100, maxY: 80 };
 
     const cam = fitToView(bounds, viewport, 32);
@@ -147,23 +147,23 @@ describe('fitToView', () => {
     expect(centerX).toBeCloseTo(viewport.width / 2, 6);
   });
 
-  it('maxZoom değerini aşmaz — tek düğümü ekranı dolduracak kadar büyütmez', () => {
+  it('does not exceed maxZoom — does not enlarge a single node to fill the screen', () => {
     const cam = fitToView({ minX: 0, minY: 0, maxX: 40, maxY: 20 }, viewport, 32);
 
     expect(cam.zoom).toBe(1);
   });
 
-  it('çok büyük şemada alt sınırda kelepçelenir', () => {
+  it('is clamped at the lower limit for a very large diagram', () => {
     const cam = fitToView({ minX: 0, minY: 0, maxX: 100000, maxY: 100000 }, viewport, 32);
 
     expect(cam.zoom).toBe(MIN_ZOOM);
   });
 
-  it('ölçüsüz sınırda kamerayı oynatmaz', () => {
+  it('does not move the camera for zero-size bounds', () => {
     expect(fitToView({ minX: 10, minY: 10, maxX: 10, maxY: 10 }, viewport)).toEqual(IDENTITY_CAMERA);
   });
 
-  it('henüz yerleşmemiş viewport kamerayı oynatmaz', () => {
+  it('a viewport not yet laid out does not move the camera', () => {
     const bounds = { minX: 0, minY: 0, maxX: 400, maxY: 200 };
 
     expect(fitToView(bounds, { width: 0, height: 0 })).toEqual(IDENTITY_CAMERA);
@@ -173,7 +173,7 @@ describe('fitToView', () => {
 describe('fitToView — align: start', () => {
   const viewport = { width: 800, height: 600 };
 
-  it('küçük şemayı ortalamaz, sol-üst köşeye padding kadar içeriden yaslar', () => {
+  it('does not centre a small diagram; aligns it to the top-left corner inset by the padding', () => {
     const bounds = { minX: 300, minY: 200, maxX: 500, maxY: 300 };
     const cam = fitToView(bounds, viewport, 32, 1, 'start');
 
@@ -182,8 +182,8 @@ describe('fitToView — align: start', () => {
     expect(bounds.minY * cam.zoom + cam.panY).toBeCloseTo(32, 6);
   });
 
-  it('büyük şemada küçülür, sol-üstten başlar ve sağ-alt viewport içinde kalır', () => {
-    // MIN_ZOOM kelepçesine takılmayacak ölçüde (gereken zoom ≈ 0.49).
+  it('shrinks a large diagram, starts at the top-left and the bottom-right stays inside the viewport', () => {
+    // Sized so it doesn't hit the MIN_ZOOM clamp (required zoom ≈ 0.49).
     const bounds = { minX: -100, minY: 50, maxX: 1400, maxY: 1050 };
     const cam = fitToView(bounds, viewport, 32, 1, 'start');
 
@@ -196,7 +196,7 @@ describe('fitToView — align: start', () => {
 });
 
 describe('gridStyle', () => {
-  it('zoom 1\'de temel aralık, pan kadar kayar', () => {
+  it('base spacing at zoom 1, shifted by pan', () => {
     const grid = gridStyle(camera(1, 45, 7));
 
     expect(grid.step).toBe(GRID_STEP);
@@ -204,35 +204,35 @@ describe('gridStyle', () => {
     expect(grid.offsetY).toBe(7);
   });
 
-  it('zoom ile ölçeklenir', () => {
+  it('scales with zoom', () => {
     expect(gridStyle(camera(2)).step).toBe(GRID_STEP * 2);
   });
 
-  it('çok uzaklaşınca aralık ikiye katlanır, gürültüye dönmez', () => {
+  it('doubles the spacing when zoomed far out, so it does not turn into noise', () => {
     const step = gridStyle(camera(MIN_ZOOM)).step;
 
     expect(step).toBeGreaterThanOrEqual(GRID_MIN_SCREEN_STEP);
     expect(step % (GRID_STEP * MIN_ZOOM)).toBe(0);
   });
 
-  it('negatif pan\'da kayma [0, aralık) içinde kalır', () => {
+  it('with a negative pan the offset stays within [0, spacing)', () => {
     const grid = gridStyle(camera(1, -45, -1));
 
     expect(grid.offsetX).toBe(15);
     expect(grid.offsetY).toBe(19);
   });
 
-  it('bozuk zoom sonsuz döngüye girmez', () => {
+  it('a broken zoom does not cause an infinite loop', () => {
     expect(gridStyle(camera(0)).step).toBe(GRID_STEP);
   });
 });
 
 describe('boundsOf', () => {
-  it('boş listede null döner', () => {
+  it('returns null for an empty list', () => {
     expect(boundsOf([])).toBeNull();
   });
 
-  it('tüm kutuları kapsar', () => {
+  it('covers all boxes', () => {
     const bounds = boundsOf([
       { x: 10, y: 20, width: 100, height: 50 },
       { x: 200, y: 5, width: 60, height: 200 }
@@ -245,19 +245,19 @@ describe('boundsOf', () => {
     const view = { width: 800, height: 600 };
     const camera: Camera = { zoom: 1, panX: 0, panY: 0 };
 
-    it('görünür kutuda kamera aynı nesne kalır', () => {
+    it('for a visible box the camera stays the same object', () => {
       expect(revealBox(camera, { x: 100, y: 100, width: 168, height: 60 }, view)).toBe(camera);
     });
 
-    it('sağdan taşan kutu için yalnız gerektiği kadar sola kaydırır', () => {
+    it('for a box overflowing on the right, pans left only as much as needed', () => {
       const next = revealBox(camera, { x: 700, y: 100, width: 168, height: 60 }, view);
-      // sağ kenar 868 → 800 − 24 = 776 olmalı: 92 px.
+      // right edge 868 → must be 800 − 24 = 776: 92 px.
       expect(next).toEqual({ zoom: 1, panX: -92, panY: 0 });
     });
 
-    it('soldan/üstten taşan kutuyu kenar payıyla getirir; zoom hesaba katılır', () => {
+    it('brings a box overflowing left/top in with the margin; zoom is taken into account', () => {
       const zoomed: Camera = { zoom: 0.5, panX: -200, panY: 0 };
-      // x=100 → ekranda 50 − 200 = −150 → 24'e: +174.
+      // x=100 → on screen 50 − 200 = −150 → to 24: +174.
       expect(revealBox(zoomed, { x: 100, y: -100, width: 168, height: 60 }, view))
         .toEqual({ zoom: 0.5, panX: -26, panY: 74 });
     });

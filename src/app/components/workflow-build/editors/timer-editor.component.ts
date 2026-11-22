@@ -6,13 +6,13 @@ import { PublishedColumn } from '../../../services/published-model.service';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { StepTarget } from './condition-editor.component';
 
-/** Süre birimlerinin dakika karşılığı — en fazla bekleme denetimi için. */
+/** Minutes per duration unit — for the maximum wait check. */
 const UNIT_MINUTES: Record<WorkflowTimerUnit, number> = { minutes: 1, hours: 60, days: 1440 };
 
 /**
- * Bekleme düğümünün düzenleyicisi: sabit süre ya da kayıttaki bir tarihe kadar
- * (± saat). Tarih İstanbul saatiyle okunur; yalnız tarih alanı gece yarısıdır.
- * Adımın KOPYASIYLA çalışır (bkz. condition-editor).
+ * Editor of the wait node: a fixed duration or until a date in the record
+ * (± hours). The date is read in Istanbul time; a date-only field means midnight.
+ * Works on a COPY of the step (see condition-editor).
  */
 @Component({
     selector: 'app-timer-editor',
@@ -36,11 +36,11 @@ export class TimerEditorComponent implements OnInit {
   readonly timer = computed<WorkflowTimerConfig>(() => this.draft().timer ?? { mode: 'duration', amount: 1, unit: 'days' });
   readonly mode = computed<WorkflowTimerMode>(() => this.timer().mode ?? 'duration');
 
-  /** Tarih alanı seçicisi: yalnız tarih kolonları. */
+  /** Date field picker: date columns only. */
   readonly dateColumns = computed(() =>
     this.columns().filter(c => c.dataType === 'datetime' || c.dataType === 'dateonly'));
 
-  /** Süre geçersiz (≤ 0) ya da üst sınırı aşıyor. */
+  /** Duration is invalid (≤ 0) or exceeds the upper limit. */
   readonly durationProblem = computed<'invalid' | 'tooLong' | null>(() => {
     const timer = this.timer();
     if (this.mode() !== 'duration') return null;
@@ -79,7 +79,7 @@ export class TimerEditorComponent implements OnInit {
     this.apply(step => ({ ...step, next }));
   }
 
-  /** Mod değişince diğer modun alanları temizlenir — kayıtta yarım ayar kalmasın. */
+  /** When the mode changes, the other mode's fields are cleared — no half setting is left in the record. */
   setMode(mode: WorkflowTimerMode): void {
     if (mode === this.mode()) return;
     this.apply(step => ({

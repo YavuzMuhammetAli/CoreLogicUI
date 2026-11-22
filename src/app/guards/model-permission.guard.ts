@@ -7,16 +7,16 @@ import { NotificationService } from '../services/notification.service';
 import { LanguageService } from '../services/language.service';
 
 /**
- * Model rotaları için per-model izin guard'ı fabrikası.
+ * Factory for the per-model permission guard of model routes.
  *
- * Kullanım (app.routes.ts):
+ * Usage (app.routes.ts):
  *   canActivate: [modelPermissionGuard('read')]
  *   canActivate: [modelPermissionGuard('create')]
  *
- * - Admin'ler PermissionService.can() içinde bypass edilir.
- * - İzin yoksa '/models'e yönlendirir ve NotificationService üzerinden uyarı gösterir.
- * - ensureLoaded() ile yetki verisinin yüklü olması beklenir; sayfa yenilemesinde
- *   senkron sinyal null olsa dahi doğru kararı verir.
+ * - Admins are bypassed inside PermissionService.can().
+ * - Without permission, redirects to '/models' and shows a warning via NotificationService.
+ * - Waits for the permission data to be loaded via ensureLoaded(); decides correctly
+ *   even if the synchronous signal is null on a page reload.
  */
 export function modelPermissionGuard(action: 'read' | 'create' | 'update' | 'delete'): CanActivateFn {
   return (route): Observable<boolean | UrlTree> => {
@@ -33,7 +33,7 @@ export function modelPermissionGuard(action: 'read' | 'create' | 'update' | 'del
           return true;
         }
 
-        // Uyarı aktif dilde (önceden sabit Türkçe metindi).
+        // The warning is in the active language (previously a fixed Turkish text).
         const label = typeName
           ? language.t('permission.guard.denied', {
               model: typeName,

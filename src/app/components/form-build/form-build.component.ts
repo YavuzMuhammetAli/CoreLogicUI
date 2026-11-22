@@ -17,9 +17,9 @@ import { IconComponent } from '../shared/icon/icon.component';
 import { ModelIconComponent } from '../shared/model-icon/model-icon.component';
 
 /**
- * FormBuildComponent — yayınlanmış model listesi + silme.
- * Yeni tablo oluşturma ve mevcut tabloyu düzenleme artık ayrı bir detay görünümünde
- * (`TableDetailComponent`, route: `/build/new` ve `/build/:typeName`) yapılır.
+ * FormBuildComponent — published model list + delete.
+ * Creating a new table and editing an existing one now happen in a separate detail view
+ * (`TableDetailComponent`, routes: `/build/new` and `/build/:typeName`).
  */
 @Component({
     selector: 'app-form-build',
@@ -29,23 +29,23 @@ import { ModelIconComponent } from '../shared/model-icon/model-icon.component';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FormBuildComponent {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
 
   models: PublishedModel[] = [];
   loadingModels = false;
   listError: string | null = null;
 
-  /** typeName → siliniyor mu (pasifleştirme isteği devam ediyor) */
+  /** typeName → being deleted? (deactivation request in progress) */
   isDeleting: Record<string, boolean> = {};
   deleteError: string | null = null;
 
-  /** Silme onay modalının durumu */
+  /** State of the delete confirm modal */
   confirmOpen = false;
   confirmBusy = false;
   confirmUsageLoading = false;
   confirmUsage: ModelUsage | null = null;
-  /** Onay bekleyen modelin adı */
+  /** Name of the model awaiting confirmation */
   pendingTypeName: string | null = null;
 
   private readonly languageService = inject(LanguageService);
@@ -82,9 +82,9 @@ export class FormBuildComponent {
   }
 
   /**
-   * Modeli pasif yapmadan önce nerelerde kullanıldığını (raporlar/dashboardlar) kontrol eder
-   * ve onay modalını açar. Asıl pasifleştirme `onConfirmDelete()`'te, kullanıcı modalı onayladıktan
-   * sonra yapılır.
+   * Before deactivating the model, checks where it is used (reports/dashboards)
+   * and opens the confirm modal. The actual deactivation happens in `onConfirmDelete()`, after the user
+   * confirms the modal.
    */
   onDeleteModel(typeName: string): void {
     this.deleteError = null;
@@ -95,14 +95,14 @@ export class FormBuildComponent {
 
     this.modelUsageService.getUsage(typeName).pipe(markDirty(this.cdr)).subscribe({
       next: usage => {
-        // Modal açıkken kullanıcı vazgeçmiş olabilir; o durumda sonucu yoksay.
+        // The user may have cancelled while the modal was open; ignore the result then.
         if (this.pendingTypeName === typeName) {
           this.confirmUsage = usage;
           this.confirmUsageLoading = false;
         }
       },
       error: () => {
-        // Kullanım bilgisi alınamazsa silme akışını engellemiyoruz; boş kullanım gibi davran.
+        // If usage info can't be fetched we don't block the delete flow; treat it as no usage.
         if (this.pendingTypeName === typeName) {
           this.confirmUsage = { reports: [], dashboards: [], isEmpty: true };
           this.confirmUsageLoading = false;
@@ -120,9 +120,9 @@ export class FormBuildComponent {
   }
 
   /**
-   * Kullanıcı modalı onayladı: önce (varsa) bağlı rapor/dashboardları, sonra modeli pasif alır.
-   * PublishedTable/PublishedTableMember + ModelDefinition kayıtları Active=false olur,
-   * derlenmiş tip assembly'den düşürülür. SQL tablosu ve içindeki kayıtlar hiçbir şekilde silinmez.
+   * The user confirmed the modal: first deactivates linked reports/dashboards (if any), then the model.
+   * PublishedTable/PublishedTableMember + ModelDefinition records become Active=false,
+   * the compiled type is dropped from the assembly. The SQL table and its records are never deleted.
    */
   onConfirmDelete(): void {
     const typeName = this.pendingTypeName;
@@ -137,7 +137,7 @@ export class FormBuildComponent {
       ...(usage?.reports.map(r => this.reportService.delete(r.id).pipe(catchError(() => of(null)))) ?? []),
       ...(usage?.dashboards.map(d => this.dashboardService.delete(d.id).pipe(catchError(() => of(null)))) ?? [])
     ];
-    // forkJoin'in her zaman aynı şekilde tip çıkarımı yapması için boşken bile en az 1 eleman verilir.
+    // Pass at least 1 element even when empty so forkJoin always infers the same type.
     if (cascadeCalls.length === 0) {
       cascadeCalls.push(of(null));
     }

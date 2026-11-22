@@ -1,4 +1,4 @@
-import '../../i18n/lazy/datatype-help'; // help.* sözlüğü bu parçayla iner
+import '../../i18n/lazy/datatype-help'; // the help.* dictionary is loaded with this chunk
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, ViewChild, inject, OnDestroy, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { ReactiveFormsModule, AbstractControl, FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -41,29 +41,29 @@ import { ModelIconComponent } from '../shared/model-icon/model-icon.component';
 import { ModelIconPickerComponent } from '../shared/model-icon/model-icon-picker.component';
 import { NotificationService } from '../../services/notification.service';
 
-/** Ekrandaki sekmeler. */
+/** Tabs on the screen. */
 type TabId = 'columns' | 'subModels' | 'relationships';
 
-/** /Published/getAll satırı — model ağacını (parent/derinlik) kurmak için. */
+/** /Published/getAll row — to build the model tree (parent/depth). */
 type TableRow = PublishedTableRow;
 
-/** Kayıtlı bir kolonun düzenleme modundaki diff temeli. */
+/** Diff baseline of a saved column in edit mode. */
 interface ColumnDisplayMeta {
-  /** Kayıtlı tip — kilitli; yine de değişmişse kayıt durur (sessizce atılmaz). */
+  /** Saved type — locked; if it changed anyway the save stops (it is not silently dropped). */
   dataType: string;
   /**
-   * Etiket, açıklama, zorunluluk ve kurallar — değişirse updateMemberMetadata ile tek istekte
-   * yazılır. Önceden yalnız etiket/açıklama yazılıyor, zorunluluk ve kurallar sessizce atılıyordu.
+   * Label, description, requiredness and rules — if changed, written in a single request via
+   * updateMemberMetadata. Previously only label/description were written; requiredness and rules were silently dropped.
    */
   metadataKey: string;
-  /** Otomatik değer kuralı (tetik|formül|salt okunur) — değişirse setMemberAutoValue ile yazılır. */
+  /** Auto-value rule (trigger|formula|read-only) — written via setMemberAutoValue if changed. */
   autoValueKey: string;
-  /** Kayıtlı enum değerleri ve zorunluluk — popup'taki uyarılar için. */
+  /** Saved enum values and requiredness — for the warnings in the popup. */
   enumValues: string;
   isRequired: boolean;
 }
 
-/** Formdaki (kaydedilmiş) sütunun diff temeli. */
+/** Diff baseline of the (saved) column in the form. */
 function columnMetaOf(c: MetadataColumn & { enumValues?: string | null }): ColumnDisplayMeta {
   return {
     dataType: c.dataType,
@@ -74,10 +74,10 @@ function columnMetaOf(c: MetadataColumn & { enumValues?: string | null }): Colum
   };
 }
 
-/** Kaydetme akışında kullanılan düzleştirilmiş düğüm verisi */
+/** Flattened node data used in the save flow */
 interface TreeNode {
   entityName: string;
-  /** Kullanıcı dostu model adı (PublishedTable.Label). */
+  /** User-friendly model name (PublishedTable.Label). */
   label: string | null;
   parentName: string | null;
   columns: {
@@ -103,7 +103,7 @@ interface TreeNode {
 
 type TreeColumn = TreeNode['columns'][number];
 
-/** Tasarımcı sütun değerini otomatik değer planlayıcısının girdisine çevirir. */
+/** Converts a designer column value into the input of the auto-value planner. */
 function toAutoValueColumn(c: {
   columnName: string; dataType: string;
   autoValueTrigger?: string | null; autoValueExpression?: string | null; isReadOnly?: boolean | null;
@@ -117,24 +117,24 @@ function toAutoValueColumn(c: {
   };
 }
 
-/** Taslak sütunun henüz adı yokken planlayıcıda kullanılan yer tutucu ad. */
+/** Placeholder name used in the planner while a draft column has no name yet. */
 const DRAFT_COLUMN = '__draft__';
 
-/** "Tarih + sıra no" şablonu — ör. 25092026-001; sayaç her gün sıfırlanır. */
+/** "Tarih + sıra no" (Date + sequence no) template — e.g. 25092026-001; the counter resets every day. */
 const SEQUENCE_TEMPLATE = "TODAY('ddMMyyyy') & '-' & SEQ(3, TODAY('ddMMyyyy'))";
 
 /**
- * TableDetailComponent — bir tablonun (modelin) oluşturma/düzenleme ekranı.
- * `/build/new` (yeni) ve `/build/:typeName` (düzenleme) bu component'i kullanır
- * (bkz. model-detail/role-detail ile aynı "new sabit segment, data.mode" deseni).
+ * TableDetailComponent — create/edit screen of a table (model).
+ * `/build/new` (new) and `/build/:typeName` (edit) use this component
+ * (see the same "new fixed segment, data.mode" pattern as model-detail/role-detail).
  *
- * Sütunlar, model-detail'deki alt-model sekmesi görünümüyle aynı dilde
- * ("Sütunlar" paneli + veri tablosu) gösterilir; ekleme/düzenleme bir popup
- * (modal) üzerinden yapılır ve değişiklik yalnızca bellekte (FormArray) tutulur —
- * üst-sağdaki "Kaydet"e basılana kadar backend'e gitmez.
+ * Columns are shown in the same style as the sub-model tab view in model-detail
+ * ("Sütunlar" (Columns) panel + data table); adding/editing is done via a popup
+ * (modal) and changes are kept only in memory (FormArray) —
+ * nothing goes to the backend until "Kaydet" (Save) at the top right is pressed.
  *
- * İç içe gerçek alt modeller (subModels) bu ekranda yüzeye çıkarılmaz; veri
- * akışı (flattenTree/saveNode$) geriye dönük uyumluluk için korunur.
+ * Real nested sub-models (subModels) are not surfaced on this screen; the data
+ * flow (flattenTree/saveNode$) is kept for backward compatibility.
  */
 @Component({
     selector: 'app-table-detail',
@@ -155,60 +155,60 @@ const SEQUENCE_TEMPLATE = "TODAY('ddMMyyyy') & '-' & SEQ(3, TODAY('ddMMyyyy'))";
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TableDetailComponent implements OnDestroy {
-  /** OnPush: asenkron veri geldiğinde görünümü kirli işaretlemek için (bkz. markDirty). */
+  /** OnPush: to mark the view dirty when async data arrives (see markDirty). */
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly notifications = inject(NotificationService);
 
   /**
-   * Model ikonu (PublishedTable.Icon, migrasyon 025). Şemaya dokunmaz: henüz kaydedilmemiş modelde
-   * addTable ile, kayıtlı modelde seçildiği anda setTableIcon ile yazılır; Yayınla da seçtirir.
+   * Model icon (PublishedTable.Icon, migration 025). Does not touch the schema: on an unsaved model it is
+   * written with addTable, on a saved model via setTableIcon as soon as it is picked; Publish also asks for it.
    */
   modelIcon: string | null = null;
-  /** Sunucudaki ikon — yalnız değiştiyse yazılır. */
+  /** Icon on the server — written only if changed. */
   private originalIcon: string | null = null;
-  /** Açık ikon seçicinin kipi; null = kapalı. */
+  /** Mode of the open icon picker; null = closed. */
   iconPickerMode: 'publish' | 'select' | null = null;
   iconSaving = false;
 
-  /** Kök model FormGroup — entityName + columns + subModels */
+  /** Root model FormGroup — entityName + columns + subModels */
   rootGroup: FormGroup;
 
-  // Geri bildirim mesajları
+  // Feedback messages
   submitMessage: string | null = null;
   submitSuccess: boolean | null = null;
 
-  // Adım bazlı yükleme bayrakları
+  // Per-step loading flags
   isSaving = false;
   isPublishing = false;
 
   /**
-   * Kaydetme durumu — zorunlu iş kuralı:
-   *   "Kaydedilmemiş model yayınlanamaz."
-   *   Herhangi bir form düzenlemesi bu bayrağı sıfırlar.
+   * Save state — mandatory business rule:
+   *   "An unsaved model cannot be published."
+   *   Any form edit resets this flag.
    */
   isSaved = false;
   savedRootName: string | null = null;
 
-  /** Yeni mi (route data: { mode: 'new' }) yoksa mevcut bir modeli düzenleme mi. */
+  /** Whether this is new (route data: { mode: 'new' }) or editing an existing model. */
   isNew = false;
   editTypeName: string | null = null;
   isLoadingSchema = false;
   loadError: string | null = null;
 
-  /** Düzenleme modunda diff için: yüklenen şemadaki kolon adları */
+  /** For the diff in edit mode: column names in the loaded schema */
   private originalColumnNames = new Set<string>();
 
-  /** Düzenleme modunda diff için: kayıtlı model etiketi ve kolonların etiket/açıklaması. */
+  /** For the diff in edit mode: the saved model label and the columns' label/description. */
   private originalLabel: string | null = null;
   private originalColumnMeta = new Map<string, ColumnDisplayMeta>();
 
   /**
-   * Bu model bir alt modelse üst modelin adı — `{Parent}Id` FK kolonu sistem tarafından
-   * üretildiği için aynı adla kolon açılamaz. Kök modelde ve oluşturma modunda null.
+   * If this model is a sub-model, the parent model's name — since the `{Parent}Id` FK column is
+   * generated by the system, no column can be created with that name. null for a root model and in create mode.
    */
   private ownParentName: string | null = null;
 
-  // ─── Etiket → ad senkronu ───────────────────────────────────────────────────
+  // ─── Label → name sync ──────────────────────────────────────────────────────
 
   readonly IDENTIFIER_MAX_LENGTH = IDENTIFIER_MAX_LENGTH;
   readonly LABEL_MAX_LENGTH = LABEL_MAX_LENGTH;
@@ -219,42 +219,42 @@ export class TableDetailComponent implements OnDestroy {
   readonly maxFileMbFor = maxFileMbFor;
   readonly MIN_FILE_LIMIT_MB = MIN_FILE_LIMIT_MB;
 
-  /** Model etiketi → tablo adı. rootGroup her yeniden kurulduğunda tazelenir. */
+  /** Model label → table name. Refreshed whenever rootGroup is rebuilt. */
   private rootNameSync?: LabelNameSync;
-  /** Sütun popup'ında etiket → alan adı. Popup kapanınca bırakılır. */
+  /** Label → field name in the column popup. Released when the popup closes. */
   private draftNameSync?: LabelNameSync;
 
-  /** Adres çubuğunu sayfa yeniden yüklemeden güncellemek için (oluşturma → düzenleme geçişi). */
+  /** To update the address bar without reloading the page (create → edit transition). */
   private readonly location = inject(Location);
 
   private formChangeSub?: Subscription;
   private paramSub?: Subscription;
 
-  /** Lookup kolon tipi için hedef model seçenekleri (kayıtlı tüm tablolar — taslak + yayınlanmış). */
+  /** Target model options for the lookup column type (all saved tables — draft + published). */
   availableTables: string[] = [];
 
-  // ─── Alt Modeller sekmesi ───────────────────────────────────────────────────
+  // ─── Sub-models tab ─────────────────────────────────────────────────────────
 
-  /** /Published/getAll ham satırları — alt model ağacı, tablo ID'si ve derinlik buradan türetilir. */
+  /** Raw /Published/getAll rows — the sub-model tree, table ID and depth are derived from here. */
   private allTables: TableRow[] = [];
 
-  /** Bu modelin KAYITLI alt modelleri. Her biri kendi /build/:typeName ekranından düzenlenir. */
+  /** SAVED sub-models of this model. Each one is edited from its own /build/:typeName screen. */
   subModelRows: TableRow[] = [];
 
-  /** Bu modelin ağaçtaki derinliği (kök = 1). Kayıtlı değilse kök varsayılır. */
+  /** Depth of this model in the tree (root = 1). Assumed root if not saved. */
   ownTableDepth = 1;
-  /** lookupTargetTable → hedef tablonun kolon adları (display kolonu seçimi için, lazy yüklenir). */
+  /** lookupTargetTable → the target table's column names (for the display column choice, lazy-loaded). */
   lookupColumnsByTable: Partial<Record<string, string[]>> = {};
   private lookupColumnsLoading = new Set<string>();
 
-  // ─── Sütun popup'ı ──────────────────────────────────────────────────────────
+  // ─── Column popup ───────────────────────────────────────────────────────────
 
   columnModalOpen = false;
-  /** null = yeni sütun ekleniyor; sayı ise o index'teki sütun düzenleniyor. */
+  /** null = a new column is being added; a number means the column at that index is being edited. */
   editingColumnIndex: number | null = null;
   columnDraft: FormGroup;
 
-  /** Dropdown seçenekleri — value backend'e gönderilen anahtar, label kullanıcıya gösterilen ad. */
+  /** Dropdown options — value is the key sent to the backend, label the name shown to the user. */
   primitiveTypes: { value: string; label: string }[] = [
     { value: 'string',   label: 'String' },
     { value: 'text',     label: 'Text' },
@@ -279,44 +279,44 @@ export class TableDetailComponent implements OnDestroy {
     { value: 'file',   label: 'File' }
   ];
 
-  /** Sayısal kural alanlarının (Min/Max) gösterileceği tipler. */
+  /** Types for which the numeric rule fields (Min/Max) are shown. */
   private readonly numericTypes = new Set(['int', 'long', 'short', 'byte', 'decimal', 'double', 'float']);
 
-  // ─── Veri tipi / kural kılavuzu ─────────────────────────────────────────────
+  // ─── Data type / rule guide ─────────────────────────────────────────────────
 
   /**
-   * Kılavuz diyaloğu — sütun popup'ındaki "Veri Tipi", ilişki popup'ındaki
-   * "İlişki Tipi" ve sekme araç çubuklarındaki "i" düğmeleriyle açılır.
-   * Diğer popup'ların ÜSTÜNDE açılır; kendi ESC/backdrop yönetimi vardır.
+   * Guide dialog — opened by the "Veri Tipi" (Data type) button in the column popup, the
+   * "İlişki Tipi" (Relationship type) button in the relationship popup and the "i" buttons in the tab toolbars.
+   * Opens ON TOP of the other popups; it has its own ESC/backdrop handling.
    */
   helpOpen = signal(false);
   helpTopic = signal<HelpTopicId>('string');
 
-  // ─── G1: İlişkiler sekmesi ──────────────────────────────────────────────────
+  // ─── G1: Relationships tab ──────────────────────────────────────────────────
   //
-  // İlişkilerin tüm yaşam döngüsü RelationshipsTabComponent'tedir. Burada
-  // yalnızca sekmeye geçirilen bağlam ve sekme çubuğundaki rozet için gereken
-  // özet durum tutulur.
+  // The whole lifecycle of relationships lives in RelationshipsTabComponent. Here
+  // only the context passed to the tab and the summary state needed for the
+  // badge in the tab bar are kept.
 
   private readonly publishedModelService = inject(PublishedModelService);
-  /** Kural kaydından sonra açık kayıt formlarının eski kuralı kullanmaması için. */
+  /** So that open record forms do not keep using the old rule after a rule is saved. */
   private readonly recordMetadata = inject(RecordMetadataService);
 
   @ViewChild(RelationshipsTabComponent) private relationshipsTab?: RelationshipsTabComponent;
 
-  /** Aktif sekme — "Sütunlar", "Alt Modeller" veya "İlişkiler". */
+  /** Active tab — "Sütunlar" (Columns), "Alt Modeller" (Sub-models) or "İlişkiler" (Relationships). */
   activeTab = signal<TabId>('columns');
 
   /**
-   * Kaynak modelin PublishedTable.ID değeri. İlişki endpoint'lerinin route
-   * parametresidir. Yeni model modunda ilk kayıt tamamlanana kadar null'dır.
+   * The source model's PublishedTable.ID value. It is the route parameter of the
+   * relationship endpoints. In new model mode it is null until the first save completes.
    */
   relationshipTableId: number | null = null;
 
-  /** Autocomplete kaynağı — yalnızca YAYINLANMIŞ modeller (taslaklar hariç). */
+  /** Autocomplete source — only PUBLISHED models (drafts excluded). */
   publishedModelNames: string[] = [];
 
-  /** Sekme rozeti: ilişki sayısı ve graph geçerliliği (sekmeden gelir). */
+  /** Tab badge: relationship count and graph validity (comes from the tab). */
   relationshipCount = 0;
   relationshipsValid = true;
 
@@ -331,11 +331,11 @@ export class TableDetailComponent implements OnDestroy {
     this.columnDraft = this.buildColumnDraft();
 
     if (this.isNew) {
-      // Oluşturma modu — ad ve etiket boş başlar; ad, etiket yazıldıkça üretilir
+      // Create mode — name and label start empty; the name is generated as the label is typed
       this.rootGroup = this.buildRootGroup('', '');
       this.trackFormChanges();
     } else {
-      // Düzenleme modu — boş bir yer tutucu ile başla, şema yüklenince değiştirilir
+      // Edit mode — start with an empty placeholder, replaced once the schema loads
       this.editTypeName = this.route.snapshot.paramMap.get('typeName');
       this.rootGroup = this.buildRootGroup(this.editTypeName ?? '', '');
       this.trackFormChanges();
@@ -344,12 +344,12 @@ export class TableDetailComponent implements OnDestroy {
       }
     }
 
-    // Tek istek: lookup hedefleri + alt model ağacı + ilişki tablo ID'si.
+    // Single request: lookup targets + sub-model tree + relationship table ID.
     this.loadTables();
     this.loadPublishedModelNames();
 
-    // /build/:typeName → /build/:typeName geçişinde (alt model satırına tıklama)
-    // Angular component'i yeniden oluşturmaz; parametre akışı dinlenir.
+    // On a /build/:typeName → /build/:typeName transition (clicking a sub-model row)
+    // Angular does not recreate the component; the parameter stream is listened to.
     this.paramSub = this.route.paramMap.pipe(markDirty(this.cdr)).subscribe(params => {
       const typeName = params.get('typeName');
       if (!typeName || typeName === this.editTypeName) return;
@@ -364,14 +364,14 @@ export class TableDetailComponent implements OnDestroy {
     this.draftNameSync?.unsubscribe();
   }
 
-  // ─── Form kurulumu ──────────────────────────────────────────────────────────
+  // ─── Form setup ─────────────────────────────────────────────────────────────
 
   /**
-   * Kök model FormGroup'u. Oluşturma, düzenleme ve alt modele geçiş aynı fabrikadan
-   * geçer — doğrulayıcılar tek yerde durur.
+   * The root model FormGroup. Create, edit and switching to a sub-model all go through
+   * the same factory — the validators live in one place.
    *
-   * Model adı mevcut tablolarla çakışmamalı; düzenleme modunda ad kilitli
-   * (disabled) olduğundan doğrulanmaz, kontrol yalnızca oluşturmada anlamlıdır.
+   * The model name must not clash with existing tables; in edit mode the name is locked
+   * (disabled) so it is not validated — the check is only meaningful on create.
    */
   private buildRootGroup(entityName: string, label: string, columns: FormGroup[] = []): FormGroup {
     return this.fb.group({
@@ -385,14 +385,14 @@ export class TableDetailComponent implements OnDestroy {
     });
   }
 
-  /** Sütun popup'ının taslağı — ağaca bağlı olmadığı için bağlam dışarıdan verilir. */
+  /** Draft of the column popup — not attached to the tree, so the context is supplied from outside. */
   private buildColumnDraft(): FormGroup {
     return ModelNodeComponent.buildColumnGroupStatic(this.fb, () => this.columnDraftContext());
   }
 
-  /** Popup'taki sütunun çakışmaması gerekenler: diğer sütunlar, model adı, üst FK kolonu. */
+  /** What the popup's column must not clash with: other columns, the model name, the parent FK column. */
   private columnDraftContext(): IdentifierContext {
-    // Taslak constructor'da rootGroup'tan önce kurulur ve doğrulayıcı hemen koşar.
+    // The draft is built in the constructor before rootGroup and the validator runs immediately.
     if (!this.rootGroup) return {};
     return {
       taken: this.columns.controls
@@ -403,49 +403,49 @@ export class TableDetailComponent implements OnDestroy {
     };
   }
 
-  /** Ad alanına yazılırken Türkçe karakter/boşluk anında temizlenir. */
+  /** Turkish characters/spaces are stripped instantly while typing in the name field. */
   onNameInput(event: Event, control: AbstractControl, kind: IdentifierKind): void {
     sanitizeIdentifierInputEvent(event, control, kind);
   }
 
-  /** Tablo adındaki "↺ Etiketten üret". */
+  /** The "↺ Etiketten üret" (Generate from label) action for the table name. */
   regenerateEntityName(): void {
     this.rootNameSync?.regenerate();
   }
 
-  /** Sütun popup'ındaki "↺ Etiketten üret". */
+  /** The "↺ Etiketten üret" (Generate from label) action in the column popup. */
   regenerateColumnName(): void {
     this.draftNameSync?.regenerate();
   }
 
-  /** Popup'ta düzenlenen sütun veritabanında kayıtlı mı (kayıtlıysa adı kilitlidir). */
+  /** Whether the column edited in the popup is saved in the database (if so its name is locked). */
   get isEditingPersistedColumn(): boolean {
     return this.columnDraft.get('columnName')!.disabled;
   }
 
-  /** Düzenlenen model yayında mı (derlenmiş sınıf + SQL tablosu var mı). */
+  /** Whether the edited model is published (a compiled class + SQL table exist). */
   get isModelPublished(): boolean {
     return !!this.editTypeName && this.publishedModelNames.includes(this.editTypeName);
   }
 
-  /** Popup'taki kayıtlı sütunun kayıtlı meta verisi (yeni sütunda null). */
+  /** Saved metadata of the saved column in the popup (null for a new column). */
   private get draftOriginalMeta(): ColumnDisplayMeta | null {
     if (!this.isEditingPersistedColumn) return null;
     return this.originalColumnMeta.get(this.columnDraft.getRawValue().columnName) ?? null;
   }
 
-  /** Zorunluluk kutusu yayınlanmış modelde değer tipi olduğu için kilitli mi. */
+  /** Whether the required checkbox is locked because it is a value type on a published model. */
   get draftRequiredLocked(): boolean {
     return this.isEditingPersistedColumn && this.columnDraft.get('isNullable')!.disabled;
   }
 
-  /** Yayındaki modelde isteğe bağlı alan zorunlu yapılıyor — boş eski kayıtlar düzenlenirken takılır. */
+  /** An optional field is being made required on a published model — empty old records get stuck when edited. */
   get draftRequiredTightened(): boolean {
     const original = this.draftOriginalMeta;
     return !!original && this.isModelPublished && !original.isRequired && !this.columnDraft.getRawValue().isNullable;
   }
 
-  /** Enum değeri kaldırılıyor — o değeri taşıyan kayıtlar bir sonraki düzenlemede geçersiz olur. */
+  /** An enum value is being removed — records carrying that value become invalid on their next edit. */
   get draftEnumShrinks(): boolean {
     const original = this.draftOriginalMeta;
     if (!original || original.dataType !== 'enum') return false;
@@ -453,26 +453,26 @@ export class TableDetailComponent implements OnDestroy {
     return original.enumValues.split('|').map(s => s.trim()).filter(Boolean).some(v => !next.has(v));
   }
 
-  /** Ekran tasarımı yalnız yayınlanmış modelde anlamlı: kayıt ekranları derlenmiş tipi çizer. */
+  /** Screen design only makes sense for a published model: record screens draw the compiled type. */
   get screenDesignTypeName(): string | null {
     const name = this.editTypeName;
     return name && this.publishedModelNames.includes(name) ? name : null;
   }
 
-  /** Başlıkta gösterilecek ad: kayıtlı etiket, yoksa tablo adı. */
+  /** Name shown in the header: the saved label, otherwise the table name. */
   get displayModelName(): string {
     return (this.originalLabel ?? '').trim() || this.editTypeName || '';
   }
 
-  // ─── G1: Sekme yönetimi ─────────────────────────────────────────────────────
+  // ─── G1: Tab management ─────────────────────────────────────────────────────
 
   setTab(tab: TabId): void {
     this.activeTab.set(tab);
   }
 
-  // ─── Alt Modeller sekmesi ───────────────────────────────────────────────────
+  // ─── Sub-models tab ─────────────────────────────────────────────────────────
 
-  /** Bu oturumda eklenen (henüz kaydedilmemiş) alt model FormGroup'ları. */
+  /** Sub-model FormGroups added in this session (not yet saved). */
   get subModels(): FormArray {
     return this.rootGroup.get('subModels') as FormArray;
   }
@@ -482,8 +482,8 @@ export class TableDetailComponent implements OnDestroy {
   }
 
   /**
-   * Yeni bir alt model taslağı ekler. Kaydetme, kök modelle birlikte "Kaydet"
-   * butonundan yapılır (flattenTree → saveNode$ → addTable(parentTableName)).
+   * Adds a new sub-model draft. Saving is done together with the root model via the
+   * "Kaydet" (Save) button (flattenTree → saveNode$ → addTable(parentTableName)).
    */
   addSubModel(): void {
     if (!this.canAddSubModel) return;
@@ -494,46 +494,46 @@ export class TableDetailComponent implements OnDestroy {
     this.subModels.removeAt(index);
   }
 
-  /** Şablonda [onRemoveSelf]="removeSubModelFn($index)" olarak bağlanır. */
+  /** Bound in the template as [onRemoveSelf]="removeSubModelFn($index)". */
   removeSubModelFn(index: number): () => void {
     return () => this.removeSubModel(index);
   }
 
   /**
-   * Alt model eklenebilir mi: model ağacı en fazla MAX_DEPTH seviyedir
-   * (backend PublishedTableManager.Add, Depth > 4 kaydını reddeder).
+   * Whether a sub-model can be added: the model tree has at most MAX_DEPTH levels
+   * (backend PublishedTableManager.Add rejects a record with Depth > 4).
    */
   get canAddSubModel(): boolean {
     return this.ownTableDepth < MAX_DEPTH;
   }
 
-  /** Sekme rozeti: kayıtlı + kaydedilmemiş alt model sayısı. */
+  /** Tab badge: saved + unsaved sub-model count. */
   get subModelCount(): number {
     return this.subModelRows.length + this.subModels.length;
   }
 
-  /** Kayıtlı bir alt modeli kendi düzenleme ekranında açar. */
+  /** Opens a saved sub-model in its own edit screen. */
   openSubModel(typeName: string): void {
     this.router.navigate(['/build', typeName]);
   }
 
   /**
-   * Aynı route'ta yalnızca parametre değiştiğinde (alt modelden alt modele geçiş)
-   * Angular component'i YENİDEN OLUŞTURMAZ — route'u yeniden kullanır. Ekran
-   * kurulumu constructor'da snapshot ile yapıldığı için burada elle yenilenir.
+   * When only the parameter changes on the same route (sub-model to sub-model transition)
+   * Angular does NOT RECREATE the component — it reuses the route. Since screen setup
+   * is done in the constructor from the snapshot, it is refreshed manually here.
    */
   private reinitForEdit(typeName: string): void {
     this.isNew        = false;
     this.editTypeName = typeName;
 
-    // Kaydetme/yayınlama durumunu sıfırla — yeni modelin kendi durumu geçerlidir.
+    // Reset the save/publish state — the new model's own state applies.
     this.isSaved             = false;
     this.savedRootName       = null;
     this.submitMessage       = null;
     this.submitSuccess       = null;
     this.loadError           = null;
-    // İlişki durumu sekmenin kendisindedir; ID'yi null'layıp sekmeyi boşaltmak
-    // yeterlidir — yeni tablo ID'si çözüldüğünde sekme listeyi kendi yükler.
+    // The relationship state lives in the tab itself; nulling the ID and emptying the tab
+    // is enough — once the new table ID is resolved the tab loads its list itself.
     this.relationshipTableId = null;
     this.relationshipCount   = 0;
     this.relationshipsValid  = true;
@@ -555,9 +555,9 @@ export class TableDetailComponent implements OnDestroy {
     this.loadTables();
   }
 
-  // ─── G1: İlişki verisi yükleme ──────────────────────────────────────────────
+  // ─── G1: Relationship data loading ──────────────────────────────────────────
 
-  /** Autocomplete için yalnızca yayınlanmış model adlarını yükler. */
+  /** Loads only the published model names for the autocomplete. */
   private loadPublishedModelNames(): void {
     this.publishedModelService.getModels().pipe(markDirty(this.cdr)).subscribe({
       next: res => {
@@ -568,13 +568,13 @@ export class TableDetailComponent implements OnDestroy {
   }
 
   /**
-   * Kayıtlı tüm tabloları TEK istekte okur ve üç şeyi birden besler:
-   *   1. availableTables  → lookup kolonlarının hedef listesi
-   *   2. subModelRows / ownTableDepth → "Alt Modeller" sekmesi
-   *   3. relationshipTableId → ilişki endpoint'lerinin route parametresi
+   * Reads all saved tables in ONE request and feeds three things at once:
+   *   1. availableTables  → target list of lookup columns
+   *   2. subModelRows / ownTableDepth → the "Alt Modeller" (Sub-models) tab
+   *   3. relationshipTableId → the route parameter of the relationship endpoints
    *
-   * Model henüz kaydedilmemişse (oluşturma modu) 2 ve 3 boş kalır; ilk kayıttan
-   * sonra yeniden çağrılır.
+   * If the model is not saved yet (create mode) 2 and 3 stay empty; it is called again
+   * after the first save.
    */
   private loadTables(): void {
     this.publishedTableService.getAllTables().pipe(markDirty(this.cdr)).subscribe({
@@ -592,8 +592,8 @@ export class TableDetailComponent implements OnDestroy {
   }
 
   /**
-   * Yüklenen tablo listesinden bu modelin satırını bulur; alt modellerini,
-   * derinliğini ve ilişki tablo ID'sini türetir.
+   * Finds this model's row in the loaded table list; derives its sub-models,
+   * depth and relationship table ID.
    */
   private refreshOwnTableContext(): void {
     const typeName = this.editTypeName;
@@ -617,14 +617,14 @@ export class TableDetailComponent implements OnDestroy {
       .filter(t => t.parentTableId === own.id)
       .sort((a, b) => a.tableName.localeCompare(b.tableName, 'tr'));
 
-    // İlişki tablo ID'si Input olarak sekmeye iner; sekme kendi verisini yükler.
+    // The relationship table ID goes down to the tab as an Input; the tab loads its own data.
     this.relationshipTableId = own.id;
   }
 
   /**
-   * İlişkiler anında kalıcılaşır; kolon formunda bekleyen değişiklik YOKSA
-   * modeli yayınlanabilir sayar. Kolon düzenlemesi varsa kullanıcı yine
-   * "Kaydet"e basmalıdır — kaydedilmemiş kolonlar yayınlanmasın diye.
+   * Relationships are persisted immediately; if there are NO pending changes in the column form
+   * the model is considered publishable. If there are column edits the user must still
+   * press "Kaydet" (Save) — so unsaved columns are not published.
    */
   markRelationshipsPersisted(): void {
     if (this.isNew || this.rootGroup.dirty) return;
@@ -632,16 +632,16 @@ export class TableDetailComponent implements OnDestroy {
     this.isSaved = true;
     this.savedRootName = this.editTypeName;
   }
-  // ─── Accessor'lar ───────────────────────────────────────────────────────────
+  // ─── Accessors ──────────────────────────────────────────────────────────────
 
-  /** Bu ekranda düzenlenen modelin adı — ilişkiler sekmesine geçirilir. */
+  /** Name of the model edited on this screen — passed to the relationships tab. */
   get currentModelName(): string {
     return this.isNew
       ? (this.entityNameCtrl.value as string)
       : (this.editTypeName ?? '');
   }
 
-  /** İlişkiler sekmesinden gelen özet — sekme çubuğundaki rozeti besler. */
+  /** Summary coming from the relationships tab — feeds the badge in the tab bar. */
   onRelationshipStatus(status: { count: number; isValid: boolean }): void {
     this.relationshipCount = status.count;
     this.relationshipsValid = status.isValid;
@@ -660,17 +660,17 @@ export class TableDetailComponent implements OnDestroy {
     return this.columns.at(index) as FormGroup;
   }
 
-  /** Bir kolonun sayısal Min/Max kural alanlarının gösterilip gösterilmeyeceği. */
+  /** Whether a column's numeric Min/Max rule fields are shown. */
   isNumericType(dataType: string): boolean {
     return this.numericTypes.has(dataType);
   }
 
-  /** Bir tip değerinin kullanıcıya gösterilecek etiketini döner. */
+  /** Returns the label to show to the user for a type value. */
   typeLabel(value: string): string {
     return [...this.primitiveTypes, ...this.referenceTypes].find(t => t.value === value)?.label ?? value;
   }
 
-  /** Dosya kolonunda izinli tür seçili mi (seçim taslakta `enumValues` alanında durur). */
+  /** Whether an allowed type is selected on a file column (the selection lives in the draft's `enumValues` field). */
   isFileGroupSelected(group: FileTypeGroup): boolean {
     return parseFileGroups(this.columnDraft.get('enumValues')!.value).includes(group);
   }
@@ -682,14 +682,14 @@ export class TableDetailComponent implements OnDestroy {
     control.markAsDirty();
   }
 
-  /** Bir sütun satırı için kısa kural özeti (tablo görünümünde gösterilir). */
+  /** Short rule summary for a column row (shown in the table view). */
   ruleSummary(col: AbstractControl): string {
-    // Yalnız sütunun tipine ait kurallar gösterilir (formda eski tipin değeri kalmış olabilir).
+    // Only rules belonging to the column's type are shown (the form may still hold an old type's value).
     const v = normalizeColumnRules((col as FormGroup).getRawValue());
     const parts: string[] = [];
 
     if (isFileType(v.dataType)) {
-      // Sınır girilmediyse de platform tavanı geçerli — kullanıcı bunu görmeli.
+      // Even without a limit the platform ceiling applies — the user should see it.
       const limitKb = v.maxLength ?? maxFileKbFor(v.dataType);
       parts.push(this.languageService.t(
         v.maxLength != null ? 'table.detail.ruleMaxFileSize' : 'table.detail.ruleMaxFileSizeDefault',
@@ -718,8 +718,8 @@ export class TableDetailComponent implements OnDestroy {
   }
 
   /**
-   * Kullanıcı popup'ta bir lookup hedef tablosu seçtiğinde, "display kolonu" dropdown'unu
-   * doldurmak için hedef tablonun şemasını okur (her hedef için bir kez, cache'lenir).
+   * When the user picks a lookup target table in the popup, reads the target table's schema
+   * to fill the "display column" dropdown (once per target, cached).
    */
   onLookupTargetChange(targetTable: string): void {
     if (!targetTable || this.lookupColumnsByTable[targetTable] || this.lookupColumnsLoading.has(targetTable)) {
@@ -737,9 +737,9 @@ export class TableDetailComponent implements OnDestroy {
     });
   }
 
-  /** Herhangi bir form değişikliği kayıt durumunu geçersiz kılar — rootGroup her değiştiğinde yeniden çağrılır. */
+  /** Any form change invalidates the save state — called again whenever rootGroup changes. */
   private trackFormChanges(): void {
-    // Etiket → tablo adı senkronu da yeni rootGroup'a bağlanır.
+    // The label → table name sync is also bound to the new rootGroup.
     this.rootNameSync?.unsubscribe();
     this.rootNameSync = new LabelNameSync(
       this.rootGroup.get('label')!, this.entityNameCtrl, 'model',
@@ -754,13 +754,13 @@ export class TableDetailComponent implements OnDestroy {
     });
   }
 
-  // ─── Düzenleme modu: mevcut şemayı yükle ──────────────────────────────────
+  // ─── Edit mode: load the existing schema ──────────────────────────────────
 
   /**
-   * Mevcut tablo şemasını okuyup formu doldurur. Yalnızca kendi kolonları
-   * yüklenir — alt modeller bu ekranda gösterilmez/düzenlenmez (her alt model
-   * kendi /build/:typeName sayfasından düzenlenir). Bu ekranda yeni alt model
-   * eklemek hâlâ mümkündür (normal oluşturma akışıyla aynı, veri akışında korunur).
+   * Reads the existing table schema and fills the form. Only its own columns are
+   * loaded — sub-models are not shown/edited on this screen (each sub-model is
+   * edited from its own /build/:typeName page). Adding new sub-models on this screen
+   * is still possible (same as the normal create flow, kept in the data flow).
    */
   private loadForEdit(typeName: string): void {
     this.isLoadingSchema = true;
@@ -786,8 +786,8 @@ export class TableDetailComponent implements OnDestroy {
           } satisfies ColumnDisplayMeta
         ]));
         this.ownParentName = schema.parentTableName ?? null;
-        // Etiketi olmayan eski modellerde etiket tablo adıyla önden doldurulur (zorunlu alan);
-        // diff temeli de aynı değer olduğu için kullanıcı değiştirmedikçe yazılmaz.
+        // On old models without a label, the label is prefilled with the table name (required field);
+        // since the diff baseline is the same value, it is not written unless the user changes it.
         this.originalLabel = schema.label?.trim() || schema.tableName;
         this.modelIcon = this.originalIcon = schema.icon?.trim() || null;
         this.rootGroup = this.buildGroupFromSchema(schema, this.originalLabel);
@@ -801,7 +801,7 @@ export class TableDetailComponent implements OnDestroy {
     });
   }
 
-  /** Okunan şemadan kök düğüm FormGroup'u kurar (mevcut kolonlarla doldurulmuş, alt model yok). */
+  /** Builds the root node FormGroup from the loaded schema (filled with existing columns, no sub-models). */
   private buildGroupFromSchema(schema: PublishedTableSchema, label: string): FormGroup {
     return this.buildRootGroup(
       schema.tableName,
@@ -810,11 +810,11 @@ export class TableDetailComponent implements OnDestroy {
   }
 
   /**
-   * Okunan bir kolon kaydından FormGroup kurar (model-node'un sütun FormGroup yapısıyla aynı).
+   * Builds a FormGroup from a loaded column record (same as model-node's column FormGroup structure).
    *
-   * Kayıtlı kolonun adı zaten veritabanında — yeni ad kurallarıyla yeniden doğrulanmaz
-   * (eski bir ad kuralı karşılamıyorsa model hiç kaydedilemez hale gelirdi). Adı
-   * değiştirilemez; popup'ta kilitli açılır.
+   * The saved column's name is already in the database — it is not revalidated against new naming rules
+   * (if an old name did not satisfy a rule, the model could never be saved). Its name
+   * cannot be changed; it opens locked in the popup.
    */
   private buildColumnGroupFromSchema(col: PublishedColumnSchema): FormGroup {
     return this.fb.group({
@@ -832,7 +832,7 @@ export class TableDetailComponent implements OnDestroy {
       lookupDisplayColumn: [col.lookupDisplayColumn ?? ''],
       label:               [col.label ?? ''],
       description:         [col.description ?? ''],
-      // image/file: saklanan KB sınırı forma MB olarak gelir (normalizeColumnRules geri çevirir).
+      // image/file: the stored KB limit arrives in the form as MB (normalizeColumnRules converts it back).
       maxFileSizeMb:       [
         isFileType(col.dataType) ? kbToMb(col.maxLength) : null,
         fileLimitMbValidator
@@ -843,7 +843,7 @@ export class TableDetailComponent implements OnDestroy {
     });
   }
 
-  // ─── Sütun popup'ı ──────────────────────────────────────────────────────────
+  // ─── Column popup ───────────────────────────────────────────────────────────
 
   openAddColumnModal(): void {
     this.editingColumnIndex = null;
@@ -858,15 +858,15 @@ export class TableDetailComponent implements OnDestroy {
     const source = this.getColumnGroup(index).getRawValue();
     this.columnDraft.patchValue(source);
 
-    // Etiket artık zorunlu — etiketi olmayan eski sütunda ad önden doldurulur.
+    // The label is now required — on an old column without a label, the name is prefilled.
     if (!source.label?.trim()) {
       this.columnDraft.get('label')!.setValue(source.columnName);
     }
 
-    // Kayıtlı sütunun adı kilitli: onSaveEdit diff'i ada göre çalışır; yeniden
-    // adlandırma "eskisini pasifle + yenisini ekle" demek olur ve veri eski kolonda kalır.
-    // Tip ve lookup hedefi de kilitli: değişimleri derlenen sınıfı ve tabloyu değiştirir
-    // (yalnız meta veri düzenlenir). Değer tipinde zorunluluk yayınlanmış modelde kilitli.
+    // A saved column's name is locked: the onSaveEdit diff works by name; renaming
+    // would mean "deactivate the old one + add a new one" and the data would stay in the old column.
+    // The type and lookup target are locked too: changing them changes the compiled class and the table
+    // (only metadata is edited). For value types, requiredness is locked on a published model.
     if (this.originalColumnNames.has(source.columnName)) {
       this.columnDraft.get('columnName')!.disable();
       this.columnDraft.get('dataType')!.disable();
@@ -891,9 +891,9 @@ export class TableDetailComponent implements OnDestroy {
       () => this.columnDraftContext());
   }
 
-  /** Popup'taki sütunu doğrular, geçerliyse ekler/günceller ve popup'ı kapatır. */
+  /** Validates the popup's column; if valid, adds/updates it and closes the popup. */
   saveColumnModal(): void {
-    // Çakışma kontrolü kardeşlere bağlı; popup açıkken değişmiş olabilirler.
+    // The clash check depends on the siblings; they may have changed while the popup was open.
     this.columnDraft.get('columnName')!.updateValueAndValidity();
     this.columnDraft.get('maxFileSizeMb')!.updateValueAndValidity();
     if (this.columnDraft.invalid || this.draftAutoValueError) {
@@ -901,7 +901,7 @@ export class TableDetailComponent implements OnDestroy {
       return;
     }
 
-    // Kurallar tipe göre ayıklanır (tip değişince eski tipin kuralı kalmasın).
+    // Rules are filtered by type (so an old type's rule does not remain after a type change).
     const value = normalizeColumnRules(this.columnDraft.getRawValue());
     if (this.editingColumnIndex === null) {
       const group = ModelNodeComponent.buildColumnGroupStatic(this.fb);
@@ -925,14 +925,14 @@ export class TableDetailComponent implements OnDestroy {
     this.closeColumnModal();
   }
 
-  // ─── Sütun popup'ı: otomatik değer ──────────────────────────────────────────
+  // ─── Column popup: auto value ───────────────────────────────────────────────
 
   readonly autoValueTriggers = AUTO_VALUE_TRIGGERS;
 
-  /** Formülde kullanılabilen fonksiyonlar — tıklanınca "AD()" eklenir. */
+  /** Functions usable in the formula — clicking inserts "NAME()". */
   readonly autoValueFunctions = ['IF', 'ROUND', 'CONCAT', 'COALESCE', 'TODAY', 'NOW', 'ADD_DAYS', 'FORMAT_DATE', 'SEQ'];
 
-  /** Formülde referans verilebilecek diğer sütunlar (dosya sütunları hariç). */
+  /** Other columns that can be referenced in the formula (file columns excluded). */
   get autoValueFieldOptions(): { name: string; label: string }[] {
     return (this.columns.getRawValue() as TreeColumn[])
       .filter((c, i) => i !== this.editingColumnIndex && c.columnName?.trim() && !isFileType(c.dataType))
@@ -940,8 +940,8 @@ export class TableDetailComponent implements OnDestroy {
   }
 
   /**
-   * Taslak sütunun formül sorunu (yoksa null). Tablonun diğer kurallarıyla birlikte
-   * planlanır — döngü ancak böyle görünür.
+   * Formula issue of the draft column (null if none). Planned together with the table's
+   * other rules — that is the only way a cycle becomes visible.
    */
   get draftAutoValueError(): string | null {
     const draft = this.columnDraft.getRawValue() as TreeColumn;
@@ -955,7 +955,7 @@ export class TableDetailComponent implements OnDestroy {
     return issue ? this.autoValueIssueText(issue) : null;
   }
 
-  /** `save` tetiği ve SEQ() salt okunurluğu zorunlu kılar (bkz. normalizeColumnRules). */
+  /** The `save` trigger and SEQ() make read-only mandatory (see normalizeColumnRules). */
   get draftReadOnlyForced(): boolean {
     const trigger = this.columnDraft.get('autoValueTrigger')!.value;
     if (trigger === 'save') return true;
@@ -967,7 +967,7 @@ export class TableDetailComponent implements OnDestroy {
     }
   }
 
-  /** İmlecin olduğu yere bir parça ekler; fonksiyonlarda imleç parantezin içine konur. */
+  /** Inserts a snippet at the caret; for functions the caret is placed inside the parentheses. */
   insertAutoValueToken(input: HTMLTextAreaElement, token: string, caretBack = 0): void {
     const ctrl = this.columnDraft.get('autoValueExpression')!;
     const value: string = ctrl.value ?? '';
@@ -980,7 +980,7 @@ export class TableDetailComponent implements OnDestroy {
     input.setSelectionRange(caret, caret);
   }
 
-  /** "Tarih + sıra no" şablonu: yeni kayıtta tarih + günlük sayaç, ör. 25092026-001. */
+  /** "Tarih + sıra no" (Date + sequence no) template: date + daily counter on a new record, e.g. 25092026-001. */
   applySequenceTemplate(): void {
     this.columnDraft.patchValue({
       autoValueTrigger: 'create',
@@ -989,7 +989,7 @@ export class TableDetailComponent implements OnDestroy {
     });
   }
 
-  /** Planlayıcı sorununu okunur metne çevirir. */
+  /** Converts a planner issue into readable text. */
   autoValueIssueText(issue: RuleIssue): string {
     const t = (key: string, params?: Record<string, string | number>) =>
       this.languageService.t('table.detail.autoValue.' + key, params);
@@ -1009,27 +1009,27 @@ export class TableDetailComponent implements OnDestroy {
     }
   }
 
-  // ─── Kılavuz diyaloğu ───────────────────────────────────────────────────────
+  // ─── Guide dialog ───────────────────────────────────────────────────────────
 
-  /** Sütun popup'ındaki "Veri Tipi" yanındaki "i" — seçili tipin kılavuzunu açar. */
+  /** The "i" next to "Veri Tipi" (Data type) in the column popup — opens the guide for the selected type. */
   openTypeHelp(): void {
     this.openHelp(this.columnDraft.get('dataType')!.value || 'string');
   }
 
   /**
-   * İlişki popup'ındaki "İlişki Tipi" yanındaki "i" — seçili ilişki tipinin
-   * kılavuzunu açar.
+   * The "i" next to "İlişki Tipi" (Relationship type) in the relationship popup — opens the guide
+   * for the selected relationship type.
    *
-   * RelationshipType SAYISAL bir enum'dur ve `<select>` değeri string olarak
-   * ('1'..'5') gelir; konu anahtarı ise tip ADIYLA kurulur ('rel:OneToOne').
-   * Bu yüzden enum'un ters eşlemesi üzerinden ada çevrilir.
+   * RelationshipType is a NUMERIC enum and the `<select>` value arrives as a string
+   * ('1'..'5'); the topic key, however, is built from the type NAME ('rel:OneToOne').
+   * So it is converted to the name via the enum's reverse mapping.
    */
   openRelationshipTypeHelp(type: RelationshipType): void {
     const name = RelationshipType[type];
     this.openHelp(name ? `rel:${name}` : 'relationships');
   }
 
-  /** Sekme araç çubuklarındaki "Nasıl çalışır?" — kavram kılavuzunu açar. */
+  /** "Nasıl çalışır?" (How does it work?) in the tab toolbars — opens the concept guide. */
   openHelp(topic: HelpTopicId): void {
     this.helpTopic.set(topic);
     this.helpOpen.set(true);
@@ -1040,9 +1040,9 @@ export class TableDetailComponent implements OnDestroy {
   }
 
   /**
-   * Kılavuzdaki hazır regex deseninde "Kullan"a basıldığında deseni sütun
-   * taslağına yazar. Hata mesajı yalnızca boşsa doldurulur — kullanıcının
-   * kendi yazdığı mesaj ezilmez.
+   * When "Kullan" (Use) is pressed on a ready-made regex pattern in the guide, writes the pattern
+   * into the column draft. The error message is filled only if empty — the user's own
+   * message is not overwritten.
    */
   onHelpPattern(preset: RegexPreset): void {
     this.columnDraft.get('regex')!.setValue(preset.pattern);
@@ -1055,12 +1055,12 @@ export class TableDetailComponent implements OnDestroy {
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    // Kılavuz diyaloğu kendi ESC işleyicisinde stopPropagation yapar; yine de
-    // savunmacı olarak burada da alttaki popup'ların kapanmasını engelliyoruz.
+    // The guide dialog calls stopPropagation in its own ESC handler; still,
+    // defensively, we also prevent the popups below from closing here.
     if (this.helpOpen()) return;
 
-    // En üstteki diyalogdan başlayarak kapat. İlişki diyalogları sekmenin
-    // içindedir; kapatacak bir şey varsa sekme true döner.
+    // Close starting from the topmost dialog. Relationship dialogs live inside
+    // the tab; if there is something to close the tab returns true.
     if (this.relationshipsTab?.handleEscape()) return;
 
     if (this.columnModalOpen) {
@@ -1072,11 +1072,11 @@ export class TableDetailComponent implements OnDestroy {
     this.columns.removeAt(index);
   }
 
-  // ─── Yardımcı: ağacı BFS ile düzleştir ────────────────────────────────────
+  // ─── Helper: flatten the tree with BFS ────────────────────────────────────
 
   /**
-   * FormGroup ağacını parent-first sırada düz bir TreeNode listesine çevirir.
-   * Yalnızca geçerli (columnName dolu) sütunları dahil eder.
+   * Converts the FormGroup tree into a flat TreeNode list in parent-first order.
+   * Includes only valid columns (columnName filled).
    */
   private flattenTree(group: FormGroup, parentName: string | null): TreeNode[] {
     const result: TreeNode[] = [];
@@ -1085,14 +1085,14 @@ export class TableDetailComponent implements OnDestroy {
     const columnsArr = group.get('columns') as FormArray;
     const subModelsArr = group.get('subModels') as FormArray;
 
-    // Kurallar tipe göre ayıklanır; image/file'da MB girişi maxLength'e (KB) çevrilir.
+    // Rules are filtered by type; for image/file the MB input is converted to maxLength (KB).
     const cols = (columnsArr?.value ?? [])
       .filter((c: any) => c.columnName?.trim())
       .map((c: any) => normalizeColumnRules(c));
 
     result.push({ entityName, label, parentName, columns: cols });
 
-    // Alt modelleri BFS sırasında ekle (parent her zaman önce)
+    // Add sub-models in BFS order (parent always first)
     for (let i = 0; i < (subModelsArr?.length ?? 0); i++) {
       const subGroup = subModelsArr.at(i) as FormGroup;
       result.push(...this.flattenTree(subGroup, entityName));
@@ -1101,9 +1101,9 @@ export class TableDetailComponent implements OnDestroy {
     return result;
   }
 
-  // ─── Yardımcı: yeni bir düğümü kaydet (dup kontrol → addTable → addMember'lar) ──
+  // ─── Helper: save a new node (dup check → addTable → addMembers) ──
 
-  /** Tek bir YENİ düğümü kaydeder: dup kontrolü yapar, addTable + her kolon için addMember çağırır. */
+  /** Saves a single NEW node: performs the dup check, calls addTable + addMember for each column. */
   private saveNode$(node: TreeNode): Observable<unknown> {
     return this.publishedTableService.getSchema(node.entityName).pipe(
       catchError((err: { status?: number }) => {
@@ -1118,11 +1118,11 @@ export class TableDetailComponent implements OnDestroy {
             this.languageService.t('table.detail.duplicateModelName', { name: node.entityName })
           ));
         }
-        // addTable — alt model ise parentTableName gönderilir
+        // addTable — parentTableName is sent for a sub-model
         return this.publishedTableService.addTable({
           tableName:       node.entityName,
           label:           node.label,
-          // İkon yalnız kök modelde seçilir (başlıktaki düğme).
+          // The icon is picked only on the root model (the button in the header).
           icon:            node.parentName ? null : this.modelIcon,
           description:     `${node.entityName} dinamik modeli`,
           version:         1,
@@ -1134,7 +1134,7 @@ export class TableDetailComponent implements OnDestroy {
           ? of(res)
           : throwError(() => new Error(res.message ?? this.languageService.t('table.detail.tableMetaSaveFailed')))
       ),
-      // Her kolon için addMember
+      // addMember for each column
       switchMap(() =>
         from(node.columns).pipe(
           concatMap(col =>
@@ -1153,9 +1153,9 @@ export class TableDetailComponent implements OnDestroy {
   }
 
   /**
-   * Kaydetmeden önce tüm ağaçtaki adları yeniden doğrular (kardeş çakışmaları bir ad
-   * değişince diğerlerinde kendiliğinden tazelenmez). Geçersizse hataları görünür
-   * yapar ve kullanıcıya nerede olduğunu söyler — hatalı ad backend'e hiç gitmez.
+   * Revalidates the names in the whole tree before saving (sibling clashes do not refresh
+   * by themselves in the others when one name changes). If invalid, makes the errors visible
+   * and tells the user where they are — an invalid name never reaches the backend.
    */
   private ensureFormValid(): boolean {
     revalidateIdentifiers(this.rootGroup);
@@ -1164,7 +1164,7 @@ export class TableDetailComponent implements OnDestroy {
     this.rootGroup.markAllAsTouched();
     this.submitSuccess = false;
     this.submitMessage = this.languageService.t('table.detail.formInvalid');
-    // Hata kaydedilmemiş bir alt model taslağındaysa o sekme görünür olsun.
+    // If the error is in an unsaved sub-model draft, make that tab visible.
     if (this.subModels.invalid && this.rootGroup.get('label')!.valid && this.entityNameCtrl.valid) {
       this.activeTab.set('subModels');
     }
@@ -1172,9 +1172,9 @@ export class TableDetailComponent implements OnDestroy {
   }
 
   /**
-   * Sütunların otomatik değer kurallarını birlikte denetler (döngü yalnız tüm tabloya
-   * bakınca görünür). Sunucu aynı denetimi yapar; burada yakalamak kullanıcıyı yarım
-   * kalmış bir kayıttan korur — ilk hatalı kolon adıyla birlikte gösterilir.
+   * Checks the columns' auto-value rules together (a cycle is only visible when looking at the
+   * whole table). The server performs the same check; catching it here protects the user from
+   * a half-finished save — shown together with the first faulty column name.
    */
   private ensureAutoValuesValid(): boolean {
     const plan = buildAutoValuePlan(
@@ -1192,7 +1192,7 @@ export class TableDetailComponent implements OnDestroy {
     return false;
   }
 
-  /** Bir sütunu addMember isteğine çevirir (oluşturma ve düzenleme akışları ortak). */
+  /** Converts a column into an addMember request (shared by the create and edit flows). */
   private memberRequest(typeName: string, col: TreeColumn): AddMemberRequest {
     return {
       typeName,
@@ -1216,12 +1216,12 @@ export class TableDetailComponent implements OnDestroy {
     };
   }
 
-  // ─── ADIM 1: KAYDET (oluşturma modu) ──────────────────────────────────────
+  // ─── STEP 1: SAVE (create mode) ───────────────────────────────────────────
 
   /**
-   * Tüm model ağacını (kök + alt modeller) parent-first sırada kaydeder.
-   * Her düğüm: addTable + her kolon için addMember.
-   * Başarı sonrası isSaved = true olur ve Yayınla butonu aktifleşir.
+   * Saves the whole model tree (root + sub-models) in parent-first order.
+   * Each node: addTable + addMember for each column.
+   * After success isSaved = true and the Publish button becomes active.
    */
   onSave(): void {
     if (this.isSaving || this.isPublishing || !this.ensureFormValid()) return;
@@ -1241,7 +1241,7 @@ export class TableDetailComponent implements OnDestroy {
     this.submitMessage = null;
     this.submitSuccess = null;
 
-    // Her düğüm için sırayla: dup kontrol → addTable → addMember'lar
+    // For each node in order: dup check → addTable → addMembers
     from(nodes).pipe(
       concatMap(node => this.saveNode$(node))
     ).pipe(markDirty(this.cdr)).subscribe({
@@ -1259,7 +1259,7 @@ export class TableDetailComponent implements OnDestroy {
         this.savedRootName = rootName;
         this.submitSuccess = true;
 
-        // G1: Model artık kayıtlı — bellekte bekleyen ilişkiler sunucuya gönderilir.
+        // G1: The model is now saved — relationships pending in memory are sent to the server.
         this.relationshipsTab?.flush(rootName);
 
         const nodeCount = nodes.length;
@@ -1267,58 +1267,58 @@ export class TableDetailComponent implements OnDestroy {
           ? this.languageService.t('table.detail.modelsSavedMulti', { count: nodeCount, names: nodes.map(n => n.entityName).join(', ') })
           : this.languageService.t('table.detail.modelSaved');
 
-        // Model artık veritabanında var — ekran düzenleme moduna geçer.
+        // The model now exists in the database — the screen switches to edit mode.
         this.enterEditModeAfterCreate(rootName, nodes[0]);
       }
     });
   }
 
   /**
-   * Oluşturma modunda ilk başarılı kayıttan sonra ekranı düzenleme moduna çevirir.
+   * Switches the screen to edit mode after the first successful save in create mode.
    *
-   * Bu geçiş olmadan ikinci "Kaydet" yine oluşturma akışını çalıştırır ve
-   * saveNode$'ın dup kontrolü "bu adda bir model zaten mevcut" hatası verir —
-   * oysa kullanıcı aynı modelin içindedir ve güncelleme yapmak istemektedir.
+   * Without this transition a second "Kaydet" (Save) would run the create flow again and
+   * saveNode$'s dup check would fail with "a model with this name already exists" —
+   * whereas the user is inside the same model and wants to update it.
    *
-   * Sayfa yeniden yüklenmez: form durumu, ilişki sekmesi ve isSaved bayrağı korunur
-   * (bayrak korunmalı ki "Yayınla" butonu aktif kalsın — bu yüzden tüm form
-   * mutasyonları emitEvent:false ile yapılır, aksi halde trackFormChanges sıfırlar).
+   * The page is not reloaded: form state, relationships tab and the isSaved flag are kept
+   * (the flag must be kept so the "Yayınla" (Publish) button stays active — that is why all form
+   * mutations use emitEvent:false, otherwise trackFormChanges would reset it).
    */
   private enterEditModeAfterCreate(rootName: string, savedRoot: TreeNode): void {
     this.isNew = false;
     this.editTypeName = rootName;
 
-    // Düzenleme modu kuralı: kök model adı değiştirilemez (loadForEdit ile aynı).
+    // Edit mode rule: the root model name cannot be changed (same as loadForEdit).
     this.rootGroup.get('entityName')?.disable({ emitEvent: false });
 
-    // Diff temeli: bu kayıtla birlikte sunucuda oluşan kolonlar ve etiketler.
+    // Diff baseline: the columns and labels created on the server with this save.
     this.originalColumnNames = new Set(savedRoot.columns.map(c => c.columnName));
     this.originalColumnMeta = new Map(savedRoot.columns.map(c => [
       c.columnName, columnMetaOf(c)
     ]));
     this.originalLabel = savedRoot.label;
-    // addTable ikonu birlikte yazdı (025'siz tenant'ta sunucu atlar; ikon varsayılan kalır).
+    // addTable wrote the icon along with it (on a tenant without 025 the server skips it; the icon stays default).
     this.originalIcon = this.modelIcon;
 
-    // Kaydedilen alt modeller artık taslak değildir; formdan düşürülür ve
-    // "Alt Modeller" sekmesindeki kayıtlı listeye geçerler (loadTables).
+    // Saved sub-models are no longer drafts; they are dropped from the form and
+    // move to the saved list in the "Alt Modeller" (Sub-models) tab (loadTables).
     this.subModels.clear({ emitEvent: false });
 
-    // Adres çubuğu gerçek duruma uyar: sayfa yenilenirse düzenleme ekranı açılır.
+    // The address bar follows the real state: on page refresh the edit screen opens.
     this.location.replaceState(`/build/${rootName}`);
 
-    // Kayıtlı alt model listesi, tablo ID'si ve lookup hedefleri tazelenir.
+    // The saved sub-model list, table ID and lookup targets are refreshed.
     this.loadTables();
   }
 
-  // ─── ADIM 1: KAYDET (düzenleme modu) ──────────────────────────────────────
+  // ─── STEP 1: SAVE (edit mode) ─────────────────────────────────────────────
 
   /**
-   * Düzenleme modunda kaydet: kök modelin kolonlarını orijinal şema ile
-   * karşılaştırır (diff) — yeni kolon adları addMember, kaybolan kolon adları
-   * removeMember (soft-delete, SQL kolonu DROP edilmez) ile gönderilir.
-   * Bu oturumda eklenen tamamen yeni alt modeller normal oluşturma akışıyla
-   * (addTable + addMember) kaydedilir. Model adı (kök) bu modda değiştirilemez.
+   * Save in edit mode: compares the root model's columns with the original schema
+   * (diff) — new column names are sent with addMember, missing column names with
+   * removeMember (soft-delete, the SQL column is not DROPped).
+   * Entirely new sub-models added in this session are saved with the normal create flow
+   * (addTable + addMember). The (root) model name cannot be changed in this mode.
    */
   onSaveEdit(): void {
     if (this.isSaving || this.isPublishing || !this.editTypeName || !this.ensureFormValid()) return;
@@ -1326,7 +1326,7 @@ export class TableDetailComponent implements OnDestroy {
     const rootName = this.editTypeName;
     const nodes = this.flattenTree(this.rootGroup, null);
     const rootNode = nodes[0];
-    const newChildNodes = nodes.slice(1); // bu oturumda eklenen yeni alt modeller
+    const newChildNodes = nodes.slice(1); // new sub-models added in this session
 
     if (rootNode.columns.length === 0) {
       this.submitSuccess = false;
@@ -1338,8 +1338,8 @@ export class TableDetailComponent implements OnDestroy {
     const addedColumns = rootNode.columns.filter(c => !this.originalColumnNames.has(c.columnName));
     const removedColumnNames = [...this.originalColumnNames].filter(name => !currentColumnNames.has(name));
 
-    // Kayıtlı kolonun tipi kilitli; yine de değişmişse (eski bir taslak, elle müdahale)
-    // değişiklik sessizce atılmaz — kayıt hiç başlamadan durur.
+    // A saved column's type is locked; if it changed anyway (an old draft, manual tampering)
+    // the change is not silently dropped — the save stops before it even starts.
     const typeChanged = rootNode.columns.find(c => {
       const original = this.originalColumnMeta.get(c.columnName);
       return !!original && original.dataType !== c.dataType;
@@ -1352,7 +1352,7 @@ export class TableDetailComponent implements OnDestroy {
 
     const ops: Array<() => Observable<unknown>> = [];
 
-    // 1. Kaldırılan kolonları pasifle (soft-delete — SQL kolonu DROP edilmez)
+    // 1. Deactivate removed columns (soft-delete — the SQL column is not DROPped)
     removedColumnNames.forEach(name => ops.push(() =>
       this.publishedTableService.removeMember(rootName, name).pipe(
         switchMap(r => r.success
@@ -1361,7 +1361,7 @@ export class TableDetailComponent implements OnDestroy {
       )
     ));
 
-    // 2. Eklenen yeni kolonları kaydet
+    // 2. Save the newly added columns
     addedColumns.forEach(col => ops.push(() =>
       this.publishedTableService.addMember(this.memberRequest(rootName, col)).pipe(
         switchMap(r => r.success
@@ -1370,7 +1370,7 @@ export class TableDetailComponent implements OnDestroy {
       )
     ));
 
-    // 3. Model etiketi değiştiyse yalnız etiketi yaz
+    // 3. If the model label changed, write only the label
     const newLabel = rootNode.label ?? '';
     if (newLabel !== (this.originalLabel ?? '')) {
       ops.push(() => this.publishedTableService.setTableLabel(rootName, newLabel).pipe(
@@ -1380,8 +1380,8 @@ export class TableDetailComponent implements OnDestroy {
       ));
     }
 
-    // 4. Kayıtlı kolonların meta verisi: etiket, açıklama, zorunluluk, kurallar ve dosya boyutu
-    //    sınırı — tek istekte (ad/tip kilitli; şema değişmez, yayın gerekmez).
+    // 4. Metadata of saved columns: label, description, requiredness, rules and file size
+    //    limit — in a single request (name/type locked; the schema does not change, no publish needed).
     const metadataChanged = rootNode.columns.filter(c => {
       const original = this.originalColumnMeta.get(c.columnName);
       return !!original && metadataKey(c) !== original.metadataKey;
@@ -1394,7 +1394,7 @@ export class TableDetailComponent implements OnDestroy {
       )
     ));
 
-    // 5b. Kayıtlı kolonların otomatik değer kuralı değiştiyse yaz (şema değişmez, yayın gerekmez)
+    // 5b. If the auto-value rule of saved columns changed, write it (the schema does not change, no publish needed)
     const autoValueChanged = rootNode.columns.filter(c => {
       const original = this.originalColumnMeta.get(c.columnName);
       return !!original && autoValueKey(c) !== original.autoValueKey;
@@ -1413,7 +1413,7 @@ export class TableDetailComponent implements OnDestroy {
       )
     ));
 
-    // 6. Bu oturumda eklenen tamamen yeni alt modeller — normal oluşturma akışı
+    // 6. Entirely new sub-models added in this session — normal create flow
     newChildNodes.forEach(node => ops.push(() => this.saveNode$(node)));
 
     this.isSaving = true;
@@ -1447,9 +1447,9 @@ export class TableDetailComponent implements OnDestroy {
         this.submitSuccess = true;
         this.submitMessage = this.languageService.t('table.detail.changesSaved');
 
-        // Diff temelini tazele: bu kayıttan sonra eklenen kolonlar artık "mevcut"tur
-        // ve bu oturumda oluşturulan alt modeller artık "yeni" değildir. Tazelenmezse
-        // ikinci "Kaydet" aynı kolonları/alt modelleri yeniden eklemeye çalışır.
+        // Refresh the diff baseline: columns added after this save are now "existing"
+        // and sub-models created in this session are no longer "new". Without refreshing,
+        // a second "Kaydet" (Save) would try to add the same columns/sub-models again.
         this.originalColumnNames = new Set(rootNode.columns.map(c => c.columnName));
         this.originalColumnMeta = new Map(rootNode.columns.map(c => [
           c.columnName, columnMetaOf(c)
@@ -1458,18 +1458,18 @@ export class TableDetailComponent implements OnDestroy {
         this.subModels.clear({ emitEvent: false });
         this.recordMetadata.invalidate(rootName);
 
-        // Yeni alt modeller kayıtlı listeye geçsin (ve lookup hedefi olabilsin).
+        // Let the new sub-models move to the saved list (and become possible lookup targets).
         if (newChildNodes.length > 0)
           this.loadTables();
       }
     });
   }
 
-  // ─── ADIM 2: YAYINLA ──────────────────────────────────────────────────────
+  // ─── STEP 2: PUBLISH ──────────────────────────────────────────────────────
 
   /**
-   * Yayınla: önce model ikonu seçtirilir (kayıtlı ikon seçili gelir, seçmek opsiyonel),
-   * onaylanınca {@link onIconConfirmed} → {@link publish}.
+   * Publish: first the model icon is picked (the saved icon comes preselected, picking is optional);
+   * once confirmed {@link onIconConfirmed} → {@link publish}.
    */
   onPublish(): void {
     if (!this.isSaved || !this.savedRootName) {
@@ -1482,12 +1482,12 @@ export class TableDetailComponent implements OnDestroy {
     this.iconPickerMode = 'publish';
   }
 
-  /** Başlıktaki ikon düğmesi — yeniden yayınlamadan değiştirir. */
+  /** The icon button in the header — changes it without republishing. */
   openIconPicker(): void {
     if (!this.isPublishing && !this.isSaving) this.iconPickerMode = 'select';
   }
 
-  /** Seçici onayı. Yayın kipinde ikon (değiştiyse) yazılır ve yayın başlar. */
+  /** Picker confirmation. In publish mode the icon (if changed) is written and publishing starts. */
   onIconConfirmed(icon: string | null): void {
     const mode = this.iconPickerMode;
     const typeName = this.editTypeName ?? this.savedRootName;
@@ -1499,7 +1499,7 @@ export class TableDetailComponent implements OnDestroy {
       return;
     }
 
-    // Henüz kaydedilmemiş model: ikon addTable ile birlikte gider.
+    // Not yet saved model: the icon goes along with addTable.
     if (!typeName) {
       this.modelIcon = icon;
       this.iconPickerMode = null;
@@ -1534,11 +1534,11 @@ export class TableDetailComponent implements OnDestroy {
   }
 
   /**
-   * Kaydedilmiş ağacı backend'e yayınlatır.
-   * Backend kök adından tüm ağacı BFS ile çekip parent-first derler ve SQL tabloları oluşturur.
+   * Has the backend publish the saved tree.
+   * The backend fetches the whole tree from the root name via BFS, compiles it parent-first and creates the SQL tables.
    *
-   * `iconFor` doluysa önce o modelin ikonu yazılır. İkon opsiyoneldir: yazılamazsa (ör. tenant
-   * migrasyonu 025 yok) uyarı gösterilir, yayın yine yapılır.
+   * If `iconFor` is set, that model's icon is written first. The icon is optional: if it cannot be written (e.g. tenant
+   * migration 025 missing) a warning is shown, and publishing still happens.
    */
   private publish(iconFor: string | null): void {
     if (!this.savedRootName) return;
